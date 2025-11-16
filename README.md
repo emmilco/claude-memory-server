@@ -1,373 +1,406 @@
 # Claude Memory + RAG Server
 
-**Persistent memory and documentation search for Claude Code**
+**Persistent memory, documentation search, and semantic code search for Claude**
 
-An MCP (Model Context Protocol) server that gives Claude Code:
-- 🧠 **Persistent Memory** - Remembers your preferences, workflows, and project facts across all sessions
-- 📚 **Documentation RAG** - Ingest and search project documentation with semantic search
-- 🔀 **Smart Routing** - Automatically routes queries to memories or docs based on intent
-- 🏢 **Project Awareness** - Separates global preferences from project-specific knowledge
+> 🚀 **NEW:** Semantic code search with sub-10ms latency!
+
+An MCP (Model Context Protocol) server that gives Claude:
+- 🧠 **Persistent Memory** - Remembers preferences, workflows, and project facts
+- 📚 **Documentation RAG** - Semantic search across project documentation
+- 🔍 **Code Search** - Find code by meaning, not keywords (6 languages)
+- 🏢 **Project Awareness** - Separates global from project-specific knowledge
 
 ## Features
 
-### Automatic Memory
+### 🔍 Semantic Code Search (NEW!)
+
+Search your codebase by meaning, not keywords:
+
+```
+You: Find the authentication logic
+Claude: [Searches semantically]
+       → auth/handlers.py:45-67 - login() function
+       → auth/middleware.py:23-45 - authenticate_request()
+```
+
+**Supported Languages:**
+- Python, JavaScript, TypeScript, Java, Go, Rust
+
+**Performance:**
+- 7-13ms search latency
+- 2.45 files/sec indexing
+- Real-time file watching with auto-reindexing
+
+### 🧠 Automatic Memory
+
 Claude automatically remembers:
 - **Preferences**: "I prefer Python", "I always use async/await"
 - **Workflows**: "I usually run tests before committing"
 - **Project Facts**: "This API uses FastAPI", "Database is PostgreSQL"
 - **Events**: "Fixed auth bug on Nov 15", "Deployed to production"
 
-### Documentation Search
+### 📚 Documentation Search
+
 - Ingest markdown documentation (README, docs/ folder)
 - Semantic search across all docs
-- Project-specific context (docs don't leak between projects)
-- Smart chunking preserves document structure
+- Project-specific context
+- Smart chunking preserves structure
 
-### Smart Query Routing
-- **Personal queries** ("What do I prefer?")  Search memories
-- **Technical queries** ("How do I install?")  Search documentation
-- **Mixed queries**  Search both, weighted by relevance
+## Quick Start
 
-## Installation
+### Prerequisites
+- Python 3.8+
+- Docker (for Qdrant vector DB)
+- ~500MB disk space
 
-### Quick Start
+### Installation
 
 ```bash
-# 1. Clone the repository
+# 1. Clone repository
 git clone https://github.com/yourusername/claude-memory-server.git
 cd claude-memory-server
 
-# 2. Run setup (installs dependencies, downloads AI model, adds to Claude Code)
-./setup.sh
+# 2. Start Qdrant vector database
+docker-compose up -d
 
-# 3. Start using!
-# Open Claude Code and start a new session
-```
+# 3. Install dependencies
+pip install -r requirements.txt
 
-### Manual Installation
+# 4. Build Rust module (for fast parsing)
+cd rust_core && maturin develop && cd ..
 
-If setup.sh doesn't work:
+# 5. Add to Claude Code
+claude mcp add --transport stdio --scope user claude-memory-rag -- \
+  python "$(pwd)/src/mcp_server.py"
 
-```bash
-# Install Python dependencies
-pip3 install -r requirements.txt
-
-# Download embedding model
-python3 -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
-
-# Add to Claude Code manually
-SERVER_PATH="$(pwd)/src/mcp_server.py"
-claude mcp add --transport stdio --scope user claude-memory-rag -- python3 "$SERVER_PATH"
+# 6. Verify installation
+curl http://localhost:6333/health  # Should return OK
+pytest tests/ -v                    # Should pass 68/68 tests
 ```
 
 ## Usage
 
-### First Steps
+### Code Search
 
-1. **Test the connection**:
-   ```
-   You: Show me memory statistics
-   Claude: [Shows current memory stats]
-   ```
+**Index a codebase:**
+```bash
+# Via CLI
+python -m src.cli index ./src --project-name my-project
 
-2. **Ingest documentation**:
-   ```
-   You: Analyze the current directory for documentation
-   Claude: [Scans for .md files, ingests them]
-   ```
-
-3. **Store a preference**:
-   ```
-   You: I prefer TypeScript for all new projects
-   Claude: [Automatically stores as global preference]
-   ```
-
-4. **Query documentation**:
-   ```
-   You: How do I install this project?
-   Claude: [Searches ingested docs, returns installation instructions]
-   ```
-
-### Example Workflows
-
-#### Project Documentation Search
+# Via Claude (MCP)
+You: Please index the src directory
+Claude: ✅ Indexed 175 semantic units from 4 files in 2.99s
 ```
-# Navigate to your project
-cd ~/projects/my-app
 
-# Ingest docs
+**Search code:**
+```bash
+# Via Claude (MCP)
+You: Find code related to database connections
+Claude: [Shows relevant functions with file paths and line numbers]
+```
+
+**Watch for changes:**
+```bash
+python -m src.cli watch ./src
+# Auto-reindexes when files change
+```
+
+### Memory & Documentation
+
+**Store a preference:**
+```
+You: I prefer TypeScript for all new projects
+Claude: ✅ Stored preference memory (global scope)
+```
+
+**Ingest documentation:**
+```
 You: Please analyze this directory and ingest all documentation
-
 Claude: ✅ Documentation Ingestion Complete
-Files processed: 15
-Total chunks created: 87
+        Files processed: 15
+        Total chunks created: 87
+```
 
-# Query docs
+**Query documentation:**
+```
 You: How does authentication work in this project?
-
 Claude: Based on the documentation:
-1. [From docs/auth.md] Authentication uses JWT tokens...
-2. [From README.md] Users log in via /api/auth/login...
+        [Shows relevant sections from docs]
 ```
 
-#### Personal Memory
-```
-# Store preference
-You: I always prefer using pytest for Python testing
+## Available MCP Tools
 
-Claude: ✅ Stored preference memory
-Scope: global
-Content: User prefers pytest for Python testing
+Claude has access to these tools:
 
-# Later, in any project...
-You: What should I use for testing?
+### Code Search Tools (NEW!)
+- **`search_code`** - Semantic code search across indexed files
+- **`index_codebase`** - Index a directory for code search
 
-Claude: Based on your preference for pytest...
-```
+### Memory Tools
+- **`store_memory`** - Store a memory (usually automatic)
+- **`retrieve_memories`** - Search memories and/or docs
+- **`delete_memory`** - Delete a specific memory by ID
 
-#### Project-Specific Facts
-```
-# In project A
-You: This project uses PostgreSQL with Prisma ORM
+### Documentation Tools
+- **`ingest_docs`** - Ingest markdown documentation
+- **`search_all`** - Explicit search without routing
 
-Claude: ✅ Stored fact memory
-Scope: project
-Project: project-a
-
-# Switch to project B
-cd ~/projects/project-b
-
-You: What database am I using?
-
-Claude: I don't see any database information for this project yet.
-# (Correctly doesn't show project-a's info!)
-```
-
-## Available Tools
-
-Claude Code has access to these tools:
-
-### `store_memory`
-Manually store a memory (usually automatic)
-
-### `retrieve_memories`
-Search memories and/or docs with smart routing
-
-### `ingest_docs`
-Ingest markdown documentation from a directory
-
-### `search_all`
-Explicit search without smart routing
-
-### `delete_memory`
-Delete a specific memory by ID
-
-### `get_stats`
-View memory and documentation statistics
-
-### `show_context`
-Debug tool - see what's in current context
-
-## How It Works
-
-### Memory Storage
-```
-You: "I prefer async/await over promises"
-       
-Claude detects preference pattern
-       
-Extracts: "User prefers async/await"
-       
-Generates semantic embedding (384-dim vector)
-       
-Stores in SQLite (~/.claude-rag/memory.db)
-       
-Tagged as: global preference
-```
-
-### Documentation Ingestion
-```
-Scan directory for *.md files
-       
-Read and parse markdown
-       
-Chunk by headers (preserve structure)
-       
-Generate embeddings for each chunk
-       
-Store with metadata (file, heading, project)
-       
-Track file hash (skip if unchanged)
-```
-
-### Smart Routing
-```
-Query: "What do I prefer for testing?"
-       
-Intent: PERSONAL
-       
-Search: memories only
-       
-Results: [preferences, workflows]
-
-Query: "How do I install this?"
-       
-Intent: TECHNICAL
-       
-Search: 70% docs, 30% project facts
-       
-Results: [documentation, relevant facts]
-```
+### Utility Tools
+- **`get_stats`** - View memory and indexing statistics
+- **`show_context`** - Debug tool to see current context
 
 ## Architecture
 
-```bash
-+-----------------------+
-|      Claude Code      |
-+-----------------------+
-            |
-     MCP Protocol
-            |
-+-----------------------+
-|  Memory + RAG Server  |
-| +-------------------+ |
-| |   Smart Router    | |
-| +-------------------+ |
-|           |           |
-|    +------+------+    |
-|    |             |    |
-|    v             v    |
-| +--------+  +--------+ |
-| | Memory |  |  Docs  | |
-| |Manager |  |Ingester| |
-| +--------+  +--------+ |
-|      |           |    |
-|      v           v    |
-| +-------------------+ |
-| |  Vector Database  | |
-| |     (SQLite)      | |
-| +-------------------+ |
-+-----------------------+
+```
+┌─────────────────────────────────────┐
+│          Claude via MCP              │
+└──────────────┬──────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────┐
+│      MCP Server (mcp_server.py)      │
+│  ┌───────────────────────────────┐  │
+│  │   search_code                 │  │
+│  │   index_codebase              │  │
+│  │   store_memory                │  │
+│  │   retrieve_memories           │  │
+│  └───────────────────────────────┘  │
+└───────┬──────────────────┬──────────┘
+        │                  │
+        ▼                  ▼
+┌──────────────┐    ┌──────────────┐
+│  Incremental │    │   Qdrant     │
+│   Indexer    │───▶│  Vector DB   │
+│              │    │ (localhost   │
+│ Rust Parser  │    │  :6333)      │
+│ 1-6ms/file   │    │ 7-13ms search│
+└──────────────┘    └──────────────┘
 ```
 
-## Storage
+## Technology Stack
 
-All data stored locally at:
-```
-~/.claude-rag/memory.db
-```
+### Core
+- **Python 3.13** - Main application
+- **Rust 1.91** - Fast code parsing (tree-sitter)
+- **Qdrant** - Vector database
+- **PyO3** - Python-Rust bridge
 
-- SQLite database
-- Text + semantic embeddings
-- ~1-2 KB per entry
-- No cloud sync
-- 100% local
+### AI/ML
+- **sentence-transformers** - Embedding generation
+- **all-MiniLM-L6-v2** - Embedding model (384 dims)
+
+### Storage
+- **Qdrant** - Primary vector storage
+- **SQLite** - Fallback + embedding cache
 
 ## Performance
 
-- **Embedding generation**: ~10ms per text (local CPU)
-- **Doc ingestion**: ~5s for 100 markdown files
-- **Query retrieval**: <50ms for 10,000 entries
-- **Memory overhead**: <100MB for 10,000 entries
+| Metric | Performance |
+|--------|-------------|
+| Code Search | 7-13ms latency |
+| Indexing | 2.45 files/sec |
+| Parsing | 1-6ms per file (Rust) |
+| Embedding | <50ms per text |
+| Tests | 68/68 passing ✅ |
 
 ## Project Structure
 
 ```
 claude-memory-server/
 ├── src/
-│   ├── mcp_server.py      # MCP server (main entry point)
-│   ├── database.py        # Vector database operations
-│   ├── embeddings.py      # Local embedding generation
-│   ├── memory.py          # Memory extraction & management
-│   ├── doc_ingestion.py   # Documentation ingestion
-│   ├── router.py          # Smart query routing
-│   └── schema.sql         # Database schema
-├── tests/                 # Unit tests
-├── docs/                  # Documentation
-├── setup.sh              # Installation script
-└── README.md             # This file
+│   ├── core/              # Main server logic
+│   │   ├── server.py      # MemoryRAGServer with all tools
+│   │   ├── models.py      # Pydantic data models
+│   │   └── exceptions.py  # Custom exceptions
+│   ├── store/             # Vector storage
+│   │   ├── qdrant_store.py    # Qdrant (primary)
+│   │   └── sqlite_store.py    # SQLite (fallback)
+│   ├── embeddings/        # Embedding generation & cache
+│   ├── memory/            # Code indexing
+│   │   ├── incremental_indexer.py  # Main indexer
+│   │   └── file_watcher.py         # Auto-reindexing
+│   ├── cli/               # CLI commands (index, watch)
+│   ├── mcp_server.py      # MCP entry point
+│   └── config.py          # Configuration
+├── rust_core/             # Rust parsing module
+│   └── src/parsing.rs     # Tree-sitter parsing
+├── tests/                 # 68 tests (all passing)
+├── docker-compose.yml     # Qdrant setup
+└── README.md              # This file
+```
+
+## Documentation
+
+📖 **New to this project?** Start here:
+1. **[START_HERE.md](START_HERE.md)** - Quick orientation guide
+2. **[PROJECT_STATUS.md](PROJECT_STATUS.md)** - Comprehensive current state
+3. **[EXECUTABLE_DEVELOPMENT_CHECKLIST.md](EXECUTABLE_DEVELOPMENT_CHECKLIST.md)** - Task tracking
+
+### Technical Documentation
+- **[PHASE_3_COMPLETION_REPORT.md](PHASE_3_COMPLETION_REPORT.md)** - Code intelligence specs
+- **[MCP_INTEGRATION_COMPLETE.md](MCP_INTEGRATION_COMPLETE.md)** - MCP integration details
+- **[PERFORMANCE_BENCHMARK_REPORT.md](PERFORMANCE_BENCHMARK_REPORT.md)** - Performance testing
+
+### Archived Docs
+- Session summaries in `docs/archive/`
+
+## Configuration
+
+### Environment Variables
+
+Create `.env` file (optional):
+```bash
+# Qdrant
+CLAUDE_RAG_QDRANT_URL=http://localhost:6333
+CLAUDE_RAG_COLLECTION_NAME=memory
+
+# Embeddings
+CLAUDE_RAG_EMBEDDING_MODEL=all-MiniLM-L6-v2
+
+# Features
+CLAUDE_RAG_ENABLE_FILE_WATCHER=true
+CLAUDE_RAG_WATCH_DEBOUNCE_MS=1000
+```
+
+## Testing
+
+```bash
+# Run all tests (68/68 should pass)
+pytest tests/ -v
+
+# With coverage
+pytest tests/ --cov=src --cov-report=term-missing
+
+# Specific test suite
+pytest tests/unit/ -v           # Unit tests
+pytest tests/integration/ -v    # Integration tests
+
+# Code search end-to-end
+python test_code_search.py
 ```
 
 ## Troubleshooting
 
-### Server not connecting
+### Qdrant not connecting
 ```bash
-# Check if server is registered
-claude mcp list
+# Check Qdrant status
+docker-compose ps
+curl http://localhost:6333/health
 
-# Should show: claude-memory-rag: ✅ Connected
+# Restart if needed
+docker-compose restart
+```
 
-# If not, re-run setup
-./setup.sh
+### Rust module errors
+```bash
+# Rebuild Rust module
+cd rust_core
+maturin develop
+cd ..
 ```
 
 ### Import errors
 ```bash
 # Reinstall dependencies
-pip3 install -r requirements.txt
+pip install -r requirements.txt
 ```
 
-### Database errors
+### Code search not working
 ```bash
-# Remove and reinitialize
-rm ~/.claude-rag/memory.db
-python3 -c "from src.database import MemoryDatabase; MemoryDatabase('~/.claude-rag/memory.db').close()"
+# 1. Check Qdrant is running
+curl http://localhost:6333/health
+
+# 2. Re-index codebase
+python -m src.cli index ./src
+
+# 3. Run tests
+python test_code_search.py
 ```
 
-### Ingestion fails
-- Check file permissions on markdown files
-- Ensure files are valid UTF-8
-- Check for very large files (>1MB per file may be slow)
+## Development
 
-## Advanced Usage
-
-### Direct Database Access
+### Running Tests
 ```bash
-sqlite3 ~/.claude-rag/memory.db
-
-# View recent memories
-SELECT category, content, scope, project_name
-FROM memories
-ORDER BY timestamp DESC
-LIMIT 10;
-
-# Count by project
-SELECT project_name, COUNT(*)
-FROM memories
-GROUP BY project_name;
+pytest tests/ -v              # All tests
+pytest tests/unit/ -v         # Unit only
+pytest tests/integration/ -v  # Integration only
 ```
 
-### Backup Your Memories
+### Building Rust Module
 ```bash
-cp ~/.claude-rag/memory.db ~/backups/memory-$(date +%Y%m%d).db
+cd rust_core
+maturin develop --release    # For development
+maturin build --release      # For distribution
+cd ..
 ```
 
-### Reset Everything
-```bash
-rm ~/.claude-rag/memory.db
-# Will be recreated on next use
-```
+### Code Style
+- Python: PEP 8, type hints, docstrings
+- Rust: cargo fmt, clippy
+- All tests must pass before merge
 
 ## Privacy & Security
 
-- ✅ No cloud sync or telemetry
+- ✅ 100% local processing (no cloud sync)
 - ✅ Embeddings generated locally (no external API)
 - ✅ Only Claude API calls go to Anthropic
+- ✅ Vector DB runs locally in Docker
 - ⚠️ Database not encrypted (add SQLCipher if needed)
+
+## Performance Benchmarks
+
+Latest benchmark results:
+- **Files indexed:** 29
+- **Semantic units:** 981
+- **Time:** 11.82 seconds
+- **Success rate:** 100%
+- **Search latency:** 6.3ms average
+- **Throughput:** 2.45 files/sec
+
+See [PERFORMANCE_BENCHMARK_REPORT.md](PERFORMANCE_BENCHMARK_REPORT.md) for details.
 
 ## Requirements
 
-- Python 3.8+
-- ~500MB disk space (for embedding model + data)
-- Claude Code installed
+- **Python:** 3.8+ (tested on 3.13)
+- **Rust:** 1.70+ (for building, not required for running)
+- **Docker:** For Qdrant
+- **Disk:** ~500MB (model + data)
+- **RAM:** ~1GB (model loaded)
+
+## Supported Languages
+
+Code search currently supports:
+- Python (.py)
+- JavaScript (.js, .jsx)
+- TypeScript (.ts, .tsx)
+- Java (.java)
+- Go (.go)
+- Rust (.rs)
+
+More languages can be added via tree-sitter grammars.
 
 ## Contributing
 
-This is a personal tool, but feedback and improvements welcome!
+See [EXECUTABLE_DEVELOPMENT_CHECKLIST.md](EXECUTABLE_DEVELOPMENT_CHECKLIST.md) for development status and roadmap.
+
+### Current Status
+- ✅ Phase 1: Foundation (100% complete)
+- ✅ Phase 2: Security & Context (100% complete)
+- ✅ Phase 3: Code Intelligence (85% complete)
+- ⚠️ Phase 4: Testing & docs (40% complete)
 
 ## License
 
 MIT
 
+## Acknowledgments
 
-**Built with ❤️ for better AI collaboration**
+Built with:
+- [Qdrant](https://qdrant.tech/) - Vector database
+- [tree-sitter](https://tree-sitter.github.io/) - Code parsing
+- [sentence-transformers](https://www.sbert.net/) - Embeddings
+- [MCP](https://modelcontextprotocol.io/) - Model Context Protocol
+
+---
+
+**🚀 Ready to use! Start with [START_HERE.md](START_HERE.md) or run `python -m src.cli index ./src`**

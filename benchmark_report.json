@@ -1,0 +1,111 @@
+{
+  "indexing": {
+    "total_files": 29,
+    "indexed_files": 29,
+    "skipped_files": 0,
+    "failed_files": 0,
+    "total_units": 981,
+    "total_time_sec": 11.83561897277832,
+    "files_per_sec": 2.4502309568007723,
+    "units_per_sec": 82.88539891798476,
+    "avg_time_per_file_ms": 408.12479216476964
+  },
+  "search": {
+    "num_queries": 10,
+    "total_search_time_sec": 0.06270670890808105,
+    "avg_search_time_ms": 6.2706708908081055,
+    "queries": [
+      {
+        "query": "memory storage and retrieval",
+        "results_count": 5,
+        "embed_time_ms": 4.087686538696289,
+        "search_time_ms": 4.6062469482421875,
+        "total_time_ms": 8.693933486938477,
+        "top_score": 0.51268184
+      },
+      {
+        "query": "embedding generation",
+        "results_count": 5,
+        "embed_time_ms": 4.204034805297852,
+        "search_time_ms": 2.4640560150146484,
+        "total_time_ms": 6.6680908203125,
+        "top_score": 0.52334166
+      },
+      {
+        "query": "vector database connection",
+        "results_count": 5,
+        "embed_time_ms": 3.5219192504882812,
+        "search_time_ms": 2.7170181274414062,
+        "total_time_ms": 6.2389373779296875,
+        "top_score": 0.30839777
+      },
+      {
+        "query": "configuration settings",
+        "results_count": 5,
+        "embed_time_ms": 3.4029483795166016,
+        "search_time_ms": 2.228975296020508,
+        "total_time_ms": 5.631923675537109,
+        "top_score": 0.48906824
+      },
+      {
+        "query": "error handling and exceptions",
+        "results_count": 5,
+        "embed_time_ms": 3.491640090942383,
+        "search_time_ms": 2.495288848876953,
+        "total_time_ms": 5.986928939819336,
+        "top_score": 0.41311586
+      },
+      {
+        "query": "file watcher and monitoring",
+        "results_count": 5,
+        "embed_time_ms": 3.602743148803711,
+        "search_time_ms": 2.353191375732422,
+        "total_time_ms": 5.955934524536133,
+        "top_score": 0.67554265
+      },
+      {
+        "query": "parse source code",
+        "results_count": 5,
+        "embed_time_ms": 3.457784652709961,
+        "search_time_ms": 2.4602413177490234,
+        "total_time_ms": 5.918025970458984,
+        "top_score": 0.38376993
+      },
+      {
+        "query": "batch processing",
+        "results_count": 5,
+        "embed_time_ms": 3.4177303314208984,
+        "search_time_ms": 2.331256866455078,
+        "total_time_ms": 5.748987197875977,
+        "top_score": 0.42083177
+      },
+      {
+        "query": "authentication and security",
+        "results_count": 5,
+        "embed_time_ms": 3.8568973541259766,
+        "search_time_ms": 2.254009246826172,
+        "total_time_ms": 6.110906600952148,
+        "top_score": 0.20187801
+      },
+      {
+        "query": "data validation",
+        "results_count": 5,
+        "embed_time_ms": 3.4580230712890625,
+        "search_time_ms": 2.2950172424316406,
+        "total_time_ms": 5.753040313720703,
+        "top_score": 0.42095342
+      }
+    ]
+  },
+  "files": {
+    "by_language": {
+      "unknown": 100
+    },
+    "by_type": {
+      "unknown": 100
+    },
+    "top_files": {
+      "unknown": 100
+    }
+  }
+}

@@ -1,0 +1,417 @@
+2025-11-16 01:35:11,173 - src.embeddings.generator - INFO - Embedding generator initialized with model: all-MiniLM-L6-v2
+2025-11-16 01:35:11,173 - src.memory.incremental_indexer - INFO - Incremental indexer initialized for project: claude-memory-benchmark
+2025-11-16 01:35:11,233 - httpx - INFO - HTTP Request: GET http://localhost:6333 "HTTP/1.1 200 OK"
+2025-11-16 01:35:11,237 - httpx - INFO - HTTP Request: GET http://localhost:6333/collections "HTTP/1.1 200 OK"
+2025-11-16 01:35:11,239 - src.store.qdrant_setup - INFO - Connected to Qdrant at http://localhost:6333
+2025-11-16 01:35:11,242 - httpx - INFO - HTTP Request: GET http://localhost:6333/collections "HTTP/1.1 200 OK"
+2025-11-16 01:35:11,244 - httpx - INFO - HTTP Request: GET http://localhost:6333/collections "HTTP/1.1 200 OK"
+2025-11-16 01:35:11,244 - src.store.qdrant_setup - INFO - Creating collection: benchmark_1763274911
+2025-11-16 01:35:11,297 - httpx - INFO - HTTP Request: PUT http://localhost:6333/collections/benchmark_1763274911 "HTTP/1.1 200 OK"
+2025-11-16 01:35:11,298 - src.store.qdrant_setup - INFO - Collection benchmark_1763274911 created successfully
+2025-11-16 01:35:11,333 - httpx - INFO - HTTP Request: PUT http://localhost:6333/collections/benchmark_1763274911/index?wait=true "HTTP/1.1 200 OK"
+2025-11-16 01:35:11,334 - src.store.qdrant_setup - INFO - Created payload index for: category
+2025-11-16 01:35:11,373 - httpx - INFO - HTTP Request: PUT http://localhost:6333/collections/benchmark_1763274911/index?wait=true "HTTP/1.1 200 OK"
+2025-11-16 01:35:11,373 - src.store.qdrant_setup - INFO - Created payload index for: context_level
+2025-11-16 01:35:11,407 - httpx - INFO - HTTP Request: PUT http://localhost:6333/collections/benchmark_1763274911/index?wait=true "HTTP/1.1 200 OK"
+2025-11-16 01:35:11,408 - src.store.qdrant_setup - INFO - Created payload index for: scope
+2025-11-16 01:35:11,449 - httpx - INFO - HTTP Request: PUT http://localhost:6333/collections/benchmark_1763274911/index?wait=true "HTTP/1.1 200 OK"
+2025-11-16 01:35:11,449 - src.store.qdrant_setup - INFO - Created payload index for: project_name
+2025-11-16 01:35:11,493 - httpx - INFO - HTTP Request: PUT http://localhost:6333/collections/benchmark_1763274911/index?wait=true "HTTP/1.1 200 OK"
+2025-11-16 01:35:11,494 - src.store.qdrant_setup - INFO - Created payload index for: importance
+2025-11-16 01:35:11,532 - httpx - INFO - HTTP Request: PUT http://localhost:6333/collections/benchmark_1763274911/index?wait=true "HTTP/1.1 200 OK"
+2025-11-16 01:35:11,533 - src.store.qdrant_setup - INFO - Created payload index for: tags
+2025-11-16 01:35:11,533 - src.store.qdrant_store - INFO - Qdrant store initialized successfully
+2025-11-16 01:35:11,533 - src.memory.incremental_indexer - INFO - Incremental indexer ready
+2025-11-16 01:35:11,533 - __main__ - INFO - Benchmark initialized
+2025-11-16 01:35:11,533 - __main__ - INFO - 
+============================================================
+2025-11-16 01:35:11,533 - __main__ - INFO - BENCHMARKING: Full Directory Indexing
+2025-11-16 01:35:11,533 - __main__ - INFO - ============================================================
+
+2025-11-16 01:35:11,544 - src.memory.incremental_indexer - INFO - Found 29 files to index in /Users/elliotmilco/Documents/GitHub/claude-memory-server/src
+2025-11-16 01:35:11,544 - src.memory.incremental_indexer - INFO - Indexing [1/29]: config.py
+2025-11-16 01:35:11,555 - src.embeddings.generator - INFO - Loading embedding model: all-MiniLM-L6-v2
+2025-11-16 01:35:11,572 - sentence_transformers.SentenceTransformer - INFO - Use pytorch device_name: mps
+2025-11-16 01:35:11,572 - sentence_transformers.SentenceTransformer - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-11-16 01:35:12,798 - src.embeddings.generator - INFO - Model loaded in 1.24s
+
+============================================================
+CODE INDEXING PERFORMANCE BENCHMARK
+============================================================
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  3.47it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  3.47it/s]
+2025-11-16 01:35:13,103 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/scroll "HTTP/1.1 200 OK"
+2025-11-16 01:35:13,124 - httpx - INFO - HTTP Request: PUT http://localhost:6333/collections/benchmark_1763274911/points?wait=true "HTTP/1.1 200 OK"
+2025-11-16 01:35:13,125 - src.memory.incremental_indexer - INFO - Indexed 23 units from config.py (7.20ms parse)
+2025-11-16 01:35:13,125 - src.memory.incremental_indexer - INFO - Indexing [2/29]: memory.py
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  2.53it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  2.53it/s]
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 12.22it/s]
+2025-11-16 01:35:13,620 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/scroll "HTTP/1.1 200 OK"
+2025-11-16 01:35:13,648 - httpx - INFO - HTTP Request: PUT http://localhost:6333/collections/benchmark_1763274911/points?wait=true "HTTP/1.1 200 OK"
+2025-11-16 01:35:13,649 - src.memory.incremental_indexer - INFO - Indexed 39 units from memory.py (2.69ms parse)
+2025-11-16 01:35:13,649 - src.memory.incremental_indexer - INFO - Indexing [3/29]: doc_ingestion.py
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  2.99it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  2.99it/s]
+2025-11-16 01:35:13,993 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/scroll "HTTP/1.1 200 OK"
+2025-11-16 01:35:14,016 - httpx - INFO - HTTP Request: PUT http://localhost:6333/collections/benchmark_1763274911/points?wait=true "HTTP/1.1 200 OK"
+2025-11-16 01:35:14,017 - src.memory.incremental_indexer - INFO - Indexed 31 units from doc_ingestion.py (2.34ms parse)
+2025-11-16 01:35:14,017 - src.memory.incremental_indexer - INFO - Indexing [4/29]: database.py
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  3.00it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  3.00it/s]
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  3.06it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  3.06it/s]
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 14.40it/s]
+2025-11-16 01:35:14,762 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/scroll "HTTP/1.1 200 OK"
+2025-11-16 01:35:14,804 - httpx - INFO - HTTP Request: PUT http://localhost:6333/collections/benchmark_1763274911/points?wait=true "HTTP/1.1 200 OK"
+2025-11-16 01:35:14,804 - src.memory.incremental_indexer - INFO - Indexed 71 units from database.py (2.65ms parse)
+2025-11-16 01:35:14,805 - src.memory.incremental_indexer - INFO - Indexing [5/29]: __init__.py
+2025-11-16 01:35:14,806 - src.memory.incremental_indexer - INFO - Indexing [6/29]: embeddings.py
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  5.26it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  5.26it/s]
+2025-11-16 01:35:15,009 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/scroll "HTTP/1.1 200 OK"
+2025-11-16 01:35:15,020 - httpx - INFO - HTTP Request: PUT http://localhost:6333/collections/benchmark_1763274911/points?wait=true "HTTP/1.1 200 OK"
+2025-11-16 01:35:15,020 - src.memory.incremental_indexer - INFO - Indexed 19 units from embeddings.py (1.58ms parse)
+2025-11-16 01:35:15,020 - src.memory.incremental_indexer - INFO - Indexing [7/29]: router.py
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  3.51it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  3.51it/s]
+2025-11-16 01:35:15,316 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/scroll "HTTP/1.1 200 OK"
+2025-11-16 01:35:15,333 - httpx - INFO - HTTP Request: PUT http://localhost:6333/collections/benchmark_1763274911/points?wait=true "HTTP/1.1 200 OK"
+2025-11-16 01:35:15,333 - src.memory.incremental_indexer - INFO - Indexed 26 units from router.py (2.16ms parse)
+2025-11-16 01:35:15,333 - src.memory.incremental_indexer - INFO - Indexing [8/29]: mcp_server.py
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  2.99it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  2.99it/s]
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  5.31it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  5.31it/s]
+2025-11-16 01:35:15,871 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/scroll "HTTP/1.1 200 OK"
+2025-11-16 01:35:15,902 - httpx - INFO - HTTP Request: PUT http://localhost:6333/collections/benchmark_1763274911/points?wait=true "HTTP/1.1 200 OK"
+2025-11-16 01:35:15,902 - src.memory.incremental_indexer - INFO - Indexed 51 units from mcp_server.py (3.31ms parse)
+2025-11-16 01:35:15,902 - src.memory.incremental_indexer - INFO - Indexing [9/29]: cache.py
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  2.86it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  2.85it/s]
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  8.22it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  8.21it/s]
+2025-11-16 01:35:16,384 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/scroll "HTTP/1.1 200 OK"
+2025-11-16 01:35:16,400 - httpx - INFO - HTTP Request: PUT http://localhost:6333/collections/benchmark_1763274911/points?wait=true "HTTP/1.1 200 OK"
+2025-11-16 01:35:16,401 - src.memory.incremental_indexer - INFO - Indexed 43 units from cache.py (2.38ms parse)
+2025-11-16 01:35:16,401 - src.memory.incremental_indexer - INFO - Indexing [10/29]: __init__.py
+2025-11-16 01:35:16,404 - src.memory.incremental_indexer - INFO - Indexing [11/29]: generator.py
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  2.96it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  2.96it/s]
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 13.69it/s]
+2025-11-16 01:35:16,827 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/scroll "HTTP/1.1 200 OK"
+2025-11-16 01:35:16,851 - httpx - INFO - HTTP Request: PUT http://localhost:6333/collections/benchmark_1763274911/points?wait=true "HTTP/1.1 200 OK"
+2025-11-16 01:35:16,851 - src.memory.incremental_indexer - INFO - Indexed 39 units from generator.py (2.10ms parse)
+2025-11-16 01:35:16,851 - src.memory.incremental_indexer - INFO - Indexing [12/29]: rust_bridge.py
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  3.37it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  3.37it/s]
+2025-11-16 01:35:17,155 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/scroll "HTTP/1.1 200 OK"
+2025-11-16 01:35:17,167 - httpx - INFO - HTTP Request: PUT http://localhost:6333/collections/benchmark_1763274911/points?wait=true "HTTP/1.1 200 OK"
+2025-11-16 01:35:17,167 - src.memory.incremental_indexer - INFO - Indexed 27 units from rust_bridge.py (1.75ms parse)
+2025-11-16 01:35:17,167 - src.memory.incremental_indexer - INFO - Indexing [13/29]: server.py
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  3.03it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  3.03it/s]
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  4.09it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  4.08it/s]
+2025-11-16 01:35:17,761 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/scroll "HTTP/1.1 200 OK"
+2025-11-16 01:35:17,789 - httpx - INFO - HTTP Request: PUT http://localhost:6333/collections/benchmark_1763274911/points?wait=true "HTTP/1.1 200 OK"
+2025-11-16 01:35:17,790 - src.memory.incremental_indexer - INFO - Indexed 55 units from server.py (2.86ms parse)
+2025-11-16 01:35:17,790 - src.memory.incremental_indexer - INFO - Indexing [14/29]: models.py
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  3.68it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  3.68it/s]
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  3.87it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  3.87it/s]
+2025-11-16 01:35:18,332 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/scroll "HTTP/1.1 200 OK"
+2025-11-16 01:35:18,364 - httpx - INFO - HTTP Request: PUT http://localhost:6333/collections/benchmark_1763274911/points?wait=true "HTTP/1.1 200 OK"
+2025-11-16 01:35:18,364 - src.memory.incremental_indexer - INFO - Indexed 57 units from models.py (2.38ms parse)
+2025-11-16 01:35:18,364 - src.memory.incremental_indexer - INFO - Indexing [15/29]: __init__.py
+2025-11-16 01:35:18,366 - src.memory.incremental_indexer - INFO - Indexing [16/29]: exceptions.py
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  6.03it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  6.03it/s]
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  7.75it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  7.75it/s]
+2025-11-16 01:35:18,675 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/scroll "HTTP/1.1 200 OK"
+2025-11-16 01:35:18,705 - httpx - INFO - HTTP Request: PUT http://localhost:6333/collections/benchmark_1763274911/points?wait=true "HTTP/1.1 200 OK"
+2025-11-16 01:35:18,705 - src.memory.incremental_indexer - INFO - Indexed 55 units from exceptions.py (1.67ms parse)
+2025-11-16 01:35:18,705 - src.memory.incremental_indexer - INFO - Indexing [17/29]: indexing_service.py
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  3.01it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  3.01it/s]
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  8.35it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  8.34it/s]
+2025-11-16 01:35:19,169 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/scroll "HTTP/1.1 200 OK"
+2025-11-16 01:35:19,194 - httpx - INFO - HTTP Request: PUT http://localhost:6333/collections/benchmark_1763274911/points?wait=true "HTTP/1.1 200 OK"
+2025-11-16 01:35:19,195 - src.memory.incremental_indexer - INFO - Indexed 43 units from indexing_service.py (1.94ms parse)
+2025-11-16 01:35:19,195 - src.memory.incremental_indexer - INFO - Indexing [18/29]: __init__.py
+2025-11-16 01:35:19,197 - src.memory.incremental_indexer - INFO - Indexing [19/29]: incremental_indexer.py
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  2.83it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  2.83it/s]
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  7.82it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  7.81it/s]
+2025-11-16 01:35:19,693 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/scroll "HTTP/1.1 200 OK"
+2025-11-16 01:35:19,723 - httpx - INFO - HTTP Request: PUT http://localhost:6333/collections/benchmark_1763274911/points?wait=true "HTTP/1.1 200 OK"
+2025-11-16 01:35:19,723 - src.memory.incremental_indexer - INFO - Indexed 43 units from incremental_indexer.py (2.57ms parse)
+2025-11-16 01:35:19,723 - src.memory.incremental_indexer - INFO - Indexing [20/29]: file_watcher.py
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  2.87it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  2.87it/s]
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  3.09it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  3.09it/s]
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 17.42it/s]
+2025-11-16 01:35:20,474 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/scroll "HTTP/1.1 200 OK"
+2025-11-16 01:35:20,503 - httpx - INFO - HTTP Request: PUT http://localhost:6333/collections/benchmark_1763274911/points?wait=true "HTTP/1.1 200 OK"
+2025-11-16 01:35:20,503 - src.memory.incremental_indexer - INFO - Indexed 70 units from file_watcher.py (2.47ms parse)
+2025-11-16 01:35:20,503 - src.memory.incremental_indexer - INFO - Indexing [21/29]: watch_command.py
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  9.32it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  9.31it/s]
+2025-11-16 01:35:20,621 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/scroll "HTTP/1.1 200 OK"
+2025-11-16 01:35:20,631 - httpx - INFO - HTTP Request: PUT http://localhost:6333/collections/benchmark_1763274911/points?wait=true "HTTP/1.1 200 OK"
+2025-11-16 01:35:20,632 - src.memory.incremental_indexer - INFO - Indexed 11 units from watch_command.py (1.82ms parse)
+2025-11-16 01:35:20,632 - src.memory.incremental_indexer - INFO - Indexing [22/29]: __init__.py
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  6.37it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  6.37it/s]
+2025-11-16 01:35:20,799 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/scroll "HTTP/1.1 200 OK"
+2025-11-16 01:35:20,812 - httpx - INFO - HTTP Request: PUT http://localhost:6333/collections/benchmark_1763274911/points?wait=true "HTTP/1.1 200 OK"
+2025-11-16 01:35:20,813 - src.memory.incremental_indexer - INFO - Indexed 16 units from __init__.py (1.87ms parse)
+2025-11-16 01:35:20,813 - src.memory.incremental_indexer - INFO - Indexing [23/29]: index_command.py
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  9.37it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  9.36it/s]
+2025-11-16 01:35:20,930 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/scroll "HTTP/1.1 200 OK"
+2025-11-16 01:35:20,940 - httpx - INFO - HTTP Request: PUT http://localhost:6333/collections/benchmark_1763274911/points?wait=true "HTTP/1.1 200 OK"
+2025-11-16 01:35:20,940 - src.memory.incremental_indexer - INFO - Indexed 11 units from index_command.py (2.11ms parse)
+2025-11-16 01:35:20,940 - src.memory.incremental_indexer - INFO - Indexing [24/29]: qdrant_store.py
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  3.05it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  3.05it/s]
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  3.64it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  3.64it/s]
+2025-11-16 01:35:21,556 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/scroll "HTTP/1.1 200 OK"
+2025-11-16 01:35:21,594 - httpx - INFO - HTTP Request: PUT http://localhost:6333/collections/benchmark_1763274911/points?wait=true "HTTP/1.1 200 OK"
+2025-11-16 01:35:21,594 - src.memory.incremental_indexer - INFO - Indexed 59 units from qdrant_store.py (2.90ms parse)
+2025-11-16 01:35:21,594 - src.memory.incremental_indexer - INFO - Indexing [25/29]: __init__.py
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 21.13it/s]
+2025-11-16 01:35:21,651 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/scroll "HTTP/1.1 200 OK"
+2025-11-16 01:35:21,657 - httpx - INFO - HTTP Request: PUT http://localhost:6333/collections/benchmark_1763274911/points?wait=true "HTTP/1.1 200 OK"
+2025-11-16 01:35:21,658 - src.memory.incremental_indexer - INFO - Indexed 4 units from __init__.py (1.70ms parse)
+2025-11-16 01:35:21,658 - src.memory.incremental_indexer - INFO - Indexing [26/29]: sqlite_store.py
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  3.11it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  3.11it/s]
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  4.10it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  4.10it/s]
+2025-11-16 01:35:22,238 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/scroll "HTTP/1.1 200 OK"
+2025-11-16 01:35:22,267 - httpx - INFO - HTTP Request: PUT http://localhost:6333/collections/benchmark_1763274911/points?wait=true "HTTP/1.1 200 OK"
+2025-11-16 01:35:22,267 - src.memory.incremental_indexer - INFO - Indexed 55 units from sqlite_store.py (2.76ms parse)
+2025-11-16 01:35:22,267 - src.memory.incremental_indexer - INFO - Indexing [27/29]: readonly_wrapper.py
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  4.69it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  4.69it/s]
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  4.99it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  4.99it/s]
+2025-11-16 01:35:22,695 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/scroll "HTTP/1.1 200 OK"
+2025-11-16 01:35:22,723 - httpx - INFO - HTTP Request: PUT http://localhost:6333/collections/benchmark_1763274911/points?wait=true "HTTP/1.1 200 OK"
+2025-11-16 01:35:22,724 - src.memory.incremental_indexer - INFO - Indexed 51 units from readonly_wrapper.py (1.81ms parse)
+2025-11-16 01:35:22,724 - src.memory.incremental_indexer - INFO - Indexing [28/29]: qdrant_setup.py
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  3.07it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  3.06it/s]
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 26.61it/s]
+2025-11-16 01:35:23,098 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/scroll "HTTP/1.1 200 OK"
+2025-11-16 01:35:23,112 - httpx - INFO - HTTP Request: PUT http://localhost:6333/collections/benchmark_1763274911/points?wait=true "HTTP/1.1 200 OK"
+2025-11-16 01:35:23,112 - src.memory.incremental_indexer - INFO - Indexed 35 units from qdrant_setup.py (2.18ms parse)
+2025-11-16 01:35:23,112 - src.memory.incremental_indexer - INFO - Indexing [29/29]: base.py
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  4.58it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  4.58it/s]
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  6.79it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  6.78it/s]
+2025-11-16 01:35:23,491 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/scroll "HTTP/1.1 200 OK"
+2025-11-16 01:35:23,515 - httpx - INFO - HTTP Request: PUT http://localhost:6333/collections/benchmark_1763274911/points?wait=true "HTTP/1.1 200 OK"
+2025-11-16 01:35:23,515 - src.memory.incremental_indexer - INFO - Indexed 47 units from base.py (1.78ms parse)
+2025-11-16 01:35:23,515 - src.memory.incremental_indexer - INFO - Directory indexing complete: 29 files, 981 units indexed
+2025-11-16 01:35:23,515 - __main__ - INFO - 
+============================================================
+2025-11-16 01:35:23,515 - __main__ - INFO - BENCHMARKING: Semantic Search
+2025-11-16 01:35:23,515 - __main__ - INFO - ============================================================
+
+
+============================================================
+INDEXING BENCHMARK RESULTS
+============================================================
+Total files found:      29
+Files indexed:          29
+Files skipped:          0
+Files failed:           0
+Semantic units:         981
+Total time:             11.98s
+Throughput:             2.42 files/sec
+                        81.87 units/sec
+Avg per file:           413.17ms
+============================================================
+
+
+Query: 'memory storage and retrieval'
+------------------------------------------------------------
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 331.02it/s]
+2025-11-16 01:35:23,524 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/query "HTTP/1.1 200 OK"
+Found 5 results in 9.70ms
+  (Embed: 4.00ms, Search: 5.70ms)
+
+  1. unknown (unknown) - Score: 0.5127
+     unknown:0
+  2. unknown (unknown) - Score: 0.5127
+     unknown:0
+  3. unknown (unknown) - Score: 0.5127
+     unknown:0
+
+
+Query: 'embedding generation'
+------------------------------------------------------------
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 327.32it/s]
+2025-11-16 01:35:23,532 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/query "HTTP/1.1 200 OK"
+Found 5 results in 6.99ms
+  (Embed: 3.89ms, Search: 3.10ms)
+
+  1. unknown (unknown) - Score: 0.5233
+     unknown:0
+  2. unknown (unknown) - Score: 0.5233
+     unknown:0
+  3. unknown (unknown) - Score: 0.5233
+     unknown:0
+
+
+Query: 'vector database connection'
+------------------------------------------------------------
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 373.13it/s]
+2025-11-16 01:35:23,539 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/query "HTTP/1.1 200 OK"
+2025-11-16 01:35:23,540 - src.store.qdrant_store - WARNING - Failed to parse search result: 1 validation error for MemoryUnit
+content
+  String should have at most 10000 characters [type=string_too_long, input_value='File: src/store/sqlite_s...ta=metadata,\n        )', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_too_long
+2025-11-16 01:35:23,540 - src.store.qdrant_store - WARNING - Failed to parse search result: 1 validation error for MemoryUnit
+content
+  String should have at most 10000 characters [type=string_too_long, input_value='File: src/store/sqlite_s...ta=metadata,\n        )', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_too_long
+2025-11-16 01:35:23,540 - src.store.qdrant_store - WARNING - Failed to parse search result: 1 validation error for MemoryUnit
+content
+  String should have at most 10000 characters [type=string_too_long, input_value='File: src/store/sqlite_s...ta=metadata,\n        )', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_too_long
+2025-11-16 01:35:23,540 - src.store.qdrant_store - WARNING - Failed to parse search result: 1 validation error for MemoryUnit
+content
+  String should have at most 10000 characters [type=string_too_long, input_value='File: src/database.py:17...)\n        return False', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_too_long
+2025-11-16 01:35:23,540 - src.store.qdrant_store - WARNING - Failed to parse search result: 1 validation error for MemoryUnit
+content
+  String should have at most 10000 characters [type=string_too_long, input_value='File: src/database.py:17...)\n        return False', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_too_long
+Found 0 results in 7.78ms
+  (Embed: 3.44ms, Search: 4.35ms)
+
+
+
+Query: 'configuration settings'
+------------------------------------------------------------
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 383.32it/s]
+2025-11-16 01:35:23,547 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/query "HTTP/1.1 200 OK"
+Found 5 results in 7.06ms
+  (Embed: 3.35ms, Search: 3.71ms)
+
+  1. unknown (unknown) - Score: 0.4891
+     unknown:0
+  2. unknown (unknown) - Score: 0.4891
+     unknown:0
+  3. unknown (unknown) - Score: 0.4891
+     unknown:0
+
+
+Query: 'error handling and exceptions'
+------------------------------------------------------------
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 371.87it/s]
+2025-11-16 01:35:23,554 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/query "HTTP/1.1 200 OK"
+Found 5 results in 6.96ms
+  (Embed: 3.47ms, Search: 3.48ms)
+
+  1. unknown (unknown) - Score: 0.4131
+     unknown:0
+  2. unknown (unknown) - Score: 0.4131
+     unknown:0
+  3. unknown (unknown) - Score: 0.4131
+     unknown:0
+
+
+Query: 'file watcher and monitoring'
+------------------------------------------------------------
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 368.34it/s]
+2025-11-16 01:35:23,561 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/query "HTTP/1.1 200 OK"
+Found 5 results in 6.97ms
+  (Embed: 3.47ms, Search: 3.50ms)
+
+  1. unknown (unknown) - Score: 0.6755
+     unknown:0
+  2. unknown (unknown) - Score: 0.6755
+     unknown:0
+  3. unknown (unknown) - Score: 0.6755
+     unknown:0
+
+
+Query: 'parse source code'
+------------------------------------------------------------
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 380.64it/s]
+2025-11-16 01:35:23,567 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/query "HTTP/1.1 200 OK"
+Found 5 results in 6.35ms
+  (Embed: 3.38ms, Search: 2.96ms)
+
+  1. unknown (unknown) - Score: 0.3838
+     unknown:0
+  2. unknown (unknown) - Score: 0.3838
+     unknown:0
+  3. unknown (unknown) - Score: 0.3838
+     unknown:0
+
+
+Query: 'batch processing'
+------------------------------------------------------------
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 395.58it/s]
+2025-11-16 01:35:23,573 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/query "HTTP/1.1 200 OK"
+Found 5 results in 6.23ms
+  (Embed: 3.25ms, Search: 2.98ms)
+
+  1. unknown (unknown) - Score: 0.4208
+     unknown:0
+  2. unknown (unknown) - Score: 0.4208
+     unknown:0
+  3. unknown (unknown) - Score: 0.4208
+     unknown:0
+
+
+Query: 'authentication and security'
+------------------------------------------------------------
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 339.10it/s]
+2025-11-16 01:35:23,580 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/query "HTTP/1.1 200 OK"
+Found 5 results in 6.49ms
+  (Embed: 3.70ms, Search: 2.79ms)
+
+  1. unknown (unknown) - Score: 0.2019
+     unknown:0
+  2. unknown (unknown) - Score: 0.2019
+     unknown:0
+  3. unknown (unknown) - Score: 0.2019
+     unknown:0
+
+
+Query: 'data validation'
+------------------------------------------------------------
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 389.41it/s]
+2025-11-16 01:35:23,586 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/query "HTTP/1.1 200 OK"
+2025-11-16 01:35:23,586 - __main__ - INFO - 
+============================================================
+2025-11-16 01:35:23,586 - __main__ - INFO - ANALYZING: Indexed Code
+2025-11-16 01:35:23,586 - __main__ - INFO - ============================================================
+
+2025-11-16 01:35:23,590 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/benchmark_1763274911/points/query "HTTP/1.1 200 OK"
+2025-11-16 01:35:23,592 - src.store.qdrant_store - WARNING - Failed to parse search result: 1 validation error for MemoryUnit
+content
+  String should have at most 10000 characters [type=string_too_long, input_value='File: src/database.py:17...)\n        return False', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_too_long
+2025-11-16 01:35:23,592 - src.store.qdrant_store - WARNING - Failed to parse search result: 1 validation error for MemoryUnit
+content
+  String should have at most 10000 characters [type=string_too_long, input_value='File: src/database.py:17...)\n        return False', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_too_long
+2025-11-16 01:35:23,593 - __main__ - INFO - Benchmark report saved to benchmark_report.json
+2025-11-16 01:35:23,593 - src.store.qdrant_store - INFO - Qdrant store closed
+2025-11-16 01:35:23,593 - src.embeddings.generator - INFO - Embedding generator closed
+2025-11-16 01:35:23,593 - src.memory.incremental_indexer - INFO - Incremental indexer closed
+Found 5 results in 6.04ms
+  (Embed: 3.30ms, Search: 2.73ms)
+
+  1. unknown (unknown) - Score: 0.4210
+     unknown:0
+  2. unknown (unknown) - Score: 0.4210
+     unknown:0
+  3. unknown (unknown) - Score: 0.4210
+     unknown:0
+
+
+============================================================
+SEARCH BENCHMARK RESULTS
+============================================================
+Total queries:          10
+Total time:             0.071s
+Avg per query:          7.06ms
+============================================================
+
+Code Distribution:
+
+By Language:
+  unknown: 98
+
+By Type:
+  unknown: 98
+
+Top 10 Files by Unit Count:
+  unknown: 98
+
+
+============================================================
+BENCHMARK COMPLETE
+============================================================
+
+Detailed results saved to: benchmark_report.json
+

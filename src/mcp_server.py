@@ -226,6 +226,68 @@ class MemoryRAGServer:
             "count": len(results)
         }
 
+    async def search_code(
+        self,
+        query: str,
+        project_name: Optional[str] = None,
+        limit: int = 5,
+        file_pattern: Optional[str] = None,
+        language: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Search indexed code semantically.
+
+        This uses the new architecture from src/core/server.py
+        """
+        from src.core.server import MemoryRAGServer as NewServer
+        from src.config import get_config
+
+        # Create new server instance
+        config = get_config()
+        new_server = NewServer(config)
+        await new_server.initialize()
+
+        try:
+            result = await new_server.search_code(
+                query=query,
+                project_name=project_name,
+                limit=limit,
+                file_pattern=file_pattern,
+                language=language,
+            )
+            return result
+        finally:
+            await new_server.close()
+
+    async def index_codebase(
+        self,
+        directory_path: str,
+        project_name: Optional[str] = None,
+        recursive: bool = True,
+    ) -> Dict[str, Any]:
+        """
+        Index a codebase directory for semantic code search.
+
+        This uses the new architecture from src/core/server.py
+        """
+        from src.core.server import MemoryRAGServer as NewServer
+        from src.config import get_config
+
+        # Create new server instance
+        config = get_config()
+        new_server = NewServer(config)
+        await new_server.initialize()
+
+        try:
+            result = await new_server.index_codebase(
+                directory_path=directory_path,
+                project_name=project_name,
+                recursive=recursive,
+            )
+            return result
+        finally:
+            await new_server.close()
+
 
 # Initialize MCP server
 app = Server("claude-memory-rag")
@@ -371,6 +433,58 @@ async def list_tools() -> List[Tool]:
                     }
                 }
             }
+        ),
+        Tool(
+            name="search_code",
+            description="Search indexed code semantically. Searches through functions and classes to find relevant code snippets.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Search query (e.g., 'authentication logic', 'database connection')"
+                    },
+                    "project_name": {
+                        "type": "string",
+                        "description": "Optional project name filter (uses current project if not specified)"
+                    },
+                    "limit": {
+                        "type": "number",
+                        "description": "Maximum number of results (default: 5)"
+                    },
+                    "file_pattern": {
+                        "type": "string",
+                        "description": "Optional file path pattern filter (e.g., '*/auth/*')"
+                    },
+                    "language": {
+                        "type": "string",
+                        "description": "Optional language filter (e.g., 'python', 'javascript')"
+                    }
+                },
+                "required": ["query"]
+            }
+        ),
+        Tool(
+            name="index_codebase",
+            description="Index a codebase directory for semantic code search. Parses all supported source files and extracts functions/classes.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "directory_path": {
+                        "type": "string",
+                        "description": "Path to directory to index"
+                    },
+                    "project_name": {
+                        "type": "string",
+                        "description": "Project name for scoping (uses directory name if not specified)"
+                    },
+                    "recursive": {
+                        "type": "boolean",
+                        "description": "Whether to recursively index subdirectories (default: true)"
+                    }
+                },
+                "required": ["directory_path"]
+            }
         )
     ]
 
@@ -486,6 +600,56 @@ async def call_tool(name: str, arguments: Any) -> List[TextContent]:
 
             output = f"Current Context ({context['count']} entries):\n\n"
             output += context['formatted']
+
+            return [TextContent(type="text", text=output)]
+
+        elif name == "search_code":
+            results = await memory_rag_server.search_code(
+                query=arguments["query"],
+                project_name=arguments.get("project_name"),
+                limit=arguments.get("limit", 5),
+                file_pattern=arguments.get("file_pattern"),
+                language=arguments.get("language")
+            )
+
+            if not results["results"]:
+                return [TextContent(type="text", text="No code found matching your query.")]
+
+            output = f"✅ Code Search Results ({results['total_found']} found)\n\n"
+            output += f"Query: '{results['query']}'\n"
+            output += f"Project: {results['project_name']}\n"
+            output += f"Search time: {results['query_time_ms']:.2f}ms\n\n"
+
+            for i, result in enumerate(results["results"], 1):
+                output += f"## {i}. {result['unit_name']} ({result['unit_type']})\n\n"
+                output += f"**File:** `{result['file_path']}`:{result['start_line']}-{result['end_line']}\n"
+                output += f"**Language:** {result['language']}\n"
+                output += f"**Relevance:** {result['relevance_score']:.2%}\n\n"
+                if result['signature']:
+                    output += f"**Signature:**\n```{result['language']}\n{result['signature']}\n```\n\n"
+                output += f"**Code:**\n```{result['language']}\n{result['code']}\n```\n\n"
+                output += "---\n\n"
+
+            return [TextContent(type="text", text=output)]
+
+        elif name == "index_codebase":
+            result = await memory_rag_server.index_codebase(
+                directory_path=arguments["directory_path"],
+                project_name=arguments.get("project_name"),
+                recursive=arguments.get("recursive", True)
+            )
+
+            output = f"✅ Codebase Indexing Complete\n\n"
+            output += f"Project: {result['project_name']}\n"
+            output += f"Directory: {result['directory']}\n"
+            output += f"Files indexed: {result['files_indexed']}\n"
+            output += f"Semantic units: {result['units_indexed']}\n"
+            output += f"Total time: {result['total_time_s']:.2f}s\n"
+
+            if result.get('languages'):
+                output += f"\nLanguages:\n"
+                for lang, count in result['languages'].items():
+                    output += f"  - {lang}: {count} files\n"
 
             return [TextContent(type="text", text=output)]
 
