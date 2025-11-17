@@ -9,7 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - 2025-11-17
 
-<<<<<<< HEAD
 - **UX-025: Memory Lifecycle Management** - Intelligent storage optimization with automatic memory health monitoring
   - **StorageOptimizer** (`src/memory/storage_optimizer.py`, 421 lines) - Analyzes memory storage and identifies optimization opportunities
     - Detects large memories (>10KB) for potential compression with 30-50% estimated savings
@@ -42,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Impact:** Prevents long-term storage bloat, automatically maintains memory health, provides actionable optimization recommendations with estimated savings
   - **Integrates with:** FEAT-026 (memory pruning), FEAT-032 (lifecycle states), FEAT-036 (project archival)
   - **Status:** Complete - Storage optimizer with CLI and comprehensive tests
-=======
+
 - **UX-022: Configuration File Support ✅ COMPLETE** - Added parsing for JSON, YAML, and TOML configuration files
   - Created `rust_core/src/config_parsing.rs` (192 lines) - Native Rust parsers for config files
     - `parse_json()` - Extract top-level keys from JSON files using serde_json
@@ -130,10 +129,6 @@ filtered_files = manager.apply_patterns(all_files)
 ```
 
 **Impact**: Provides actionable optimization suggestions helping users improve indexing performance by 1.5-3x through intelligent exclusion of non-essential files
->>>>>>> origin/main
-
-### Added - 2025-11-17
->>>>>>> origin/main
 
 - **WORKFLOW: Git worktree support for parallel agent development** - Configured repository to use git worktrees for concurrent feature development
   - Created `.worktrees/` directory for isolated feature branches
