@@ -98,6 +98,11 @@ class ServerConfig(BaseSettings):
     # Cross-project learning (FEAT-030)
     enable_cross_project_search: bool = True  # Allow searching across projects
     cross_project_default_mode: str = "current"  # "current" or "all"
+
+    # Graceful degradation (UX-012)
+    allow_qdrant_fallback: bool = True  # Fall back to SQLite if Qdrant unavailable
+    allow_rust_fallback: bool = True  # Fall back to Python parser if Rust unavailable
+    warn_on_degradation: bool = True  # Show warnings when running in degraded mode
     cross_project_opt_in_file: str = "~/.claude-rag/cross_project_consent.json"
 
     model_config = SettingsConfigDict(
