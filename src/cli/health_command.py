@@ -29,6 +29,7 @@ class HealthCommand:
         self.errors = []
         self.warnings = []
         self.recommendations = []
+        self.storage_backend = None
 
     def print_section(self, title: str):
         """Print section header."""
@@ -199,13 +200,193 @@ class HealthCommand:
             store = create_memory_store(config=config)
             await store.initialize()
 
-            # Try to get project stats
-            # This is a simplified check - actual implementation would query the store
-            projects = []  # Would need to implement project listing
+            # Get all projects
+            projects = await store.get_all_projects()
 
-            return True, f"{len(projects)} projects indexed", projects
+            # Get stats for each project
+            project_stats = []
+            for project_name in projects:
+                try:
+                    stats = await store.get_project_stats(project_name)
+                    project_stats.append(stats)
+                except:
+                    pass
+
+            await store.close()
+
+            return True, f"{len(projects)} projects indexed", project_stats
         except Exception as e:
             return False, f"Error checking: {str(e)[:50]}", []
+
+    async def check_qdrant_latency(self) -> Tuple[bool, str, Optional[float]]:
+        """Check Qdrant query latency."""
+        try:
+            from src.store import create_memory_store
+            from src.config import get_config
+            import time
+
+            config = get_config()
+
+            # Only check if using Qdrant
+            if config.storage_backend != "qdrant":
+                return True, "N/A (using SQLite)", None
+
+            store = create_memory_store(config=config)
+            await store.initialize()
+
+            # Perform a simple query and time it
+            start = time.time()
+            try:
+                # Try a simple retrieval or count operation
+                if hasattr(store, 'client'):
+                    # For Qdrant, do a simple collection check
+                    store.client.get_collection(store.collection_name)
+            except:
+                pass
+            latency_ms = (time.time() - start) * 1000
+
+            await store.close()
+
+            if latency_ms < 20:
+                return True, f"{latency_ms:.1f}ms (excellent)", latency_ms
+            elif latency_ms < 50:
+                return True, f"{latency_ms:.1f}ms (good)", latency_ms
+            else:
+                return False, f"{latency_ms:.1f}ms (slow - check Docker resources)", latency_ms
+
+        except Exception as e:
+            return False, f"Could not measure: {str(e)[:40]}", None
+
+    async def check_cache_hit_rate(self) -> Tuple[bool, str, Optional[float]]:
+        """Check embedding cache hit rate."""
+        try:
+            from src.embeddings.cache import EmbeddingCache
+            from src.config import get_config
+
+            config = get_config()
+            cache = EmbeddingCache(config.cache_dir_expanded)
+
+            stats = cache.get_stats()
+            total = stats.get("total_queries", 0)
+            hits = stats.get("cache_hits", 0)
+
+            if total == 0:
+                return True, "No queries yet", None
+
+            hit_rate = (hits / total) * 100
+
+            if hit_rate >= 70:
+                return True, f"{hit_rate:.1f}% ({hits}/{total} hits)", hit_rate
+            else:
+                return False, f"{hit_rate:.1f}% (low - consider re-indexing)", hit_rate
+
+        except Exception as e:
+            return False, f"Could not check: {str(e)[:40]}", None
+
+    async def check_stale_projects(self) -> Tuple[bool, str, List[Dict[str, Any]]]:
+        """Check for projects not indexed recently."""
+        try:
+            from src.store import create_memory_store
+            from src.config import get_config
+            from datetime import datetime, timedelta, UTC
+
+            config = get_config()
+            store = create_memory_store(config=config)
+            await store.initialize()
+
+            # Get all projects with stats
+            projects = await store.get_all_projects()
+            stale_projects = []
+
+            threshold = datetime.now(UTC) - timedelta(days=90)
+
+            for project_name in projects:
+                try:
+                    stats = await store.get_project_stats(project_name)
+                    last_updated = stats.get("last_updated")
+
+                    if last_updated:
+                        if isinstance(last_updated, str):
+                            last_updated = datetime.fromisoformat(last_updated.replace('Z', '+00:00'))
+
+                        # Make timezone-aware if needed
+                        if last_updated.tzinfo is None:
+                            last_updated = last_updated.replace(tzinfo=UTC)
+
+                        if last_updated < threshold:
+                            days_old = (datetime.now(UTC) - last_updated).days
+                            stale_projects.append({
+                                "name": project_name,
+                                "days_old": days_old,
+                                "last_updated": last_updated
+                            })
+                except:
+                    pass
+
+            await store.close()
+
+            if not stale_projects:
+                return True, "All projects current", []
+            else:
+                return False, f"{len(stale_projects)} projects not indexed in 90+ days", stale_projects
+
+        except Exception as e:
+            return False, f"Could not check: {str(e)[:40]}", []
+
+    async def get_project_stats_summary(self) -> Dict[str, Any]:
+        """Get overall project statistics summary."""
+        try:
+            from src.store import create_memory_store
+            from src.config import get_config
+            from pathlib import Path
+
+            config = get_config()
+            store = create_memory_store(config=config)
+            await store.initialize()
+
+            projects = await store.get_all_projects()
+            total_memories = 0
+            total_files = 0
+
+            for project_name in projects:
+                try:
+                    stats = await store.get_project_stats(project_name)
+                    total_memories += stats.get("total_memories", 0)
+                    total_files += stats.get("total_files", 0)
+                except:
+                    pass
+
+            await store.close()
+
+            # Get index size
+            index_size = 0
+            if config.storage_backend == "sqlite":
+                db_path = config.sqlite_path_expanded
+                if db_path.exists():
+                    index_size = db_path.stat().st_size
+
+            # Get cache size
+            cache_dir = config.cache_dir_expanded
+            if cache_dir.exists():
+                for file in cache_dir.rglob("*"):
+                    if file.is_file():
+                        index_size += file.stat().st_size
+
+            return {
+                "total_projects": len(projects),
+                "total_memories": total_memories,
+                "total_files": total_files,
+                "index_size_bytes": index_size,
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting project stats: {e}")
+            return {
+                "total_projects": 0,
+                "total_memories": 0,
+                "total_files": 0,
+                "index_size_bytes": 0,
+            }
 
     async def run_checks(self):
         """Run all health checks."""
@@ -250,12 +431,11 @@ class HealthCommand:
         self.print_section("Storage Backend")
 
         success, backend, msg = await self.check_storage_backend()
+        # Store backend for later use
+        self.storage_backend = backend if success else None
+
         if success:
             self.print_check(backend, True, msg)
-            if backend == "SQLite":
-                self.recommendations.append(
-                    "Consider upgrading to Qdrant for better performance: python setup.py --upgrade-to-qdrant"
-                )
         else:
             self.print_check(backend, False, msg)
             self.errors.append(f"{backend} not accessible")
@@ -275,6 +455,74 @@ class HealthCommand:
             self.print_check("Embedding cache", True, msg)
         else:
             self.print_warning("Embedding cache", msg)
+
+        # Performance Metrics
+        self.print_section("Performance Metrics")
+
+        success, msg, latency = await self.check_qdrant_latency()
+        if success:
+            self.print_check("Qdrant latency", True, msg)
+        else:
+            self.print_warning("Qdrant latency", msg)
+            if latency and latency >= 50:
+                self.warnings.append(f"Slow Qdrant latency ({latency:.1f}ms)")
+                self.recommendations.append(
+                    "Increase Docker resources (CPU/RAM) or check network connectivity"
+                )
+
+        success, msg, hit_rate = await self.check_cache_hit_rate()
+        if success:
+            self.print_check("Cache hit rate", True, msg)
+        else:
+            self.print_warning("Cache hit rate", msg)
+            if hit_rate is not None and hit_rate < 70:
+                self.warnings.append(f"Low cache hit rate ({hit_rate:.1f}%)")
+                self.recommendations.append(
+                    "Consider re-indexing projects to improve cache performance"
+                )
+
+        # Project Health
+        self.print_section("Project Health")
+
+        success, msg, stale = await self.check_stale_projects()
+        if success:
+            self.print_check("Stale projects", True, msg)
+        else:
+            self.print_warning("Stale projects", msg)
+            if stale:
+                self.warnings.append(f"{len(stale)} stale projects (90+ days old)")
+                for project in stale[:3]:  # Show up to 3
+                    project_name = project['name']
+                    days = project['days_old']
+                    self.recommendations.append(
+                        f"Re-index '{project_name}' ({days} days old): python -m src.cli index <path>"
+                    )
+
+        # Get project stats summary
+        stats = await self.get_project_stats_summary()
+        if stats['total_projects'] > 0:
+            size_mb = stats['index_size_bytes'] / (1024 * 1024)
+            summary_msg = f"{stats['total_projects']} projects | {stats['total_memories']:,} memories | {size_mb:.1f} MB"
+            self.print_check("Project summary", True, summary_msg)
+
+            # Add smart recommendations based on stats
+            if self.storage_backend == "SQLite" and stats['total_memories'] > 10000:
+                self.recommendations.append(
+                    f"📊 Using SQLite with {stats['total_memories']:,} memories - consider upgrading to Qdrant for better performance"
+                )
+                self.recommendations.append(
+                    "   → Run: docker-compose up -d && python setup.py --upgrade-to-qdrant"
+                )
+
+            if size_mb > 500:
+                self.recommendations.append(
+                    f"💾 Large index size ({size_mb:.0f} MB) - consider archiving old memories"
+                )
+        else:
+            self.print_warning("Project summary", "No projects indexed yet")
+            self.recommendations.append(
+                "🚀 Get started: python -m src.cli index ./your-project --project-name my-project"
+            )
 
     def print_summary(self):
         """Print health check summary."""
