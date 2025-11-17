@@ -13,6 +13,10 @@ pub enum SupportedLanguage {
     Java,
     Go,
     Rust,
+    C,
+    Cpp,
+    CSharp,
+    Sql,
 }
 
 impl SupportedLanguage {
@@ -24,6 +28,10 @@ impl SupportedLanguage {
             "java" => Some(SupportedLanguage::Java),
             "go" => Some(SupportedLanguage::Go),
             "rs" => Some(SupportedLanguage::Rust),
+            "c" => Some(SupportedLanguage::C),
+            "cpp" | "cc" | "cxx" | "hpp" | "h" | "hxx" | "hh" => Some(SupportedLanguage::Cpp),
+            "cs" => Some(SupportedLanguage::CSharp),
+            "sql" => Some(SupportedLanguage::Sql),
             _ => None,
         }
     }
@@ -36,6 +44,10 @@ impl SupportedLanguage {
             SupportedLanguage::Java => tree_sitter_java::LANGUAGE.into(),
             SupportedLanguage::Go => tree_sitter_go::LANGUAGE.into(),
             SupportedLanguage::Rust => tree_sitter_rust::LANGUAGE.into(),
+            SupportedLanguage::C => tree_sitter_cpp::LANGUAGE.into(),
+            SupportedLanguage::Cpp => tree_sitter_cpp::LANGUAGE.into(),
+            SupportedLanguage::CSharp => tree_sitter_c_sharp::LANGUAGE.into(),
+            SupportedLanguage::Sql => tree_sitter_sequel::LANGUAGE.into(),
         }
     }
 
@@ -90,6 +102,26 @@ impl SupportedLanguage {
                   body: (block) @body) @function
                 "#
             }
+            SupportedLanguage::C | SupportedLanguage::Cpp => {
+                r#"
+                (function_definition
+                  declarator: (function_declarator
+                    declarator: (_) @name)
+                  body: (compound_statement) @body) @function
+                "#
+            }
+            SupportedLanguage::CSharp => {
+                r#"
+                (method_declaration
+                  name: (identifier) @name) @function
+                "#
+            }
+            SupportedLanguage::Sql => {
+                // SQL functions and procedures
+                r#"
+                (create_function) @function
+                "#
+            }
         }
     }
 
@@ -137,6 +169,44 @@ impl SupportedLanguage {
                 (struct_item
                   name: (type_identifier) @name
                   body: (field_declaration_list) @body) @class
+                "#
+            }
+            SupportedLanguage::C => {
+                // C only has structs, not classes
+                r#"
+                (struct_specifier
+                  name: (type_identifier) @name
+                  body: (field_declaration_list) @body) @class
+                "#
+            }
+            SupportedLanguage::Cpp => {
+                // C++ has both classes and structs - use alternation to capture both
+                r#"
+                [(class_specifier
+                  name: (type_identifier) @name
+                  body: (field_declaration_list) @body)
+                 (struct_specifier
+                  name: (type_identifier) @name
+                  body: (field_declaration_list) @body)] @class
+                "#
+            }
+            SupportedLanguage::CSharp => {
+                r#"
+                [(class_declaration
+                  name: (identifier) @name)
+                 (interface_declaration
+                  name: (identifier) @name)
+                 (struct_declaration
+                  name: (identifier) @name)] @class
+                "#
+            }
+            SupportedLanguage::Sql => {
+                // SQL tables and views as "class" equivalents
+                r#"
+                [
+                  (create_table) @class
+                  (create_view) @class
+                ]
                 "#
             }
         }
@@ -221,6 +291,10 @@ impl CodeParser {
             SupportedLanguage::Java,
             SupportedLanguage::Go,
             SupportedLanguage::Rust,
+            SupportedLanguage::C,
+            SupportedLanguage::Cpp,
+            SupportedLanguage::CSharp,
+            SupportedLanguage::Sql,
         ] {
             let mut parser = Parser::new();
             parser

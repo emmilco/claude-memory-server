@@ -18,6 +18,15 @@ except ImportError:
     logging.warning("Rust parsing module not available. Using Python fallback parser (10-20x slower).")
     logging.info("For better performance, install Rust and build: cd rust_core && maturin develop")
 
+    # Track degradation
+    from src.core.degradation_warnings import add_degradation_warning
+    add_degradation_warning(
+        component="Rust Parser",
+        message="Rust parser unavailable, using Python fallback",
+        upgrade_path="cd rust_core && maturin develop (see docs/setup.md)",
+        performance_impact="10-20x slower parsing",
+    )
+
     # Import Python fallback parser
     try:
         from src.memory.python_parser import parse_code_file as python_parse_file
@@ -68,6 +77,16 @@ except ImportError:
             ".java": "java",
             ".go": "go",
             ".rs": "rust",
+            ".c": "c",
+            ".cpp": "cpp",
+            ".cc": "cpp",
+            ".cxx": "cpp",
+            ".hpp": "cpp",
+            ".h": "cpp",
+            ".hxx": "cpp",
+            ".hh": "cpp",
+            ".cs": "csharp",
+            ".sql": "sql",
         }
         language = language_map.get(ext, "unknown")
 
@@ -197,7 +216,7 @@ class IncrementalIndexer(BaseCodeIndexer):
     """
 
     # Supported file extensions
-    SUPPORTED_EXTENSIONS = {".py", ".js", ".jsx", ".ts", ".tsx", ".java", ".go", ".rs"}
+    SUPPORTED_EXTENSIONS = {".py", ".js", ".jsx", ".ts", ".tsx", ".java", ".go", ".rs", ".c", ".h", ".cpp", ".cc", ".cxx", ".hpp", ".hxx", ".hh", ".cs", ".sql"}
 
     def __init__(
         self,
