@@ -198,6 +198,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Impact:** Enables trust signals, relationship tracking, and verification workflows (P1 strategic priority)
   - **Next:** Phase 2 will add provenance tracker, Phase 3 relationship detector, Phase 4 trust signals
 
+- **FEAT-034: Memory Provenance & Trust Signals - Phases 2-4 (Core Logic)** ✅ COMPLETE
+  - Implemented `src/memory/provenance_tracker.py` - Full provenance tracking system (380 lines)
+    - `capture_provenance()` - Capture provenance metadata for new memories
+    - `update_access()` - Track memory access patterns
+    - `verify_memory()` - User verification with confidence boost
+    - `calculate_confidence()` - Multi-factor confidence scoring (source, age, verification, access frequency, last confirmation)
+    - `get_low_confidence_memories()` - Find memories needing review
+    - `get_unverified_memories()` - Find old unverified memories
+    - Source-based confidence mapping: USER_EXPLICIT=0.9, DOCUMENTATION=0.85, CODE_INDEXED=0.8, etc.
+  - Implemented `src/memory/relationship_detector.py` - Comprehensive relationship detection (435 lines)
+    - `detect_contradictions()` - Detect conflicting preferences/facts with framework-aware logic
+    - `detect_duplicates()` - Find duplicate memories using semantic similarity
+    - `detect_support()` - Find supporting/reinforcing relationships
+    - `detect_supersession()` - Detect when newer memories replace older ones
+    - `scan_for_contradictions()` - Full database contradiction scan
+    - Framework conflict detection: React vs Vue, Express vs FastAPI, npm vs yarn, etc.
+    - Preference extraction with regex patterns and temporal reasoning
+  - Implemented `src/memory/trust_signals.py` - Trust signal generation for search results (355 lines)
+    - `explain_result()` - Generate "Why this result?" explanations with 7+ factors
+    - `calculate_trust_score()` - Weighted scoring: source 30%, verification 25%, access 20%, age 15%, contradictions 10%
+    - `generate_batch_trust_signals()` - Batch processing for search results
+    - Human-readable confidence levels: excellent, good, fair, poor
+    - Rich explanations: semantic match quality, project context, access frequency, verification status, provenance source
+  - **Status:** Core provenance, relationships, and trust signals fully implemented
+  - **Impact:** Transparent search results, conflict detection, trust-building through verification
+  - **Next:** Phase 5 will add CLI verification tool, Phase 6 contradiction alerts, Phase 7 integration tests
+
 - **FEAT-035: Intelligent Memory Consolidation - Phases 1-2 (Core Detection & Merging)** 🏗️ FOUNDATION COMPLETE
   - Created `src/memory/duplicate_detector.py` - Semantic similarity-based duplicate detection (320 lines)
     - Three-tier confidence system: High (>0.95 auto-merge), Medium (0.85-0.95 user review), Low (0.75-0.85 related)
