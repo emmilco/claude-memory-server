@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - 2025-11-17
 
+- **FEAT-023: Hybrid Search (BM25 + Vector) - PARTIAL** - Keyword and semantic search combination
+  - Created `src/search/bm25.py` - BM25 ranking algorithm implementation (282 lines)
+  - Created `src/search/hybrid_search.py` - Hybrid search with 3 fusion methods (385 lines)
+  - Added configuration options to `src/config.py` for hybrid search tuning
+  - Supports weighted combination, RRF, and cascade fusion strategies
+  - **Status:** Core implementation complete, integration and testing pending
+  - **Remaining:** Integrate into search_code(), write tests, documentation
+
 - **FEAT-031: Git-Aware Semantic Search (Phase 1)** - Index and search git commit history
   - Created `src/memory/git_indexer.py` - Extract and index git commits with GitPython
   - Added git storage tables to `src/store/sqlite_store.py` (git_commits, git_file_changes)
