@@ -70,6 +70,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Impact:** More relevant top results, personalized ranking based on usage patterns
   - **Example:** Boost recently accessed, frequently used results
 
+- **FEAT-013: Change Detection ✅ COMPLETE** - Smart diffing for incremental indexing
+  - Created `src/memory/change_detector.py` - Change detection algorithms (376 lines)
+  - Implemented `ChangeDetector` class with comprehensive change tracking:
+    - File-level change detection (added, deleted, modified, renamed)
+    - Semantic unit-level change detection (functions/classes)
+    - Content similarity-based rename detection (80% threshold)
+    - Incremental indexing plan generation
+    - File hash-based quick change detection
+  - `FileChange` dataclass for representing file changes:
+    - Tracks old/new content, units added/modified/deleted
+    - Similarity ratios for renamed files
+  - Change detection methods:
+    - `detect_file_changes()` - Compare old and new file sets
+    - `detect_unit_changes()` - Function/class-level diffing
+    - `get_incremental_index_plan()` - Generate reindexing plan
+  - Smart reindexing recommendations:
+    - Incremental updates for <70% changed files
+    - Full reindex recommendation for massive changes (>70% units changed)
+  - Helper functions: `quick_file_hash()`, `build_file_hash_index()`
+  - Statistics tracking: files compared, units compared, changes detected
+  - Created comprehensive test suite (21 tests): `tests/unit/test_change_detector.py`
+  - **Impact:** Faster incremental indexing by updating only changed code units
+  - **Example:** Modified one function → only reindex that function, not entire file
+
 - **FEAT-031: Git-Aware Semantic Search ✅ COMPLETE** - Index and search git commit history
   - **Phase 1: Basic Commit Indexing (Complete)**
     - Created `src/memory/git_indexer.py` - Extract and index git commits with GitPython

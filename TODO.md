@@ -205,10 +205,16 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Impact:** Semantic search over git commit history, track code evolution
   - **Completed:** 2025-11-17 (commit 102dc46)
 
-- [ ] **FEAT-013**: Change detection
-  - [ ] Smart diffing to re-index only changed functions
-  - [ ] Track function-level changes
+- [x] **FEAT-013**: Change detection ✅ **COMPLETE**
+  - [x] Smart diffing to re-index only changed functions
+  - [x] Track function-level changes
+  - [x] Detect added, modified, deleted, renamed files
+  - [x] Semantic unit-level change detection
+  - [x] Incremental indexing plan generation
+  - [x] File hash-based quick change detection
   - **Impact:** Faster incremental indexing
+  - **Tests:** 21 tests passing
+  - **Completed:** 2025-11-17
 
 - [ ] **FEAT-012**: Docstring extraction
   - [ ] Separate indexing for documentation
