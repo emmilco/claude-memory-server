@@ -259,7 +259,7 @@ class DataImporter:
 
                 # Import memory
                 if not dry_run:
-                    await self.store.store(memory)
+                    await self._store_memory(memory)
 
                 stats["imported"] += 1
 
@@ -308,7 +308,7 @@ class DataImporter:
             if imported.updated_at > existing.updated_at:
                 # Imported is newer, replace
                 if not dry_run:
-                    await self.store.update(imported)
+                    await self._update_memory(imported)
                 logger.debug(f"Conflict resolved: keeping newer (imported) for {imported.id}")
                 return "kept_newer"
             else:
@@ -326,7 +326,7 @@ class DataImporter:
             if not dry_run:
                 imported.id = f"{imported.id}_imported"
                 imported.content = f"{imported.content}\n\n(Imported copy)"
-                await self.store.store(imported)
+                await self._store_memory(imported)
             logger.debug(f"Conflict resolved: keeping both for {imported.id}")
             return "kept_both"
 
@@ -342,7 +342,7 @@ class DataImporter:
                 existing.metadata = {**(existing.metadata or {}), **(imported.metadata or {})}
                 existing.tags = list(set((existing.tags or []) + (imported.tags or [])))
                 existing.updated_at = datetime.now(UTC)
-                await self.store.update(existing)
+                await self._update_memory(existing)
             logger.debug(f"Conflict resolved: merged metadata for {imported.id}")
             return "merged"
 
@@ -412,9 +412,9 @@ class DataImporter:
             updated_at=datetime.fromisoformat(data["updated_at"]),
             last_accessed=datetime.fromisoformat(data["last_accessed"]),
             lifecycle_state=LifecycleState(data.get("lifecycle_state", "ACTIVE")),
-            tags=data.get("tags"),
-            metadata=data.get("metadata"),
-            provenance=provenance,
+            tags=data.get("tags", []),
+            metadata=data.get("metadata", {}),
+            provenance=provenance if provenance else MemoryProvenance(),
         )
 
         return memory
@@ -472,3 +472,59 @@ class DataImporter:
             for chunk in iter(lambda: f.read(4096), b''):
                 sha256.update(chunk)
         return sha256.hexdigest()
+
+    async def _store_memory(self, memory: MemoryUnit) -> None:
+        """Store a memory using the store's API."""
+        await self.store.store(
+            content=memory.content,
+            embedding=memory.embedding,
+            metadata={
+                "id": memory.id,
+                "category": memory.category.value,
+                "context_level": memory.context_level.value,
+                "scope": memory.scope.value,
+                "project_name": memory.project_name,
+                "importance": memory.importance,
+                "embedding_model": memory.embedding_model,
+                "created_at": memory.created_at.isoformat(),
+                "updated_at": memory.updated_at.isoformat(),
+                "last_accessed": memory.last_accessed.isoformat(),
+                "lifecycle_state": memory.lifecycle_state.value,
+                "tags": memory.tags,
+                "metadata": memory.metadata,
+                "provenance": memory.provenance.model_dump() if memory.provenance else None,
+            }
+        )
+
+    async def _update_memory(self, memory: MemoryUnit) -> None:
+        """Update a memory using the store's API."""
+        # For update, we need to use the store's update method if it exists
+        # Otherwise, we delete and re-store
+        try:
+            if hasattr(self.store, 'update'):
+                await self.store.update(
+                    memory_id=memory.id,
+                    content=memory.content,
+                    metadata={
+                        "category": memory.category.value,
+                        "context_level": memory.context_level.value,
+                        "scope": memory.scope.value,
+                        "project_name": memory.project_name,
+                        "importance": memory.importance,
+                        "embedding_model": memory.embedding_model,
+                        "created_at": memory.created_at.isoformat(),
+                        "updated_at": memory.updated_at.isoformat(),
+                        "last_accessed": memory.last_accessed.isoformat(),
+                        "lifecycle_state": memory.lifecycle_state.value,
+                        "tags": memory.tags,
+                        "metadata": memory.metadata,
+                        "provenance": memory.provenance.model_dump() if memory.provenance else None,
+                    }
+                )
+            else:
+                # Fallback: delete and re-store
+                await self.store.delete(memory.id)
+                await self._store_memory(memory)
+        except Exception as e:
+            logger.error(f"Failed to update memory {memory.id}: {e}")
+            raise
