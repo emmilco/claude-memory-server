@@ -11,7 +11,7 @@ def test_config_defaults():
     config = ServerConfig()
     assert config.server_name == "claude-memory-rag"
     assert config.log_level == "INFO"
-    assert config.storage_backend == "qdrant"
+    assert config.storage_backend == "sqlite"  # Default is SQLite for easier setup
     assert config.qdrant_url == "http://localhost:6333"
     assert config.embedding_batch_size == 32
     assert config.read_only_mode is False

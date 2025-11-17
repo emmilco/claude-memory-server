@@ -145,6 +145,7 @@ class BaseCodeIndexer(ABC):
         recursive: bool = True,
         show_progress: bool = True,
         max_concurrent: int = 4,
+        progress_callback: Optional[callable] = None,
     ) -> Dict[str, Any]:
         """
         Index all supported files in a directory.
@@ -154,6 +155,7 @@ class BaseCodeIndexer(ABC):
             recursive: Recursively index subdirectories
             show_progress: Show progress logging
             max_concurrent: Maximum concurrent indexing tasks
+            progress_callback: Optional callback for progress updates
 
         Returns:
             Dict with indexing stats (total_files, total_units, etc.)
@@ -211,10 +213,11 @@ class IncrementalIndexer(BaseCodeIndexer):
             config: Server configuration
             project_name: Project name for scoping (defaults to current directory name)
         """
-        if not RUST_AVAILABLE:
+        if not RUST_AVAILABLE and not PYTHON_PARSER_AVAILABLE:
             raise RuntimeError(
-                "Rust parsing module not available. "
-                "Install with: cd rust_core && maturin develop"
+                "Neither Rust nor Python parser available. "
+                "Install Rust parser: cd rust_core && maturin develop OR "
+                "Install Python parser: pip install tree-sitter tree-sitter-languages"
             )
 
         if config is None:
@@ -325,6 +328,7 @@ class IncrementalIndexer(BaseCodeIndexer):
         recursive: bool = True,
         show_progress: bool = True,
         max_concurrent: int = 4,
+        progress_callback: Optional[callable] = None,
     ) -> Dict[str, Any]:
         """
         Index all supported files in a directory with concurrent processing.
@@ -334,6 +338,8 @@ class IncrementalIndexer(BaseCodeIndexer):
             recursive: Recursively index subdirectories
             show_progress: Show progress logging
             max_concurrent: Maximum concurrent indexing tasks (default 4)
+            progress_callback: Optional callback for progress updates.
+                Called with (current, total, current_file, error_info)
 
         Returns:
             Dict with indexing stats (total_files, total_units, etc.)
@@ -357,27 +363,53 @@ class IncrementalIndexer(BaseCodeIndexer):
 
         logger.info(f"Found {len(files_to_index)} files to index in {dir_path}")
 
+        # Notify callback of total file count
+        if progress_callback:
+            progress_callback(0, len(files_to_index), None, None)
+
         if not files_to_index:
             return {
                 "total_files": 0,
                 "total_units": 0,
                 "skipped_files": 0,
+                "indexed_files": 0,
+                "failed_files": [],
             }
 
         # Use semaphore to limit concurrent indexing and prevent resource exhaustion
         semaphore = asyncio.Semaphore(max_concurrent)
-        
+        completed_count = 0
+
         async def index_with_semaphore(i: int, file_path: Path) -> Tuple[str, Dict[str, Any]]:
             """Index a file with semaphore-controlled concurrency."""
+            nonlocal completed_count
+
             async with semaphore:
+                # Notify callback of current file
+                if progress_callback:
+                    progress_callback(completed_count, len(files_to_index), file_path.name, None)
+
                 if show_progress:
                     logger.info(f"Indexing [{i}/{len(files_to_index)}]: {file_path.name}")
-                
+
                 try:
                     result = await self.index_file(file_path)
+                    completed_count += 1
+
+                    # Update progress on success
+                    if progress_callback:
+                        progress_callback(completed_count, len(files_to_index), file_path.name, None)
+
                     return "success", result
                 except Exception as e:
                     logger.error(f"Failed to index {file_path}: {e}")
+                    completed_count += 1
+
+                    # Update progress with error
+                    error_info = {"file": file_path.name, "error": str(e)}
+                    if progress_callback:
+                        progress_callback(completed_count, len(files_to_index), file_path.name, error_info)
+
                     return "error", {"path": str(file_path), "error": str(e)}
 
         # Index all files concurrently
@@ -385,7 +417,7 @@ class IncrementalIndexer(BaseCodeIndexer):
             index_with_semaphore(i, file_path)
             for i, file_path in enumerate(files_to_index, 1)
         ]
-        
+
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # Process results
@@ -399,9 +431,9 @@ class IncrementalIndexer(BaseCodeIndexer):
                 logger.error(f"Unexpected error during indexing: {result}")
                 failed_files.append(str(result))
                 continue
-            
+
             status, data = result
-            
+
             if status == "error":
                 failed_files.append(data.get("path", "unknown"))
             elif data.get("skipped"):

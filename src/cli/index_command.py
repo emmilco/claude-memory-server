@@ -172,19 +172,50 @@ class IndexCommand:
                         TaskProgressColumn(),
                         TimeRemainingColumn(),
                         console=self.console,
-                    ) as progress:
-                        task = progress.add_task(
-                            f"[cyan]Indexing {path.name}...",
+                    ) as prog:
+                        task = prog.add_task(
+                            f"[cyan]Preparing to index {path.name}...",
                             total=None,  # Will update when we know file count
                         )
+
+                        error_count = 0
+
+                        def progress_callback(current: int, total: int, current_file: Optional[str], error_info: Optional[dict]):
+                            """Update progress bar with indexing status."""
+                            nonlocal error_count
+
+                            # Update total if this is the first callback
+                            if prog.tasks[task].total is None and total > 0:
+                                prog.update(task, total=total)
+
+                            # Update progress
+                            if current_file:
+                                if error_info:
+                                    error_count += 1
+                                    prog.update(
+                                        task,
+                                        completed=current,
+                                        description=f"[cyan]Indexing[/cyan] [yellow]({error_count} errors)[/yellow] - [dim]{current_file}[/dim]",
+                                    )
+                                else:
+                                    desc = f"[cyan]Indexing[/cyan]"
+                                    if error_count > 0:
+                                        desc += f" [yellow]({error_count} errors)[/yellow]"
+                                    desc += f" - [dim]{current_file}[/dim]"
+                                    prog.update(task, completed=current, description=desc)
+                            else:
+                                # Initial callback with total count
+                                prog.update(task, total=total, description=f"[cyan]Indexing {total} files...[/cyan]")
 
                         result = await indexer.index_directory(
                             path,
                             recursive=args.recursive,
                             show_progress=False,  # Use our progress bar instead
+                            progress_callback=progress_callback,
                         )
 
-                        progress.update(task, completed=True)
+                        # Final update
+                        prog.update(task, completed=result['total_files'], description="[green]✓ Indexing complete[/green]")
                 else:
                     result = await indexer.index_directory(
                         path,

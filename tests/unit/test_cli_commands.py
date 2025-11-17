@@ -3,7 +3,7 @@
 import pytest
 import pytest_asyncio
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch, ANY
 from argparse import Namespace
 from src.cli.index_command import IndexCommand
 from src.cli.watch_command import WatchCommand
@@ -98,11 +98,12 @@ class TestClass:
             # Run command
             await index_command.run(args)
 
-            # Verify
+            # Verify - with progress callback
             mock_indexer.index_directory.assert_called_once_with(
                 temp_directory,
                 recursive=True,
-                show_progress=True
+                show_progress=False,
+                progress_callback=ANY
             )
 
     @pytest.mark.asyncio
@@ -133,7 +134,8 @@ class TestClass:
             mock_indexer.index_directory.assert_called_once_with(
                 temp_directory,
                 recursive=False,
-                show_progress=True
+                show_progress=False,
+                progress_callback=ANY
             )
 
     @pytest.mark.asyncio
