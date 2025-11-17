@@ -131,7 +131,6 @@ class StatusCommand:
         """Get list of indexed projects with statistics."""
         from src.config import get_config
         from src.store import create_memory_store
-        from src.core.models import MemoryCategory
 
         config = get_config()
         store = create_memory_store(config=config)
@@ -139,16 +138,25 @@ class StatusCommand:
         try:
             await store.initialize()
 
-            # Query for code memories (they have project names)
-            # This is a simplified approach - would need to enhance store API
-            # to get project-specific stats
+            # Get all project names
+            project_names = await store.get_all_projects()
 
-            # For now, we'll return a placeholder
-            # TODO: Implement proper project statistics in store
+            # Get stats for each project
             projects = []
-
-            # Try to get some basic stats
-            # This would need store.get_projects() method to be implemented
+            for project_name in project_names:
+                try:
+                    stats = await store.get_project_stats(project_name)
+                    projects.append(stats)
+                except Exception as e:
+                    logger.warning(f"Error getting stats for {project_name}: {e}")
+                    # Add minimal info if stats fail
+                    projects.append({
+                        "project_name": project_name,
+                        "total_memories": 0,
+                        "num_files": 0,
+                        "num_functions": 0,
+                        "num_classes": 0,
+                    })
 
             return projects
 
@@ -316,6 +324,7 @@ class StatusCommand:
 
             table = Table(show_header=True, header_style="bold")
             table.add_column("Project", style="cyan")
+            table.add_column("Memories", justify="right")
             table.add_column("Files", justify="right")
             table.add_column("Functions", justify="right")
             table.add_column("Classes", justify="right")
@@ -323,10 +332,11 @@ class StatusCommand:
 
             for project in projects:
                 table.add_row(
-                    project.get("name", "unknown"),
-                    str(project.get("files", 0)),
-                    str(project.get("functions", 0)),
-                    str(project.get("classes", 0)),
+                    project.get("project_name", "unknown"),
+                    str(project.get("total_memories", 0)),
+                    str(project.get("num_files", 0)),
+                    str(project.get("num_functions", 0)),
+                    str(project.get("num_classes", 0)),
                     self._format_time_ago(project.get("last_indexed")),
                 )
 
@@ -335,10 +345,11 @@ class StatusCommand:
         else:
             print("\nIndexed Projects")
             for project in projects:
-                print(f"  {project.get('name', 'unknown')}")
-                print(f"    Files: {project.get('files', 0)}")
-                print(f"    Functions: {project.get('functions', 0)}")
-                print(f"    Classes: {project.get('classes', 0)}")
+                print(f"  {project.get('project_name', 'unknown')}")
+                print(f"    Memories: {project.get('total_memories', 0)}")
+                print(f"    Files: {project.get('num_files', 0)}")
+                print(f"    Functions: {project.get('num_functions', 0)}")
+                print(f"    Classes: {project.get('num_classes', 0)}")
 
     def print_quick_commands(self):
         """Print quick reference commands."""

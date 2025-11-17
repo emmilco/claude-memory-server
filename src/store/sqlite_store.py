@@ -387,3 +387,111 @@ class SQLiteMemoryStore(MemoryStore):
             tags=tags,
             metadata=metadata,
         )
+
+    async def get_all_projects(self) -> List[str]:
+        """
+        Get list of all unique project names in the store.
+
+        Returns:
+            List of project names.
+        """
+        if not self.conn:
+            raise StorageError("Store not initialized")
+
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute("""
+                SELECT DISTINCT project_name
+                FROM memories
+                WHERE project_name IS NOT NULL
+                ORDER BY project_name
+            """)
+
+            projects = [row[0] for row in cursor.fetchall()]
+            return projects
+
+        except Exception as e:
+            logger.error(f"Error getting all projects: {e}")
+            raise StorageError(f"Failed to get projects: {e}")
+
+    async def get_project_stats(self, project_name: str) -> Dict[str, Any]:
+        """
+        Get statistics for a specific project.
+
+        Args:
+            project_name: Name of the project.
+
+        Returns:
+            Dictionary with project statistics.
+        """
+        if not self.conn:
+            raise StorageError("Store not initialized")
+
+        try:
+            cursor = self.conn.cursor()
+
+            # Get total count
+            cursor.execute("""
+                SELECT COUNT(*) FROM memories WHERE project_name = ?
+            """, (project_name,))
+            total_memories = cursor.fetchone()[0]
+
+            # Get category counts
+            cursor.execute("""
+                SELECT category, COUNT(*)
+                FROM memories
+                WHERE project_name = ?
+                GROUP BY category
+            """, (project_name,))
+            categories = {row[0]: row[1] for row in cursor.fetchall()}
+
+            # Get context level counts
+            cursor.execute("""
+                SELECT context_level, COUNT(*)
+                FROM memories
+                WHERE project_name = ?
+                GROUP BY context_level
+            """, (project_name,))
+            context_levels = {row[0]: row[1] for row in cursor.fetchall()}
+
+            # Get latest update
+            cursor.execute("""
+                SELECT MAX(updated_at) FROM memories WHERE project_name = ?
+            """, (project_name,))
+            latest_update = cursor.fetchone()[0]
+            if latest_update:
+                latest_update = datetime.fromisoformat(latest_update)
+
+            # Get unique file count (from metadata)
+            cursor.execute("""
+                SELECT metadata FROM memories
+                WHERE project_name = ? AND category = 'code'
+            """, (project_name,))
+
+            file_paths = set()
+            for row in cursor.fetchall():
+                try:
+                    metadata = json.loads(row[0])
+                    if "file_path" in metadata:
+                        file_paths.add(metadata["file_path"])
+                except:
+                    pass
+
+            num_files = len(file_paths)
+            num_functions = categories.get("code", 0)
+            num_classes = sum(1 for cat in categories if "class" in cat.lower())
+
+            return {
+                "project_name": project_name,
+                "total_memories": total_memories,
+                "num_files": num_files,
+                "num_functions": num_functions,
+                "num_classes": num_classes,
+                "categories": categories,
+                "context_levels": context_levels,
+                "last_indexed": latest_update,
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting project stats for {project_name}: {e}")
+            raise StorageError(f"Failed to get project stats: {e}")

@@ -507,3 +507,135 @@ class QdrantMemoryStore(MemoryStore):
             tags=payload.get("tags", []),
             metadata=metadata,
         )
+
+    async def get_all_projects(self) -> List[str]:
+        """
+        Get list of all unique project names in the store.
+
+        Returns:
+            List of project names.
+        """
+        if not self.client:
+            raise StorageError("Store not initialized")
+
+        try:
+            # Scroll through all points and collect unique project names
+            projects = set()
+            offset = None
+
+            while True:
+                results, offset = self.client.scroll(
+                    collection_name=self.collection_name,
+                    limit=100,
+                    offset=offset,
+                    with_payload=True,
+                    with_vectors=False,
+                )
+
+                if not results:
+                    break
+
+                for point in results:
+                    project_name = point.payload.get("project_name")
+                    if project_name:
+                        projects.add(project_name)
+
+                if offset is None:
+                    break
+
+            return sorted(list(projects))
+
+        except Exception as e:
+            logger.error(f"Error getting all projects: {e}")
+            raise StorageError(f"Failed to get projects: {e}")
+
+    async def get_project_stats(self, project_name: str) -> Dict[str, Any]:
+        """
+        Get statistics for a specific project.
+
+        Args:
+            project_name: Name of the project.
+
+        Returns:
+            Dictionary with project statistics (total_memories, categories, etc.).
+        """
+        if not self.client:
+            raise StorageError("Store not initialized")
+
+        try:
+            # Get all memories for this project
+            offset = None
+            total_memories = 0
+            categories = {}
+            context_levels = {}
+            latest_update = None
+            file_paths = set()
+
+            while True:
+                results, offset = self.client.scroll(
+                    collection_name=self.collection_name,
+                    scroll_filter=Filter(
+                        must=[
+                            FieldCondition(
+                                key="project_name",
+                                match=MatchValue(value=project_name)
+                            )
+                        ]
+                    ),
+                    limit=100,
+                    offset=offset,
+                    with_payload=True,
+                    with_vectors=False,
+                )
+
+                if not results:
+                    break
+
+                for point in results:
+                    total_memories += 1
+                    payload = point.payload
+
+                    # Count by category
+                    category = payload.get("category", "unknown")
+                    categories[category] = categories.get(category, 0) + 1
+
+                    # Count by context level
+                    context = payload.get("context_level", "unknown")
+                    context_levels[context] = context_levels.get(context, 0) + 1
+
+                    # Track latest update
+                    updated_at = payload.get("updated_at")
+                    if updated_at:
+                        if isinstance(updated_at, str):
+                            updated_at = datetime.fromisoformat(updated_at)
+                        if latest_update is None or updated_at > latest_update:
+                            latest_update = updated_at
+
+                    # Collect unique file paths (for code category)
+                    if category == "code":
+                        file_path = payload.get("file_path")
+                        if file_path:
+                            file_paths.add(file_path)
+
+                if offset is None:
+                    break
+
+            # Calculate derived stats
+            num_files = len(file_paths)
+            num_functions = categories.get("code", 0)
+            num_classes = sum(1 for cat in categories if "class" in cat.lower())
+
+            return {
+                "project_name": project_name,
+                "total_memories": total_memories,
+                "num_files": num_files,
+                "num_functions": num_functions,
+                "num_classes": num_classes,
+                "categories": categories,
+                "context_levels": context_levels,
+                "last_indexed": latest_update,
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting project stats for {project_name}: {e}")
+            raise StorageError(f"Failed to get project stats: {e}")
