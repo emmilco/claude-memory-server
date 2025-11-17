@@ -54,6 +54,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Statistics (2 tests)
   - **Status:** Phase 2 of 8 complete (~30% of FEAT-017)
   - **Next:** Phase 3 - Multi-Repository Indexer implementation
+- **FEAT-017 Phase 3: Multi-Repository Indexer** - Implemented batch indexing orchestration for repository collections
+  - Created `src/memory/multi_repository_indexer.py` (550+ lines) - Complete multi-repo indexer
+    - `RepositoryIndexResult` and `BatchIndexResult` dataclasses for result tracking
+    - `MultiRepositoryIndexer` class for orchestrating batch operations
+    - Single repository indexing with status tracking (INDEXING → INDEXED/ERROR)
+    - Batch indexing of multiple repositories in parallel (with concurrency control)
+    - Workspace-scoped indexing (index all repos in a workspace)
+    - Stale repository re-indexing (by status or age)
+    - Progress callback support for UI integration
+    - IncrementalIndexer caching (one per repository, reused across operations)
+    - Error handling and recovery with detailed result reporting
+    - Repository status updates (file_count, unit_count, indexed_at, last_updated)
+    - Overall indexing statistics
+  - Created `tests/unit/test_multi_repository_indexer.py` - 29 comprehensive tests (100% passing)
+    - Result model tests (4 tests)
+    - Initialization and cleanup (3 tests)
+    - Single repository indexing (6 tests)
+    - Batch indexing with concurrency control (4 tests)
+    - Workspace indexing (3 tests)
+    - Stale repository re-indexing (3 tests)
+    - Indexer caching (3 tests)
+    - Status tracking (3 tests)
+  - **Status:** Phase 3 of 8 complete (~45% of FEAT-017)
+  - **Next:** Phase 4 - Enhanced Cross-Repository Search implementation
 - **WORKFLOW: Git worktree support for parallel agent development** - Configured repository to use git worktrees for concurrent feature development
   - Created `.worktrees/` directory for isolated feature branches
   - Added `.worktrees/` to `.gitignore` to prevent committing worktree directories
