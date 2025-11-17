@@ -49,7 +49,16 @@ impl SupportedLanguage {
                   body: (block) @body) @function
                 "#
             }
-            SupportedLanguage::JavaScript | SupportedLanguage::TypeScript => {
+            SupportedLanguage::JavaScript => {
+                r#"
+                (function_declaration
+                  name: (identifier) @name
+                  parameters: (formal_parameters) @params
+                  body: (statement_block) @body) @function
+                "#
+            }
+            SupportedLanguage::TypeScript => {
+                // TypeScript functions can have type annotations
                 r#"
                 (function_declaration
                   name: (identifier) @name
@@ -93,10 +102,18 @@ impl SupportedLanguage {
                   body: (block) @body) @class
                 "#
             }
-            SupportedLanguage::JavaScript | SupportedLanguage::TypeScript => {
+            SupportedLanguage::JavaScript => {
                 r#"
                 (class_declaration
                   name: (identifier) @name
+                  body: (class_body) @body) @class
+                "#
+            }
+            SupportedLanguage::TypeScript => {
+                // TypeScript can use both identifier and type_identifier for class names
+                r#"
+                (class_declaration
+                  name: (_) @name
                   body: (class_body) @body) @class
                 "#
             }
@@ -246,67 +263,77 @@ impl CodeParser {
 
         let mut units = Vec::new();
 
-        // Extract functions
-        let function_query = Query::new(&lang.get_language(), lang.function_query())
-            .map_err(|e| format!("Function query error: {}", e))?;
+        // Extract functions (with error recovery)
+        match Query::new(&lang.get_language(), lang.function_query()) {
+            Ok(function_query) => {
+                let mut cursor = QueryCursor::new();
+                let mut captures = cursor.captures(&function_query, tree.root_node(), source_code.as_bytes());
 
-        let mut cursor = QueryCursor::new();
-        let mut captures = cursor.captures(&function_query, tree.root_node(), source_code.as_bytes());
+                while let Some((match_, _)) = captures.next() {
+                    if let Some(capture) = match_.captures.first() {
+                        let node = capture.node;
+                        let name = node
+                            .utf8_text(source_code.as_bytes())
+                            .unwrap_or("<unknown>")
+                            .lines()
+                            .next()
+                            .unwrap_or("")
+                            .trim();
 
-        while let Some((match_, _)) = captures.next() {
-            if let Some(capture) = match_.captures.first() {
-                let node = capture.node;
-                let name = node
-                    .utf8_text(source_code.as_bytes())
-                    .unwrap_or("<unknown>")
-                    .lines()
-                    .next()
-                    .unwrap_or("")
-                    .trim();
-
-                units.push(SemanticUnit {
-                    unit_type: "function".to_string(),
-                    name: name.to_string(),
-                    start_line: node.start_position().row + 1,
-                    end_line: node.end_position().row + 1,
-                    start_byte: node.start_byte(),
-                    end_byte: node.end_byte(),
-                    signature: name.to_string(),
-                    content: node.utf8_text(source_code.as_bytes()).unwrap_or("").to_string(),
-                    language: lang_name.clone(),
-                });
+                        units.push(SemanticUnit {
+                            unit_type: "function".to_string(),
+                            name: name.to_string(),
+                            start_line: node.start_position().row + 1,
+                            end_line: node.end_position().row + 1,
+                            start_byte: node.start_byte(),
+                            end_byte: node.end_byte(),
+                            signature: name.to_string(),
+                            content: node.utf8_text(source_code.as_bytes()).unwrap_or("").to_string(),
+                            language: lang_name.clone(),
+                        });
+                    }
+                }
+            }
+            Err(e) => {
+                // Log error but continue parsing (skip function extraction for this file)
+                eprintln!("Warning: Function query failed for {}: {}. Continuing without function extraction.", file_path, e);
             }
         }
 
-        // Extract classes
-        let class_query = Query::new(&lang.get_language(), lang.class_query())
-            .map_err(|e| format!("Class query error: {}", e))?;
+        // Extract classes (with error recovery)
+        match Query::new(&lang.get_language(), lang.class_query()) {
+            Ok(class_query) => {
+                let mut cursor = QueryCursor::new();
+                let mut captures = cursor.captures(&class_query, tree.root_node(), source_code.as_bytes());
 
-        let mut cursor = QueryCursor::new();
-        let mut captures = cursor.captures(&class_query, tree.root_node(), source_code.as_bytes());
+                while let Some((match_, _)) = captures.next() {
+                    if let Some(capture) = match_.captures.first() {
+                        let node = capture.node;
+                        let name = node
+                            .utf8_text(source_code.as_bytes())
+                            .unwrap_or("<unknown>")
+                            .lines()
+                            .next()
+                            .unwrap_or("")
+                            .trim();
 
-        while let Some((match_, _)) = captures.next() {
-            if let Some(capture) = match_.captures.first() {
-                let node = capture.node;
-                let name = node
-                    .utf8_text(source_code.as_bytes())
-                    .unwrap_or("<unknown>")
-                    .lines()
-                    .next()
-                    .unwrap_or("")
-                    .trim();
-
-                units.push(SemanticUnit {
-                    unit_type: "class".to_string(),
-                    name: name.to_string(),
-                    start_line: node.start_position().row + 1,
-                    end_line: node.end_position().row + 1,
-                    start_byte: node.start_byte(),
-                    end_byte: node.end_byte(),
-                    signature: name.to_string(),
-                    content: node.utf8_text(source_code.as_bytes()).unwrap_or("").to_string(),
-                    language: lang_name.clone(),
-                });
+                        units.push(SemanticUnit {
+                            unit_type: "class".to_string(),
+                            name: name.to_string(),
+                            start_line: node.start_position().row + 1,
+                            end_line: node.end_position().row + 1,
+                            start_byte: node.start_byte(),
+                            end_byte: node.end_byte(),
+                            signature: name.to_string(),
+                            content: node.utf8_text(source_code.as_bytes()).unwrap_or("").to_string(),
+                            language: lang_name.clone(),
+                        });
+                    }
+                }
+            }
+            Err(e) => {
+                // Log error but continue parsing (skip class extraction for this file)
+                eprintln!("Warning: Class query failed for {}: {}. Continuing without class extraction.", file_path, e);
             }
         }
 
