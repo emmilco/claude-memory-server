@@ -14,7 +14,7 @@ from rich.layout import Layout
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from datetime import datetime, timedelta
 
-from src.config import load_config
+from src.config import get_config
 from src.store.factory import create_store
 from src.monitoring.metrics_collector import MetricsCollector
 from src.monitoring.alert_engine import AlertEngine, AlertSeverity

@@ -259,6 +259,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Impact:** User-friendly duplicate management, prevents noise accumulation
   - **Status:** CLI tool complete, background jobs and auto-scheduler pending (Phases 3-4)
 
+- **FEAT-034: Memory Provenance & Trust Signals - Phases 5-7** ✅ COMPLETE
+  - **Phase 5: CLI Verification Tool**
+    - Created `src/cli/verify_command.py` - Interactive memory verification workflow (350+ lines)
+    - Three operating modes: auto-verify (>0.8 confidence), interactive, contradiction review
+    - Category filtering: preference, fact, event, workflow, context
+    - Finds memories needing verification based on 4 criteria:
+      - Low confidence (<0.6)
+      - Old and unverified (>90 days, not verified)
+      - Rarely accessed (last access >60 days ago)
+      - Has contradictions with other memories
+    - Rich UI with tables showing: memory content, category, age, confidence, verification status
+    - Interactive prompts: y/n/skip/quit for verification control
+    - Options per memory: verify (with notes), delete, update, archive
+    - Summary panel: shows verified/rejected/skipped counts
+  - **Phase 6: Contradiction Alerts & Reporting**
+    - Integrated contradiction review into verify command (`--contradictions` flag)
+    - Framework-aware conflict detection (React vs Vue, Express vs FastAPI, etc.)
+    - Temporal reasoning for preference changes (>30 day gap threshold)
+    - Interactive resolution: older/newer/both/neither options
+    - Rich UI showing both contradicting memories with age and confidence
+  - **Phase 7: Integration Tests**
+    - Created `tests/integration/test_provenance_trust_integration.py` (9 comprehensive tests)
+    - End-to-end provenance tracking workflow
+    - Contradiction detection workflow with framework conflicts
+    - Duplicate detection workflow with high similarity threshold
+    - Trust signal generation with multi-factor scoring
+    - Relationship storage and retrieval
+    - Confidence calculation with all factors
+    - Low-confidence memory detection
+  - **CLI Integration**
+    - Updated `src/cli/__init__.py` - Added verify command with full argument parsing
+    - Fixed `src/cli/health_monitor_command.py` - Corrected get_config import
+    - Created `src/store/factory.py` - Store factory for backend selection
+  - **Usage:**
+    - `python -m src.cli verify --auto-verify` - Auto-verify high confidence memories
+    - `python -m src.cli verify --contradictions` - Review and resolve contradictions
+    - `python -m src.cli verify --category preference --max-items 10`
+  - **Impact:** Transparent verification workflow, automatic contradiction detection, comprehensive trust signals
+  - **Status:** ✅ COMPLETE - All 7 phases implemented and tested
+
+- **FEAT-035: Intelligent Memory Consolidation - Phase 4 & 6** ✅ COMPLETE
+  - **Phase 4: Background Consolidation Jobs**
+    - Created `src/memory/consolidation_jobs.py` - Automated consolidation scheduler (400+ lines)
+    - APScheduler integration with AsyncIOScheduler
+    - Three scheduled jobs:
+      - Daily (2 AM): Auto-merge high-confidence duplicates (>0.95 similarity)
+      - Weekly (Sunday 3 AM): Scan for medium-confidence duplicates needing user review
+      - Monthly (1st, 3 AM): Full contradiction scan across all preferences
+    - Statistics tracking: last run times, total merges, review candidates, contradictions found
+    - Safe defaults: uses KEEP_MOST_RECENT merge strategy for auto-merges
+    - File output for user review: weekly_review_candidates.txt, monthly_contradiction_report.txt
+    - Global scheduler instance with get/stop functions
+    - Standalone testing: run jobs individually for testing/debugging
+  - **Phase 6: Integration Tests**
+    - Created `tests/integration/test_consolidation_integration.py` (10 comprehensive tests)
+    - End-to-end duplicate detection and merge workflow
+    - Auto-merge candidates detection (>0.95 similarity)
+    - User review candidates detection (0.85-0.95 similarity)
+    - All merge strategies: KEEP_MOST_RECENT, KEEP_HIGHEST_IMPORTANCE, KEEP_MOST_ACCESSED
+    - Dry-run mode verification (ensures no actual merges)
+    - Consolidation suggestions generation
+    - Category filtering in detection
+  - **CLI Integration**
+    - Updated `src/cli/__init__.py` - Added consolidate command with full argument parsing
+  - **Usage:**
+    - Start scheduler: `from src.memory.consolidation_jobs import get_global_scheduler; get_global_scheduler()`
+    - Manual runs: `python -m src.memory.consolidation_jobs --job daily`
+  - **Impact:** Automatic noise reduction, prevents duplicate accumulation, proactive quality maintenance
+  - **Status:** ✅ COMPLETE - All phases (1-2, 4-6) implemented, Phase 3 remains (contradiction detection enhancement)
+
 - **Pre-commit Hook: Documentation Sync Enforcement**
   - Created `.git/hooks/pre-commit` - Validates CHANGELOG.md updates before commits
   - Blocks commits without changelog entries with helpful message

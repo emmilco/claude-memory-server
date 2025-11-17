@@ -16,6 +16,8 @@ from src.cli.git_search_command import GitSearchCommand
 from src.cli.analytics_command import run_analytics_command
 from src.cli.session_summary_command import run_session_summary_command
 from src.cli.health_monitor_command import HealthMonitorCommand
+from src.cli.verify_command import verify_command
+from src.cli.consolidate_command import consolidate_command
 
 
 def setup_logging(level: str = "INFO"):
@@ -318,6 +320,68 @@ def create_parser() -> argparse.ArgumentParser:
         help="Number of days of history (default: 30)",
     )
 
+    # Verify command
+    verify_parser = subparsers.add_parser(
+        "verify",
+        help="Interactive memory verification workflow",
+    )
+    verify_parser.add_argument(
+        "--auto-verify",
+        action="store_true",
+        help="Auto-verify high confidence memories (>0.8)",
+    )
+    verify_parser.add_argument(
+        "--category",
+        "-c",
+        type=str,
+        help="Filter by category (preference, fact, event, workflow, context)",
+    )
+    verify_parser.add_argument(
+        "--contradictions",
+        action="store_true",
+        help="Review and resolve contradictions",
+    )
+    verify_parser.add_argument(
+        "--max-items",
+        "-n",
+        type=int,
+        default=20,
+        help="Maximum items to review (default: 20)",
+    )
+
+    # Consolidate command
+    consolidate_parser = subparsers.add_parser(
+        "consolidate",
+        help="Find and merge duplicate memories",
+    )
+    consolidate_parser.add_argument(
+        "--auto",
+        action="store_true",
+        help="Auto-merge high-confidence duplicates (>0.95)",
+    )
+    consolidate_parser.add_argument(
+        "--interactive",
+        action="store_true",
+        help="Review each merge interactively",
+    )
+    consolidate_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        default=True,
+        help="Show what would be done (default, safe)",
+    )
+    consolidate_parser.add_argument(
+        "--execute",
+        action="store_true",
+        help="Actually perform merges (disables dry-run)",
+    )
+    consolidate_parser.add_argument(
+        "--category",
+        "-c",
+        type=str,
+        help="Filter by category (preference, fact, event, workflow, context)",
+    )
+
     return parser
 
 
@@ -366,6 +430,25 @@ async def main_async(args):
     elif args.command == "health-monitor":
         cmd = HealthMonitorCommand()
         await cmd.run(args)
+    elif args.command == "verify":
+        await verify_command(
+            auto_verify_high_confidence=args.auto_verify,
+            category=args.category,
+            show_contradictions=args.contradictions,
+            max_items=args.max_items,
+        )
+    elif args.command == "consolidate":
+        # Handle --execute flag to disable dry-run
+        dry_run = args.dry_run
+        if args.execute:
+            dry_run = False
+
+        await consolidate_command(
+            auto=args.auto,
+            interactive=args.interactive,
+            dry_run=dry_run,
+            category=args.category,
+        )
     else:
         print("No command specified. Use --help for usage information.")
         sys.exit(1)

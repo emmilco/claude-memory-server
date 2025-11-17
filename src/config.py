@@ -32,6 +32,10 @@ class ServerConfig(BaseSettings):
     embedding_cache_path: str = "~/.claude-rag/embedding_cache.db"
     embedding_cache_ttl_days: int = 30
 
+    # Parallel embedding generation (PERF-001)
+    enable_parallel_embeddings: bool = True  # Use multiprocessing for embeddings
+    embedding_parallel_workers: Optional[int] = None  # Auto-detect CPU count if None
+
     # Security
     read_only_mode: bool = False
     enable_input_validation: bool = True

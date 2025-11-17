@@ -100,6 +100,7 @@ except ImportError:
 
 from src.config import ServerConfig, get_config
 from src.embeddings.generator import EmbeddingGenerator
+from src.embeddings.parallel_generator import ParallelEmbeddingGenerator
 from src.store.qdrant_store import QdrantMemoryStore
 from src.core.models import MemoryCategory, ContextLevel, MemoryScope
 from src.core.exceptions import StorageError
@@ -226,7 +227,16 @@ class IncrementalIndexer(BaseCodeIndexer):
 
         self.config = config
         self.store = store or QdrantMemoryStore(config)
-        self.embedding_generator = embedding_generator or EmbeddingGenerator(config)
+
+        # Use parallel embedding generator if enabled, otherwise use standard generator
+        if embedding_generator is not None:
+            self.embedding_generator = embedding_generator
+        elif config.enable_parallel_embeddings:
+            logger.info("Using parallel embedding generator for improved throughput")
+            self.embedding_generator = ParallelEmbeddingGenerator(config)
+        else:
+            logger.info("Using standard embedding generator (single-threaded)")
+            self.embedding_generator = EmbeddingGenerator(config)
 
         # Project name for scoping
         self.project_name = project_name or Path.cwd().name
@@ -239,6 +249,11 @@ class IncrementalIndexer(BaseCodeIndexer):
     async def initialize(self) -> None:
         """Initialize the indexer (connect to storage, etc.)."""
         await self.store.initialize()
+
+        # Initialize embedding generator (especially important for parallel generator)
+        if hasattr(self.embedding_generator, 'initialize'):
+            await self.embedding_generator.initialize()
+
         logger.info("Incremental indexer ready")
 
     async def index_file(self, file_path: Path) -> Dict[str, Any]:
