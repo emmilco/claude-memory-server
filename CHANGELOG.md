@@ -313,6 +313,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Semantic unit extraction verification
   - **Impact:** Systems engineers can now index and search C/C++ codebases with full semantic understanding
   - **Test Results:** All 19 C/C++ parsing tests passing ✅
+- **UX-012: Graceful Degradation** - System continues working when optional dependencies unavailable
+  - **Qdrant Fallback:** Automatic fallback to SQLite when Qdrant vector store unavailable
+    - Detects connection errors during store creation (`src/store/__init__.py`)
+    - Falls back to SQLite keyword search with clear warnings
+    - Configurable via `allow_qdrant_fallback` setting (enabled by default)
+    - Performance impact: 3-5x slower search, no semantic similarity
+  - **Rust Parser Fallback:** Enhanced existing fallback to Python parser with degradation tracking
+    - Tracks degradation when Rust parser unavailable (`src/memory/incremental_indexer.py`)
+    - Python fallback already existed, now integrated with warning system
+    - Configurable via `allow_rust_fallback` setting (enabled by default)
+    - Performance impact: 10-20x slower parsing
+  - **Degradation Tracking System:** Centralized warning system (`src/core/degradation_warnings.py`)
+    - `DegradationWarning` dataclass: component, message, upgrade_path, performance_impact
+    - `DegradationTracker` singleton: tracks warnings, prevents duplicates, generates summaries
+    - Global functions: `add_degradation_warning()`, `has_degradations()`, `get_degradation_summary()`
+  - **Status Command Display:** Shows degradation warnings to users (`src/cli/status_command.py`)
+    - Displays warnings in yellow panel with upgrade instructions
+    - Shows performance implications clearly
+    - Only displays when degradations exist (otherwise shows success message)
+  - **Configuration:** Added 3 fields to `ServerConfig` (`src/config.py`)
+    - `allow_qdrant_fallback: bool = True` - Fall back to SQLite if Qdrant unavailable
+    - `allow_rust_fallback: bool = True` - Fall back to Python parser if Rust unavailable
+    - `warn_on_degradation: bool = True` - Show warnings when running in degraded mode
+  - **Test Coverage:** 15 comprehensive tests (`tests/unit/test_graceful_degradation.py`)
+    - DegradationWarning dataclass tests (creation, serialization)
+    - DegradationTracker tests (singleton, add/clear, duplicates, summaries)
+    - Store creation fallback tests (Qdrant → SQLite)
+    - Configuration control tests (fallback enable/disable)
+  - **Impact:**
+    - Installation success rate: Fewer failures due to missing optional dependencies
+    - User experience: Clear warnings with actionable upgrade paths
+    - System reliability: Works in degraded mode until user can upgrade
+  - **Files Created:** `src/core/degradation_warnings.py` (150 lines)
+  - **Files Modified:** `src/store/__init__.py` (96 lines), `src/memory/incremental_indexer.py` (+10 lines), `src/cli/status_command.py` (+24 lines), `src/config.py` (+3 fields)
+  - **Planning Document:** `planning_docs/UX-012_graceful_degradation.md`
 
 - **WORKFLOW: Git worktree support for parallel agent development** - Configured repository to use git worktrees for concurrent feature development
   - Created `.worktrees/` directory for isolated feature branches
