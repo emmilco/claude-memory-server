@@ -190,10 +190,20 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Impact:** Better search recall, improved keyword matching
   - **Completed:** 2025-11-17
 
-- [ ] **FEAT-025**: Result reranking
-  - [ ] ML-based relevance scoring
-  - [ ] Personalized ranking based on usage
-  - **Impact:** More relevant top results
+- [x] **FEAT-025**: Result reranking ✅ **COMPLETE**
+  - [x] Implemented ResultReranker with multiple signals (similarity, recency, usage, length, keywords)
+  - [x] Implemented MMR (Maximal Marginal Relevance) reranker for diversity
+  - [x] Custom reranking function support
+  - [x] Configurable weights for different ranking signals
+  - [x] Recency decay with exponential half-life
+  - [x] Usage frequency scoring with logarithmic scaling
+  - [x] Length penalty for very short/long results
+  - [x] Keyword matching boost
+  - [x] Diversity penalty to reduce redundancy
+  - [x] Comprehensive tests (29 tests passing)
+  - **Algorithms:** Weighted combination, MMR, custom scoring
+  - **Impact:** More relevant top results, personalized ranking
+  - **Completed:** 2025-11-17
 
 - [ ] **FEAT-013**: Change detection
   - [ ] Smart diffing to re-index only changed functions

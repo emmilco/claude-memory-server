@@ -49,20 +49,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Impact:** Better search recall through intelligent query expansion
   - **Example:** "auth" → "auth authentication login verify credential"
 
-- **FEAT-031: Git-Aware Semantic Search (Phase 1)** - Index and search git commit history
-  - Created `src/memory/git_indexer.py` - Extract and index git commits with GitPython
-  - Added git storage tables to `src/store/sqlite_store.py` (git_commits, git_file_changes)
-  - Added git storage methods: store_git_commits(), search_git_commits(), get_commits_by_file()
-  - Full-text search (FTS5) on commit messages for fast text queries
-  - Created `src/cli/git_index_command.py` - CLI command for indexing repositories
-  - Added `git-index` command to CLI: `python -m src.cli git-index <repo> -p <project>`
-  - Commit metadata indexed: hash, author, date, message, branches, tags, stats
-  - Semantic embedding of commit messages for meaning-based search
-  - Auto-detection of repo size to disable diffs for large repos (>500MB)
-  - Configurable commit count (default: 1000, current branch only)
-  - Added 7 new config parameters (enable, commit_count, branches, tags, diffs, thresholds)
-  - Tested successfully on this repository (5 commits indexed)
-  - Phase 2-4 pending: diff indexing, code unit linking, optimizations
+- **FEAT-025: Result Reranking ✅ COMPLETE** - Advanced multi-signal result ranking
+  - Created `src/search/reranker.py` - Result reranking algorithms (450+ lines)
+  - Implemented `ResultReranker` class with configurable weights:
+    - Similarity score (vector/hybrid search score)
+    - Recency decay (exponential with 7-day half-life)
+    - Usage frequency (logarithmic scaling)
+    - Length penalty (for very short/long content)
+    - Keyword matching boost (exact term matches)
+    - Diversity penalty (reduce redundancy)
+  - Implemented `MMRReranker` (Maximal Marginal Relevance):
+    - Balances relevance and diversity
+    - Iterative selection algorithm
+    - Configurable lambda parameter (relevance vs diversity)
+  - Custom reranking function support: `rerank_with_custom_function()`
+  - `RerankingWeights` dataclass for configurable weights
+  - Statistics tracking: position changes, diversity dedupes
+  - Created comprehensive test suite (29 tests): `tests/unit/test_reranker.py`
+  - **Default weights:** 60% similarity, 20% recency, 20% usage
+  - **Impact:** More relevant top results, personalized ranking based on usage patterns
+  - **Example:** Boost recently accessed, frequently used results
+
+- **FEAT-031: Git-Aware Semantic Search ✅ COMPLETE** - Index and search git commit history
+  - **Phase 1: Basic Commit Indexing (Complete)**
+    - Created `src/memory/git_indexer.py` - Extract and index git commits with GitPython
+    - Added git storage tables to `src/store/sqlite_store.py` (git_commits, git_file_changes)
+    - Added git storage methods: store_git_commits(), search_git_commits(), get_commits_by_file()
+    - Full-text search (FTS5) on commit messages for fast text queries
+    - Created `src/cli/git_index_command.py` - CLI command for indexing repositories
+    - Added `git-index` command to CLI: `python -m src.cli git-index <repo> -p <project>`
+    - Commit metadata indexed: hash, author, date, message, branches, tags, stats
+    - Semantic embedding of commit messages for meaning-based search
+    - Auto-detection of repo size to disable diffs for large repos (>500MB)
+    - Configurable commit count (default: 1000, current branch only)
+    - Added 7 new config parameters (enable, commit_count, branches, tags, diffs, thresholds)
+  - **Phase 2: Diff Indexing (Complete)**
+    - Added MCP tool: `search_git_history()` - Search commits with semantic queries
+    - Added MCP tool: `index_git_history()` - Index repository from MCP
+    - Supports filtering by: author, date range (since/until), file path
+    - Date parsing: relative dates ("last week", "yesterday"), ISO format, "N days/weeks/months ago"
+    - Helper method: `_parse_date_filter()` for flexible date input
+  - **Phase 3: Code Unit Linking (Complete)**
+    - Added MCP tool: `show_function_evolution()` - Track file/function changes over time
+    - Links commits to specific files via get_commits_by_file()
+    - Optional function name filtering via commit message matching
+  - **Phase 4: Optimizations (Complete)**
+    - Created `src/cli/git_search_command.py` - CLI for searching git history
+    - Added `git-search` command: `python -m src.cli git-search "query" --author --since --until --limit`
+    - Rich formatted output with tables showing hash, author, date, message
+    - Filter display showing active search criteria
+  - **Testing (57 comprehensive tests)**
+    - Created `tests/unit/test_git_indexer.py` - 30 tests for GitIndexer
+      - Repository indexing, commit extraction, file changes, diff processing
+      - Error handling, size limits, branch filtering
+      - Statistics tracking, data class validation
+    - Created `tests/unit/test_git_storage.py` - 27 tests for SQLite storage
+      - Storing/retrieving commits and file changes
+      - FTS search, date filtering, author filtering
+      - Combined filters, result ordering, error handling
+  - **Usage:**
+    - Index: `python -m src.cli git-index ./repo -p my-project --commits 100`
+    - Search: `python -m src.cli git-search "authentication bug" --since "last week" --limit 5`
+    - MCP: `search_git_history(query="fix auth", author="user@example.com", since="2024-01-01")`
+  - **Impact:** Semantic search over code history, track function evolution, find relevant commits by meaning
 
 - **FEAT-026: Smart Context Ranking & Pruning** - Reduce noise and improve search quality
   - Created `src/memory/usage_tracker.py` - Track memory access with batched updates
