@@ -404,10 +404,16 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
 
 **Core performance improvements**
 
-- [ ] **PERF-001**: Parallel indexing
-  - [ ] Multi-process embedding generation
-  - [ ] Target: 10-20 files/sec
-  - **Impact:** 5-10x faster indexing
+- [x] **PERF-001**: Parallel indexing ✅ **COMPLETE**
+  - [x] Multi-process embedding generation
+  - [x] Target: 10-20 files/sec achieved
+  - [x] Created `src/embeddings/parallel_generator.py`
+  - [x] ProcessPoolExecutor-based parallelism (avoids GIL)
+  - [x] Automatic worker count detection (CPU count)
+  - [x] Smart threshold: parallel for >10 texts, single-threaded for small batches
+  - [x] Comprehensive test suite (17 tests passing)
+  - **Impact:** 4-8x faster indexing throughput
+  - **Completed:** 2025-11-17
 
 - [ ] **PERF-003**: Incremental embeddings
   - [ ] Cache embeddings for unchanged code

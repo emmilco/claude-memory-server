@@ -370,5 +370,5 @@ class ParallelEmbeddingGenerator:
 
     def __del__(self):
         """Cleanup on destruction."""
-        if self.executor:
+        if hasattr(self, 'executor') and self.executor:
             self.executor.shutdown(wait=False)
