@@ -9,6 +9,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - 2025-11-17
 
+<<<<<<< HEAD
+- **UX-025: Memory Lifecycle Management** - Intelligent storage optimization with automatic memory health monitoring
+  - **StorageOptimizer** (`src/memory/storage_optimizer.py`, 421 lines) - Analyzes memory storage and identifies optimization opportunities
+    - Detects large memories (>10KB) for potential compression with 30-50% estimated savings
+    - Identifies stale memories (180+ days unused) for safe deletion
+    - Finds expired SESSION_STATE memories (>48h old) for automatic cleanup
+    - Detects potential duplicate memories using content signatures
+    - Estimates storage savings and calculates impact metrics
+    - Risk-based classification: safe, low, medium, high
+    - Dry-run mode for safe analysis without data modification
+  - **Enhanced Lifecycle CLI** (`src/cli/lifecycle_command.py`) - Extended existing health monitoring with optimization features
+    - `lifecycle optimize` - Analyze storage for optimization opportunities
+    - `lifecycle auto` - Automatically apply safe optimizations (dry-run by default)
+    - `lifecycle auto --execute` - Apply safe optimizations in live mode
+    - `lifecycle config` - Display lifecycle configuration and settings
+    - Rich-formatted tables showing opportunities, savings, and risk levels
+    - Integration with existing health and update commands
+  - **LifecycleConfig** - Configurable optimization policies
+    - Session expiry: 48 hours (configurable)
+    - Importance decay half-life: 7 days
+    - Auto-archive threshold: 180 days
+    - Auto-delete threshold: 365 days
+    - Compression threshold: 10 KB
+    - Enable/disable auto-compression, auto-archival, auto-deduplication
+  - **Comprehensive Testing** - 14 tests, 100% passing
+    - Empty store handling, stale memory detection, session expiry
+    - Large memory detection, duplicate detection, lifecycle distribution
+    - Memory size estimation, dry-run/live optimization
+    - Safe optimization filtering, auto-optimize workflows
+    - Opportunity sorting, analysis summary formatting
+  - **Impact:** Prevents long-term storage bloat, automatically maintains memory health, provides actionable optimization recommendations with estimated savings
+  - **Integrates with:** FEAT-026 (memory pruning), FEAT-032 (lifecycle states), FEAT-036 (project archival)
+  - **Status:** Complete - Storage optimizer with CLI and comprehensive tests
+=======
 - **UX-022: Configuration File Support ✅ COMPLETE** - Added parsing for JSON, YAML, and TOML configuration files
   - Created `rust_core/src/config_parsing.rs` (192 lines) - Native Rust parsers for config files
     - `parse_json()` - Extract top-level keys from JSON files using serde_json
@@ -99,6 +133,7 @@ filtered_files = manager.apply_patterns(all_files)
 >>>>>>> origin/main
 
 ### Added - 2025-11-17
+>>>>>>> origin/main
 
 - **WORKFLOW: Git worktree support for parallel agent development** - Configured repository to use git worktrees for concurrent feature development
   - Created `.worktrees/` directory for isolated feature branches
