@@ -358,6 +358,11 @@ class SQLiteMemoryStore(MemoryStore):
                 if filters.min_importance > 0.0:
                     query += " AND m.importance >= ?"
                     params.append(filters.min_importance)
+                if filters.tags:
+                    # Filter by tags (AND operation - memory must have all tags)
+                    for tag in filters.tags:
+                        query += " AND json_extract(m.tags, '$') LIKE ?"
+                        params.append(f'%"{tag}"%')
 
             query += " ORDER BY m.created_at DESC LIMIT ?"
             params.append(limit)
