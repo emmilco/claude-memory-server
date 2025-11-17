@@ -89,6 +89,23 @@ class SQLiteMemoryStore(MemoryStore):
                 )
             """)
 
+            # Create usage tracking table
+            self.conn.execute("""
+                CREATE TABLE IF NOT EXISTS memory_usage_tracking (
+                    memory_id TEXT PRIMARY KEY,
+                    first_seen TEXT NOT NULL,
+                    last_used TEXT NOT NULL,
+                    use_count INTEGER NOT NULL DEFAULT 0,
+                    last_search_score REAL NOT NULL DEFAULT 0.0,
+                    FOREIGN KEY (memory_id) REFERENCES memories(id) ON DELETE CASCADE
+                )
+            """)
+
+            # Index for efficient queries
+            self.conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_last_used ON memory_usage_tracking(last_used)"
+            )
+
             self.conn.commit()
             logger.info("SQLite store initialized successfully")
 
@@ -495,3 +512,277 @@ class SQLiteMemoryStore(MemoryStore):
         except Exception as e:
             logger.error(f"Error getting project stats for {project_name}: {e}")
             raise StorageError(f"Failed to get project stats: {e}")
+
+    async def update_usage(self, usage_data: Dict[str, Any]) -> bool:
+        """
+        Update usage tracking for a single memory.
+
+        Args:
+            usage_data: Dictionary with memory_id, first_seen, last_used, use_count, last_search_score
+
+        Returns:
+            True if successful
+        """
+        if not self.conn:
+            raise StorageError("Store not initialized")
+
+        try:
+            self.conn.execute(
+                """
+                INSERT INTO memory_usage_tracking
+                (memory_id, first_seen, last_used, use_count, last_search_score)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(memory_id) DO UPDATE SET
+                    last_used = excluded.last_used,
+                    use_count = excluded.use_count,
+                    last_search_score = excluded.last_search_score
+                """,
+                (
+                    usage_data["memory_id"],
+                    usage_data["first_seen"],
+                    usage_data["last_used"],
+                    usage_data["use_count"],
+                    usage_data["last_search_score"],
+                ),
+            )
+            self.conn.commit()
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to update usage tracking: {e}")
+            raise StorageError(f"Failed to update usage tracking: {e}")
+
+    async def batch_update_usage(self, usage_data_list: List[Dict[str, Any]]) -> bool:
+        """
+        Batch update usage tracking for multiple memories.
+
+        Args:
+            usage_data_list: List of usage data dictionaries
+
+        Returns:
+            True if successful
+        """
+        if not self.conn:
+            raise StorageError("Store not initialized")
+
+        try:
+            self.conn.executemany(
+                """
+                INSERT INTO memory_usage_tracking
+                (memory_id, first_seen, last_used, use_count, last_search_score)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(memory_id) DO UPDATE SET
+                    last_used = excluded.last_used,
+                    use_count = excluded.use_count,
+                    last_search_score = excluded.last_search_score
+                """,
+                [
+                    (
+                        data["memory_id"],
+                        data["first_seen"],
+                        data["last_used"],
+                        data["use_count"],
+                        data["last_search_score"],
+                    )
+                    for data in usage_data_list
+                ],
+            )
+            self.conn.commit()
+            logger.debug(f"Batch updated {len(usage_data_list)} usage records")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to batch update usage tracking: {e}")
+            raise StorageError(f"Failed to batch update usage tracking: {e}")
+
+    async def get_usage_stats(self, memory_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get usage statistics for a memory.
+
+        Args:
+            memory_id: Memory ID
+
+        Returns:
+            Usage stats dictionary, or None if not found
+        """
+        if not self.conn:
+            raise StorageError("Store not initialized")
+
+        try:
+            cursor = self.conn.execute(
+                "SELECT * FROM memory_usage_tracking WHERE memory_id = ?",
+                (memory_id,),
+            )
+            row = cursor.fetchone()
+
+            if not row:
+                return None
+
+            return dict(row)
+
+        except Exception as e:
+            logger.error(f"Failed to get usage stats: {e}")
+            return None
+
+    async def get_all_usage_stats(self) -> List[Dict[str, Any]]:
+        """Get all usage statistics."""
+        if not self.conn:
+            raise StorageError("Store not initialized")
+
+        try:
+            cursor = self.conn.execute("SELECT * FROM memory_usage_tracking")
+            return [dict(row) for row in cursor.fetchall()]
+
+        except Exception as e:
+            logger.error(f"Failed to get all usage stats: {e}")
+            return []
+
+    async def delete_usage_tracking(self, memory_id: str) -> bool:
+        """
+        Delete usage tracking for a memory.
+
+        Args:
+            memory_id: Memory ID
+
+        Returns:
+            True if deleted
+        """
+        if not self.conn:
+            raise StorageError("Store not initialized")
+
+        try:
+            cursor = self.conn.execute(
+                "DELETE FROM memory_usage_tracking WHERE memory_id = ?",
+                (memory_id,),
+            )
+            self.conn.commit()
+            return cursor.rowcount > 0
+
+        except Exception as e:
+            logger.error(f"Failed to delete usage tracking: {e}")
+            return False
+
+    async def cleanup_orphaned_usage_tracking(self) -> int:
+        """
+        Clean up usage tracking records for deleted memories.
+
+        Returns:
+            Number of records deleted
+        """
+        if not self.conn:
+            raise StorageError("Store not initialized")
+
+        try:
+            cursor = self.conn.execute(
+                """
+                DELETE FROM memory_usage_tracking
+                WHERE memory_id NOT IN (SELECT id FROM memories)
+                """
+            )
+            self.conn.commit()
+            return cursor.rowcount
+
+        except Exception as e:
+            logger.error(f"Failed to cleanup orphaned usage tracking: {e}")
+            return 0
+
+    async def find_memories_by_criteria(
+        self,
+        context_level: Optional[Any] = None,
+        older_than: Optional[datetime] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Find memories matching criteria (for pruning).
+
+        Args:
+            context_level: Filter by context level
+            older_than: Find memories older than this datetime
+
+        Returns:
+            List of memory dictionaries
+        """
+        if not self.conn:
+            raise StorageError("Store not initialized")
+
+        try:
+            query = "SELECT m.id, m.created_at, u.last_used FROM memories m"
+            query += " LEFT JOIN memory_usage_tracking u ON m.id = u.memory_id"
+            query += " WHERE 1=1"
+            params = []
+
+            if context_level:
+                query += " AND m.context_level = ?"
+                params.append(context_level.value if hasattr(context_level, "value") else context_level)
+
+            if older_than:
+                # Check either last_used or created_at
+                query += " AND (COALESCE(u.last_used, m.created_at) < ?)"
+                params.append(older_than.isoformat())
+
+            cursor = self.conn.execute(query, params)
+            return [dict(row) for row in cursor.fetchall()]
+
+        except Exception as e:
+            logger.error(f"Failed to find memories by criteria: {e}")
+            return []
+
+    async def find_unused_memories(
+        self,
+        cutoff_time: datetime,
+        exclude_context_levels: Optional[List[Any]] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Find memories that haven't been used since cutoff_time.
+
+        Args:
+            cutoff_time: Cutoff datetime
+            exclude_context_levels: Don't include these context levels
+
+        Returns:
+            List of memory dictionaries
+        """
+        if not self.conn:
+            raise StorageError("Store not initialized")
+
+        try:
+            query = """
+                SELECT m.id, m.created_at, m.context_level, u.last_used, u.use_count
+                FROM memories m
+                LEFT JOIN memory_usage_tracking u ON m.id = u.memory_id
+                WHERE (u.use_count = 0 OR u.use_count IS NULL)
+                  AND (COALESCE(u.last_used, m.created_at) < ?)
+            """
+            params = [cutoff_time.isoformat()]
+
+            if exclude_context_levels:
+                placeholders = ",".join(["?"] * len(exclude_context_levels))
+                query += f" AND m.context_level NOT IN ({placeholders})"
+                params.extend([
+                    cl.value if hasattr(cl, "value") else cl
+                    for cl in exclude_context_levels
+                ])
+
+            cursor = self.conn.execute(query, params)
+            return [dict(row) for row in cursor.fetchall()]
+
+        except Exception as e:
+            logger.error(f"Failed to find unused memories: {e}")
+            return []
+
+    async def get_all_memories(self) -> List[Dict[str, Any]]:
+        """
+        Get all memories (for fallback queries).
+
+        Returns:
+            List of all memory dictionaries
+        """
+        if not self.conn:
+            raise StorageError("Store not initialized")
+
+        try:
+            cursor = self.conn.execute("SELECT * FROM memories")
+            return [dict(row) for row in cursor.fetchall()]
+
+        except Exception as e:
+            logger.error(f"Failed to get all memories: {e}")
+            return []

@@ -31,6 +31,8 @@ from src.core.exceptions import (
     RetrievalError,
 )
 from src.router import RetrievalGate
+from src.memory.usage_tracker import UsageTracker
+from src.memory.pruner import MemoryPruner
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +73,9 @@ class MemoryRAGServer:
         self.embedding_generator: Optional[EmbeddingGenerator] = None
         self.embedding_cache: Optional[EmbeddingCache] = None
         self.retrieval_gate: Optional[RetrievalGate] = None
+        self.usage_tracker: Optional[UsageTracker] = None
+        self.pruner: Optional[MemoryPruner] = None
+        self.scheduler = None  # APScheduler instance
 
         # Statistics
         self.stats = {
@@ -138,6 +143,27 @@ class MemoryRAGServer:
             else:
                 self.retrieval_gate = None
                 logger.info("Retrieval gate disabled")
+
+            # Initialize usage tracker if enabled
+            if self.config.enable_usage_tracking:
+                self.usage_tracker = UsageTracker(self.config, self.store)
+                await self.usage_tracker.start()
+                logger.info("Usage tracking enabled")
+            else:
+                self.usage_tracker = None
+                logger.info("Usage tracking disabled")
+
+            # Initialize pruner
+            self.pruner = MemoryPruner(self.config, self.store)
+
+            # Initialize background scheduler for auto-pruning
+            if self.config.enable_auto_pruning:
+                await self._start_pruning_scheduler()
+                logger.info(
+                    f"Auto-pruning enabled (schedule: {self.config.pruning_schedule})"
+                )
+            else:
+                logger.info("Auto-pruning disabled")
 
             logger.info("Server initialized successfully")
 
@@ -363,6 +389,39 @@ class MemoryRAGServer:
 
             # Update stats for successful retrieval
             self.stats["queries_retrieved"] += 1
+
+            # Apply composite ranking if usage tracking is enabled
+            if self.usage_tracker and self.config.enable_usage_tracking:
+                reranked_results = []
+
+                for memory, similarity_score in results:
+                    # Get usage stats for this memory
+                    usage_stats = await self.usage_tracker.get_usage_stats(memory.id)
+
+                    # Calculate composite score
+                    if usage_stats:
+                        composite_score = self.usage_tracker.calculate_composite_score(
+                            similarity_score=similarity_score,
+                            created_at=memory.created_at,
+                            last_used=datetime.fromisoformat(usage_stats["last_used"]) if usage_stats.get("last_used") else None,
+                            use_count=usage_stats.get("use_count", 0),
+                        )
+                    else:
+                        # No usage stats yet - use similarity score only
+                        composite_score = similarity_score
+
+                    reranked_results.append((memory, composite_score, similarity_score))
+
+                # Sort by composite score
+                reranked_results.sort(key=lambda x: x[1], reverse=True)
+
+                # Track usage for all retrieved memories (asynchronously)
+                memory_ids = [memory.id for memory, _, _ in reranked_results]
+                scores = [comp_score for _, comp_score, _ in reranked_results]
+                await self.usage_tracker.record_batch(memory_ids, scores)
+
+                # Use reranked results
+                results = [(memory, composite_score) for memory, composite_score, _ in reranked_results]
 
             # Convert to response format
             # Clamp scores to [0, 1] range to handle floating point precision issues
@@ -900,8 +959,81 @@ class MemoryRAGServer:
         # Default to project context
         return ContextLevel.PROJECT_CONTEXT
 
+    async def _start_pruning_scheduler(self) -> None:
+        """Start background scheduler for auto-pruning."""
+        try:
+            from apscheduler.schedulers.asyncio import AsyncIOScheduler
+            from apscheduler.triggers.cron import CronTrigger
+
+            self.scheduler = AsyncIOScheduler()
+
+            # Parse cron schedule (format: "minute hour day month day_of_week")
+            # Default: "0 2 * * *" = 2 AM daily
+            schedule_parts = self.config.pruning_schedule.split()
+
+            self.scheduler.add_job(
+                self._auto_prune_job,
+                CronTrigger(
+                    minute=schedule_parts[0] if len(schedule_parts) > 0 else "0",
+                    hour=schedule_parts[1] if len(schedule_parts) > 1 else "2",
+                    day=schedule_parts[2] if len(schedule_parts) > 2 else "*",
+                    month=schedule_parts[3] if len(schedule_parts) > 3 else "*",
+                    day_of_week=schedule_parts[4] if len(schedule_parts) > 4 else "*",
+                ),
+                id="auto_prune",
+                name="Auto-prune expired memories",
+                replace_existing=True,
+            )
+
+            self.scheduler.start()
+            logger.info("Pruning scheduler started")
+
+        except Exception as e:
+            logger.error(f"Failed to start pruning scheduler: {e}")
+            # Don't fail server initialization if scheduler fails
+            self.scheduler = None
+
+    async def _auto_prune_job(self) -> None:
+        """Background job to auto-prune expired memories."""
+        try:
+            logger.info("Running auto-prune job")
+
+            if not self.pruner:
+                logger.warning("Pruner not initialized, skipping auto-prune")
+                return
+
+            # Prune expired SESSION_STATE memories
+            result = await self.pruner.prune_expired(
+                dry_run=False,
+                ttl_hours=None,  # Use config default
+                safety_check=True,
+            )
+
+            logger.info(
+                f"Auto-prune completed: {result.memories_deleted} memories deleted, "
+                f"{len(result.errors)} errors"
+            )
+
+            # Cleanup orphaned usage tracking
+            orphaned_count = await self.pruner.cleanup_orphaned_usage_tracking()
+            if orphaned_count > 0:
+                logger.info(f"Cleaned up {orphaned_count} orphaned usage tracking records")
+
+        except Exception as e:
+            logger.error(f"Auto-prune job failed: {e}", exc_info=True)
+
     async def close(self) -> None:
         """Clean up resources."""
+        # Stop usage tracker
+        if self.usage_tracker:
+            await self.usage_tracker.stop()
+            logger.info("Usage tracker stopped")
+
+        # Stop scheduler
+        if self.scheduler:
+            self.scheduler.shutdown(wait=False)
+            logger.info("Pruning scheduler stopped")
+
         if self.store:
             await self.store.close()
         if self.embedding_generator:

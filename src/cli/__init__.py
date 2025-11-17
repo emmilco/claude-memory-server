@@ -10,6 +10,7 @@ from src.cli.index_command import IndexCommand
 from src.cli.watch_command import WatchCommand
 from src.cli.health_command import HealthCommand
 from src.cli.status_command import StatusCommand
+from src.cli.prune_command import prune_command
 
 
 def setup_logging(level: str = "INFO"):
@@ -100,6 +101,32 @@ def create_parser() -> argparse.ArgumentParser:
         help="Interactive memory browser (TUI)",
     )
 
+    # Prune command
+    prune_parser = subparsers.add_parser(
+        "prune",
+        help="Prune expired and stale memories",
+    )
+    prune_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Don't actually delete, just show what would be deleted",
+    )
+    prune_parser.add_argument(
+        "--ttl-hours",
+        type=int,
+        help="Time-to-live for SESSION_STATE in hours (default from config)",
+    )
+    prune_parser.add_argument(
+        "--stale-days",
+        type=int,
+        help="Also prune memories unused for N days",
+    )
+    prune_parser.add_argument(
+        "-v", "--verbose",
+        action="store_true",
+        help="Show detailed output",
+    )
+
     return parser
 
 
@@ -120,6 +147,14 @@ async def main_async(args):
     elif args.command == "browse":
         from src.cli.memory_browser import run_memory_browser
         await run_memory_browser()
+    elif args.command == "prune":
+        exit_code = await prune_command(
+            dry_run=args.dry_run,
+            ttl_hours=args.ttl_hours,
+            verbose=args.verbose,
+            stale_days=args.stale_days,
+        )
+        sys.exit(exit_code)
     else:
         print("No command specified. Use --help for usage information.")
         sys.exit(1)

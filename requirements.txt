@@ -17,3 +17,4 @@ tree-sitter-typescript>=0.20.0
 tree-sitter-java>=0.20.0
 tree-sitter-go>=0.20.0
 tree-sitter-rust>=0.20.0
+apscheduler>=3.10.0

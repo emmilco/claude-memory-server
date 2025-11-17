@@ -639,3 +639,457 @@ class QdrantMemoryStore(MemoryStore):
         except Exception as e:
             logger.error(f"Error getting project stats for {project_name}: {e}")
             raise StorageError(f"Failed to get project stats: {e}")
+
+    async def update_usage(self, usage_data: Dict[str, Any]) -> bool:
+        """
+        Update usage tracking for a single memory (stored in payload).
+
+        Args:
+            usage_data: Dictionary with memory_id, first_seen, last_used, use_count, last_search_score
+
+        Returns:
+            True if successful
+        """
+        if not self.client:
+            raise StorageError("Store not initialized")
+
+        try:
+            memory_id = usage_data["memory_id"]
+
+            # Get current point
+            points = self.client.retrieve(
+                collection_name=self.collection_name,
+                ids=[memory_id],
+                with_payload=True,
+                with_vectors=True,
+            )
+
+            if not points:
+                logger.warning(f"Memory {memory_id} not found for usage update")
+                return False
+
+            point = points[0]
+            payload = dict(point.payload)
+
+            # Update usage tracking fields in payload
+            payload["usage_first_seen"] = usage_data.get("first_seen")
+            payload["usage_last_used"] = usage_data["last_used"]
+            payload["usage_count"] = usage_data["use_count"]
+            payload["usage_last_score"] = usage_data["last_search_score"]
+
+            # Update point with new payload
+            self.client.upsert(
+                collection_name=self.collection_name,
+                points=[
+                    PointStruct(
+                        id=point.id,
+                        vector=point.vector,
+                        payload=payload,
+                    )
+                ],
+            )
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to update usage tracking: {e}")
+            raise StorageError(f"Failed to update usage tracking: {e}")
+
+    async def batch_update_usage(self, usage_data_list: List[Dict[str, Any]]) -> bool:
+        """
+        Batch update usage tracking for multiple memories.
+
+        Args:
+            usage_data_list: List of usage data dictionaries
+
+        Returns:
+            True if successful
+        """
+        if not self.client:
+            raise StorageError("Store not initialized")
+
+        try:
+            # Retrieve all points at once
+            memory_ids = [data["memory_id"] for data in usage_data_list]
+
+            points = self.client.retrieve(
+                collection_name=self.collection_name,
+                ids=memory_ids,
+                with_payload=True,
+                with_vectors=True,
+            )
+
+            # Create lookup for usage data
+            usage_lookup = {data["memory_id"]: data for data in usage_data_list}
+
+            # Update points
+            updated_points = []
+            for point in points:
+                usage_data = usage_lookup.get(str(point.id))
+                if not usage_data:
+                    continue
+
+                payload = dict(point.payload)
+                payload["usage_first_seen"] = usage_data.get("first_seen")
+                payload["usage_last_used"] = usage_data["last_used"]
+                payload["usage_count"] = usage_data["use_count"]
+                payload["usage_last_score"] = usage_data["last_search_score"]
+
+                updated_points.append(
+                    PointStruct(
+                        id=point.id,
+                        vector=point.vector,
+                        payload=payload,
+                    )
+                )
+
+            if updated_points:
+                self.client.upsert(
+                    collection_name=self.collection_name,
+                    points=updated_points,
+                )
+                logger.debug(f"Batch updated {len(updated_points)} usage records")
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to batch update usage tracking: {e}")
+            raise StorageError(f"Failed to batch update usage tracking: {e}")
+
+    async def get_usage_stats(self, memory_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get usage statistics for a memory.
+
+        Args:
+            memory_id: Memory ID
+
+        Returns:
+            Usage stats dictionary, or None if not found
+        """
+        if not self.client:
+            raise StorageError("Store not initialized")
+
+        try:
+            points = self.client.retrieve(
+                collection_name=self.collection_name,
+                ids=[memory_id],
+                with_payload=True,
+                with_vectors=False,
+            )
+
+            if not points:
+                return None
+
+            payload = points[0].payload
+
+            return {
+                "memory_id": memory_id,
+                "first_seen": payload.get("usage_first_seen"),
+                "last_used": payload.get("usage_last_used"),
+                "use_count": payload.get("usage_count", 0),
+                "last_search_score": payload.get("usage_last_score", 0.0),
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to get usage stats: {e}")
+            return None
+
+    async def get_all_usage_stats(self) -> List[Dict[str, Any]]:
+        """Get all usage statistics."""
+        if not self.client:
+            raise StorageError("Store not initialized")
+
+        try:
+            stats = []
+            offset = None
+
+            while True:
+                results, offset = self.client.scroll(
+                    collection_name=self.collection_name,
+                    limit=100,
+                    offset=offset,
+                    with_payload=True,
+                    with_vectors=False,
+                )
+
+                if not results:
+                    break
+
+                for point in results:
+                    payload = point.payload
+                    if "usage_count" in payload:  # Has usage tracking
+                        stats.append({
+                            "memory_id": point.id,
+                            "first_seen": payload.get("usage_first_seen"),
+                            "last_used": payload.get("usage_last_used"),
+                            "use_count": payload.get("usage_count", 0),
+                            "last_search_score": payload.get("usage_last_score", 0.0),
+                        })
+
+                if offset is None:
+                    break
+
+            return stats
+
+        except Exception as e:
+            logger.error(f"Failed to get all usage stats: {e}")
+            return []
+
+    async def delete_usage_tracking(self, memory_id: str) -> bool:
+        """
+        Delete usage tracking for a memory (remove from payload).
+
+        Args:
+            memory_id: Memory ID
+
+        Returns:
+            True if deleted
+        """
+        if not self.client:
+            raise StorageError("Store not initialized")
+
+        try:
+            points = self.client.retrieve(
+                collection_name=self.collection_name,
+                ids=[memory_id],
+                with_payload=True,
+                with_vectors=True,
+            )
+
+            if not points:
+                return False
+
+            point = points[0]
+            payload = dict(point.payload)
+
+            # Remove usage tracking fields
+            payload.pop("usage_first_seen", None)
+            payload.pop("usage_last_used", None)
+            payload.pop("usage_count", None)
+            payload.pop("usage_last_score", None)
+
+            # Update point
+            self.client.upsert(
+                collection_name=self.collection_name,
+                points=[
+                    PointStruct(
+                        id=point.id,
+                        vector=point.vector,
+                        payload=payload,
+                    )
+                ],
+            )
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to delete usage tracking: {e}")
+            return False
+
+    async def cleanup_orphaned_usage_tracking(self) -> int:
+        """
+        Clean up usage tracking (no-op for Qdrant, data is in payload).
+
+        Returns:
+            0 (no orphaned records in Qdrant)
+        """
+        # In Qdrant, usage tracking is part of the point payload,
+        # so there are no orphaned records
+        return 0
+
+    async def find_memories_by_criteria(
+        self,
+        context_level: Optional[Any] = None,
+        older_than: Optional[datetime] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Find memories matching criteria (for pruning).
+
+        Args:
+            context_level: Filter by context level
+            older_than: Find memories older than this datetime
+
+        Returns:
+            List of memory dictionaries
+        """
+        if not self.client:
+            raise StorageError("Store not initialized")
+
+        try:
+            # Build filter conditions
+            conditions = []
+
+            if context_level:
+                conditions.append(
+                    FieldCondition(
+                        key="context_level",
+                        match=MatchValue(
+                            value=context_level.value if hasattr(context_level, "value") else context_level
+                        )
+                    )
+                )
+
+            # For Qdrant, we need to scroll and filter in Python for datetime comparisons
+            # since Qdrant doesn't support datetime comparisons directly
+
+            scroll_filter = Filter(must=conditions) if conditions else None
+            offset = None
+            results_list = []
+
+            while True:
+                results, offset = self.client.scroll(
+                    collection_name=self.collection_name,
+                    scroll_filter=scroll_filter,
+                    limit=100,
+                    offset=offset,
+                    with_payload=True,
+                    with_vectors=False,
+                )
+
+                if not results:
+                    break
+
+                for point in results:
+                    payload = point.payload
+
+                    # Check age if older_than is specified
+                    if older_than:
+                        last_used = payload.get("usage_last_used") or payload.get("created_at")
+                        if last_used:
+                            if isinstance(last_used, str):
+                                last_used = datetime.fromisoformat(last_used)
+
+                            if last_used >= older_than:
+                                continue  # Not old enough
+
+                    results_list.append({
+                        "id": point.id,
+                        "created_at": payload.get("created_at"),
+                        "last_used": payload.get("usage_last_used"),
+                    })
+
+                if offset is None:
+                    break
+
+            return results_list
+
+        except Exception as e:
+            logger.error(f"Failed to find memories by criteria: {e}")
+            return []
+
+    async def find_unused_memories(
+        self,
+        cutoff_time: datetime,
+        exclude_context_levels: Optional[List[Any]] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Find memories that haven't been used since cutoff_time.
+
+        Args:
+            cutoff_time: Cutoff datetime
+            exclude_context_levels: Don't include these context levels
+
+        Returns:
+            List of memory dictionaries
+        """
+        if not self.client:
+            raise StorageError("Store not initialized")
+
+        try:
+            offset = None
+            results_list = []
+
+            while True:
+                results, offset = self.client.scroll(
+                    collection_name=self.collection_name,
+                    limit=100,
+                    offset=offset,
+                    with_payload=True,
+                    with_vectors=False,
+                )
+
+                if not results:
+                    break
+
+                for point in results:
+                    payload = point.payload
+
+                    # Check context level exclusions
+                    if exclude_context_levels:
+                        context_level = payload.get("context_level")
+                        if context_level in [
+                            cl.value if hasattr(cl, "value") else cl
+                            for cl in exclude_context_levels
+                        ]:
+                            continue
+
+                    # Check usage
+                    use_count = payload.get("usage_count", 0)
+                    if use_count > 0:
+                        continue  # Has been used
+
+                    # Check age
+                    last_used = payload.get("usage_last_used") or payload.get("created_at")
+                    if last_used:
+                        if isinstance(last_used, str):
+                            last_used = datetime.fromisoformat(last_used)
+
+                        if last_used >= cutoff_time:
+                            continue  # Not old enough
+
+                    results_list.append({
+                        "id": point.id,
+                        "created_at": payload.get("created_at"),
+                        "context_level": payload.get("context_level"),
+                        "last_used": payload.get("usage_last_used"),
+                        "use_count": use_count,
+                    })
+
+                if offset is None:
+                    break
+
+            return results_list
+
+        except Exception as e:
+            logger.error(f"Failed to find unused memories: {e}")
+            return []
+
+    async def get_all_memories(self) -> List[Dict[str, Any]]:
+        """
+        Get all memories (for fallback queries).
+
+        Returns:
+            List of all memory dictionaries
+        """
+        if not self.client:
+            raise StorageError("Store not initialized")
+
+        try:
+            offset = None
+            memories = []
+
+            while True:
+                results, offset = self.client.scroll(
+                    collection_name=self.collection_name,
+                    limit=100,
+                    offset=offset,
+                    with_payload=True,
+                    with_vectors=False,
+                )
+
+                if not results:
+                    break
+
+                for point in results:
+                    memory_dict = dict(point.payload)
+                    memory_dict["id"] = point.id
+                    memories.append(memory_dict)
+
+                if offset is None:
+                    break
+
+            return memories
+
+        except Exception as e:
+            logger.error(f"Failed to get all memories: {e}")
+            return []
