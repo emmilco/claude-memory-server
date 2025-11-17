@@ -78,6 +78,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Status tracking (3 tests)
   - **Status:** Phase 3 of 8 complete (~45% of FEAT-017)
   - **Next:** Phase 4 - Enhanced Cross-Repository Search implementation
+- **FEAT-017 Phase 4: Enhanced Cross-Repository Search** - Implemented cross-repository code search with intelligent result aggregation
+  - Created `src/memory/multi_repository_search.py` (450+ lines) - Complete cross-repo search
+    - `RepositorySearchResult` and `MultiRepositorySearchResult` dataclasses for result tracking
+    - `MultiRepositorySearch` class for cross-repository search operations
+    - Single repository search with filtering
+    - Multi-repository search with parallel execution
+    - Result aggregation and sorting by score
+    - Workspace-scoped search (respects cross_repo_search_enabled setting)
+    - Dependency-aware search (search repo + its dependencies)
+    - Search scope utilities (get repos by workspace, tags, status)
+    - Configurable limits (per-repo and total)
+    - Error handling for missing repositories
+  - Created `tests/unit/test_multi_repository_search.py` - 29 comprehensive tests (100% passing)
+    - Result model tests (3 tests)
+    - Initialization and cleanup (2 tests)
+    - Single repository search (3 tests)
+    - Multi-repository search with aggregation (6 tests)
+    - Workspace search (5 tests)
+    - Dependency-aware search (4 tests)
+    - Search scope utilities (6 tests)
+  - **Status:** Phase 4 of 8 complete (~60% of FEAT-017)
+  - **Next:** Phase 5 - MCP Server Integration (add 12+ new tools)
 - **WORKFLOW: Git worktree support for parallel agent development** - Configured repository to use git worktrees for concurrent feature development
   - Created `.worktrees/` directory for isolated feature branches
   - Added `.worktrees/` to `.gitignore` to prevent committing worktree directories
