@@ -212,14 +212,198 @@ python -m src.cli status  # Shows git index stats
   - [x] SQLite storage methods
   - [x] CLI command created
   - [x] Tested successfully (5 commits indexed)
-- [ ] Phase 2 complete
-- [ ] Phase 3 complete
-- [ ] Phase 4 complete
-- [ ] Tests complete
-- [ ] Documentation complete
+- [x] Phase 2 complete ✅
+  - [x] MCP search_git_history tool
+  - [x] MCP index_git_history tool
+  - [x] Date filter parsing
+  - [x] File path filtering
+- [x] Phase 3 complete ✅
+  - [x] MCP show_function_evolution tool
+  - [x] Commit-to-file linking
+  - [x] Function name filtering
+- [x] Phase 4 complete ✅
+  - [x] CLI git-search command
+  - [x] Rich formatted output
+  - [x] Filter display
+- [x] Tests complete ✅
+  - [x] test_git_indexer.py (30 tests)
+  - [x] test_git_storage.py (27 tests)
+  - Total: 57 comprehensive tests
+- [x] Documentation complete ✅
+  - [x] CHANGELOG.md updated
+  - [x] Planning document updated
 - [ ] Feature committed
 
-## Related Files
+## Completion Summary
+
+**Status:** ✅ COMPLETE
+**Date:** 2025-11-17
+**Implementation Time:** 2 sessions (1 day)
+
+### What Was Built
+
+**Phase 1: Basic Commit Indexing**
+- GitIndexer class with full commit extraction
+- SQLite storage tables and methods (git_commits, git_file_changes)
+- FTS5 integration for fast text search
+- CLI command for indexing (`git-index`)
+- Configuration system with 7 parameters
+- Auto-size detection for diff indexing
+
+**Phase 2: Diff Indexing & MCP Tools**
+- `search_git_history()` MCP tool - Semantic search over commits
+- `index_git_history()` MCP tool - Index from Claude
+- Flexible date parsing (relative dates, ISO, patterns)
+- Multi-filter support (author, date, file path)
+
+**Phase 3: Code Unit Linking**
+- `show_function_evolution()` MCP tool - Track file/function changes
+- get_commits_by_file() storage method
+- Function name filtering via commit messages
+
+**Phase 4: Optimizations**
+- `git-search` CLI command with rich output
+- Hash truncation, message truncation
+- Filter status display
+- Professional table formatting
+
+**Testing**
+- 57 comprehensive unit tests
+- test_git_indexer.py: 30 tests covering all GitIndexer functionality
+- test_git_storage.py: 27 tests covering all storage operations
+- 100% test pass rate
+
+### Files Changed
+
+**Created:**
+- `src/memory/git_indexer.py` (436 lines)
+- `src/cli/git_index_command.py` (existing, from Phase 1)
+- `src/cli/git_search_command.py` (148 lines)
+- `tests/unit/test_git_indexer.py` (600+ lines, 30 tests)
+- `tests/unit/test_git_storage.py` (500+ lines, 27 tests)
+
+**Modified:**
+- `src/core/server.py` - Added 3 MCP tools (~300 lines)
+  - search_git_history()
+  - index_git_history()
+  - show_function_evolution()
+  - _parse_date_filter() helper
+- `src/cli/__init__.py` - Registered git-search command
+- `src/store/sqlite_store.py` - Added git storage methods (Phase 1)
+- `src/config.py` - Added 7 git configuration parameters (Phase 1)
+- `CHANGELOG.md` - Comprehensive documentation of all phases
+- `planning_docs/FEAT-031_git_aware_semantic_search.md` - This document
+
+### Impact
+
+**Functionality:**
+- Semantic search over git commit history
+- Track code evolution and changes over time
+- Find relevant commits by natural language queries
+- Filter by author, date, file path
+- Support for both CLI and MCP interfaces
+
+**Use Cases:**
+- "Find commits related to authentication bugs from last week"
+- "Show me how the login function evolved over time"
+- "Search for changes by Alice in the last month"
+- "Track modifications to auth.py"
+
+**Performance:**
+- FTS5 for fast text search
+- Embeddings for semantic search
+- Auto-size detection prevents large repo slowdowns
+- Configurable commit limits
+
+### Test Coverage
+
+- **GitIndexer:** 30 tests
+  - Initialization, repository indexing, commit extraction
+  - File change extraction, diff processing
+  - Helper methods, statistics, error handling
+  - Data classes validation
+
+- **Git Storage:** 27 tests
+  - Storing commits and file changes
+  - Searching with various filters
+  - Date range queries, FTS search
+  - Error handling, edge cases
+
+**Total:** 57 tests, all passing
+
+### Configuration
+
+```python
+# Git indexing settings
+enable_git_indexing: bool = True
+git_index_commit_count: int = 1000
+git_index_branches: str = "current"  # or "all"
+git_index_tags: bool = True
+git_index_diffs: bool = True  # Auto-disabled for large repos
+git_auto_size_threshold_mb: int = 500
+git_diff_size_limit_kb: int = 10
+```
+
+### Usage Examples
+
+**Indexing:**
+```bash
+# Index a repository
+python -m src.cli git-index ./my-repo -p my-project --commits 500
+
+# Index with explicit diff control
+python -m src.cli git-index ./repo -p test --diffs --verbose
+```
+
+**Searching (CLI):**
+```bash
+# Basic search
+python -m src.cli git-search "authentication bug fix"
+
+# With filters
+python -m src.cli git-search "refactor" --author alice@example.com --since "last month" --limit 10
+
+# Date ranges
+python -m src.cli git-search "api" --since "2024-01-01" --until "2024-06-30"
+```
+
+**Searching (MCP):**
+```python
+# Search commits
+result = await server.search_git_history(
+    query="fix authentication",
+    author="alice@example.com",
+    since="last week",
+    limit=5
+)
+
+# Track function evolution
+result = await server.show_function_evolution(
+    file_path="src/auth.py",
+    function_name="authenticate",
+    limit=10
+)
+
+# Index from MCP
+result = await server.index_git_history(
+    repository_path="/path/to/repo",
+    project_name="my-project",
+    num_commits=1000,
+    include_diffs=True
+)
+```
+
+### Next Steps
+
+This feature is complete and ready for production use. Potential future enhancements:
+- Qdrant storage backend for git commits (currently SQLite only)
+- Diff content semantic search (currently only commit messages)
+- Visual timeline of code changes
+- Commit impact analysis (files affected, complexity metrics)
+- Integration with code review workflows
+
+### Related Files
+
 - TODO.md - Task definition
 - CLAUDE.md - Project guide
 - src/config.py - Configuration

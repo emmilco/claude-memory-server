@@ -12,6 +12,7 @@ from src.cli.health_command import HealthCommand
 from src.cli.status_command import StatusCommand
 from src.cli.prune_command import prune_command
 from src.cli.git_index_command import GitIndexCommand
+from src.cli.git_search_command import GitSearchCommand
 
 
 def setup_logging(level: str = "INFO"):
@@ -170,6 +171,48 @@ def create_parser() -> argparse.ArgumentParser:
         help="Verbose output",
     )
 
+    # Git search command
+    git_search_parser = subparsers.add_parser(
+        "git-search",
+        help="Search git commit history",
+    )
+    git_search_parser.add_argument(
+        "query",
+        type=str,
+        help="Search query (e.g., 'authentication bug fix')",
+    )
+    git_search_parser.add_argument(
+        "--project-name",
+        "-p",
+        type=str,
+        help="Filter by project name",
+    )
+    git_search_parser.add_argument(
+        "--author",
+        "-a",
+        type=str,
+        help="Filter by author email",
+    )
+    git_search_parser.add_argument(
+        "--since",
+        "-s",
+        type=str,
+        help="Filter by date (e.g., '2024-01-01', 'last week')",
+    )
+    git_search_parser.add_argument(
+        "--until",
+        "-u",
+        type=str,
+        help="Filter by date (e.g., '2024-12-31', 'yesterday')",
+    )
+    git_search_parser.add_argument(
+        "--limit",
+        "-l",
+        type=int,
+        default=10,
+        help="Maximum results (default: 10)",
+    )
+
     return parser
 
 
@@ -200,6 +243,9 @@ async def main_async(args):
         sys.exit(exit_code)
     elif args.command == "git-index":
         cmd = GitIndexCommand()
+        await cmd.run(args)
+    elif args.command == "git-search":
+        cmd = GitSearchCommand()
         await cmd.run(args)
     else:
         print("No command specified. Use --help for usage information.")
