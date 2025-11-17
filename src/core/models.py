@@ -63,6 +63,16 @@ class RelationshipType(str, Enum):
     DUPLICATE = "duplicate"  # Memory A is a duplicate of memory B
 
 
+class MergeStrategy(str, Enum):
+    """Strategy for merging duplicate memories."""
+
+    KEEP_MOST_RECENT = "keep_most_recent"  # Keep the newest memory
+    KEEP_HIGHEST_IMPORTANCE = "keep_highest_importance"  # Keep most important
+    KEEP_MOST_ACCESSED = "keep_most_accessed"  # Keep most frequently accessed
+    MERGE_CONTENT = "merge_content"  # Combine content from all
+    USER_SELECTED = "user_selected"  # User manually selected canonical
+
+
 class MemoryProvenance(BaseModel):
     """Provenance metadata for a memory."""
 

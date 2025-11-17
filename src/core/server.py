@@ -81,6 +81,7 @@ class MemoryRAGServer:
         self.conversation_tracker: Optional[ConversationTracker] = None
         self.query_expander: Optional[QueryExpander] = None
         self.hybrid_searcher: Optional[HybridSearcher] = None
+        self.cross_project_consent: Optional = None  # Cross-project consent manager
         self.scheduler = None  # APScheduler instance
 
         # Statistics
@@ -209,6 +210,21 @@ class MemoryRAGServer:
             else:
                 self.hybrid_searcher = None
                 logger.info("Hybrid search disabled")
+
+            # Initialize cross-project consent manager if enabled
+            if self.config.enable_cross_project_search:
+                from src.memory.cross_project_consent import CrossProjectConsent
+                self.cross_project_consent = CrossProjectConsent(
+                    self.config.cross_project_opt_in_file
+                )
+                opted_in_count = len(self.cross_project_consent.get_opted_in_projects())
+                logger.info(
+                    f"Cross-project search enabled (default: {self.config.cross_project_default_mode}, "
+                    f"opted-in projects: {opted_in_count})"
+                )
+            else:
+                self.cross_project_consent = None
+                logger.info("Cross-project search disabled")
 
             logger.info("Server initialized successfully")
 
@@ -1183,6 +1199,149 @@ class MemoryRAGServer:
         except Exception as e:
             logger.error(f"Failed to find similar code: {e}")
             raise RetrievalError(f"Failed to find similar code: {e}")
+
+    async def search_all_projects(
+        self,
+        query: str,
+        limit: int = 10,
+        file_pattern: Optional[str] = None,
+        language: Optional[str] = None,
+        search_mode: str = "semantic",
+    ) -> Dict[str, Any]:
+        """
+        Search code across all opted-in projects.
+
+        Implements cross-project learning by searching across multiple
+        indexed projects. Respects privacy settings - projects must be
+        explicitly opted in via consent manager.
+
+        Args:
+            query: Search query (e.g., "authentication logic", "database connection")
+            limit: Maximum number of results across all projects (default 10)
+            file_pattern: Optional file path pattern filter (e.g., "*/auth/*")
+            language: Optional language filter (e.g., "python", "javascript")
+            search_mode: Search mode - "semantic" (default), "keyword", or "hybrid"
+
+        Returns:
+            Dict with code search results from all projects, grouped by project
+        """
+        # Check if cross-project search is enabled
+        if not self.config.enable_cross_project_search or not self.cross_project_consent:
+            raise ValidationError(
+                "Cross-project search is disabled. Enable it in config to use this feature."
+            )
+
+        try:
+            import time
+            start_time = time.time()
+
+            # Determine which projects to search
+            search_all_mode = self.config.cross_project_default_mode == "all"
+            searchable_projects = self.cross_project_consent.get_searchable_projects(
+                current_project=self.project_name,
+                search_all=search_all_mode
+            )
+
+            if not searchable_projects:
+                return {
+                    "results": [],
+                    "total_found": 0,
+                    "projects_searched": [],
+                    "query": query,
+                    "interpretation": "No projects available for cross-project search. Opt in projects first.",
+                    "suggestions": [
+                        "Use the opt-in tool to enable cross-project search for your projects",
+                        "Current project is automatically searchable if it exists"
+                    ],
+                    "query_time_ms": 0.0,
+                }
+
+            # Search each project and collect results
+            all_results = []
+            for project_name in searchable_projects:
+                try:
+                    # Search this specific project
+                    project_results = await self.search_code(
+                        query=query,
+                        project_name=project_name,
+                        limit=limit,  # Get limit per project, then we'll trim overall
+                        file_pattern=file_pattern,
+                        language=language,
+                        search_mode=search_mode,
+                    )
+
+                    # Add project name to each result
+                    for result in project_results.get("results", []):
+                        result["source_project"] = project_name
+                        all_results.append(result)
+
+                except Exception as e:
+                    logger.warning(f"Failed to search project '{project_name}': {e}")
+                    # Continue searching other projects
+
+            # Sort all results by relevance score (descending)
+            all_results.sort(key=lambda r: r.get("relevance_score", 0.0), reverse=True)
+
+            # Limit to top N results across all projects
+            final_results = all_results[:limit]
+
+            # Group by project for statistics
+            projects_with_results = {}
+            for result in final_results:
+                project = result.get("source_project")
+                if project not in projects_with_results:
+                    projects_with_results[project] = 0
+                projects_with_results[project] += 1
+
+            query_time_ms = (time.time() - start_time) * 1000
+
+            logger.info(
+                f"Cross-project search: '{query}' found {len(final_results)} results "
+                f"across {len(projects_with_results)} projects in {query_time_ms:.2f}ms"
+            )
+
+            # Generate interpretation
+            if not final_results:
+                interpretation = f"No results found across {len(searchable_projects)} searched projects"
+                suggestions = [
+                    "Try a different search query",
+                    "Verify that projects have been indexed",
+                    f"Searched projects: {', '.join(sorted(searchable_projects))}"
+                ]
+            elif len(projects_with_results) > 1:
+                interpretation = (
+                    f"Found {len(final_results)} results across {len(projects_with_results)} projects. "
+                    f"Similar patterns exist in multiple codebases - consider code reuse!"
+                )
+                project_breakdown = [f"{p}: {c} results" for p, c in sorted(projects_with_results.items())]
+                suggestions = [
+                    "Results show similar implementations across your projects",
+                    f"Project breakdown: {', '.join(project_breakdown)}",
+                    "Consider extracting common patterns into a shared library"
+                ]
+            else:
+                single_project = list(projects_with_results.keys())[0]
+                interpretation = f"Found {len(final_results)} results, all from project '{single_project}'"
+                suggestions = [
+                    f"This pattern appears unique to {single_project}",
+                    "Consider if similar solutions exist in other projects",
+                ]
+
+            return {
+                "results": final_results,
+                "total_found": len(final_results),
+                "projects_searched": sorted(searchable_projects),
+                "projects_with_results": projects_with_results,
+                "query": query,
+                "search_mode": search_mode,
+                "query_time_ms": query_time_ms,
+                "interpretation": interpretation,
+                "suggestions": suggestions,
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to search across projects: {e}")
+            raise RetrievalError(f"Failed to search across projects: {e}")
 
     async def index_codebase(
         self,

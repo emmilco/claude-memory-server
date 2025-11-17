@@ -321,6 +321,116 @@ class MemoryRAGServer:
         finally:
             await new_server.close()
 
+    async def search_all_projects(
+        self,
+        query: str,
+        limit: int = 10,
+        file_pattern: Optional[str] = None,
+        language: Optional[str] = None,
+        search_mode: str = "semantic",
+    ) -> Dict[str, Any]:
+        """
+        Search code across all opted-in projects.
+
+        This uses the new architecture from src/core/server.py
+        """
+        from src.core.server import MemoryRAGServer as NewServer
+        from src.config import get_config
+
+        # Create new server instance
+        config = get_config()
+        new_server = NewServer(config)
+        await new_server.initialize()
+
+        try:
+            result = await new_server.search_all_projects(
+                query=query,
+                limit=limit,
+                file_pattern=file_pattern,
+                language=language,
+                search_mode=search_mode,
+            )
+            return result
+        finally:
+            await new_server.close()
+
+    async def opt_in_cross_project(self, project_name: str) -> Dict[str, Any]:
+        """Opt in a project for cross-project search."""
+        from src.core.server import MemoryRAGServer as NewServer
+        from src.config import get_config
+
+        config = get_config()
+        new_server = NewServer(config)
+        await new_server.initialize()
+
+        try:
+            if new_server.cross_project_consent:
+                new_server.cross_project_consent.opt_in_project(project_name)
+                return {
+                    "status": "success",
+                    "message": f"Project '{project_name}' opted in for cross-project search",
+                    "opted_in_projects": list(new_server.cross_project_consent.get_opted_in_projects())
+                }
+            else:
+                return {
+                    "status": "disabled",
+                    "message": "Cross-project search is disabled in configuration"
+                }
+        finally:
+            await new_server.close()
+
+    async def opt_out_cross_project(self, project_name: str) -> Dict[str, Any]:
+        """Opt out a project from cross-project search."""
+        from src.core.server import MemoryRAGServer as NewServer
+        from src.config import get_config
+
+        config = get_config()
+        new_server = NewServer(config)
+        await new_server.initialize()
+
+        try:
+            if new_server.cross_project_consent:
+                new_server.cross_project_consent.opt_out_project(project_name)
+                return {
+                    "status": "success",
+                    "message": f"Project '{project_name}' opted out from cross-project search",
+                    "opted_in_projects": list(new_server.cross_project_consent.get_opted_in_projects())
+                }
+            else:
+                return {
+                    "status": "disabled",
+                    "message": "Cross-project search is disabled in configuration"
+                }
+        finally:
+            await new_server.close()
+
+    async def list_opted_in_projects(self) -> Dict[str, Any]:
+        """List all projects opted in for cross-project search."""
+        from src.core.server import MemoryRAGServer as NewServer
+        from src.config import get_config
+
+        config = get_config()
+        new_server = NewServer(config)
+        await new_server.initialize()
+
+        try:
+            if new_server.cross_project_consent:
+                opted_in = new_server.cross_project_consent.get_opted_in_projects()
+                return {
+                    "status": "success",
+                    "opted_in_projects": list(opted_in),
+                    "count": len(opted_in)
+                }
+            else:
+                return {
+                    "status": "disabled",
+                    "message": "Cross-project search is disabled in configuration",
+                    "opted_in_projects": [],
+                    "count": 0
+                }
+        finally:
+            await new_server.close()
+
 
 # Initialize MCP server
 app = Server("claude-memory-rag")
@@ -547,6 +657,72 @@ async def list_tools() -> List[Tool]:
                     }
                 },
                 "required": ["code_snippet"]
+            }
+        ),
+        Tool(
+            name="search_all_projects",
+            description="Search code across all opted-in projects. Finds similar implementations across your codebase for learning and code reuse.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Search query (e.g., 'authentication logic', 'database connection')"
+                    },
+                    "limit": {
+                        "type": "number",
+                        "description": "Maximum number of results across all projects (default: 10)"
+                    },
+                    "file_pattern": {
+                        "type": "string",
+                        "description": "Optional file path pattern filter (e.g., '*/auth/*')"
+                    },
+                    "language": {
+                        "type": "string",
+                        "description": "Optional language filter (e.g., 'python', 'javascript')"
+                    },
+                    "search_mode": {
+                        "type": "string",
+                        "description": "Search mode: 'semantic', 'keyword', or 'hybrid' (default: 'semantic')"
+                    }
+                },
+                "required": ["query"]
+            }
+        ),
+        Tool(
+            name="opt_in_cross_project",
+            description="Opt in a project for cross-project search. Required for privacy-respecting cross-project learning.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "project_name": {
+                        "type": "string",
+                        "description": "Project name to opt in for cross-project search"
+                    }
+                },
+                "required": ["project_name"]
+            }
+        ),
+        Tool(
+            name="opt_out_cross_project",
+            description="Opt out a project from cross-project search.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "project_name": {
+                        "type": "string",
+                        "description": "Project name to opt out from cross-project search"
+                    }
+                },
+                "required": ["project_name"]
+            }
+        ),
+        Tool(
+            name="list_opted_in_projects",
+            description="List all projects that are opted in for cross-project search.",
+            inputSchema={
+                "type": "object",
+                "properties": {}
             }
         )
     ]

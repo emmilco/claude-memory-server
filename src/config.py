@@ -91,6 +91,11 @@ class ServerConfig(BaseSettings):
     bm25_k1: float = 1.5  # Term saturation parameter
     bm25_b: float = 0.75  # Length normalization parameter
 
+    # Cross-project learning (FEAT-030)
+    enable_cross_project_search: bool = True  # Allow searching across projects
+    cross_project_default_mode: str = "current"  # "current" or "all"
+    cross_project_opt_in_file: str = "~/.claude-rag/cross_project_consent.json"
+
     model_config = SettingsConfigDict(
         env_prefix="CLAUDE_RAG_",
         env_file=".env",

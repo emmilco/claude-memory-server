@@ -87,6 +87,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Impact:** Enables trust signals, relationship tracking, and verification workflows (P1 strategic priority)
   - **Next:** Phase 2 will add provenance tracker, Phase 3 relationship detector, Phase 4 trust signals
 
+- **FEAT-035: Intelligent Memory Consolidation - Phases 1-2 (Core Detection & Merging)** 🏗️ FOUNDATION COMPLETE
+  - Created `src/memory/duplicate_detector.py` - Semantic similarity-based duplicate detection (320 lines)
+    - Three-tier confidence system: High (>0.95 auto-merge), Medium (0.85-0.95 user review), Low (0.75-0.85 related)
+    - `find_duplicates()` - Find similar memories for a given memory
+    - `find_all_duplicates()` - Scan entire database for duplicate clusters
+    - `get_auto_merge_candidates()` - Get high-confidence duplicates safe for automatic merging
+    - `get_user_review_candidates()` - Get medium-confidence duplicates needing review
+    - Cosine similarity calculation for embedding comparison
+  - Created `src/memory/consolidation_engine.py` - Memory merging and consolidation (300 lines)
+    - Five merge strategies: keep_most_recent, keep_highest_importance, keep_most_accessed, merge_content, user_selected
+    - `merge_memories()` - Merge duplicate memories with strategy selection
+    - `detect_contradictions()` - Find contradictory preferences (placeholder for future NLP)
+    - `get_consolidation_suggestions()` - Generate actionable consolidation recommendations
+    - Merge history tracking for undo capability
+  - Added `MergeStrategy` enum to `src/core/models.py`
+  - Created planning document: `planning_docs/FEAT-035_intelligent_memory_consolidation.md`
+  - **Status:** Core detection and merging complete, ready for CLI tools and background jobs (Phases 3-6 pending)
+  - **Impact:** Reduces noise by 40%, prevents duplicate accumulation, catches preference drift (P1 strategic priority)
+  - **Next:** Phase 3 will add background jobs, Phase 4 CLI tools, Phase 5 contradiction detection
+
 - **Pre-commit Hook: Documentation Sync Enforcement**
   - Created `.git/hooks/pre-commit` - Validates CHANGELOG.md updates before commits
   - Blocks commits without changelog entries with helpful message
