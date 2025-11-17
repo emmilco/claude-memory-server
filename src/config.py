@@ -61,6 +61,13 @@ class ServerConfig(BaseSettings):
     # Decay parameters
     recency_decay_halflife_days: float = 7.0  # Half-life for recency decay
 
+    # Conversation tracking
+    enable_conversation_tracking: bool = True
+    conversation_session_timeout_minutes: int = 30
+    conversation_query_history_size: int = 5
+    query_expansion_similarity_threshold: float = 0.7
+    deduplication_fetch_multiplier: int = 3
+
     model_config = SettingsConfigDict(
         env_prefix="CLAUDE_RAG_",
         env_file=".env",
@@ -131,6 +138,25 @@ class ServerConfig(BaseSettings):
 
         if self.recency_decay_halflife_days <= 0:
             raise ValueError("recency_decay_halflife_days must be positive")
+
+        # Validate conversation tracking settings
+        if self.conversation_session_timeout_minutes < 1:
+            raise ValueError("conversation_session_timeout_minutes must be at least 1")
+        if self.conversation_session_timeout_minutes > 1440:  # 24 hours
+            raise ValueError("conversation_session_timeout_minutes should not exceed 1440 (24 hours)")
+
+        if self.conversation_query_history_size < 1:
+            raise ValueError("conversation_query_history_size must be at least 1")
+        if self.conversation_query_history_size > 50:
+            raise ValueError("conversation_query_history_size should not exceed 50")
+
+        if not 0.0 <= self.query_expansion_similarity_threshold <= 1.0:
+            raise ValueError("query_expansion_similarity_threshold must be between 0.0 and 1.0")
+
+        if self.deduplication_fetch_multiplier < 1:
+            raise ValueError("deduplication_fetch_multiplier must be at least 1")
+        if self.deduplication_fetch_multiplier > 10:
+            raise ValueError("deduplication_fetch_multiplier should not exceed 10")
 
         return self
 

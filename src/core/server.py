@@ -33,6 +33,8 @@ from src.core.exceptions import (
 from src.router import RetrievalGate
 from src.memory.usage_tracker import UsageTracker
 from src.memory.pruner import MemoryPruner
+from src.memory.conversation_tracker import ConversationTracker
+from src.memory.query_expander import QueryExpander
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +77,8 @@ class MemoryRAGServer:
         self.retrieval_gate: Optional[RetrievalGate] = None
         self.usage_tracker: Optional[UsageTracker] = None
         self.pruner: Optional[MemoryPruner] = None
+        self.conversation_tracker: Optional[ConversationTracker] = None
+        self.query_expander: Optional[QueryExpander] = None
         self.scheduler = None  # APScheduler instance
 
         # Statistics
@@ -164,6 +168,20 @@ class MemoryRAGServer:
                 )
             else:
                 logger.info("Auto-pruning disabled")
+
+            # Initialize conversation tracker if enabled
+            if self.config.enable_conversation_tracking:
+                self.conversation_tracker = ConversationTracker(self.config)
+                await self.conversation_tracker.start()
+                logger.info("Conversation tracking enabled")
+
+                # Initialize query expander (requires embedding generator)
+                self.query_expander = QueryExpander(self.config, self.embedding_generator)
+                logger.info("Query expansion enabled")
+            else:
+                self.conversation_tracker = None
+                self.query_expander = None
+                logger.info("Conversation tracking disabled")
 
             logger.info("Server initialized successfully")
 
@@ -302,9 +320,10 @@ class MemoryRAGServer:
         category: Optional[str] = None,
         min_importance: float = 0.0,
         tags: Optional[List[str]] = None,
+        session_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        Retrieve memories similar to the query.
+        Retrieve memories similar to the query with conversation awareness.
 
         Args:
             query: Search query
@@ -315,6 +334,7 @@ class MemoryRAGServer:
             category: Filter by category
             min_importance: Minimum importance threshold
             tags: Filter by tags
+            session_id: Optional conversation session ID for context tracking
 
         Returns:
             Dict with results and metadata
@@ -367,8 +387,21 @@ class MemoryRAGServer:
                     return response.model_dump()
 
             # Gate approved - proceed with retrieval
-            # Generate query embedding
-            query_embedding = await self._get_embedding(query)
+
+            # Conversation-aware query expansion (if session provided)
+            expanded_query = query
+            recent_queries = []
+            if session_id and self.conversation_tracker and self.query_expander:
+                recent_queries = self.conversation_tracker.get_recent_queries(session_id)
+                if recent_queries:
+                    expanded_query = await self.query_expander.expand_query(
+                        query, recent_queries
+                    )
+                    if expanded_query != query:
+                        logger.debug(f"Expanded query: '{query}' -> '{expanded_query}'")
+
+            # Generate query embedding (use expanded query)
+            query_embedding = await self._get_embedding(expanded_query)
 
             # Build filters
             filters = SearchFilters(
@@ -380,12 +413,42 @@ class MemoryRAGServer:
                 tags=request.tags,
             )
 
+            # Determine fetch limit (with deduplication multiplier if needed)
+            fetch_limit = request.limit
+            shown_memory_ids = set()
+
+            if session_id and self.conversation_tracker:
+                # Fetch more to account for deduplication
+                fetch_limit = request.limit * self.config.deduplication_fetch_multiplier
+                shown_memory_ids = self.conversation_tracker.get_shown_memory_ids(session_id)
+                logger.debug(
+                    f"Deduplication enabled: fetching {fetch_limit} results "
+                    f"(filtering {len(shown_memory_ids)} shown)"
+                )
+
             # Retrieve from store
             results = await self.store.retrieve(
                 query_embedding=query_embedding,
                 filters=filters if any(filters.to_dict().values()) else None,
-                limit=request.limit,
+                limit=fetch_limit,
             )
+
+            # Apply deduplication if session provided
+            if session_id and shown_memory_ids:
+                # Filter out already-shown memories
+                filtered_results = [
+                    (memory, score) for memory, score in results
+                    if memory.id not in shown_memory_ids
+                ]
+
+                # Trim to requested limit
+                results = filtered_results[:request.limit]
+
+                if filtered_results != results[:len(filtered_results)]:
+                    logger.debug(
+                        f"Deduplication: filtered {len(results) - len(filtered_results)} "
+                        f"shown memories"
+                    )
 
             # Update stats for successful retrieval
             self.stats["queries_retrieved"] += 1
@@ -444,6 +507,17 @@ class MemoryRAGServer:
             logger.info(
                 f"Retrieved {len(memory_results)} memories in {query_time_ms:.2f}ms"
             )
+
+            # Track query and results in conversation session
+            if session_id and self.conversation_tracker:
+                results_shown = [result.memory.id for result in memory_results]
+                self.conversation_tracker.track_query(
+                    session_id=session_id,
+                    query=query,
+                    results_shown=results_shown,
+                    query_embedding=query_embedding if self.config.enable_conversation_tracking else None,
+                )
+                logger.debug(f"Tracked {len(results_shown)} results in session {session_id}")
 
             return response.model_dump()
 
@@ -561,6 +635,116 @@ class MemoryRAGServer:
             limit=limit,
             context_level="SESSION_STATE",
         )
+
+    async def start_conversation_session(
+        self,
+        description: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Start a new conversation session for context tracking.
+
+        Call this at the beginning of a new conversation to enable:
+        - Deduplication of previously shown context
+        - Conversation-aware query expansion
+        - Better context relevance over time
+
+        Args:
+            description: Optional description of this conversation
+
+        Returns:
+            Dict with session_id and status
+        """
+        if not self.conversation_tracker:
+            return {
+                "error": "Conversation tracking is disabled",
+                "status": "disabled"
+            }
+
+        try:
+            session_id = self.conversation_tracker.create_session(description)
+
+            logger.info(f"Started conversation session: {session_id}")
+
+            return {
+                "session_id": session_id,
+                "status": "created",
+                "description": description,
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to start conversation session: {e}")
+            return {
+                "error": str(e),
+                "status": "failed"
+            }
+
+    async def end_conversation_session(
+        self,
+        session_id: str
+    ) -> Dict[str, Any]:
+        """
+        End and cleanup a conversation session.
+
+        Args:
+            session_id: Session ID to end
+
+        Returns:
+            Dict with status
+        """
+        if not self.conversation_tracker:
+            return {
+                "error": "Conversation tracking is disabled",
+                "status": "disabled"
+            }
+
+        try:
+            success = self.conversation_tracker.end_session(session_id)
+
+            if success:
+                logger.info(f"Ended conversation session: {session_id}")
+                return {"status": "ended"}
+            else:
+                return {
+                    "error": "Session not found",
+                    "status": "not_found"
+                }
+
+        except Exception as e:
+            logger.error(f"Failed to end conversation session: {e}")
+            return {
+                "error": str(e),
+                "status": "failed"
+            }
+
+    async def list_conversation_sessions(self) -> Dict[str, Any]:
+        """
+        List all active conversation sessions.
+
+        Returns:
+            Dict with sessions list and stats
+        """
+        if not self.conversation_tracker:
+            return {
+                "error": "Conversation tracking is disabled",
+                "sessions": []
+            }
+
+        try:
+            sessions = self.conversation_tracker.get_all_sessions()
+            stats = self.conversation_tracker.get_stats()
+
+            return {
+                "sessions": sessions,
+                "stats": stats,
+                "status": "success"
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to list conversation sessions: {e}")
+            return {
+                "error": str(e),
+                "sessions": []
+            }
 
     def _analyze_search_quality(
         self,
@@ -1024,6 +1208,11 @@ class MemoryRAGServer:
 
     async def close(self) -> None:
         """Clean up resources."""
+        # Stop conversation tracker
+        if self.conversation_tracker:
+            await self.conversation_tracker.stop()
+            logger.info("Conversation tracker stopped")
+
         # Stop usage tracker
         if self.usage_tracker:
             await self.usage_tracker.stop()
