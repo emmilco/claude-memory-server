@@ -554,7 +554,8 @@ class SQLiteMemoryStore(MemoryStore):
                 return False
             self.conn.execute("SELECT 1")
             return True
-        except Exception:
+        except Exception as e:
+            logger.error(f"SQLite health check failed: {e}", exc_info=True)
             return False
 
     async def close(self) -> None:
@@ -733,8 +734,8 @@ class SQLiteMemoryStore(MemoryStore):
                     metadata = json.loads(row[0])
                     if "file_path" in metadata:
                         file_paths.add(metadata["file_path"])
-                except:
-                    pass
+                except Exception as e:
+                    logger.debug(f"Failed to parse metadata JSON for project {project_name}: {e}")
 
             num_files = len(file_paths)
             num_functions = categories.get("code", 0)

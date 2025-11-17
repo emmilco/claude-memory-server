@@ -185,7 +185,8 @@ class RagignoreManager:
             # Convert gitignore pattern to regex (basic validation)
             self._pattern_to_regex(pattern)
             return True
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Invalid gitignore pattern '{pattern}': {e}")
             return False
 
     def _pattern_to_regex(self, pattern: str) -> str:

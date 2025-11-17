@@ -10,11 +10,13 @@ from dataclasses import dataclass
 try:
     import git
     from git import Repo, Commit
+    from git.diff import Diff
     GIT_AVAILABLE = True
 except ImportError:
     GIT_AVAILABLE = False
     Repo = None
     Commit = None
+    Diff = Any  # type: ignore
 
 from src.config import ServerConfig
 from src.embeddings.generator import EmbeddingGenerator
@@ -346,7 +348,7 @@ class GitIndexer:
         return file_changes
 
     async def _process_diff_item(
-        self, diff_item: Any, commit_hash: str, include_diff_content: bool
+        self, diff_item: Diff, commit_hash: str, include_diff_content: bool
     ) -> Optional[GitFileChangeData]:
         """
         Process a single diff item.

@@ -99,7 +99,8 @@ class HealthCommand:
 
             # Generic fallback
             return True, "Available (exact amount unknown)"
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Failed to check memory: {e}")
             return True, "Unknown"
 
     async def check_rust_parser(self) -> Tuple[bool, str]:
@@ -185,7 +186,8 @@ class HealthCommand:
                 stats = cache.get_stats()
                 hit_rate = stats.get("hit_rate", 0)
                 return True, f"{cache_path} ({size_mb:.1f} MB, {hit_rate*100:.1f}% hit rate)"
-            except Exception:
+            except Exception as e:
+                logger.debug(f"Failed to get cache stats: {e}")
                 return True, f"{cache_path} ({size_mb:.1f} MB)"
         else:
             return True, "Not yet created"
@@ -209,8 +211,8 @@ class HealthCommand:
                 try:
                     stats = await store.get_project_stats(project_name)
                     project_stats.append(stats)
-                except:
-                    pass
+                except Exception as e:
+                    logger.debug(f"Failed to get stats for project '{project_name}': {e}")
 
             await store.close()
 
@@ -241,8 +243,8 @@ class HealthCommand:
                 if hasattr(store, 'client'):
                     # For Qdrant, do a simple collection check
                     store.client.get_collection(store.collection_name)
-            except:
-                pass
+            except Exception as e:
+                logger.debug(f"Qdrant collection check failed during latency test: {e}")
             latency_ms = (time.time() - start) * 1000
 
             await store.close()
@@ -320,8 +322,8 @@ class HealthCommand:
                                 "days_old": days_old,
                                 "last_updated": last_updated
                             })
-                except:
-                    pass
+                except Exception as e:
+                    logger.debug(f"Failed to check staleness for project '{project_name}': {e}")
 
             await store.close()
 
@@ -353,8 +355,8 @@ class HealthCommand:
                     stats = await store.get_project_stats(project_name)
                     total_memories += stats.get("total_memories", 0)
                     total_files += stats.get("total_files", 0)
-                except:
-                    pass
+                except Exception as e:
+                    logger.debug(f"Failed to get stats for project '{project_name}' during index size check: {e}")
 
             await store.close()
 

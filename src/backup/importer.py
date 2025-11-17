@@ -283,7 +283,8 @@ class DataImporter:
         try:
             existing = await self.store.get_by_id(memory.id)
             return existing
-        except:
+        except Exception as e:
+            logger.debug(f"Failed to find existing memory with id {memory.id}: {e}")
             return None
 
     async def _resolve_conflict(

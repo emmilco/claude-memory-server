@@ -288,8 +288,9 @@ class OptimizationAnalyzer:
                 # Check if mostly text
                 text_chars = sum(1 for b in chunk if 32 <= b < 127 or b in (9, 10, 13))
                 return text_chars / len(chunk) < 0.7 if chunk else False
-        except Exception:
-            return True
+        except Exception as e:
+            logger.debug(f"Failed to check if file is binary ({file_path}): {e}")
+            return True  # Assume binary if we can't read it
 
     def _categorize_file(self, file_path: Path, is_binary: bool) -> str:
         """Categorize file by type."""

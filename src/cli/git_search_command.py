@@ -62,10 +62,12 @@ class GitSearchCommand:
                     else:
                         try:
                             since_dt = datetime.fromisoformat(since).replace(tzinfo=UTC)
-                        except:
+                        except Exception as e:
+                            logger.debug(f"Failed to parse 'since' date as ISO format '{since}': {e}")
                             try:
                                 since_dt = datetime.strptime(since, "%Y-%m-%d").replace(tzinfo=UTC)
-                            except:
+                            except Exception as e2:
+                                logger.warning(f"Failed to parse 'since' date '{since}' in any format: {e2}")
                                 console.print(f"[yellow]Warning: Could not parse 'since' date: {since}[/yellow]")
 
                 if until:
@@ -77,10 +79,12 @@ class GitSearchCommand:
                     else:
                         try:
                             until_dt = datetime.fromisoformat(until).replace(tzinfo=UTC)
-                        except:
+                        except Exception as e:
+                            logger.debug(f"Failed to parse 'until' date as ISO format '{until}': {e}")
                             try:
                                 until_dt = datetime.strptime(until, "%Y-%m-%d").replace(tzinfo=UTC)
-                            except:
+                            except Exception as e2:
+                                logger.warning(f"Failed to parse 'until' date '{until}' in any format: {e2}")
                                 console.print(f"[yellow]Warning: Could not parse 'until' date: {until}[/yellow]")
 
                 # Search commits
@@ -117,8 +121,8 @@ class GitSearchCommand:
                         from datetime import datetime
                         dt = datetime.fromisoformat(date_str)
                         date_str = dt.strftime("%Y-%m-%d %H:%M")
-                    except:
-                        pass
+                    except Exception as e:
+                        logger.debug(f"Failed to format commit date '{date_str}': {e}")
 
                 table.add_row(
                     commit["commit_hash"][:8],
