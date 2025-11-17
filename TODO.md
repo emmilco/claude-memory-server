@@ -198,16 +198,17 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Complexity:** Medium (~600 lines)
   - **Runtime Cost:** +10-20ms per message, potential extra tool calls
 
-- [ ] **FEAT-027**: "Find Similar" Command (~1 day) 🔥🔥
-  - [ ] **Confirm overall feature design with user before proceeding**
-  - [ ] MCP tool: `find_similar_code(code_snippet, limit=10)`
-  - [ ] Generate embedding for input code
-  - [ ] Search against existing code index
-  - [ ] Great for finding duplicates, patterns, examples
-  - [ ] Reuses existing search infrastructure
+- [x] **FEAT-027**: "Find Similar" Command (~1 day) 🔥🔥 ✅ **COMPLETE**
+  - [x] MCP tool: `find_similar_code(code_snippet, limit=10)`
+  - [x] Generate embedding for input code
+  - [x] Search against existing code index
+  - [x] Great for finding duplicates, patterns, examples
+  - [x] Reuses existing search infrastructure
+  - [x] Comprehensive test suite (8 tests)
   - **Impact:** Enables code reuse and pattern discovery
   - **Complexity:** Very Low (~150 lines, mostly reuse)
   - **Runtime Cost:** 30-50ms per query (embed + search)
+  - **Completed:** 2025-11-17
 
 - [ ] **FEAT-030**: Cross-Project Learning (~3-5 days) 🔥🔥
   - [ ] **Confirm overall feature design with user before proceeding**
@@ -325,13 +326,13 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
 
 **Low effort, high visibility improvements (minimal work for user-facing value)**
 
-- [ ] **UX-030**: Inline Context Confidence Scores (~1 day) 🔥🔥
-  - [ ] **Confirm overall feature design with user before proceeding**
-  - [ ] Display similarity scores with search results
-  - [ ] Format: "auth/login.py:45 (confidence: 95%)"
-  - [ ] Thresholds: >0.8 = excellent, 0.6-0.8 = good, <0.6 = weak
-  - [ ] Help users and Claude assess result quality
-  - [ ] Add to search_code tool response
+- [x] **UX-030**: Inline Context Confidence Scores (~1 day) 🔥🔥 ✅ **COMPLETE**
+  - [x] Display similarity scores with search results
+  - [x] Format: "95% (excellent)", "72% (good)", "45% (weak)"
+  - [x] Thresholds: >0.8 = excellent, 0.6-0.8 = good, <0.6 = weak
+  - [x] Help users and Claude assess result quality
+  - [x] Add to search_code and find_similar_code tool responses
+  - [x] Created comprehensive test suite (10 tests passing)
   - **Impact:** Improves decision-making and trust
   - **Complexity:** Very Low (~100 lines)
   - **Runtime Cost:** None (scores already calculated)

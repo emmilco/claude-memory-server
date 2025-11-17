@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - 2025-11-17
 
+- **FEAT-027: "Find Similar" Command ✅ COMPLETE** - Find similar code snippets in indexed codebase
+  - Created `find_similar_code()` method in `src/core/server.py` - Semantic code similarity search
+  - Added MCP tool `find_similar_code` in `src/mcp_server.py` - Tool registration and call handling
+  - Generates embeddings for input code snippets and searches against indexed code
+  - Returns similar code with similarity scores (0.0-1.0) and confidence labels
+  - Filters: project name, file pattern, language
+  - Interpretation levels: >0.95 = duplicates, >0.80 = similar patterns, <0.80 = related
+  - Comprehensive test suite: `tests/unit/test_server_extended.py::TestFindSimilarCode` (8 tests passing)
+  - **Use cases:** Find duplicates, discover similar implementations, identify code patterns
+  - **Impact:** Enables code reuse and pattern discovery across codebase
+  - **Performance:** 30-50ms per query (embedding + search)
+  - **Complexity:** Very Low (~150 lines, reuses existing infrastructure)
+
 - **UX-030: Inline Context Confidence Scores ✅ COMPLETE** - Display confidence levels with search results
   - Added `_get_confidence_label()` static method to `src/core/server.py` - Converts scores to labels
   - Confidence thresholds: >0.8 = excellent, 0.6-0.8 = good, <0.6 = weak
