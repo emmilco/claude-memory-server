@@ -33,6 +33,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Usage:** search_code(query, search_mode="hybrid") for combined keyword+semantic search
   - **Impact:** Better recall for technical terms, exact matches, and rare keywords
 
+- **FEAT-024: Query Expansion ✅ COMPLETE** - Expand queries with synonyms and code context
+  - Created `src/search/query_synonyms.py` - Programming term synonyms and code context patterns (320 lines)
+  - Enhanced `src/memory/query_expander.py` - Added synonym and context expansion methods
+  - Comprehensive programming synonym dictionary (200+ terms): auth→login, function→method, db→database
+  - Code context patterns (25+ domains): auth→[user, token, session], api→[endpoint, request, response]
+  - New methods: `expand_with_synonyms_and_context()`, `expand_query_full()`
+  - Added configuration options to `src/config.py`:
+    - enable_query_expansion (default: True)
+    - query_expansion_synonyms (default: True)
+    - query_expansion_code_context (default: True)
+    - query_expansion_max_synonyms (default: 2)
+    - query_expansion_max_context_terms (default: 3)
+  - Created comprehensive test suite (33 tests): `tests/unit/test_query_synonyms.py`
+  - **Impact:** Better search recall through intelligent query expansion
+  - **Example:** "auth" → "auth authentication login verify credential"
+
 - **FEAT-031: Git-Aware Semantic Search (Phase 1)** - Index and search git commit history
   - Created `src/memory/git_indexer.py` - Extract and index git commits with GitPython
   - Added git storage tables to `src/store/sqlite_store.py` (git_commits, git_file_changes)

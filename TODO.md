@@ -178,10 +178,17 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Impact:** Improved search accuracy for technical terms, exact matches
   - **Completed:** 2025-11-17
 
-- [ ] **FEAT-024**: Query expansion
-  - [ ] Expand queries with synonyms
-  - [ ] Use code context for better results
-  - **Impact:** Better search recall
+- [x] **FEAT-024**: Query expansion ✅ **COMPLETE**
+  - [x] Created comprehensive programming synonym dictionary (200+ terms)
+  - [x] Implemented code context patterns (25+ domain-specific expansions)
+  - [x] Enhanced QueryExpander with synonym and context expansion methods
+  - [x] Added configuration options for fine-tuning expansion
+  - [x] Comprehensive tests (33 tests passing)
+  - **Features:** Synonym expansion, code context patterns, configurable limits
+  - **Synonyms:** auth→login, function→method, db→database, etc.
+  - **Context:** auth→[user, token, session], api→[endpoint, request, response], etc.
+  - **Impact:** Better search recall, improved keyword matching
+  - **Completed:** 2025-11-17
 
 - [ ] **FEAT-025**: Result reranking
   - [ ] ML-based relevance scoring

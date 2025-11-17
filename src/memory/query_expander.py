@@ -1,4 +1,4 @@
-"""Semantic query expansion using conversation context."""
+"""Semantic query expansion using conversation context, synonyms, and code patterns."""
 
 import logging
 import re
@@ -8,6 +8,7 @@ import numpy as np
 from src.config import ServerConfig
 from src.embeddings.generator import EmbeddingGenerator
 from src.memory.conversation_tracker import QueryRecord
+from src.search.query_synonyms import expand_with_synonyms, expand_with_code_context
 
 logger = logging.getLogger(__name__)
 
@@ -105,6 +106,9 @@ class QueryExpander:
             "queries_expanded": 0,
             "expansions_applied": 0,
             "avg_expansion_length": 0.0,
+            "synonym_expansions": 0,
+            "context_expansions": 0,
+            "conversation_expansions": 0,
         }
 
     async def expand_query(
@@ -231,6 +235,104 @@ class QueryExpander:
         self.stats["avg_expansion_length"] = (
             (current_avg * (total_expansions - 1) + expansion_length) / total_expansions
         )
+
+        return expanded
+
+    def expand_with_synonyms_and_context(
+        self,
+        query: str,
+        enable_synonyms: bool = True,
+        enable_context: bool = True,
+    ) -> str:
+        """
+        Expand query with programming synonyms and code context.
+
+        This is a lightweight expansion that doesn't require embeddings.
+        Uses predefined programming term synonyms and code context patterns.
+
+        Args:
+            query: Original query
+            enable_synonyms: Enable synonym expansion
+            enable_context: Enable code context expansion
+
+        Returns:
+            Expanded query
+        """
+        if not enable_synonyms and not enable_context:
+            return query
+
+        expanded = query
+
+        try:
+            # Apply synonym expansion
+            if enable_synonyms:
+                expanded_with_synonyms = expand_with_synonyms(expanded, max_synonyms=2)
+                if expanded_with_synonyms != expanded:
+                    self.stats["synonym_expansions"] += 1
+                    logger.debug(f"Added synonyms: '{expanded}' -> '{expanded_with_synonyms}'")
+                    expanded = expanded_with_synonyms
+
+            # Apply code context expansion
+            if enable_context:
+                expanded_with_context = expand_with_code_context(expanded, max_context_terms=3)
+                if expanded_with_context != expanded:
+                    self.stats["context_expansions"] += 1
+                    logger.debug(f"Added context: '{expanded}' -> '{expanded_with_context}'")
+                    expanded = expanded_with_context
+
+            # Update overall stats if query was expanded
+            if expanded != query:
+                self.stats["queries_expanded"] += 1
+
+            return expanded
+
+        except Exception as e:
+            logger.error(f"Error in synonym/context expansion: {e}")
+            return query  # Fallback to original
+
+    async def expand_query_full(
+        self,
+        query: str,
+        recent_queries: Optional[List[QueryRecord]] = None,
+        enable_synonyms: bool = True,
+        enable_context: bool = True,
+        enable_conversation: bool = True,
+    ) -> str:
+        """
+        Full query expansion using all available methods.
+
+        Combines:
+        1. Synonym expansion (programming terms)
+        2. Code context expansion (domain patterns)
+        3. Conversation-based expansion (semantic similarity)
+
+        Args:
+            query: Original query
+            recent_queries: Recent queries from conversation (optional)
+            enable_synonyms: Enable synonym expansion
+            enable_context: Enable code context expansion
+            enable_conversation: Enable conversation-based expansion
+
+        Returns:
+            Fully expanded query
+        """
+        expanded = query
+
+        # Phase 1: Synonym and context expansion (lightweight, no embeddings)
+        if enable_synonyms or enable_context:
+            expanded = self.expand_with_synonyms_and_context(
+                expanded,
+                enable_synonyms=enable_synonyms,
+                enable_context=enable_context,
+            )
+
+        # Phase 2: Conversation-based expansion (requires embeddings)
+        if enable_conversation and recent_queries:
+            expanded = await self.expand_query(expanded, recent_queries)
+
+            # Track conversation expansion separately
+            if expanded != query:
+                self.stats["conversation_expansions"] += 1
 
         return expanded
 

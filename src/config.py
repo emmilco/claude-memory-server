@@ -68,6 +68,13 @@ class ServerConfig(BaseSettings):
     query_expansion_similarity_threshold: float = 0.7
     deduplication_fetch_multiplier: int = 3
 
+    # Query expansion (FEAT-024)
+    enable_query_expansion: bool = True
+    query_expansion_synonyms: bool = True  # Programming term synonyms
+    query_expansion_code_context: bool = True  # Code domain patterns
+    query_expansion_max_synonyms: int = 2  # Max synonyms per term
+    query_expansion_max_context_terms: int = 3  # Max context terms
+
     # Git history indexing
     enable_git_indexing: bool = True
     git_index_commit_count: int = 1000
