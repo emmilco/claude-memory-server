@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2025-11-16
+
+- **Phase 3.5: Adaptive Retrieval Gate** (FEAT-001 through FEAT-004, TEST-009)
+  - Created `src/router/retrieval_predictor.py` - Heuristic-based query utility prediction
+  - Created `src/router/retrieval_gate.py` - Configurable gating mechanism (default threshold 0.8)
+  - Integrated gate into `src/core/server.py` retrieve_memories() method
+  - Added metrics collection: queries_gated, queries_retrieved, estimated_tokens_saved
+  - Gate checks run before embedding generation for maximum efficiency
+  - Comprehensive test coverage: 49 tests (32 unit + 17 integration)
+  - Updated test fixtures to disable gate for predictable test results
+  - Target: 30-40% query optimization and token savings
+
+- **UX-008: Memory Browser TUI** - Enhanced interactive terminal interface
+  - Enhanced existing `src/cli/memory_browser.py` with advanced filtering
+  - Added multi-type filtering: context level, category, project
+  - Added bulk delete operations (Press 'B')
+  - Added export functionality (Press 'E') - exports to `~/.claude-rag/memories_export_TIMESTAMP.json`
+  - Added import functionality (Press 'I')
+  - Improved filter state management with `current_filter_type` and `current_filter_value`
+
+- **UX-009: Search Result Quality Indicators** - Enhanced search feedback
+  - Enhanced `src/core/server.py._analyze_search_quality()` method
+  - Added keyword matching detection in search results
+  - Added `matched_keywords` field to search responses
+  - Improved interpretation messages with keyword vs semantic matching indicators
+  - Enhanced zero-result suggestions with better diagnostics
+
+### Fixed - 2025-11-16
+
+- **BUG-001: TypeScript Parser Improvements** - Better error handling and flexibility
+  - Modified `rust_core/src/parsing.rs` to separate JavaScript and TypeScript queries
+  - Changed TypeScript class query to use `(_)` for flexible node matching (accepts both identifier and type_identifier)
+  - Added error recovery: parsing continues even if specific queries fail
+  - Reduced false positives on complex TypeScript files
+  - Rebuilt Rust module with maturin
+
+- **BUG-002: Metadata Display Fix** - Proper nested metadata extraction
+  - Fixed `src/core/server.py.search_code()` to extract metadata from nested dictionaries
+  - Changed from direct metadata access to nested dictionary extraction
+  - Improved default values: "(no path)", "(unnamed)", "(unknown type)", "(unknown language)"
+  - All code search tests passing (18 tests across unit and integration suites)
+
 ### Added - 2025-11-17
 - **UX-001: Setup Friction Reduction** - Complete zero-friction installation system
   - Interactive setup wizard (`setup.py`) with 3 presets (minimal/standard/full)

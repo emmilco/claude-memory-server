@@ -15,68 +15,68 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
 
 ### 🔴 Tier 1: Complete Partially-Finished Initiatives + Critical Bugs
 
-#### Phase 3.5: Adaptive Retrieval Gate (Complete This Initiative)
+#### Phase 3.5: Adaptive Retrieval Gate ✅ **COMPLETE**
 
-**Status:** Fully defined, not started - partially finished initiative
+**Status:** ✅ COMPLETE - Fully implemented and tested
 **Impact:** 30-40% query optimization, token savings
 
-- [ ] **FEAT-001**: Create retrieval predictor (src/router/retrieval_predictor.py)
-  - [ ] Class: RetrievalPredictor
-  - [ ] Method: predict_utility(query: str) -> float (0-1 probability)
-  - [ ] Implement heuristic rules (not ML initially)
-  - [ ] Analyze query: type, length, keywords
-  - [ ] Expected: 30-40% of queries can be skipped
+- [x] **FEAT-001**: Create retrieval predictor (src/router/retrieval_predictor.py)
+  - [x] Class: RetrievalPredictor
+  - [x] Method: predict_utility(query: str) -> float (0-1 probability)
+  - [x] Implement heuristic rules (not ML initially)
+  - [x] Analyze query: type, length, keywords
+  - [x] Expected: 30-40% of queries can be skipped
 
-- [ ] **FEAT-002**: Implement retrieval gate (src/router/retrieval_gate.py)
-  - [ ] Class: RetrievalGate
-  - [ ] Configurable threshold (default 80%)
-  - [ ] Skip Qdrant search if utility < threshold
-  - [ ] Log gating decisions
+- [x] **FEAT-002**: Implement retrieval gate (src/router/retrieval_gate.py)
+  - [x] Class: RetrievalGate
+  - [x] Configurable threshold (default 80%)
+  - [x] Skip Qdrant search if utility < threshold
+  - [x] Log gating decisions
 
-- [ ] **FEAT-003**: Integrate gate into memory.find() handler
-  - [ ] Run prediction before Qdrant search
-  - [ ] Track metrics (queries gated, skipped, etc.)
-  - [ ] Report estimated token savings
+- [x] **FEAT-003**: Integrate gate into memory.find() handler
+  - [x] Run prediction before Qdrant search
+  - [x] Track metrics (queries gated, skipped, etc.)
+  - [x] Report estimated token savings
 
-- [ ] **FEAT-004**: Add metrics collection
-  - [ ] Counter: queries processed/gated
-  - [ ] Timer: prediction time
-  - [ ] Timer: retrieval time comparison
-  - [ ] Report: estimated token savings
+- [x] **FEAT-004**: Add metrics collection
+  - [x] Counter: queries processed/gated
+  - [x] Timer: prediction time
+  - [x] Timer: retrieval time comparison
+  - [x] Report: estimated token savings
 
-- [ ] **TEST-009**: Create tests/integration/test_retrieval_gate.py
-  - [ ] Test: Coding questions not gated
-  - [ ] Test: Small talk gated
-  - [ ] Test: Threshold enforcement
-  - [ ] Test: Metrics collection
+- [x] **TEST-009**: Create tests/integration/test_retrieval_gate.py
+  - [x] Test: Coding questions not gated
+  - [x] Test: Small talk gated
+  - [x] Test: Threshold enforcement
+  - [x] Test: Metrics collection
 
-#### Complete Visibility & Observability Initiative
+#### Complete Visibility & Observability Initiative ✅ **COMPLETE**
 
-- [ ] **UX-008**: Memory browser TUI (~3-5 days)
-  - [ ] Interactive terminal UI using Rich/Textual
-  - [ ] Browse, search, edit, delete memories
-  - [ ] Filter by context level, project, category
-  - [ ] Bulk operations (delete all SESSION_STATE)
-  - [ ] Export/import functionality
+- [x] **UX-008**: Memory browser TUI (~3-5 days)
+  - [x] Interactive terminal UI using Rich/Textual
+  - [x] Browse, search, edit, delete memories
+  - [x] Filter by context level, project, category
+  - [x] Bulk operations (delete all SESSION_STATE)
+  - [x] Export/import functionality
   - **Note:** UX-006, UX-007, UX-010 already complete
 
-- [ ] **UX-009**: Search result quality indicators (~1-2 days)
-  - [ ] Explain why results matched (highlighted terms)
-  - [ ] Confidence scores with interpretation (>0.8 = excellent, etc.)
-  - [ ] Suggest query refinements for 0 results
-  - [ ] "Did you mean to search in project X?"
+- [x] **UX-009**: Search result quality indicators (~1-2 days)
+  - [x] Explain why results matched (highlighted terms)
+  - [x] Confidence scores with interpretation (>0.8 = excellent, etc.)
+  - [x] Suggest query refinements for 0 results
+  - [x] "Did you mean to search in project X?"
   - **Note:** May be partially addressed by UX-030 (confidence scores)
 
-#### Critical Bug Fixes
+#### Critical Bug Fixes ✅ **COMPLETE**
 
-- [ ] **BUG-001**: TypeScript parser occasionally fails on complex files
-  - Need to update tree-sitter-typescript
-  - Add better error recovery
-  - **Impact:** Blocks TypeScript indexing on some projects
+- [x] **BUG-001**: TypeScript parser occasionally fails on complex files
+  - Updated tree-sitter-typescript queries
+  - Added better error recovery
+  - **Impact:** Unblocked TypeScript indexing on complex projects
 
-- [ ] **BUG-002**: Metadata display shows "unknown" in some cases
-  - Low priority, cosmetic issue
-  - Fix display logic in search results
+- [x] **BUG-002**: Metadata display shows "unknown" in some cases
+  - Fixed display logic to extract nested metadata
+  - Improved default values with descriptive strings
 
 ### 🔥 Tier 2: High-Impact Core Functionality Improvements
 
