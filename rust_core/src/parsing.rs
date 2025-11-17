@@ -13,6 +13,7 @@ pub enum SupportedLanguage {
     Java,
     Go,
     Rust,
+    Cpp,
 }
 
 impl SupportedLanguage {
@@ -24,6 +25,7 @@ impl SupportedLanguage {
             "java" => Some(SupportedLanguage::Java),
             "go" => Some(SupportedLanguage::Go),
             "rs" => Some(SupportedLanguage::Rust),
+            "cpp" | "cc" | "cxx" | "hpp" | "h" | "hxx" => Some(SupportedLanguage::Cpp),
             _ => None,
         }
     }
@@ -36,6 +38,7 @@ impl SupportedLanguage {
             SupportedLanguage::Java => tree_sitter_java::LANGUAGE.into(),
             SupportedLanguage::Go => tree_sitter_go::LANGUAGE.into(),
             SupportedLanguage::Rust => tree_sitter_rust::LANGUAGE.into(),
+            SupportedLanguage::Cpp => tree_sitter_cpp::LANGUAGE.into(),
         }
     }
 
@@ -90,6 +93,13 @@ impl SupportedLanguage {
                   body: (block) @body) @function
                 "#
             }
+            SupportedLanguage::Cpp => {
+                r#"
+                (function_definition
+                  declarator: (function_declarator
+                    declarator: (identifier) @name)) @function
+                "#
+            }
         }
     }
 
@@ -137,6 +147,14 @@ impl SupportedLanguage {
                 (struct_item
                   name: (type_identifier) @name
                   body: (field_declaration_list) @body) @class
+                "#
+            }
+            SupportedLanguage::Cpp => {
+                r#"
+                [(class_specifier
+                  name: (type_identifier) @name)
+                 (struct_specifier
+                  name: (type_identifier) @name)] @class
                 "#
             }
         }
@@ -221,6 +239,7 @@ impl CodeParser {
             SupportedLanguage::Java,
             SupportedLanguage::Go,
             SupportedLanguage::Rust,
+            SupportedLanguage::Cpp,
         ] {
             let mut parser = Parser::new();
             parser

@@ -65,7 +65,7 @@ Claude: [Searches semantically]
 ```
 
 **Supported Languages:**
-- Python, JavaScript, TypeScript, Java, Go, Rust
+- Python, JavaScript, TypeScript, Java, Go, Rust, C++
 
 **Performance:**
 - 7-13ms search latency

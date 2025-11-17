@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - 2025-11-17
 
+- **FEAT-005: Enhanced C++ Support** - Comprehensive C++ parsing with templates, structs, and namespaces
+  - Added `tree-sitter-cpp = "0.23"` dependency to `rust_core/Cargo.toml`
+  - Extended `SupportedLanguage` enum in `rust_core/src/parsing.rs` with `Cpp` variant
+  - Mapped C++ file extensions: `.cpp`, `.cc`, `.cxx`, `.hpp`, `.h`, `.hxx`
+  - Implemented C++ function query: extracts functions, methods, and operator overloads
+  - Implemented C++ class query: extracts both classes and structs using alternation pattern
+  - Updated `src/memory/incremental_indexer.py`:
+    - Added C++ extensions to `SUPPORTED_EXTENSIONS` set
+    - Added language mapping for all C++ extensions
+  - Created comprehensive test suite: `tests/unit/test_cpp_parsing.py` (25 tests, all passing)
+    - Tests all file extensions (.cpp, .cc, .cxx, .hpp, .h)
+    - Tests class and struct extraction
+    - Tests function extraction (including templates)
+    - Tests template classes and functions
+    - Tests namespace handling
+    - Tests operator overloads
+    - Tests performance (<100ms for typical files, <500ms for large files)
+    - Tests edge cases (empty files, comments, preprocessor directives)
+  - **Note:** This enhances the basic C++ support added in UX-020 (PR #16)
+  - **Impact:** Full-featured C++ semantic search for templates, structs, namespaces, and operators
+  - **Use Cases:** Index C++ codebases with modern C++ features (templates, STL, Boost)
+
 - **WORKFLOW: Git worktree support for parallel agent development** - Configured repository to use git worktrees for concurrent feature development
   - Created `.worktrees/` directory for isolated feature branches
   - Added `.worktrees/` to `.gitignore` to prevent committing worktree directories
