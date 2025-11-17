@@ -9,6 +9,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - 2025-11-17
 
+- **FEAT-038: Data Export, Backup & Portability** - Comprehensive backup and export system
+  - Created `src/backup/exporter.py` - Export memories to JSON, Markdown, and portable archives (450+ lines)
+    - `export_to_json()` - Export memories to JSON format with filtering
+    - `export_to_markdown()` - Human-readable Markdown export with table of contents
+    - `create_portable_archive()` - Create .tar.gz archives with embeddings and checksums
+    - Filter support: project name, category, context level, date range
+    - Checksum validation (SHA256) for archive integrity
+  - Created `src/backup/importer.py` - Import with conflict resolution (410+ lines)
+    - `import_from_json()` - Import from JSON backup files
+    - `import_from_archive()` - Extract and import from .tar.gz archives
+    - Five conflict strategies: KEEP_NEWER, KEEP_OLDER, KEEP_BOTH, SKIP, MERGE_METADATA
+    - Dry-run mode for safe preview before import
+    - Selective import by project or category
+    - Checksum verification for data integrity
+  - Created `src/cli/export_command.py` - CLI for exporting (220+ lines)
+    - `python -m src.cli.export <file> --format json|markdown|archive`
+    - Filter options: --project, --category, --context-level, --since, --until
+    - Progress indicators for large exports
+    - Rich formatted output with statistics
+  - Created `src/cli/import_command.py` - CLI for importing (210+ lines)
+    - `python -m src.cli.import <file> --strategy keep_newer|keep_older|keep_both|skip|merge_metadata`
+    - Dry-run mode: `--dry-run` for analysis without changes
+    - Confirmation prompts (skippable with `-y`)
+    - Detailed conflict resolution statistics
+  - Created `src/cli/backup_command.py` - Backup management CLI (310+ lines)
+    - `python -m src.cli.backup create` - Create backups on demand
+    - `python -m src.cli.backup list` - List available backups
+    - `python -m src.cli.backup restore <file>` - Restore from backup
+    - `python -m src.cli.backup cleanup --keep N` - Retention management
+    - Default backup directory: ~/.claude-rag/backups/
+  - Enhanced `src/core/server.py` - Added 3 MCP tools
+    - `export_memories()` - Export via MCP for programmatic access
+    - `import_memories()` - Import via MCP with conflict resolution
+    - `list_backups()` - Query available backups programmatically
+  - Archive format features:
+    - Manifest with version, timestamp, project list
+    - Compressed embeddings (NumPy .npz format)
+    - SHA256 checksums for all files
+    - Gzip compression for space efficiency
+  - **Impact:** Prevents data loss, enables cross-machine workflows, disaster recovery
+  - **Strategic Priority:** P2 - Critical for user trust and data ownership
+  - **Status:** Core functionality complete (export, import, CLI commands, MCP tools)
+  - **Note:** Cloud sync (Dropbox/Google Drive) and automated scheduler deferred to future phase
+
 - **FEAT-028: Proactive Context Suggestions** - Automatic pattern detection and context injection with adaptive learning
   - **Pattern Detector (`src/memory/pattern_detector.py`)** - Detects 4 types of conversation patterns:
     - Implementation requests ("I need to add X") - confidence 0.85+
