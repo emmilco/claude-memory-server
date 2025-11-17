@@ -45,6 +45,26 @@ class ServerConfig(BaseSettings):
     enable_file_watcher: bool = True
     watch_debounce_ms: int = 1000
 
+    # Auto-indexing (FEAT-016)
+    auto_index_enabled: bool = True  # Enable automatic indexing
+    auto_index_on_startup: bool = True  # Index on MCP server startup
+    auto_index_size_threshold: int = 500  # Files threshold for background mode
+    auto_index_recursive: bool = True  # Recursive directory indexing
+    auto_index_show_progress: bool = True  # Show progress indicators
+    auto_index_exclude_patterns: list[str] = [  # Patterns to exclude
+        "node_modules/**",
+        ".git/**",
+        "venv/**",
+        "__pycache__/**",
+        "*.pyc",
+        "dist/**",
+        "build/**",
+        ".next/**",
+        "target/**",
+        "*.min.js",
+        "*.map",
+    ]
+
     # Adaptive retrieval
     enable_retrieval_gate: bool = True
     retrieval_gate_threshold: float = 0.8
@@ -204,6 +224,12 @@ class ServerConfig(BaseSettings):
 
         if self.git_diff_size_limit_kb < 1:
             raise ValueError("git_diff_size_limit_kb must be at least 1")
+
+        # Validate auto-indexing settings
+        if self.auto_index_size_threshold < 1:
+            raise ValueError("auto_index_size_threshold must be at least 1")
+        if self.auto_index_size_threshold > 100000:
+            raise ValueError("auto_index_size_threshold should not exceed 100000")
 
         return self
 
