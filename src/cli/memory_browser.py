@@ -164,6 +164,9 @@ class MemoryBrowserApp(App):
         Binding("enter", "view_details", "View"),
         Binding("/", "focus_search", "Search"),
         Binding("f", "filter_menu", "Filter"),
+        Binding("b", "bulk_delete", "Bulk Delete"),
+        Binding("e", "export", "Export"),
+        Binding("i", "import_memories", "Import"),
     ]
 
     def __init__(self, **kwargs):
@@ -172,7 +175,8 @@ class MemoryBrowserApp(App):
         self.store = None
         self.memories: List[Dict[str, Any]] = []
         self.filtered_memories: List[Dict[str, Any]] = []
-        self.current_filter = "all"
+        self.current_filter_type = "context"  # context, category, project
+        self.current_filter_value = "all"
         self.search_query = ""
 
     def compose(self) -> ComposeResult:
@@ -184,7 +188,7 @@ class MemoryBrowserApp(App):
         )
         yield Container(
             Input(placeholder="Search memories...", id="search-input"),
-            Static("Filter: All | F to change", id="filter-label"),
+            Static("Filter: context=all | F to change", id="filter-label"),
             id="search-container",
         )
         yield Container(
@@ -271,8 +275,8 @@ class MemoryBrowserApp(App):
         stats_text = f"Total: {total} | Showing: {filtered}"
         if self.search_query:
             stats_text += f" | Search: '{self.search_query}'"
-        if self.current_filter != "all":
-            stats_text += f" | Filter: {self.current_filter}"
+        if self.current_filter_value != "all":
+            stats_text += f" | Filter: {self.current_filter_type}={self.current_filter_value}"
 
         self.query_one("#stats-label", Static).update(stats_text)
 
@@ -293,14 +297,26 @@ class MemoryBrowserApp(App):
                 if self.search_query in m["content"].lower()
                 or self.search_query in m["category"].lower()
                 or self.search_query in m["context_level"].lower()
+                or self.search_query in m.get("project_name", "").lower()
             ]
 
-        # Apply context level filter
-        if self.current_filter != "all":
-            self.filtered_memories = [
-                m for m in self.filtered_memories
-                if m["context_level"].lower() == self.current_filter.lower()
-            ]
+        # Apply filter based on type
+        if self.current_filter_value != "all":
+            if self.current_filter_type == "context":
+                self.filtered_memories = [
+                    m for m in self.filtered_memories
+                    if m["context_level"].lower() == self.current_filter_value.lower()
+                ]
+            elif self.current_filter_type == "category":
+                self.filtered_memories = [
+                    m for m in self.filtered_memories
+                    if m["category"].lower() == self.current_filter_value.lower()
+                ]
+            elif self.current_filter_type == "project":
+                self.filtered_memories = [
+                    m for m in self.filtered_memories
+                    if m.get("project_name", "N/A").lower() == self.current_filter_value.lower()
+                ]
 
         self.update_table()
         self.update_stats()
@@ -345,16 +361,150 @@ class MemoryBrowserApp(App):
         self.query_one("#search-input", Input).focus()
 
     def action_filter_menu(self) -> None:
-        """Cycle through filters."""
-        filters = ["all", "user_preference", "project_context", "session_state"]
-        current_index = filters.index(self.current_filter)
-        next_index = (current_index + 1) % len(filters)
-        self.current_filter = filters[next_index]
+        """Cycle through filter types and values."""
+        # Get unique values for current filter type
+        if self.current_filter_type == "context":
+            unique_values = sorted(set(m["context_level"] for m in self.memories))
+            unique_values = ["all"] + [v.lower() for v in unique_values]
+        elif self.current_filter_type == "category":
+            unique_values = sorted(set(m["category"] for m in self.memories))
+            unique_values = ["all"] + [v.lower() for v in unique_values]
+        elif self.current_filter_type == "project":
+            unique_values = sorted(set(m.get("project_name", "N/A") for m in self.memories))
+            unique_values = ["all"] + [v for v in unique_values]
+
+        # Cycle through values
+        if self.current_filter_value in unique_values:
+            current_index = unique_values.index(self.current_filter_value)
+            next_index = (current_index + 1) % len(unique_values)
+            self.current_filter_value = unique_values[next_index]
+        else:
+            self.current_filter_value = "all"
+
+        # If we're back to "all", cycle to next filter type
+        if self.current_filter_value == "all" and len(unique_values) > 1:
+            filter_types = ["context", "category", "project"]
+            type_index = filter_types.index(self.current_filter_type)
+            self.current_filter_type = filter_types[(type_index + 1) % len(filter_types)]
 
         # Update filter label
-        self.query_one("#filter-label", Static).update(f"Filter: {self.current_filter} | F to change")
+        self.query_one("#filter-label", Static).update(
+            f"Filter: {self.current_filter_type}={self.current_filter_value} | F to change"
+        )
 
         self.apply_filters()
+
+    async def action_bulk_delete(self) -> None:
+        """Bulk delete filtered memories."""
+        if not self.filtered_memories:
+            self.notify("No memories to delete", severity="warning")
+            return
+
+        count = len(self.filtered_memories)
+        filter_desc = f"{self.current_filter_type}={self.current_filter_value}" if self.current_filter_value != "all" else "all"
+
+        confirmed = await self.push_screen_wait(
+            ConfirmDialog(
+                f"Delete {count} memories?\n\nFilter: {filter_desc}\n\nThis cannot be undone!"
+            )
+        )
+
+        if confirmed:
+            try:
+                deleted_count = 0
+                for memory in self.filtered_memories:
+                    try:
+                        await self.store.delete(memory["id"])
+                        deleted_count += 1
+                    except Exception as e:
+                        logger.error(f"Error deleting memory {memory['id']}: {e}")
+
+                self.notify(f"Deleted {deleted_count} memories", severity="information")
+                await self.load_memories()
+            except Exception as e:
+                self.notify(f"Error during bulk delete: {e}", severity="error")
+
+    async def action_export(self) -> None:
+        """Export memories to JSON file."""
+        import json
+        from pathlib import Path
+
+        if not self.filtered_memories:
+            self.notify("No memories to export", severity="warning")
+            return
+
+        # Generate filename with timestamp
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"memories_export_{timestamp}.json"
+        filepath = Path.home() / ".claude-rag" / filename
+
+        try:
+            # Ensure directory exists
+            filepath.parent.mkdir(parents=True, exist_ok=True)
+
+            # Export memories
+            export_data = {
+                "exported_at": timestamp,
+                "count": len(self.filtered_memories),
+                "filter": {
+                    "type": self.current_filter_type,
+                    "value": self.current_filter_value,
+                },
+                "memories": self.filtered_memories,
+            }
+
+            with open(filepath, "w") as f:
+                json.dump(export_data, f, indent=2, default=str)
+
+            self.notify(f"Exported {len(self.filtered_memories)} memories to {filepath}", severity="information")
+
+        except Exception as e:
+            self.notify(f"Error exporting memories: {e}", severity="error")
+
+    async def action_import_memories(self) -> None:
+        """Import memories from JSON file."""
+        import json
+        from pathlib import Path
+
+        # For now, import from the most recent export file
+        export_dir = Path.home() / ".claude-rag"
+        if not export_dir.exists():
+            self.notify("No exports found", severity="warning")
+            return
+
+        try:
+            # Find most recent export file
+            export_files = sorted(export_dir.glob("memories_export_*.json"), reverse=True)
+            if not export_files:
+                self.notify("No export files found", severity="warning")
+                return
+
+            filepath = export_files[0]
+
+            confirmed = await self.push_screen_wait(
+                ConfirmDialog(f"Import memories from:\n{filepath.name}?\n\nThis will add memories to the database.")
+            )
+
+            if not confirmed:
+                return
+
+            # Load and import memories
+            with open(filepath, "r") as f:
+                export_data = json.load(f)
+
+            memories_to_import = export_data.get("memories", [])
+            imported_count = 0
+
+            # Import each memory
+            # Note: This would need proper store.create() method implementation
+            self.notify(
+                f"Import functionality requires store.create() method. Found {len(memories_to_import)} memories to import.",
+                severity="information"
+            )
+
+        except Exception as e:
+            self.notify(f"Error importing memories: {e}", severity="error")
 
     async def on_unmount(self) -> None:
         """Cleanup when app closes."""
