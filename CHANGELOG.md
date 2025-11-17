@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - 2025-11-17
 
+- **UX-022: Configuration File Support ✅ COMPLETE** - Added parsing for JSON, YAML, and TOML configuration files
+  - Created `rust_core/src/config_parsing.rs` (192 lines) - Native Rust parsers for config files
+    - `parse_json()` - Extract top-level keys from JSON files using serde_json
+    - `parse_yaml()` - Extract top-level keys from YAML files using serde_yaml
+    - `parse_toml()` - Extract top-level sections from TOML files using toml crate
+    - `parse_config_file()` - Unified interface routing by extension (.json/.yaml/.yml/.toml)
+    - Line number estimation via heuristic key search in source text
+    - Top-level keys/sections mapped to "class" semantic units for consistent API
+  - Updated `rust_core/Cargo.toml` - Added dependencies: `serde_yaml = "0.9"`, `toml = "0.8"`
+  - Modified `rust_core/src/lib.rs` - Registered `config_parsing` module
+  - Enhanced `rust_core/src/parsing.rs` - Config file routing in `parse_source_file()` and `batch_parse_files()`
+  - Updated `src/memory/incremental_indexer.py` - Added config extensions: `.json`, `.yaml`, `.yml`, `.toml`
+  - Created comprehensive test suite: `tests/unit/test_config_parsing.py` (23 tests, all passing ✅)
+    - JSON parsing tests (5): package.json, nested objects, empty files, malformed input
+    - YAML parsing tests (6): docker-compose.yml, GitHub Actions, anchors/aliases, both .yml/.yaml
+    - TOML parsing tests (5): Cargo.toml, array tables, empty files, malformed input
+    - Performance tests (3): All formats parse in <50ms
+    - Edge cases (4): Deep nesting, YAML anchors, TOML arrays, repr methods
+  - **Rationale:** Native parsing chosen over tree-sitter due to version incompatibility (tree-sitter-yaml 0.7.2 requires tree-sitter 0.25.4+, project uses 0.24). Native parsers are simpler, more reliable, and better suited for extracting structured data from config files.
+  - **Impact:** Users can now semantically search configuration files (docker-compose, package.json, Cargo.toml, CI/CD configs)
+  - **Example:** Search "where is the postgres database configured" → finds `services.database` section in docker-compose.yml
+
+### Added - 2025-11-17
+
 - **WORKFLOW: Git worktree support for parallel agent development** - Configured repository to use git worktrees for concurrent feature development
   - Created `.worktrees/` directory for isolated feature branches
   - Added `.worktrees/` to `.gitignore` to prevent committing worktree directories
