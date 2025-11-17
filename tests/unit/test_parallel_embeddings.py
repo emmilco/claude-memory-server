@@ -254,6 +254,90 @@ class TestParallelEmbeddingGenerator:
         assert len(small_embeddings) == 5
         assert len(large_embeddings) == 15
 
+    @pytest.mark.asyncio
+    async def test_cache_enabled(self, config):
+        """Test that cache is enabled and used."""
+        generator = ParallelEmbeddingGenerator(config, max_workers=2)
+        await generator.initialize()
+
+        assert generator.cache is not None
+        assert generator.cache.enabled
+
+        await generator.close()
+
+    @pytest.mark.asyncio
+    async def test_cache_hit_on_reindex(self, config):
+        """Test that cache hits occur when re-embedding same texts."""
+        generator = ParallelEmbeddingGenerator(config, max_workers=2)
+        await generator.initialize()
+
+        # Generate embeddings for first time
+        texts = [f"def function_{i}(): return {i}" for i in range(15)]
+        embeddings1 = await generator.batch_generate(texts, show_progress=True)
+
+        # Generate same texts again - should hit cache
+        embeddings2 = await generator.batch_generate(texts, show_progress=True)
+
+        # Results should be identical (from cache)
+        assert len(embeddings1) == len(embeddings2)
+        for e1, e2 in zip(embeddings1, embeddings2):
+            assert e1 == e2  # Exact match since from cache
+
+        # Verify cache was actually used (cache stats should show hits)
+        if generator.cache:
+            assert generator.cache.hits > 0
+
+        await generator.close()
+
+    @pytest.mark.asyncio
+    async def test_partial_cache_hit(self, config):
+        """Test that partially cached batches work correctly."""
+        generator = ParallelEmbeddingGenerator(config, max_workers=2)
+        await generator.initialize()
+
+        # Generate embeddings for initial set
+        initial_texts = [f"def initial_{i}(): pass" for i in range(10)]
+        await generator.batch_generate(initial_texts)
+
+        # Generate mixed batch (5 cached, 5 new)
+        mixed_texts = initial_texts[:5] + [f"def new_{i}(): pass" for i in range(5)]
+        embeddings = await generator.batch_generate(mixed_texts, show_progress=True)
+
+        # Should get all 10 embeddings
+        assert len(embeddings) == 10
+
+        # First 5 should match original (cached)
+        original_embeddings = await generator.batch_generate(initial_texts[:5])
+        for i in range(5):
+            assert embeddings[i] == original_embeddings[i]
+
+        await generator.close()
+
+    @pytest.mark.asyncio
+    async def test_cache_statistics(self, config):
+        """Test that cache statistics are tracked correctly."""
+        generator = ParallelEmbeddingGenerator(config, max_workers=2)
+        await generator.initialize()
+
+        texts = [f"def function_{i}(): return {i}" for i in range(20)]
+
+        # First run - all cache misses
+        await generator.batch_generate(texts)
+        initial_hits = generator.cache.hits if generator.cache else 0
+
+        # Second run - all cache hits
+        await generator.batch_generate(texts)
+        final_hits = generator.cache.hits if generator.cache else 0
+
+        # Should have cache hits on second run
+        assert final_hits > initial_hits, "Cache hits should increase on second run"
+
+        # Should have at least 20 hits (one per text)
+        cache_hit_increase = final_hits - initial_hits
+        assert cache_hit_increase >= 20, f"Expected at least 20 cache hits, got {cache_hit_increase}"
+
+        await generator.close()
+
 
 class TestParallelGeneratorIntegration:
     """Integration tests for parallel generator with indexer."""

@@ -9,6 +9,7 @@ import time
 
 from src.config import ServerConfig
 from src.core.exceptions import EmbeddingError
+from src.embeddings.cache import EmbeddingCache
 
 logger = logging.getLogger(__name__)
 
@@ -155,6 +156,9 @@ class ParallelEmbeddingGenerator:
         self.max_workers = max_workers
         self.executor: Optional[ProcessPoolExecutor] = None
 
+        # Initialize cache (if enabled)
+        self.cache = EmbeddingCache(config) if config.embedding_cache_enabled else None
+
         # Threshold for using parallel processing (avoid overhead for small batches)
         self.parallel_threshold = 10
 
@@ -162,6 +166,8 @@ class ParallelEmbeddingGenerator:
             f"Parallel embedding generator initialized: "
             f"model={self.model_name}, workers={self.max_workers}"
         )
+        if self.cache and self.cache.enabled:
+            logger.info("Embedding cache enabled for parallel generator")
 
     async def initialize(self) -> None:
         """
@@ -235,22 +241,63 @@ class ParallelEmbeddingGenerator:
         batch_size = batch_size or self.batch_size
 
         try:
+            # Check cache for all texts (if enabled)
+            cache_results = None
+            texts_to_generate = texts
+            indices_to_generate = list(range(len(texts)))
+
+            if self.cache and self.cache.enabled:
+                cache_results = await self.cache.batch_get(texts, self.model_name)
+
+                # Find which texts need generation
+                texts_to_generate = []
+                indices_to_generate = []
+                cache_hits = 0
+                for i, cached in enumerate(cache_results):
+                    if cached is None:
+                        texts_to_generate.append(texts[i])
+                        indices_to_generate.append(i)
+                    else:
+                        cache_hits += 1
+
+                if show_progress and cache_hits > 0:
+                    hit_rate = (cache_hits / len(texts)) * 100
+                    logger.info(f"Cache hits: {cache_hits}/{len(texts)} ({hit_rate:.1f}%)")
+
+                if not texts_to_generate:
+                    # All texts were cached
+                    if show_progress:
+                        logger.info("All embeddings retrieved from cache")
+                    return cache_results
+
             # For small batches, use single-threaded mode (avoid process overhead)
-            if len(texts) < self.parallel_threshold:
+            if len(texts_to_generate) < self.parallel_threshold:
                 if show_progress:
                     logger.info(
-                        f"Using single-threaded mode for small batch ({len(texts)} texts)"
+                        f"Using single-threaded mode for small batch ({len(texts_to_generate)} texts)"
                     )
-                return await self._generate_single_threaded(texts, batch_size)
+                generated_embeddings = await self._generate_single_threaded(texts_to_generate, batch_size)
+            else:
+                # For large batches, use multiprocessing
+                if show_progress:
+                    logger.info(
+                        f"Using parallel mode with {self.max_workers} workers "
+                        f"({len(texts_to_generate)} texts)"
+                    )
+                generated_embeddings = await self._generate_parallel(texts_to_generate, batch_size, show_progress)
 
-            # For large batches, use multiprocessing
-            if show_progress:
-                logger.info(
-                    f"Using parallel mode with {self.max_workers} workers "
-                    f"({len(texts)} texts)"
-                )
+            # Cache generated embeddings
+            if self.cache and self.cache.enabled:
+                for text, embedding in zip(texts_to_generate, generated_embeddings):
+                    await self.cache.set(text, self.model_name, embedding)
 
-            return await self._generate_parallel(texts, batch_size, show_progress)
+            # Merge results back into original order
+            if cache_results is not None:
+                for i, generated in zip(indices_to_generate, generated_embeddings):
+                    cache_results[i] = generated
+                return cache_results
+            else:
+                return generated_embeddings
 
         except Exception as e:
             raise EmbeddingError(f"Failed to batch generate embeddings: {e}")
