@@ -57,7 +57,7 @@ class ConsolidationEngine:
             dry_run: If True, don't actually perform the merge
 
         Returns:
-            Merged memory unit, or None if dry_run=True
+            Merged memory unit (returns result without persisting if dry_run=True)
         """
         try:
             # Fetch all memories
@@ -82,7 +82,7 @@ class ConsolidationEngine:
 
             if dry_run:
                 logger.info(f"Dry run: would merge {len(duplicates)} memories into {canonical_id}")
-                return None
+                return merged  # Return merged result without persisting
 
             # Store merge history
             await self._record_merge(

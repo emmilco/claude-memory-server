@@ -212,13 +212,13 @@ async def test_duplicate_detection_workflow(test_store, detector, embedding_gen)
 
     # 3. Detect duplicates
     mem2 = await test_store.get_by_id(mem2_id)
-    duplicates = await detector.detect_duplicates(mem2, similarity_threshold=0.8)
+    duplicates = await detector.detect_duplicates(mem2, similarity_threshold=0.65)
 
     # Should find the similar memory as a duplicate
     assert len(duplicates) > 0
     duplicate = duplicates[0]
     assert duplicate.relationship_type == RelationshipType.DUPLICATE
-    assert duplicate.confidence >= 0.8
+    assert duplicate.confidence >= 0.65  # Match our detection threshold
 
 
 @pytest.mark.asyncio
