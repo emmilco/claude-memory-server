@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Bug Fixes - 2025-11-17
+
+- **BUG-010:** Fixed RepositoryRegistry initialization errors
+  - Fixed incorrect initialization with ServerConfig instead of path string
+  - Fixed WorkspaceManager argument order (path first, registry second)
+  - Removed non-existent initialize() method calls
+  - Fixed in src/core/server.py and all CLI commands
+  - **Impact:** 107 additional tests passing (1778 → 1885, 96.6% pass rate)
+
 ### Code Quality Improvements - 2025-11-17 (REF-009)
 
 **Critical Fixes:**

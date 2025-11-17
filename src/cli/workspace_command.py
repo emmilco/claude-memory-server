@@ -55,7 +55,7 @@ class WorkspaceCommand:
         """List all workspaces."""
         try:
             # Initialize managers
-            registry = RepositoryRegistry(self.config)
+            registry = RepositoryRegistry(self.config.repository_storage_path)
             await registry.initialize()
 
             workspace_manager = WorkspaceManager(registry, self.config)
@@ -84,7 +84,7 @@ class WorkspaceCommand:
         """Create a new workspace."""
         try:
             # Initialize managers
-            registry = RepositoryRegistry(self.config)
+            registry = RepositoryRegistry(self.config.repository_storage_path)
             await registry.initialize()
 
             workspace_manager = WorkspaceManager(registry, self.config)
@@ -126,7 +126,7 @@ class WorkspaceCommand:
         """Delete a workspace."""
         try:
             # Initialize managers
-            registry = RepositoryRegistry(self.config)
+            registry = RepositoryRegistry(self.config.repository_storage_path)
             await registry.initialize()
 
             workspace_manager = WorkspaceManager(registry, self.config)
@@ -157,7 +157,7 @@ class WorkspaceCommand:
         """Get detailed workspace information."""
         try:
             # Initialize managers
-            registry = RepositoryRegistry(self.config)
+            registry = RepositoryRegistry(self.config.repository_storage_path)
             await registry.initialize()
 
             workspace_manager = WorkspaceManager(registry, self.config)
@@ -190,7 +190,7 @@ class WorkspaceCommand:
         """Add a repository to a workspace."""
         try:
             # Initialize managers
-            registry = RepositoryRegistry(self.config)
+            registry = RepositoryRegistry(self.config.repository_storage_path)
             await registry.initialize()
 
             workspace_manager = WorkspaceManager(registry, self.config)
@@ -221,7 +221,7 @@ class WorkspaceCommand:
         """Remove a repository from a workspace."""
         try:
             # Initialize managers
-            registry = RepositoryRegistry(self.config)
+            registry = RepositoryRegistry(self.config.repository_storage_path)
             await registry.initialize()
 
             workspace_manager = WorkspaceManager(registry, self.config)
@@ -242,7 +242,7 @@ class WorkspaceCommand:
         """List repositories in a workspace."""
         try:
             # Initialize managers
-            registry = RepositoryRegistry(self.config)
+            registry = RepositoryRegistry(self.config.repository_storage_path)
             await registry.initialize()
 
             workspace_manager = WorkspaceManager(registry, self.config)
