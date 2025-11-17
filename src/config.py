@@ -45,6 +45,11 @@ class ServerConfig(BaseSettings):
     enable_file_watcher: bool = True
     watch_debounce_ms: int = 1000
 
+    # Graceful degradation (UX-012)
+    allow_qdrant_fallback: bool = True  # Fall back to SQLite if Qdrant unavailable
+    allow_rust_fallback: bool = True  # Fall back to Python parser if Rust unavailable
+    warn_on_degradation: bool = True  # Show warnings when running in degraded mode
+
     # Adaptive retrieval
     enable_retrieval_gate: bool = True
     retrieval_gate_threshold: float = 0.8

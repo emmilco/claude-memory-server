@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - 2025-11-17
 
+- **UX-014: Explicit Project Switching** - Implemented project context management with manual switching and status display
+  - Added `switch_project(project_name)` MCP tool for explicit project switching
+  - Added `get_active_project()` MCP tool to retrieve current active project information
+  - Created `src/cli/project_command.py` with `switch` and `current` subcommands
+  - Enhanced status command to display active project information (name, path, branch, activity)
+  - Added ProjectContextDetector integration to MemoryRAGServer
+  - **Usage:** `python -m src.cli.project switch <name>` or `python -m src.cli.project current`
+  - **Impact:** Users can explicitly control which project context is active for memory operations
+
 - **UX-023: C# Support ✅ COMPLETE** - Added parsing for C# (.cs) files using tree-sitter-c-sharp
   - Added `tree-sitter-c-sharp = "0.23"` to `rust_core/Cargo.toml`
   - Extended `rust_core/src/parsing.rs` with C# support:
@@ -31,8 +40,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Note:** Extracted names include full method/class signatures (e.g., "public class User" instead of just "User"). This is actually beneficial for semantic search as it provides more context about visibility, type information, and full signatures.
   - **Impact:** Users can now semantically search C# codebases (ASP.NET, Unity, enterprise applications)
   - **Example:** Search "async method that gets user data" → finds `public async Task<IActionResult> GetUser(int id)` in controllers
-
-### Added - 2025-11-17
 
 - **WORKFLOW: Git worktree support for parallel agent development** - Configured repository to use git worktrees for concurrent feature development
   - Created `.worktrees/` directory for isolated feature branches

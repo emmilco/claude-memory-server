@@ -86,6 +86,7 @@ class MemoryRAGServer:
         self.query_expander: Optional[QueryExpander] = None
         self.hybrid_searcher: Optional[HybridSearcher] = None
         self.cross_project_consent: Optional = None  # Cross-project consent manager
+        self.project_context_detector: Optional = None  # Project context detector
         self.scheduler = None  # APScheduler instance
 
         # Multi-repository components
@@ -220,6 +221,11 @@ class MemoryRAGServer:
             else:
                 self.hybrid_searcher = None
                 logger.info("Hybrid search disabled")
+
+            # Initialize project context detector
+            from src.memory.project_context import ProjectContextDetector
+            self.project_context_detector = ProjectContextDetector(config=self.config.__dict__)
+            logger.info("Project context detector initialized")
 
             # Initialize multi-repository components if enabled
             if self.config.enable_multi_repository:
@@ -1785,11 +1791,24 @@ class MemoryRAGServer:
             # Get gate metrics
             gate_metrics = self.retrieval_gate.get_metrics() if self.retrieval_gate else {}
 
+            # Get active project info
+            active_project_info = None
+            if self.project_context_detector:
+                context = self.project_context_detector.get_active_context()
+                if context:
+                    active_project_info = {
+                        "name": context.project_name,
+                        "path": context.project_path,
+                        "git_branch": context.git_branch,
+                        "last_activity": context.last_activity.isoformat(),
+                    }
+
             return {
                 **response.model_dump(),
                 "statistics": self.stats,
                 "cache_stats": self.embedding_cache.get_stats(),
                 "gate_metrics": gate_metrics,
+                "active_project": active_project_info,
             }
 
         except Exception as e:
@@ -2349,6 +2368,94 @@ class MemoryRAGServer:
 
         except Exception as e:
             logger.error(f"Auto-prune job failed: {e}", exc_info=True)
+
+    async def switch_project(self, project_name: str) -> Dict[str, Any]:
+        """
+        Switch active project context (MCP tool).
+
+        Args:
+            project_name: Name of project to switch to
+
+        Returns:
+            Dictionary with switch status and project info
+
+        Raises:
+            ValueError: If project not found or detector not initialized
+        """
+        if not self.project_context_detector:
+            raise ValueError("Project context detector not initialized")
+
+        # Validate project exists by checking if it has any indexed data
+        projects = await self.store.get_all_projects()
+        if project_name not in projects:
+            # Provide helpful error with suggestions
+            raise ValueError(
+                f"Project '{project_name}' not found. "
+                f"Available projects: {', '.join(projects) if projects else 'none'}"
+            )
+
+        # Switch context
+        context = self.project_context_detector.set_active_context(
+            project_name=project_name,
+            explicit=True
+        )
+
+        # Get project stats
+        stats = await self.store.get_project_stats(project_name)
+
+        logger.info(f"Switched to project: {project_name}")
+
+        return {
+            "status": "success",
+            "project_name": project_name,
+            "project_path": context.project_path,
+            "git_repo": context.git_repo_root,
+            "git_branch": context.git_branch,
+            "statistics": stats,
+            "message": f"Switched to project '{project_name}'",
+        }
+
+    async def get_active_project(self) -> Dict[str, Any]:
+        """
+        Get currently active project context (MCP tool).
+
+        Returns:
+            Dictionary with active project info
+        """
+        if not self.project_context_detector:
+            return {
+                "status": "no_detector",
+                "project_name": None,
+                "message": "Project context detector not initialized",
+            }
+
+        context = self.project_context_detector.get_active_context()
+
+        if not context:
+            return {
+                "status": "no_active_project",
+                "project_name": None,
+                "message": "No active project set",
+            }
+
+        # Get project stats if available
+        stats = None
+        try:
+            stats = await self.store.get_project_stats(context.project_name)
+        except Exception as e:
+            logger.warning(f"Could not get stats for {context.project_name}: {e}")
+
+        return {
+            "status": "success",
+            "project_name": context.project_name,
+            "project_path": context.project_path,
+            "git_repo": context.git_repo_root,
+            "git_branch": context.git_branch,
+            "last_activity": context.last_activity.isoformat(),
+            "file_activity_count": context.file_activity_count,
+            "is_active": context.is_active,
+            "statistics": stats,
+        }
 
     # ========== Multi-Repository Management Tools ==========
 
