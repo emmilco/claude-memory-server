@@ -1439,3 +1439,137 @@ class SQLiteMemoryStore(MemoryStore):
 
         except Exception as e:
             raise StorageError(f"Failed to dismiss relationship: {e}")
+
+    async def delete_project(self, project_name: str) -> int:
+        """
+        Delete all memories and related data for a specific project.
+
+        Args:
+            project_name: Name of the project to delete
+
+        Returns:
+            Number of memories deleted
+
+        Raises:
+            StorageError: If deletion fails
+        """
+        if not self.conn:
+            raise StorageError("Store not initialized")
+
+        try:
+            # Get count of memories to delete
+            cursor = self.conn.cursor()
+            cursor.execute("""
+                SELECT COUNT(*) FROM memories WHERE project_name = ?
+            """, (project_name,))
+            count = cursor.fetchone()[0]
+
+            if count == 0:
+                logger.info(f"No memories found for project: {project_name}")
+                return 0
+
+            # Delete memories for this project
+            self.conn.execute("""
+                DELETE FROM memories WHERE project_name = ?
+            """, (project_name,))
+
+            # Delete related usage tracking
+            self.conn.execute("""
+                DELETE FROM memory_usage_tracking
+                WHERE memory_id IN (
+                    SELECT id FROM memories WHERE project_name = ?
+                )
+            """, (project_name,))
+
+            # Delete related git commits
+            self.conn.execute("""
+                DELETE FROM git_commits WHERE project_name = ?
+            """, (project_name,))
+
+            # Delete related git file changes
+            self.conn.execute("""
+                DELETE FROM git_file_changes
+                WHERE commit_hash IN (
+                    SELECT commit_hash FROM git_commits WHERE project_name = ?
+                )
+            """, (project_name,))
+
+            # Delete related relationships
+            self.conn.execute("""
+                DELETE FROM memory_relationships
+                WHERE source_id IN (
+                    SELECT id FROM memories WHERE project_name = ?
+                ) OR target_id IN (
+                    SELECT id FROM memories WHERE project_name = ?
+                )
+            """, (project_name, project_name))
+
+            self.conn.commit()
+
+            logger.info(f"Deleted {count} memories for project: {project_name}")
+            return count
+
+        except Exception as e:
+            logger.error(f"Error deleting project {project_name}: {e}")
+            self.conn.rollback()
+            raise StorageError(f"Failed to delete project: {e}")
+
+    async def rename_project(self, old_name: str, new_name: str) -> int:
+        """
+        Rename a project by updating all associated memories.
+
+        Args:
+            old_name: Current project name
+            new_name: New project name
+
+        Returns:
+            Number of memories updated
+
+        Raises:
+            StorageError: If rename fails
+        """
+        if not self.conn:
+            raise StorageError("Store not initialized")
+
+        try:
+            # Check if old project exists
+            cursor = self.conn.cursor()
+            cursor.execute("""
+                SELECT COUNT(*) FROM memories WHERE project_name = ?
+            """, (old_name,))
+            count = cursor.fetchone()[0]
+
+            if count == 0:
+                raise StorageError(f"Project not found: {old_name}")
+
+            # Check if new name already exists
+            cursor.execute("""
+                SELECT COUNT(*) FROM memories WHERE project_name = ?
+            """, (new_name,))
+            existing = cursor.fetchone()[0]
+
+            if existing > 0:
+                raise StorageError(f"Project already exists: {new_name}")
+
+            # Update memories
+            self.conn.execute("""
+                UPDATE memories SET project_name = ? WHERE project_name = ?
+            """, (new_name, old_name))
+
+            # Update git commits
+            self.conn.execute("""
+                UPDATE git_commits SET project_name = ? WHERE project_name = ?
+            """, (new_name, old_name))
+
+            self.conn.commit()
+
+            logger.info(f"Renamed project {old_name} to {new_name} ({count} memories updated)")
+            return count
+
+        except StorageError:
+            self.conn.rollback()
+            raise
+        except Exception as e:
+            logger.error(f"Error renaming project {old_name} to {new_name}: {e}")
+            self.conn.rollback()
+            raise StorageError(f"Failed to rename project: {e}")

@@ -2298,6 +2298,154 @@ class MemoryRAGServer:
         except Exception as e:
             logger.error(f"Auto-prune job failed: {e}", exc_info=True)
 
+    async def list_projects(self) -> Dict[str, Any]:
+        """
+        List all indexed projects with basic statistics.
+
+        Returns:
+            Dictionary with project list and metadata
+        """
+        try:
+            # Get all project names
+            project_names = await self.store.get_all_projects()
+
+            # Get basic stats for each project
+            projects = []
+            for project_name in project_names:
+                try:
+                    stats = await self.store.get_project_stats(project_name)
+                    projects.append({
+                        "name": project_name,
+                        "total_memories": stats.get("total_memories", 0),
+                        "total_files": stats.get("total_files", 0),
+                        "total_functions": stats.get("total_functions", 0),
+                        "total_classes": stats.get("total_classes", 0),
+                        "last_updated": stats.get("last_updated"),
+                    })
+                except Exception as e:
+                    logger.warning(f"Error getting stats for {project_name}: {e}")
+                    projects.append({
+                        "name": project_name,
+                        "total_memories": 0,
+                        "error": str(e),
+                    })
+
+            return {
+                "status": "success",
+                "projects": projects,
+                "total_projects": len(projects),
+            }
+
+        except Exception as e:
+            logger.error(f"Error listing projects: {e}")
+            return {
+                "status": "error",
+                "message": f"Failed to list projects: {e}",
+                "projects": [],
+            }
+
+    async def get_project_details(self, project_name: str) -> Dict[str, Any]:
+        """
+        Get detailed statistics for a specific project.
+
+        Args:
+            project_name: Name of the project
+
+        Returns:
+            Dictionary with detailed project statistics
+        """
+        try:
+            stats = await self.store.get_project_stats(project_name)
+
+            return {
+                "status": "success",
+                "project_name": project_name,
+                "statistics": stats,
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting project details for {project_name}: {e}")
+            return {
+                "status": "error",
+                "message": f"Failed to get project details: {e}",
+            }
+
+    async def delete_project(self, project_name: str) -> Dict[str, Any]:
+        """
+        Delete a project and all its indexed data.
+
+        Args:
+            project_name: Name of the project to delete
+
+        Returns:
+            Dictionary with deletion status and count
+        """
+        try:
+            # Validate project exists
+            projects = await self.store.get_all_projects()
+            if project_name not in projects:
+                return {
+                    "status": "error",
+                    "message": f"Project not found: {project_name}",
+                }
+
+            # Delete the project
+            count = await self.store.delete_project(project_name)
+
+            return {
+                "status": "success",
+                "message": f"Successfully deleted project: {project_name}",
+                "memories_deleted": count,
+            }
+
+        except Exception as e:
+            logger.error(f"Error deleting project {project_name}: {e}")
+            return {
+                "status": "error",
+                "message": f"Failed to delete project: {e}",
+            }
+
+    async def rename_project(self, old_name: str, new_name: str) -> Dict[str, Any]:
+        """
+        Rename a project by updating all associated memories.
+
+        Args:
+            old_name: Current project name
+            new_name: New project name
+
+        Returns:
+            Dictionary with rename status and count
+        """
+        try:
+            # Validate names
+            if not old_name or not new_name:
+                return {
+                    "status": "error",
+                    "message": "Project names cannot be empty",
+                }
+
+            if old_name == new_name:
+                return {
+                    "status": "error",
+                    "message": "New name must be different from old name",
+                }
+
+            # Rename the project
+            count = await self.store.rename_project(old_name, new_name)
+
+            return {
+                "status": "success",
+                "message": f"Successfully renamed project: {old_name} → {new_name}",
+                "memories_updated": count,
+            }
+
+        except Exception as e:
+            logger.error(f"Error renaming project {old_name} to {new_name}: {e}")
+            return {
+                "status": "error",
+                "message": f"Failed to rename project: {e}",
+            }
+
     async def close(self) -> None:
         """Clean up resources."""
         # Stop conversation tracker

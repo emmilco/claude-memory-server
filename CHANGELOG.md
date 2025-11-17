@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - 2025-11-17
 
+- **UX-015: Project Management Commands** - Comprehensive project management tools for listing, viewing, deleting, and renaming projects
+  - Added `delete_project()` and `rename_project()` to storage backends (SQLite and Qdrant)
+  - Added MCP tools: `list_projects()`, `get_project_details()`, `delete_project()`, `rename_project()`
+  - Created `src/cli/project_command.py` with 4 subcommands:
+    - `python -m src.cli.project list` - List all projects with statistics
+    - `python -m src.cli.project stats <name>` - Show detailed project statistics
+    - `python -m src.cli.project delete <name>` - Delete project with confirmation
+    - `python -m src.cli.project rename <old> <new>` - Rename project
+  - Delete operation removes all memories, git commits, relationships, and usage tracking
+  - Rename operation updates all associated memories atomically
+  - **Impact:** Users can fully manage project lifecycle through CLI and MCP
+
 - **WORKFLOW: Git worktree support for parallel agent development** - Configured repository to use git worktrees for concurrent feature development
   - Created `.worktrees/` directory for isolated feature branches
   - Added `.worktrees/` to `.gitignore` to prevent committing worktree directories

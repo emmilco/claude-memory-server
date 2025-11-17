@@ -1180,3 +1180,166 @@ class QdrantMemoryStore(MemoryStore):
         except Exception as e:
             logger.error(f"Failed to get all memories: {e}")
             return []
+
+    async def delete_project(self, project_name: str) -> int:
+        """
+        Delete all memories for a specific project.
+
+        Args:
+            project_name: Name of the project to delete
+
+        Returns:
+            Number of memories deleted
+
+        Raises:
+            StorageError: If deletion fails
+        """
+        if not self.client:
+            raise StorageError("Store not initialized")
+
+        try:
+            # Count memories to delete
+            result = self.client.count(
+                collection_name=self.collection_name,
+                count_filter=Filter(
+                    must=[
+                        FieldCondition(
+                            key="project_name",
+                            match=MatchValue(value=project_name),
+                        )
+                    ]
+                ),
+            )
+            count = result.count
+
+            if count == 0:
+                logger.info(f"No memories found for project: {project_name}")
+                return 0
+
+            # Delete all points with this project name
+            self.client.delete(
+                collection_name=self.collection_name,
+                points_selector=FilterSelector(
+                    filter=Filter(
+                        must=[
+                            FieldCondition(
+                                key="project_name",
+                                match=MatchValue(value=project_name),
+                            )
+                        ]
+                    )
+                ),
+            )
+
+            logger.info(f"Deleted {count} memories for project: {project_name}")
+            return count
+
+        except Exception as e:
+            logger.error(f"Error deleting project {project_name}: {e}")
+            raise StorageError(f"Failed to delete project: {e}")
+
+    async def rename_project(self, old_name: str, new_name: str) -> int:
+        """
+        Rename a project by updating all associated memories.
+
+        Args:
+            old_name: Current project name
+            new_name: New project name
+
+        Returns:
+            Number of memories updated
+
+        Raises:
+            StorageError: If rename fails
+        """
+        if not self.client:
+            raise StorageError("Store not initialized")
+
+        try:
+            # Check if old project exists
+            old_result = self.client.count(
+                collection_name=self.collection_name,
+                count_filter=Filter(
+                    must=[
+                        FieldCondition(
+                            key="project_name",
+                            match=MatchValue(value=old_name),
+                        )
+                    ]
+                ),
+            )
+
+            if old_result.count == 0:
+                raise StorageError(f"Project not found: {old_name}")
+
+            # Check if new name already exists
+            new_result = self.client.count(
+                collection_name=self.collection_name,
+                count_filter=Filter(
+                    must=[
+                        FieldCondition(
+                            key="project_name",
+                            match=MatchValue(value=new_name),
+                        )
+                    ]
+                ),
+            )
+
+            if new_result.count > 0:
+                raise StorageError(f"Project already exists: {new_name}")
+
+            # Get all points for the project and update them
+            offset = None
+            count = 0
+
+            while True:
+                results, offset = self.client.scroll(
+                    collection_name=self.collection_name,
+                    scroll_filter=Filter(
+                        must=[
+                            FieldCondition(
+                                key="project_name",
+                                match=MatchValue(value=old_name),
+                            )
+                        ]
+                    ),
+                    limit=100,
+                    offset=offset,
+                    with_payload=True,
+                    with_vectors=True,
+                )
+
+                if not results:
+                    break
+
+                # Update project_name in payloads
+                points_to_update = []
+                for point in results:
+                    payload = dict(point.payload)
+                    payload["project_name"] = new_name
+                    points_to_update.append(
+                        PointStruct(
+                            id=point.id,
+                            vector=point.vector,
+                            payload=payload,
+                        )
+                    )
+                    count += 1
+
+                # Upsert updated points
+                self.client.upsert(
+                    collection_name=self.collection_name,
+                    points=points_to_update,
+                )
+
+                if offset is None:
+                    break
+
+            logger.info(f"Renamed project {old_name} to {new_name} ({count} memories updated)")
+            return count
+
+        except StorageError:
+            raise
+        except Exception as e:
+            logger.error(f"Error renaming project {old_name} to {new_name}: {e}")
+            raise StorageError(f"Failed to rename project: {e}")
