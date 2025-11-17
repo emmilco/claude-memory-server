@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - 2025-11-17
 
+- **UX-029: Token Usage Analytics Dashboard ✅ COMPLETE** - Track and visualize token savings
+  - Created `src/analytics/token_tracker.py` - Token usage tracking with SQLite backend (350+ lines)
+  - Created `src/analytics/__init__.py` - Analytics package exports
+  - Created `src/cli/analytics_command.py` - CLI command for viewing analytics (220+ lines)
+  - Added `analytics` CLI command: `python -m src.cli analytics [--period-days 30] [--session-id ID] [--project-name NAME] [--top-sessions]`
+  - Added `get_token_analytics()` MCP tool to `src/core/server.py` - Programmatic access for Claude
+  - Token tracking: tokens used, tokens saved, cost savings, efficiency ratio, search quality
+  - Automatic savings estimation: manual paste (5000 tokens) vs RAG search (1000 tokens avg)
+  - Cost calculation: $3/M input tokens (Claude Sonnet 3.5 pricing)
+  - Analytics display: summary panel, detailed stats table, top sessions leaderboard
+  - Rich formatting with colors and Unicode icons for visual clarity
+  - Session-level analytics with filtering by project and time period
+  - Comprehensive test suite: `tests/unit/test_token_analytics.py` (13 tests passing)
+  - **Impact:** Makes invisible value visible, proves ROI, drives adoption
+  - **Metrics:** Tokens used/saved, cost savings USD, efficiency ratio, avg relevance, searches, files indexed
+  - **Runtime Cost:** +10MB storage (SQLite), negligible CPU/latency
+
 - **FEAT-030: Cross-Project Learning ✅ COMPLETE** - Search code across all opted-in projects
   - Created `src/memory/cross_project_consent.py` - Privacy-respecting consent management (115 lines)
   - Added cross-project config options to `src/config.py` - Enable/disable, default mode, consent file

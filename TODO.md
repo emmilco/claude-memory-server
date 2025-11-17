@@ -338,14 +338,14 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Complexity:** Very Low (~100 lines)
   - **Runtime Cost:** None (scores already calculated)
 
-- [ ] **UX-029**: Token Usage Analytics Dashboard (~1-2 days) 🔥🔥🔥
-  - [ ] **Confirm overall feature design with user before proceeding**
-  - [ ] Track tokens saved per session (manual paste vs semantic search)
-  - [ ] Display API cost savings over time ($X saved this month)
-  - [ ] Context efficiency ratio (relevant tokens / total tokens)
-  - [ ] CLI command: `python -m src.cli analytics`
-  - [ ] MCP tool: `get_token_analytics()` for Claude to query
-  - [ ] Storage: Simple SQLite table for metrics
+- [x] **UX-029**: Token Usage Analytics Dashboard (~1-2 days) 🔥🔥🔥 ✅ **COMPLETE**
+  - [x] Track tokens saved per session (manual paste vs semantic search)
+  - [x] Display API cost savings over time ($X saved this month)
+  - [x] Context efficiency ratio (relevant tokens / total tokens)
+  - [x] CLI command: `python -m src.cli analytics`
+  - [x] MCP tool: `get_token_analytics()` for Claude to query
+  - [x] Storage: Simple SQLite table for metrics
+  - [x] Comprehensive test suite (13 tests passing)
   - **Impact:** Makes invisible value visible, drives adoption
   - **Complexity:** Low (~300 lines)
   - **Runtime Cost:** +10MB storage, negligible CPU/latency

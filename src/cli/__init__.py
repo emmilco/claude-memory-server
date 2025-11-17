@@ -13,6 +13,7 @@ from src.cli.status_command import StatusCommand
 from src.cli.prune_command import prune_command
 from src.cli.git_index_command import GitIndexCommand
 from src.cli.git_search_command import GitSearchCommand
+from src.cli.analytics_command import run_analytics_command
 
 
 def setup_logging(level: str = "INFO"):
@@ -213,6 +214,37 @@ def create_parser() -> argparse.ArgumentParser:
         help="Maximum results (default: 10)",
     )
 
+    # Analytics command
+    analytics_parser = subparsers.add_parser(
+        "analytics",
+        help="View token usage analytics and cost savings",
+    )
+    analytics_parser.add_argument(
+        "--period-days",
+        "-d",
+        type=int,
+        default=30,
+        help="Number of days to analyze (default: 30)",
+    )
+    analytics_parser.add_argument(
+        "--session-id",
+        "-s",
+        type=str,
+        help="Filter by specific session ID",
+    )
+    analytics_parser.add_argument(
+        "--project-name",
+        "-p",
+        type=str,
+        help="Filter by specific project",
+    )
+    analytics_parser.add_argument(
+        "--top-sessions",
+        "-t",
+        action="store_true",
+        help="Show top sessions by tokens saved",
+    )
+
     return parser
 
 
@@ -247,6 +279,13 @@ async def main_async(args):
     elif args.command == "git-search":
         cmd = GitSearchCommand()
         await cmd.run(args)
+    elif args.command == "analytics":
+        run_analytics_command(
+            period_days=args.period_days,
+            session_id=args.session_id,
+            project_name=args.project_name,
+            show_top_sessions=args.top_sessions,
+        )
     else:
         print("No command specified. Use --help for usage information.")
         sys.exit(1)
