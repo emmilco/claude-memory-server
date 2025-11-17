@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - 2025-11-17
 
+- **UX-032: Health Check Improvements** - Enhanced diagnostics and proactive recommendations
+  - **Performance Metrics Section:**
+    - Qdrant latency monitoring (warns if >50ms, excellent <20ms)
+    - Cache hit rate display (warns if <70%)
+    - Real-time performance measurement during health check
+  - **Project Health Section:**
+    - Stale project detection (warns for projects not indexed in 90+ days)
+    - Lists specific stale projects with age and re-index commands
+    - Project statistics summary (total projects, memories, disk usage)
+  - **Smart Recommendations:**
+    - Context-aware suggestions based on actual system state
+    - Qdrant upgrade recommendation when using SQLite with 10K+ memories
+    - Docker resource allocation advice for slow Qdrant latency
+    - Cache re-indexing suggestion for low hit rates
+    - Actionable commands with copy-paste ready syntax
+    - Large index size warnings (>500MB) with archival suggestions
+  - **Enhanced Output:**
+    - New sections: "Performance Metrics" and "Project Health"
+    - Rich-formatted statistics display
+    - Emoji indicators for better readability (📊 💾 🚀)
+  - **Impact:** Users get proactive guidance on optimization opportunities and early warning of performance issues
+
 - **WORKFLOW: Git worktree support for parallel agent development** - Configured repository to use git worktrees for concurrent feature development
   - Created `.worktrees/` directory for isolated feature branches
   - Added `.worktrees/` to `.gitignore` to prevent committing worktree directories
