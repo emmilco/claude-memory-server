@@ -30,6 +30,7 @@ from src.core.exceptions import (
     ReadOnlyError,
     RetrievalError,
 )
+from src.router import RetrievalGate
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +70,7 @@ class MemoryRAGServer:
         self.store: Optional[MemoryStore] = None
         self.embedding_generator: Optional[EmbeddingGenerator] = None
         self.embedding_cache: Optional[EmbeddingCache] = None
+        self.retrieval_gate: Optional[RetrievalGate] = None
 
         # Statistics
         self.stats = {
@@ -92,7 +94,12 @@ class MemoryRAGServer:
             "storage_errors": 0,
             "retrieval_errors": 0,
             "validation_errors": 0,
-            
+
+            # Retrieval gate metrics
+            "queries_gated": 0,
+            "queries_retrieved": 0,
+            "estimated_tokens_saved": 0,
+
             # Timestamps
             "server_start_time": datetime.now().isoformat(),
             "last_query_time": None,
@@ -119,6 +126,18 @@ class MemoryRAGServer:
 
             # Initialize embedding cache
             self.embedding_cache = EmbeddingCache(self.config)
+
+            # Initialize retrieval gate if enabled
+            if self.config.enable_retrieval_gate:
+                self.retrieval_gate = RetrievalGate(
+                    threshold=self.config.retrieval_gate_threshold
+                )
+                logger.info(
+                    f"Retrieval gate enabled (threshold: {self.config.retrieval_gate_threshold})"
+                )
+            else:
+                self.retrieval_gate = None
+                logger.info("Retrieval gate disabled")
 
             logger.info("Server initialized successfully")
 
@@ -290,6 +309,38 @@ class MemoryRAGServer:
                 tags=tags or [],
             )
 
+            # Check retrieval gate first (if enabled)
+            if self.retrieval_gate is not None:
+                gate_decision = self.retrieval_gate.should_retrieve(
+                    query=query,
+                    expected_results=limit,
+                )
+
+                # If gate says skip, return empty results immediately
+                if not gate_decision.should_retrieve:
+                    query_time_ms = (time.time() - start_time) * 1000
+                    self.stats["queries_processed"] += 1
+                    self.stats["queries_gated"] += 1
+
+                    # Update gate metrics from the gate itself
+                    gate_metrics = self.retrieval_gate.get_metrics()
+                    self.stats["estimated_tokens_saved"] = gate_metrics.get("estimated_tokens_saved", 0)
+
+                    response = RetrievalResponse(
+                        results=[],
+                        total_found=0,
+                        query_time_ms=query_time_ms,
+                        used_cache=False,
+                    )
+
+                    logger.info(
+                        f"Query gated (utility: {gate_decision.utility_score:.3f}) - "
+                        f"skipped retrieval in {query_time_ms:.2f}ms"
+                    )
+
+                    return response.model_dump()
+
+            # Gate approved - proceed with retrieval
             # Generate query embedding
             query_embedding = await self._get_embedding(query)
 
@@ -309,6 +360,9 @@ class MemoryRAGServer:
                 filters=filters if any(filters.to_dict().values()) else None,
                 limit=request.limit,
             )
+
+            # Update stats for successful retrieval
+            self.stats["queries_retrieved"] += 1
 
             # Convert to response format
             # Clamp scores to [0, 1] range to handle floating point precision issues
@@ -731,10 +785,14 @@ class MemoryRAGServer:
                 retrieval_gate_enabled=self.config.enable_retrieval_gate,
             )
 
+            # Get gate metrics
+            gate_metrics = self.retrieval_gate.get_metrics() if self.retrieval_gate else {}
+
             return {
                 **response.model_dump(),
                 "statistics": self.stats,
                 "cache_stats": self.embedding_cache.get_stats(),
+                "gate_metrics": gate_metrics,
             }
 
         except Exception as e:

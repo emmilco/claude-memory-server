@@ -15,6 +15,7 @@ def config():
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
         read_only_mode=False,
+        enable_retrieval_gate=False,  # Disable gate for predictable test results
     )
 
 
@@ -25,6 +26,7 @@ def readonly_config():
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
         read_only_mode=True,
+        enable_retrieval_gate=False,  # Disable gate for predictable test results
     )
 
 
