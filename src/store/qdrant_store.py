@@ -18,7 +18,7 @@ from qdrant_client.models import (
 from src.store.base import MemoryStore
 from src.store.qdrant_setup import QdrantSetup
 from src.core.models import MemoryUnit, SearchFilters, MemoryCategory, ContextLevel, MemoryScope
-from src.core.exceptions import StorageError, RetrievalError, MemoryNotFoundError
+from src.core.exceptions import StorageError, RetrievalError, MemoryNotFoundError, ValidationError
 from src.config import ServerConfig
 
 logger = logging.getLogger(__name__)
@@ -63,24 +63,8 @@ class QdrantMemoryStore(MemoryStore):
             await self.initialize()
 
         try:
-            # Generate unique ID
-            memory_id = metadata.get("id", str(uuid4()))
-
-            # Prepare payload
-            payload = {
-                "id": memory_id,
-                "content": content,
-                "category": metadata.get("category"),
-                "context_level": metadata.get("context_level"),
-                "scope": metadata.get("scope", "global"),
-                "project_name": metadata.get("project_name"),
-                "importance": metadata.get("importance", 0.5),
-                "embedding_model": metadata.get("embedding_model", "all-MiniLM-L6-v2"),
-                "created_at": metadata.get("created_at", datetime.now(UTC)).isoformat(),
-                "updated_at": datetime.now(UTC).isoformat(),
-                "tags": metadata.get("tags", []),
-                **metadata.get("metadata", {}),
-            }
+            # Build payload using helper method
+            memory_id, payload = self._build_payload(content, embedding, metadata)
 
             # Create point
             point = PointStruct(
@@ -98,7 +82,17 @@ class QdrantMemoryStore(MemoryStore):
             logger.debug(f"Stored memory: {memory_id}")
             return memory_id
 
+        except ValueError as e:
+            # Invalid payload structure
+            logger.error(f"Invalid payload for storage: {e}")
+            raise ValidationError(f"Invalid memory payload: {e}")
+        except ConnectionError as e:
+            # Connection issues
+            logger.error(f"Connection error during store: {e}")
+            raise StorageError(f"Failed to connect to Qdrant: {e}")
         except Exception as e:
+            # Generic fallback
+            logger.error(f"Unexpected error storing memory: {e}")
             raise StorageError(f"Failed to store memory: {e}")
 
     async def retrieve(
@@ -112,6 +106,11 @@ class QdrantMemoryStore(MemoryStore):
             await self.initialize()
 
         try:
+            # Cap limit to prevent memory/performance issues from unbounded queries
+            safe_limit = min(limit, 100)
+            if limit != safe_limit:
+                logger.debug(f"Limiting search result count from {limit} to {safe_limit}")
+
             # Build filter conditions
             filter_conditions = self._build_filter(filters) if filters else None
 
@@ -120,7 +119,7 @@ class QdrantMemoryStore(MemoryStore):
                 collection_name=self.collection_name,
                 query=query_embedding,
                 query_filter=filter_conditions,
-                limit=limit,
+                limit=safe_limit,
                 with_payload=True,
                 with_vectors=False,
                 search_params=SearchParams(
@@ -136,14 +135,21 @@ class QdrantMemoryStore(MemoryStore):
                     memory = self._payload_to_memory_unit(hit.payload)
                     score = float(hit.score)
                     results.append((memory, score))
-                except Exception as e:
-                    logger.warning(f"Failed to parse search result: {e}")
+                except ValueError as e:
+                    logger.warning(f"Failed to parse search result payload: {e}")
                     continue
 
             logger.debug(f"Retrieved {len(results)} memories")
             return results
 
+        except ConnectionError as e:
+            logger.error(f"Connection error during retrieval: {e}")
+            raise RetrievalError(f"Failed to connect to Qdrant: {e}")
+        except ValueError as e:
+            logger.error(f"Invalid filter or query: {e}")
+            raise RetrievalError(f"Invalid search parameters: {e}")
         except Exception as e:
+            logger.error(f"Unexpected error during retrieval: {e}")
             raise RetrievalError(f"Failed to retrieve memories: {e}")
 
     async def delete(self, memory_id: str) -> bool:
@@ -174,27 +180,16 @@ class QdrantMemoryStore(MemoryStore):
             await self.initialize()
 
         try:
+            if not items:
+                return []
+
             points = []
             memory_ids = []
 
             for content, embedding, metadata in items:
-                memory_id = metadata.get("id", str(uuid4()))
+                # Build payload using helper method
+                memory_id, payload = self._build_payload(content, embedding, metadata)
                 memory_ids.append(memory_id)
-
-                payload = {
-                    "id": memory_id,
-                    "content": content,
-                    "category": metadata.get("category"),
-                    "context_level": metadata.get("context_level"),
-                    "scope": metadata.get("scope", "global"),
-                    "project_name": metadata.get("project_name"),
-                    "importance": metadata.get("importance", 0.5),
-                    "embedding_model": metadata.get("embedding_model", "all-MiniLM-L6-v2"),
-                    "created_at": metadata.get("created_at", datetime.now(UTC)).isoformat(),
-                    "updated_at": datetime.now(UTC).isoformat(),
-                    "tags": metadata.get("tags", []),
-                    **metadata.get("metadata", {}),
-                }
 
                 points.append(PointStruct(
                     id=memory_id,
@@ -211,7 +206,14 @@ class QdrantMemoryStore(MemoryStore):
             logger.debug(f"Batch stored {len(memory_ids)} memories")
             return memory_ids
 
+        except ValueError as e:
+            logger.error(f"Invalid payload in batch: {e}")
+            raise ValidationError(f"Invalid memory payload in batch: {e}")
+        except ConnectionError as e:
+            logger.error(f"Connection error during batch store: {e}")
+            raise StorageError(f"Failed to connect to Qdrant: {e}")
         except Exception as e:
+            logger.error(f"Unexpected error in batch store: {e}")
             raise StorageError(f"Failed to batch store memories: {e}")
 
     async def search_with_filters(
@@ -251,22 +253,33 @@ class QdrantMemoryStore(MemoryStore):
             await self.initialize()
 
         try:
-            if filters:
-                # Count with filters using scroll
-                filter_conditions = self._build_filter(filters)
-                result = self.client.scroll(
+            if not filters:
+                # No filters - return total collection count
+                collection_info = self.client.get_collection(self.collection_name)
+                return collection_info.points_count
+            
+            # Count with filters by scrolling through all matching points
+            filter_conditions = self._build_filter(filters)
+            total = 0
+            offset = None
+            
+            while True:
+                points, offset = self.client.scroll(
                     collection_name=self.collection_name,
                     scroll_filter=filter_conditions,
-                    limit=1,
+                    offset=offset,
+                    limit=100,
                     with_payload=False,
                     with_vectors=False,
                 )
-                # Note: This is an approximation. For exact count, we'd need to scroll all results
-                collection_info = self.client.get_collection(self.collection_name)
-                return collection_info.points_count
-            else:
-                collection_info = self.client.get_collection(self.collection_name)
-                return collection_info.points_count
+                
+                total += len(points)
+                
+                # No more points to scroll through
+                if not points or offset is None:
+                    break
+            
+            return total
 
         except Exception as e:
             logger.error(f"Failed to count memories: {e}")
@@ -310,6 +323,76 @@ class QdrantMemoryStore(MemoryStore):
             self.client = None
             logger.info("Qdrant store closed")
 
+    def _build_payload(
+        self,
+        content: str,
+        embedding: List[float],
+        metadata: Dict[str, Any],
+    ) -> Tuple[str, Dict[str, Any]]:
+        """
+        Build a standard memory payload for storage.
+
+        Args:
+            content: Memory content text.
+            embedding: Vector embedding (used for ID generation context).
+            metadata: Memory metadata.
+
+        Returns:
+            Tuple of (memory_id, payload_dict).
+        """
+        memory_id = metadata.get("id", str(uuid4()))
+
+        payload = {
+            "id": memory_id,
+            "content": content,
+            "category": metadata.get("category"),
+            "context_level": metadata.get("context_level"),
+            "scope": metadata.get("scope", "global"),
+            "project_name": metadata.get("project_name"),
+            "importance": metadata.get("importance", 0.5),
+            "embedding_model": metadata.get("embedding_model", "all-MiniLM-L6-v2"),
+            "created_at": metadata.get("created_at", datetime.now(UTC)).isoformat(),
+            "updated_at": datetime.now(UTC).isoformat(),
+            "tags": metadata.get("tags", []),
+            **metadata.get("metadata", {}),
+        }
+
+        return memory_id, payload
+
+    def _build_field_condition(
+        self,
+        key: str,
+        value: Any,
+        use_range: bool = False,
+    ) -> Optional[FieldCondition]:
+        """
+        Build a single field condition for filtering.
+
+        Args:
+            key: Field name.
+            value: Field value to match.
+            use_range: If True, treat as range condition (for numeric fields).
+
+        Returns:
+            FieldCondition, or None if value is empty.
+        """
+        if value is None:
+            return None
+
+        if use_range:
+            # Range condition for numeric fields like importance
+            if isinstance(value, (int, float)) and value > 0.0:
+                return FieldCondition(key=key, range=Range(gte=value))
+            return None
+
+        # Match condition for enums and strings
+        if hasattr(value, 'value'):  # Enum
+            return FieldCondition(key=key, match=MatchValue(value=value.value))
+        elif isinstance(value, (str, int, float)) and value:
+            return FieldCondition(key=key, match=MatchValue(value=value))
+
+        return None
+
     def _build_filter(self, filters: SearchFilters) -> Optional[Filter]:
         """
         Build Qdrant filter from SearchFilters.
@@ -322,54 +405,46 @@ class QdrantMemoryStore(MemoryStore):
         """
         conditions = []
 
-        if filters.context_level:
-            conditions.append(
-                FieldCondition(
-                    key="context_level",
-                    match=MatchValue(value=filters.context_level.value),
-                )
-            )
+        # Add context level condition
+        context_condition = self._build_field_condition(
+            "context_level", filters.context_level
+        )
+        if context_condition:
+            conditions.append(context_condition)
 
-        if filters.scope:
-            conditions.append(
-                FieldCondition(
-                    key="scope",
-                    match=MatchValue(value=filters.scope.value),
-                )
-            )
+        # Add scope condition
+        scope_condition = self._build_field_condition("scope", filters.scope)
+        if scope_condition:
+            conditions.append(scope_condition)
 
-        if filters.category:
-            conditions.append(
-                FieldCondition(
-                    key="category",
-                    match=MatchValue(value=filters.category.value),
-                )
-            )
+        # Add category condition
+        category_condition = self._build_field_condition(
+            "category", filters.category
+        )
+        if category_condition:
+            conditions.append(category_condition)
 
+        # Add project name condition
         if filters.project_name:
-            conditions.append(
-                FieldCondition(
-                    key="project_name",
-                    match=MatchValue(value=filters.project_name),
-                )
+            project_condition = self._build_field_condition(
+                "project_name", filters.project_name
             )
+            if project_condition:
+                conditions.append(project_condition)
 
-        if filters.min_importance > 0.0:
-            conditions.append(
-                FieldCondition(
-                    key="importance",
-                    range=Range(gte=filters.min_importance),
-                )
-            )
+        # Add importance range condition
+        importance_condition = self._build_field_condition(
+            "importance", filters.min_importance, use_range=True
+        )
+        if importance_condition:
+            conditions.append(importance_condition)
 
+        # Add tag conditions (multiple tags as OR conditions would require nested logic)
         if filters.tags:
             for tag in filters.tags:
-                conditions.append(
-                    FieldCondition(
-                        key="tags",
-                        match=MatchValue(value=tag),
-                    )
-                )
+                tag_condition = self._build_field_condition("tags", tag)
+                if tag_condition:
+                    conditions.append(tag_condition)
 
         if not conditions:
             return None

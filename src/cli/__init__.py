@@ -8,6 +8,8 @@ from pathlib import Path
 
 from src.cli.index_command import IndexCommand
 from src.cli.watch_command import WatchCommand
+from src.cli.health_command import HealthCommand
+from src.cli.status_command import StatusCommand
 
 
 def setup_logging(level: str = "INFO"):
@@ -64,13 +66,19 @@ def create_parser() -> argparse.ArgumentParser:
         help="Don't recursively index subdirectories",
     )
 
+    # Health command
+    health_parser = subparsers.add_parser(
+        "health",
+        help="Run health check diagnostics",
+    )
+
     # Status command
     status_parser = subparsers.add_parser(
         "status",
         help="Show server and storage status",
     )
 
-    # Watch command (future)
+    # Watch command
     watch_parser = subparsers.add_parser(
         "watch",
         help="Watch directory for changes and auto-index",
@@ -86,6 +94,12 @@ def create_parser() -> argparse.ArgumentParser:
         help="Project name for scoping",
     )
 
+    # Browse command
+    browse_parser = subparsers.add_parser(
+        "browse",
+        help="Interactive memory browser (TUI)",
+    )
+
     return parser
 
 
@@ -94,12 +108,18 @@ async def main_async(args):
     if args.command == "index":
         cmd = IndexCommand()
         await cmd.run(args)
+    elif args.command == "health":
+        cmd = HealthCommand()
+        await cmd.run(args)
     elif args.command == "status":
-        print("Status command not yet implemented")
-        sys.exit(1)
+        cmd = StatusCommand()
+        await cmd.run(args)
     elif args.command == "watch":
         cmd = WatchCommand()
         await cmd.run(args)
+    elif args.command == "browse":
+        from src.cli.memory_browser import run_memory_browser
+        await run_memory_browser()
     else:
         print("No command specified. Use --help for usage information.")
         sys.exit(1)

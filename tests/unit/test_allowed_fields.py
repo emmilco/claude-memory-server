@@ -5,7 +5,9 @@ from src.core.allowed_fields import (
     ALLOWED_MEMORY_FIELDS,
     ALLOWED_FILTER_FIELDS,
     ALLOWED_SORT_FIELDS,
+    ALLOWED_SORTABLE_FIELDS,
     ALLOWED_CODE_METADATA_FIELDS,
+    INJECTION_PATTERNS,
     is_allowed_field,
     is_filterable_field,
     is_sortable_field,
@@ -123,7 +125,8 @@ class TestValueValidation:
         valid, message = validate_field_value("content", "This is valid content")
 
         assert valid is True
-        assert message == "" or "success" in message.lower() or message == "Valid"
+        # Message should be empty string for valid content
+        assert message == "", f"Expected empty message for valid content, got: {message}"
 
     def test_validate_field_value_content_empty(self):
         """Test validating empty content."""
@@ -214,10 +217,8 @@ class TestAllowlistValidation:
 
         errors = validate_against_allowlist(data)
 
-        # Should have no errors or empty error dict
-        assert errors is not None
-        if errors:
-            assert len(errors) == 0 or all(len(v) == 0 for v in errors.values())
+        # Should return empty dict for valid data
+        assert errors == {}, f"Expected no errors for valid data, got: {errors}"
 
     def test_validate_against_allowlist_invalid_field(self):
         """Test validation with invalid field names."""
@@ -307,3 +308,74 @@ class TestMemoryFieldStructure:
 
         assert "type" in tags
         assert tags["type"] == list
+
+
+class TestValidateFieldValueCoverage:
+    """Tests for validate_field_value uncovered branches."""
+
+    def test_validate_id_type_str_mismatch(self):
+        """Test string type validation (line 242-243)."""
+        # id field expects string
+        valid, msg = validate_field_value("id", 12345)
+
+        assert valid is False
+        assert "must be a string" in msg
+
+    def test_validate_importance_type_float_mismatch(self):
+        """Test float type validation (line 244-245)."""
+        # importance field expects float
+        valid, msg = validate_field_value("importance", "not_a_number")
+
+        assert valid is False
+        assert "must be a number" in msg
+
+    def test_validate_tags_type_list_mismatch(self):
+        """Test list type validation (line 246-247)."""
+        # tags field expects list
+        valid, msg = validate_field_value("tags", "not_a_list")
+
+        assert valid is False
+        assert "must be a list" in msg
+
+    def test_validate_metadata_type_dict_mismatch(self):
+        """Test dict type validation (line 248-249)."""
+        # metadata field expects dict
+        valid, msg = validate_field_value("metadata", "not_a_dict")
+
+        assert valid is False
+        assert "must be a dictionary" in msg
+
+    def test_validate_content_max_length(self):
+        """Test string max_length validation (line 267)."""
+        # content field has max_length: 50000
+        long_content = "x" * 50001
+        valid, msg = validate_field_value("content", long_content)
+
+        assert valid is False
+        assert "exceeds maximum length" in msg
+
+    def test_validate_importance_min_value(self):
+        """Test numeric min_value validation (line 275)."""
+        # importance field has min_value: 0.0
+        valid, msg = validate_field_value("importance", -0.5)
+
+        assert valid is False
+        assert "must be >=" in msg
+
+    def test_validate_tags_max_items(self):
+        """Test list max_items validation (lines 287-288)."""
+        # tags field has max_items: 20
+        too_many_tags = ["tag" + str(i) for i in range(25)]
+        valid, msg = validate_field_value("tags", too_many_tags)
+
+        assert valid is False
+        assert "exceeds maximum of 20 items" in msg
+
+    def test_validate_metadata_max_items(self):
+        """Test dict max_items validation (lines 295-296)."""
+        # metadata field has max_items: 50
+        too_many_items = {f"key{i}": f"value{i}" for i in range(55)}
+        valid, msg = validate_field_value("metadata", too_many_items)
+
+        assert valid is False
+        assert "exceeds maximum of 50 items" in msg

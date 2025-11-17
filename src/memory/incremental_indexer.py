@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime, UTC
@@ -9,9 +10,93 @@ from datetime import datetime, UTC
 try:
     from mcp_performance_core import parse_source_file, batch_parse_files, ParseResult, SemanticUnit
     RUST_AVAILABLE = True
+    PARSER_MODE = "rust"
+    logging.info("Using Rust parser (optimal performance)")
 except ImportError:
     RUST_AVAILABLE = False
-    logging.warning("Rust parsing module not available. Install with: maturin develop")
+    PARSER_MODE = "python"
+    logging.warning("Rust parsing module not available. Using Python fallback parser (10-20x slower).")
+    logging.info("For better performance, install Rust and build: cd rust_core && maturin develop")
+
+    # Import Python fallback parser
+    try:
+        from src.memory.python_parser import parse_code_file as python_parse_file
+        PYTHON_PARSER_AVAILABLE = True
+    except ImportError:
+        PYTHON_PARSER_AVAILABLE = False
+        logging.error("Python fallback parser also not available. Install: pip install tree-sitter tree-sitter-languages")
+
+    # Create ParseResult-like classes for compatibility
+    from dataclasses import dataclass
+    from typing import List
+
+    @dataclass
+    class SemanticUnit:
+        """Semantic unit (function, class, method)."""
+        unit_type: str
+        name: str
+        signature: str
+        start_line: int
+        end_line: int
+        content: str
+        language: str
+        file_path: str
+
+    @dataclass
+    class ParseResult:
+        """Result of parsing a file."""
+        units: List[SemanticUnit]
+        parse_time_ms: float
+        language: str
+        file_path: str
+
+    def parse_source_file(file_path: str, source_code: str) -> ParseResult:
+        """Python fallback for parse_source_file."""
+        import time
+        if not PYTHON_PARSER_AVAILABLE:
+            raise ImportError("Neither Rust nor Python parser available")
+
+        # Detect language from file extension
+        from pathlib import Path
+        ext = Path(file_path).suffix.lower()
+        language_map = {
+            ".py": "python",
+            ".js": "javascript",
+            ".jsx": "javascript",
+            ".ts": "typescript",
+            ".tsx": "typescript",
+            ".java": "java",
+            ".go": "go",
+            ".rs": "rust",
+        }
+        language = language_map.get(ext, "unknown")
+
+        # Parse using Python parser
+        start_time = time.time()
+        units_data = python_parse_file(file_path, language)
+        parse_time_ms = (time.time() - start_time) * 1000
+
+        # Convert to SemanticUnit objects
+        units = [
+            SemanticUnit(
+                unit_type=u["unit_type"],
+                name=u["name"],
+                signature=u["signature"],
+                start_line=u["start_line"],
+                end_line=u["end_line"],
+                content=u["content"],
+                language=u["language"],
+                file_path=u["file_path"],
+            )
+            for u in units_data
+        ]
+
+        return ParseResult(
+            units=units,
+            parse_time_ms=parse_time_ms,
+            language=language,
+            file_path=file_path,
+        )
 
 from src.config import ServerConfig, get_config
 from src.embeddings.generator import EmbeddingGenerator
@@ -22,7 +107,79 @@ from src.core.exceptions import StorageError
 logger = logging.getLogger(__name__)
 
 
-class IncrementalIndexer:
+class BaseCodeIndexer(ABC):
+    """
+    Abstract base class for code indexers.
+
+    This provides a common interface for different code parsing and indexing strategies,
+    enabling future support for different languages, parsers, or analysis tools.
+
+    Implementations can use:
+    - Different parsers (tree-sitter, AST, LSP)
+    - Different languages (Python, JavaScript, Java, Go, Rust, etc.)
+    - Different analysis strategies (semantic, AST-based, etc.)
+    """
+
+    @abstractmethod
+    async def initialize(self) -> None:
+        """Initialize the indexer (connect to storage, etc.)."""
+        pass
+
+    @abstractmethod
+    async def index_file(self, file_path: Path) -> Dict[str, Any]:
+        """
+        Index a single source file.
+
+        Args:
+            file_path: Path to source file
+
+        Returns:
+            Dict with indexing stats (units_indexed, parse_time_ms, etc.)
+        """
+        pass
+
+    @abstractmethod
+    async def index_directory(
+        self,
+        dir_path: Path,
+        recursive: bool = True,
+        show_progress: bool = True,
+        max_concurrent: int = 4,
+    ) -> Dict[str, Any]:
+        """
+        Index all supported files in a directory.
+
+        Args:
+            dir_path: Directory to index
+            recursive: Recursively index subdirectories
+            show_progress: Show progress logging
+            max_concurrent: Maximum concurrent indexing tasks
+
+        Returns:
+            Dict with indexing stats (total_files, total_units, etc.)
+        """
+        pass
+
+    @abstractmethod
+    async def delete_file_index(self, file_path: Path) -> int:
+        """
+        Remove all index entries for a deleted file.
+
+        Args:
+            file_path: Path to deleted file
+
+        Returns:
+            Number of units deleted
+        """
+        pass
+
+    @abstractmethod
+    async def close(self) -> None:
+        """Clean up resources."""
+        pass
+
+
+class IncrementalIndexer(BaseCodeIndexer):
     """
     Incremental code indexer that extracts semantic units and stores them in vector DB.
 
@@ -167,14 +324,16 @@ class IncrementalIndexer:
         dir_path: Path,
         recursive: bool = True,
         show_progress: bool = True,
+        max_concurrent: int = 4,
     ) -> Dict[str, Any]:
         """
-        Index all supported files in a directory.
+        Index all supported files in a directory with concurrent processing.
 
         Args:
             dir_path: Directory to index
             recursive: Recursively index subdirectories
             show_progress: Show progress logging
+            max_concurrent: Maximum concurrent indexing tasks (default 4)
 
         Returns:
             Dict with indexing stats (total_files, total_units, etc.)
@@ -205,30 +364,55 @@ class IncrementalIndexer:
                 "skipped_files": 0,
             }
 
-        # Index files sequentially (could parallelize but embeddings are CPU-bound)
+        # Use semaphore to limit concurrent indexing and prevent resource exhaustion
+        semaphore = asyncio.Semaphore(max_concurrent)
+        
+        async def index_with_semaphore(i: int, file_path: Path) -> Tuple[str, Dict[str, Any]]:
+            """Index a file with semaphore-controlled concurrency."""
+            async with semaphore:
+                if show_progress:
+                    logger.info(f"Indexing [{i}/{len(files_to_index)}]: {file_path.name}")
+                
+                try:
+                    result = await self.index_file(file_path)
+                    return "success", result
+                except Exception as e:
+                    logger.error(f"Failed to index {file_path}: {e}")
+                    return "error", {"path": str(file_path), "error": str(e)}
+
+        # Index all files concurrently
+        tasks = [
+            index_with_semaphore(i, file_path)
+            for i, file_path in enumerate(files_to_index, 1)
+        ]
+        
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Process results
         total_units = 0
         skipped_files = 0
         indexed_files = 0
         failed_files = []
 
-        for i, file_path in enumerate(files_to_index, 1):
-            if show_progress:
-                logger.info(f"Indexing [{i}/{len(files_to_index)}]: {file_path.name}")
-
-            try:
-                result = await self.index_file(file_path)
-                if result.get("skipped"):
-                    skipped_files += 1
-                else:
-                    total_units += result["units_indexed"]
-                    indexed_files += 1
-            except Exception as e:
-                logger.error(f"Failed to index {file_path}: {e}")
-                failed_files.append(str(file_path))
+        for result in results:
+            if isinstance(result, Exception):
+                logger.error(f"Unexpected error during indexing: {result}")
+                failed_files.append(str(result))
                 continue
+            
+            status, data = result
+            
+            if status == "error":
+                failed_files.append(data.get("path", "unknown"))
+            elif data.get("skipped"):
+                skipped_files += 1
+            else:
+                total_units += data.get("units_indexed", 0)
+                indexed_files += 1
 
         logger.info(
-            f"Directory indexing complete: {indexed_files} files, {total_units} units indexed"
+            f"Directory indexing complete: {indexed_files} files, {total_units} units indexed "
+            f"({skipped_files} skipped, {len(failed_files)} failed)"
         )
 
         return {
@@ -270,23 +454,37 @@ class IncrementalIndexer:
         # 2. Delete them by ID
 
         try:
+            # Initialize store if needed
+            if self.store.client is None:
+                await self.store.initialize()
+            
+            # Check again after initialization
+            if self.store.client is None:
+                logger.warning(f"Store not initialized, skipping cleanup for {file_path}")
+                return 0
+            
+            # Build proper Qdrant filter
+            from qdrant_client.models import Filter, FieldCondition, MatchValue
+            
+            file_filter = Filter(
+                must=[
+                    FieldCondition(
+                        key="file_path",
+                        match=MatchValue(value=file_path_str),
+                    )
+                ]
+            )
+            
             # Get all points for this file using scroll
-            points = self.store.client.scroll(
+            points, _ = self.store.client.scroll(
                 collection_name=self.store.collection_name,
-                scroll_filter={
-                    "must": [
-                        {
-                            "key": "file_path",
-                            "match": {"value": file_path_str},
-                        }
-                    ]
-                },
+                scroll_filter=file_filter,
                 limit=10000,  # Max units per file
                 with_payload=False,
                 with_vectors=False,
             )
 
-            point_ids = [point.id for point in points[0]]
+            point_ids = [point.id for point in points]
 
             if point_ids:
                 # Delete all points

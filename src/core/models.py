@@ -222,3 +222,35 @@ class SearchFilters(BaseModel):
         if self.tags:
             filters["tags"] = self.tags
         return filters
+
+
+class SuccessResponse(BaseModel):
+    """Standard success response format for API operations."""
+
+    status: str = Field(default="success", description="Response status")
+    message: Optional[str] = Field(default=None, description="Success message")
+    data: Optional[Dict[str, Any]] = Field(default=None, description="Response data")
+    timestamp: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        description="Response timestamp"
+    )
+
+
+class ErrorResponse(BaseModel):
+    """Standard error response format for API operations."""
+
+    status: str = Field(default="error", description="Response status")
+    error_code: str = Field(..., description="Machine-readable error code")
+    message: str = Field(..., description="Human-readable error message")
+    details: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Additional error details"
+    )
+    request_id: Optional[str] = Field(
+        default=None,
+        description="Request ID for tracking"
+    )
+    timestamp: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        description="Error timestamp"
+    )

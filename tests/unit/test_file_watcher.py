@@ -77,11 +77,13 @@ async def test_file_watcher_debouncing(temp_watch_dir, changed_files):
         await watcher._debounce_callback(test_file)
         await asyncio.sleep(0.05)  # 50ms between changes
 
-    # Wait for debounce
+    # Wait for debounce to complete (200ms + buffer)
     await asyncio.sleep(0.3)
 
-    # Should have batched the changes (not 5 separate callbacks)
-    assert len(changed_files) <= 2  # Allow for some variation
+    # Should have debounced to exactly 1 callback
+    # (all 5 rapid changes within 250ms total should trigger only 1 final callback)
+    assert len(changed_files) == 1, f"Expected 1 callback after debouncing, got {len(changed_files)}"
+    assert changed_files[0] == test_file
 
 
 def test_file_hash_detection(temp_watch_dir):

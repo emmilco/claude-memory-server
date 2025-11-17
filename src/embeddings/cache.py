@@ -4,11 +4,13 @@ import sqlite3
 import hashlib
 import json
 import logging
+import threading
 from typing import List, Optional
 from datetime import datetime, timedelta, UTC
 from pathlib import Path
 
 from src.config import ServerConfig
+from src.embeddings.rust_bridge import RustBridge
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +43,9 @@ class EmbeddingCache:
         self.enabled = config.embedding_cache_enabled
         self.conn: Optional[sqlite3.Connection] = None
 
+        # Thread lock for SQLite operations (required for check_same_thread=False)
+        self._db_lock = threading.RLock()
+
         # Statistics
         self.hits = 0
         self.misses = 0
@@ -57,6 +62,7 @@ class EmbeddingCache:
             self.conn = sqlite3.Connection(
                 str(self.cache_path),
                 check_same_thread=False,
+                timeout=5.0,  # Add timeout for concurrent access
             )
 
             self.conn.execute("""
@@ -116,49 +122,56 @@ class EmbeddingCache:
         try:
             cache_key, _ = self._compute_key(text, model_name)
 
-            # Query cache
-            cursor = self.conn.execute(
-                """
-                SELECT embedding, created_at, access_count
-                FROM embeddings
-                WHERE cache_key = ?
-                """,
-                (cache_key,)
-            )
+            # Query cache with lock for thread safety
+            with self._db_lock:
+                # Query cache
+                cursor = self.conn.execute(
+                    """
+                    SELECT embedding, created_at, access_count
+                    FROM embeddings
+                    WHERE cache_key = ?
+                    """,
+                    (cache_key,)
+                )
 
-            row = cursor.fetchone()
+                row = cursor.fetchone()
 
-            if row is None:
-                self.misses += 1
-                return None
+                if row is None:
+                    self.misses += 1
+                    return None
 
-            embedding_json, created_at_str, access_count = row
+                embedding_json, created_at_str, access_count = row
 
-            # Check expiration
-            created_at = datetime.fromisoformat(created_at_str)
-            if datetime.now(UTC) - created_at > timedelta(days=self.ttl_days):
-                # Expired, delete it
-                self.conn.execute("DELETE FROM embeddings WHERE cache_key = ?", (cache_key,))
+                # Check expiration
+                created_at = datetime.fromisoformat(created_at_str)
+                if datetime.now(UTC) - created_at > timedelta(days=self.ttl_days):
+                    # Expired, delete it
+                    self.conn.execute("DELETE FROM embeddings WHERE cache_key = ?", (cache_key,))
+                    self.conn.commit()
+                    self.misses += 1
+                    return None
+
+                # Update access statistics
+                self.conn.execute(
+                    """
+                    UPDATE embeddings
+                    SET accessed_at = ?, access_count = ?
+                    WHERE cache_key = ?
+                    """,
+                    (datetime.now(UTC).isoformat(), access_count + 1, cache_key)
+                )
                 self.conn.commit()
-                self.misses += 1
-                return None
 
-            # Update access statistics
-            self.conn.execute(
-                """
-                UPDATE embeddings
-                SET accessed_at = ?, access_count = ?
-                WHERE cache_key = ?
-                """,
-                (datetime.now(UTC).isoformat(), access_count + 1, cache_key)
-            )
-            self.conn.commit()
-
-            # Deserialize embedding
-            embedding = json.loads(embedding_json)
-            self.hits += 1
-            logger.debug(f"Cache hit for key: {cache_key[:16]}...")
-            return embedding
+                # Deserialize embedding
+                embedding = json.loads(embedding_json)
+                
+                # Normalize cached embedding to match fresh embeddings
+                # Fresh embeddings from generator are normalized via Rust bridge
+                normalized = RustBridge.batch_normalize([embedding])[0]
+                
+                self.hits += 1
+                logger.debug(f"Cache hit for key: {cache_key[:16]}...")
+                return normalized
 
         except Exception as e:
             logger.error(f"Cache get error: {e}")
@@ -182,17 +195,19 @@ class EmbeddingCache:
             embedding_json = json.dumps(embedding)
             now = datetime.now(UTC).isoformat()
 
-            # Insert or replace
-            self.conn.execute(
-                """
-                INSERT OR REPLACE INTO embeddings
-                (cache_key, text_hash, model_name, embedding, created_at, accessed_at, access_count)
-                VALUES (?, ?, ?, ?, ?, ?, 1)
-                """,
-                (cache_key, text_hash, model_name, embedding_json, now, now)
-            )
-            self.conn.commit()
-            logger.debug(f"Cached embedding for key: {cache_key[:16]}...")
+            # Insert or replace with lock for thread safety
+            with self._db_lock:
+                # Insert or replace
+                self.conn.execute(
+                    """
+                    INSERT OR REPLACE INTO embeddings
+                    (cache_key, text_hash, model_name, embedding, created_at, accessed_at, access_count)
+                    VALUES (?, ?, ?, ?, ?, ?, 1)
+                    """,
+                    (cache_key, text_hash, model_name, embedding_json, now, now)
+                )
+                self.conn.commit()
+                logger.debug(f"Cached embedding for key: {cache_key[:16]}...")
 
         except Exception as e:
             logger.error(f"Cache set error: {e}")
@@ -224,6 +239,98 @@ class EmbeddingCache:
         await self.set(text, model_name, embedding)
         return embedding
 
+    async def batch_get(
+        self,
+        texts: List[str],
+        model_name: str,
+    ) -> List[Optional[List[float]]]:
+        """
+        Retrieve multiple embeddings from cache in a single query.
+
+        Avoids N+1 query pattern compared to calling get() in a loop.
+
+        Args:
+            texts: List of input texts.
+            model_name: Model name.
+
+        Returns:
+            List[Optional[List[float]]]: List of embeddings (None if not found/expired).
+        """
+        if not self.enabled or self.conn is None or not texts:
+            return [None] * len(texts)
+
+        try:
+            # Compute cache keys for all texts
+            cache_keys = [self._compute_key(text, model_name)[0] for text in texts]
+            
+            with self._db_lock:
+                # Single query for all keys using IN clause
+                placeholders = ','.join('?' * len(cache_keys))
+                cursor = self.conn.execute(
+                    f"""
+                    SELECT cache_key, embedding, created_at, access_count
+                    FROM embeddings
+                    WHERE cache_key IN ({placeholders})
+                    """,
+                    cache_keys
+                )
+
+                rows = cursor.fetchall()
+                embeddings_by_key = {}
+                expired_keys = []
+
+                # Process results
+                for row in rows:
+                    cache_key, embedding_json, created_at_str, access_count = row
+                    
+                    # Check expiration
+                    created_at = datetime.fromisoformat(created_at_str)
+                    if datetime.now(UTC) - created_at > timedelta(days=self.ttl_days):
+                        expired_keys.append(cache_key)
+                        continue
+
+                    # Deserialize and normalize
+                    embedding = json.loads(embedding_json)
+                    normalized = RustBridge.batch_normalize([embedding])[0]
+                    embeddings_by_key[cache_key] = normalized
+                    
+                    # Update access statistics
+                    self.conn.execute(
+                        """
+                        UPDATE embeddings
+                        SET accessed_at = ?, access_count = ?
+                        WHERE cache_key = ?
+                        """,
+                        (datetime.now(UTC).isoformat(), access_count + 1, cache_key)
+                    )
+
+                # Delete expired entries
+                if expired_keys:
+                    placeholders = ','.join('?' * len(expired_keys))
+                    self.conn.execute(
+                        f"DELETE FROM embeddings WHERE cache_key IN ({placeholders})",
+                        expired_keys
+                    )
+                    
+                self.conn.commit()
+
+                # Build result list in same order as input
+                results = []
+                for cache_key in cache_keys:
+                    if cache_key in embeddings_by_key:
+                        results.append(embeddings_by_key[cache_key])
+                        self.hits += 1
+                    else:
+                        results.append(None)
+                        self.misses += 1
+
+                logger.debug(f"Batch cache lookup: {len(cache_keys)} keys, {len(embeddings_by_key)} hits")
+                return results
+
+        except Exception as e:
+            logger.error(f"Batch cache get error: {e}")
+            return [None] * len(texts)
+
     async def clean_old(self, days: Optional[int] = None) -> int:
         """
         Remove expired cache entries.
@@ -241,13 +348,14 @@ class EmbeddingCache:
             days = days or self.ttl_days
             cutoff = (datetime.now(UTC) - timedelta(days=days)).isoformat()
 
-            cursor = self.conn.execute(
-                "DELETE FROM embeddings WHERE created_at < ?",
-                (cutoff,)
-            )
+            with self._db_lock:
+                cursor = self.conn.execute(
+                    "DELETE FROM embeddings WHERE created_at < ?",
+                    (cutoff,)
+                )
 
-            deleted = cursor.rowcount
-            self.conn.commit()
+                deleted = cursor.rowcount
+                self.conn.commit()
 
             logger.info(f"Cleaned {deleted} expired cache entries (older than {days} days)")
             return deleted
@@ -273,8 +381,9 @@ class EmbeddingCache:
             }
 
         try:
-            cursor = self.conn.execute("SELECT COUNT(*) FROM embeddings")
-            total_entries = cursor.fetchone()[0]
+            with self._db_lock:
+                cursor = self.conn.execute("SELECT COUNT(*) FROM embeddings")
+                total_entries = cursor.fetchone()[0]
 
             total_requests = self.hits + self.misses
             hit_rate = self.hits / total_requests if total_requests > 0 else 0.0

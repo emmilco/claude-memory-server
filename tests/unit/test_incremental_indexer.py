@@ -159,8 +159,17 @@ class TestIncrementalIndexer:
         # Verify embeddings were generated
         mock_embedding_generator.batch_generate.assert_called_once()
 
-        # Verify units were stored
+        # Verify units were stored with correct content
         mock_store.batch_store.assert_called_once()
+        stored_items = mock_store.batch_store.call_args[0][0]
+        assert len(stored_items) > 0
+
+        # Verify stored content includes expected function/class names from sample code
+        stored_contents = [item[0] for item in stored_items]
+        assert any("calculate_sum" in content for content in stored_contents), \
+            "Should index the calculate_sum function"
+        assert any("Calculator" in content for content in stored_contents), \
+            "Should index the Calculator class"
 
         await indexer.close()
 

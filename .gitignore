@@ -30,3 +30,6 @@ Thumbs.db
 
 # Claude Code
 .claude/settings.local.json
+
+# Archived documentation
+archived_docs/

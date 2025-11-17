@@ -114,6 +114,9 @@ ALLOWED_SORT_FIELDS: Set[str] = {
     "importance",
 }
 
+# Alias for ALLOWED_SORT_FIELDS (for backward compatibility and tests)
+ALLOWED_SORTABLE_FIELDS: Set[str] = ALLOWED_SORT_FIELDS
+
 # Metadata fields that are allowed for code search
 ALLOWED_CODE_METADATA_FIELDS: Set[str] = {
     "file_path",
@@ -125,6 +128,39 @@ ALLOWED_CODE_METADATA_FIELDS: Set[str] = {
     "language",
     "project_name",
 }
+
+# Common SQL injection and malicious patterns for security validation
+INJECTION_PATTERNS = [
+    # SQL keywords
+    r"(?i)(\bSELECT\b|\bUNION\b|\bDROP\b|\bDELETE\b|\bINSERT\b|\bUPDATE\b)",
+    r"(?i)(\bFROM\b|\bWHERE\b|\bJOIN\b|\bGROUP\s+BY\b|\bORDER\s+BY\b)",
+    r"(?i)(\bEXEC\b|\bEXECUTE\b|\bSCRIPT\b|\bJAVASCRIPT\b)",
+    
+    # SQL operators and functions
+    r"(?i)(\bOR\b\s+\d+=\d+|\bAND\b\s+\d+=\d+)",
+    r"(?i)(--|\#|\/\*|\*\/|;|\|{2})",
+    
+    # Common injection attempts
+    r"('|\")\s*;\s*DROP",
+    r"('|\")\s*OR\s*('|\")\s*=\s*('|\")",
+    r"admin.*?'.*?--",
+    r"\bor\b.*?\d+=\d+",
+    
+    # Command injection patterns
+    r"[;&|`$(){}[\]<>]",  # Shell metacharacters
+    r"\$\{.*?\}",  # Template injection
+    r"\$\(.*?\)",  # Command substitution
+    
+    # Path traversal
+    r"\.\./",
+    r"\.\.\\",
+    r"%2e%2e",
+    
+    # XSS patterns
+    r"<script[^>]*>",
+    r"javascript:",
+    r"on\w+\s*=",
+]
 
 
 # ============================================================================

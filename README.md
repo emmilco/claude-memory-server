@@ -49,35 +49,73 @@ Claude automatically remembers:
 ## Quick Start
 
 ### Prerequisites
-- Python 3.13+
-- Rust 1.91+ (for building)
-- Docker (for Qdrant vector DB)
+- **Required:** Python 3.8+ only!
+- **Optional:** Rust (for faster parsing), Docker (for better scalability)
 - ~500MB disk space
 
-### Installation
+### Installation (One Command!)
 
 ```bash
-# 1. Clone repository
+# Clone and setup
 git clone https://github.com/yourusername/claude-memory-server.git
 cd claude-memory-server
+python setup.py
 
-# 2. Start Qdrant vector database
-docker-compose up -d
+# That's it! The setup wizard handles everything.
+```
 
-# 3. Install dependencies
-pip install -r requirements.txt
+The interactive wizard will:
+- ✅ Check your system
+- ✅ Install dependencies
+- ✅ Configure storage (SQLite by default, no Docker needed!)
+- ✅ Set up parser (Python fallback if Rust unavailable)
+- ✅ Verify everything works
 
-# 4. Build Rust module (for fast parsing)
-cd rust_core && maturin develop && cd ..
+**Result:** Working installation in 2-5 minutes!
 
-# 5. Add to Claude Code
+### Add to Claude Code
+
+```bash
 claude mcp add --transport stdio --scope user claude-memory-rag -- \
   python "$(pwd)/src/mcp_server.py"
-
-# 6. Verify installation
-curl http://localhost:6333/health  # Should return OK
-pytest tests/ -v                    # Should pass 427/427 tests
 ```
+
+### Verify Installation
+
+```bash
+python -m src.cli health
+```
+
+### Optional: Upgrade for Better Performance
+
+```bash
+# Add Rust parser (10-20x faster indexing)
+python setup.py --build-rust
+
+# Upgrade to Qdrant (better for large datasets)
+python setup.py --upgrade-to-qdrant
+```
+
+<details>
+<summary><b>Advanced: Manual Installation</b></summary>
+
+If you prefer manual control:
+
+```bash
+# 1. Install dependencies
+pip install -r requirements.txt
+
+# 2. (Optional) Build Rust module
+cd rust_core && maturin develop && cd ..
+
+# 3. (Optional) Start Qdrant
+docker-compose up -d
+
+# 4. Configure (edit .env or set environment variables)
+export CLAUDE_RAG_STORAGE_BACKEND=sqlite  # or qdrant
+```
+
+</details>
 
 ## Usage
 
@@ -234,10 +272,11 @@ claude-memory-server/
 
 ## Documentation
 
-📖 **New to this project?** Start here:
-1. **[START_HERE.md](START_HERE.md)** - Quick orientation guide
-2. **[PROJECT_STATUS.md](PROJECT_STATUS.md)** - Comprehensive current state
-3. **[EXECUTABLE_DEVELOPMENT_CHECKLIST.md](EXECUTABLE_DEVELOPMENT_CHECKLIST.md)** - Task tracking
+📖 **Essential Documentation:**
+1. **[CLAUDE.md](CLAUDE.md)** - Guide for AI agents working on this project
+2. **[CHANGELOG.md](CHANGELOG.md)** - Version history and changes
+3. **[TODO.md](TODO.md)** - Current tasks and future work
+4. **[README.md](README.md)** - This file (user guide)
 
 ### Comprehensive Guides (docs/)
 - **[SETUP.md](docs/SETUP.md)** - Installation and setup instructions

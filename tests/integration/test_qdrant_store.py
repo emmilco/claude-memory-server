@@ -273,3 +273,238 @@ async def test_importance_filter(store):
     # Should only return high importance memory
     for memory, score in results:
         assert memory.importance >= 0.7
+
+
+@pytest.mark.asyncio
+async def test_search_with_multiple_filters(store):
+    """Test search with multiple filter conditions."""
+    # Store diverse memories
+    await store.store(
+        content="Python backend preference",
+        embedding=[0.1] * 384,
+        metadata={
+            "category": MemoryCategory.PREFERENCE.value,
+            "context_level": ContextLevel.USER_PREFERENCE.value,
+            "scope": MemoryScope.PROJECT.value,
+            "project_name": "backend-api",
+            "importance": 0.8,
+            "tags": ["python", "backend"],
+        }
+    )
+
+    await store.store(
+        content="Frontend JavaScript fact",
+        embedding=[0.2] * 384,
+        metadata={
+            "category": MemoryCategory.FACT.value,
+            "context_level": ContextLevel.PROJECT_CONTEXT.value,
+            "scope": MemoryScope.PROJECT.value,
+            "project_name": "frontend-app",
+            "importance": 0.6,
+        }
+    )
+
+    # Filter by category, scope, and project
+    filters = SearchFilters(
+        category=MemoryCategory.PREFERENCE,
+        scope=MemoryScope.PROJECT,
+        project_name="backend-api",
+    )
+
+    results = await store.search_with_filters(
+        query_embedding=[0.15] * 384,
+        filters=filters,
+        limit=10,
+    )
+
+    # Should only match the backend preference
+    assert len(results) >= 1
+    for memory, score in results:
+        assert memory.category == MemoryCategory.PREFERENCE
+        assert memory.scope == MemoryScope.PROJECT
+        assert memory.project_name == "backend-api"
+
+
+@pytest.mark.asyncio
+async def test_count_with_filters(store):
+    """Test counting memories with filters."""
+    # Store test memories
+    for i in range(5):
+        await store.store(
+            content=f"Preference {i}",
+            embedding=[i * 0.1] * 384,
+            metadata={
+                "category": MemoryCategory.PREFERENCE.value,
+                "context_level": ContextLevel.USER_PREFERENCE.value,
+                "scope": MemoryScope.GLOBAL.value,
+            }
+        )
+
+    for i in range(3):
+        await store.store(
+            content=f"Fact {i}",
+            embedding=[i * 0.2] * 384,
+            metadata={
+                "category": MemoryCategory.FACT.value,
+                "context_level": ContextLevel.PROJECT_CONTEXT.value,
+                "scope": MemoryScope.GLOBAL.value,
+            }
+        )
+
+    # Count all
+    total = await store.count()
+    assert total >= 8
+
+    # Count with filter
+    filters = SearchFilters(category=MemoryCategory.PREFERENCE)
+    pref_count = await store.count(filters)
+    assert pref_count >= 5
+
+
+@pytest.mark.asyncio
+async def test_retrieve_with_limit(store):
+    """Test that retrieve respects limit parameter."""
+    # Store many memories
+    for i in range(20):
+        await store.store(
+            content=f"Memory {i}",
+            embedding=[i * 0.05] * 384,
+            metadata={
+                "category": MemoryCategory.CONTEXT.value,
+                "context_level": ContextLevel.SESSION_STATE.value,
+                "scope": MemoryScope.GLOBAL.value,
+            }
+        )
+
+    # Retrieve with limit
+    results = await store.retrieve([0.5] * 384, limit=5)
+
+    # Should not exceed limit
+    assert len(results) <= 5
+
+
+@pytest.mark.asyncio
+async def test_retrieve_with_large_limit(store):
+    """Test that retrieve caps limit to prevent memory issues."""
+    # Store MORE than the cap (100) to properly test capping logic
+    for i in range(150):
+        await store.store(
+            content=f"Memory {i}",
+            embedding=[i * 0.001] * 384,  # Small increments to have variation
+            metadata={
+                "category": MemoryCategory.FACT.value,
+                "context_level": ContextLevel.PROJECT_CONTEXT.value,
+                "scope": MemoryScope.GLOBAL.value,
+            }
+        )
+
+    # Request excessive limit
+    results = await store.retrieve([0.5] * 384, limit=1000)
+
+    # Should cap to exactly 100 (the safe limit)
+    assert len(results) == 100, f"Expected exactly 100 results (capped), got {len(results)}"
+
+
+@pytest.mark.asyncio
+async def test_update_nonexistent_memory(store):
+    """Test updating memory that doesn't exist."""
+    fake_id = "00000000-0000-0000-0000-000000000000"
+
+    updated = await store.update(fake_id, {"importance": 0.9})
+
+    # Should return False for nonexistent memory
+    assert updated is False
+
+
+@pytest.mark.asyncio
+async def test_delete_nonexistent_memory(store):
+    """Test deleting memory that doesn't exist."""
+    fake_id = "00000000-0000-0000-0000-000000000000"
+
+    # Should handle gracefully
+    result = await store.delete(fake_id)
+
+    # May return True or False depending on implementation
+    assert isinstance(result, bool)
+
+
+@pytest.mark.asyncio
+async def test_batch_store_empty_list(store):
+    """Test batch store with empty list."""
+    memory_ids = await store.batch_store([])
+
+    assert memory_ids == []
+
+
+@pytest.mark.asyncio
+async def test_search_with_empty_results(store):
+    """Test search that returns no results."""
+    # Clear any existing data
+    filters = SearchFilters(category=MemoryCategory.WORKFLOW)
+
+    # Search for category that doesn't exist in store
+    results = await store.retrieve(
+        query_embedding=[0.99] * 384,
+        filters=filters,
+        limit=10,
+    )
+
+    # Should return empty list, not error
+    assert isinstance(results, list)
+
+
+@pytest.mark.asyncio
+async def test_store_with_tags(store):
+    """Test storing and retrieving memory with tags."""
+    tags = ["python", "backend", "fastapi", "async"]
+
+    memory_id = await store.store(
+        content="FastAPI for async Python backend",
+        embedding=[0.5] * 384,
+        metadata={
+            "category": MemoryCategory.FACT.value,
+            "context_level": ContextLevel.PROJECT_CONTEXT.value,
+            "scope": MemoryScope.PROJECT.value,
+            "project_name": "api-service",
+            "tags": tags,
+        }
+    )
+
+    retrieved = await store.get_by_id(memory_id)
+    assert retrieved is not None
+    assert set(retrieved.tags) == set(tags)
+
+
+@pytest.mark.asyncio
+async def test_store_with_custom_metadata(store):
+    """Test storing memory with custom metadata."""
+    custom_metadata = {
+        "source": "documentation",
+        "version": "1.0.0",
+        "author": "developer",
+    }
+
+    memory_id = await store.store(
+        content="Custom metadata test",
+        embedding=[0.4] * 384,
+        metadata={
+            "category": MemoryCategory.FACT.value,
+            "context_level": ContextLevel.PROJECT_CONTEXT.value,
+            "scope": MemoryScope.GLOBAL.value,
+            "metadata": custom_metadata,
+        }
+    )
+
+    retrieved = await store.get_by_id(memory_id)
+    assert retrieved is not None
+    assert retrieved.metadata == custom_metadata
+
+
+@pytest.mark.asyncio
+async def test_retrieve_empty_store(store):
+    """Test retrieving from empty store."""
+    # Store should be empty or nearly empty from fixture
+    results = await store.retrieve([0.5] * 384, limit=10)
+
+    # Should not error, just return empty or minimal results
+    assert isinstance(results, list)

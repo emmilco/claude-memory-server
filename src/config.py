@@ -1,6 +1,7 @@
 """Configuration management for Claude Memory RAG Server."""
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import model_validator
 from typing import Optional, Literal
 from pathlib import Path
 import os
@@ -13,8 +14,8 @@ class ServerConfig(BaseSettings):
     server_name: str = "claude-memory-rag"
     log_level: str = "INFO"
 
-    # Storage backend selection
-    storage_backend: Literal["sqlite", "qdrant"] = "qdrant"
+    # Storage backend selection (SQLite is default for easier setup, upgrade to Qdrant for production)
+    storage_backend: Literal["sqlite", "qdrant"] = "sqlite"
     qdrant_url: str = "http://localhost:6333"
     qdrant_api_key: Optional[str] = None
     qdrant_collection_name: str = "memory"
@@ -50,6 +51,43 @@ class ServerConfig(BaseSettings):
         env_file_encoding='utf-8',
         case_sensitive=False
     )
+
+    @model_validator(mode='after')
+    def validate_config(self) -> 'ServerConfig':
+        """Validate configuration consistency and constraints."""
+        
+        # Validate embedding batch size
+        if self.embedding_batch_size < 1:
+            raise ValueError("embedding_batch_size must be >= 1")
+        if self.embedding_batch_size > 256:
+            raise ValueError("embedding_batch_size must not exceed 256 (memory constraint)")
+        
+        # Validate Qdrant URL format
+        if self.storage_backend == "qdrant":
+            if not self.qdrant_url.startswith(("http://", "https://")):
+                raise ValueError("qdrant_url must start with http:// or https://")
+        
+        # Validate cache TTL
+        if self.embedding_cache_ttl_days < 1:
+            raise ValueError("embedding_cache_ttl_days must be >= 1")
+        if self.embedding_cache_ttl_days > 3650:
+            raise ValueError("embedding_cache_ttl_days should not exceed 10 years (3650 days)")
+        
+        # Validate memory size limit
+        if self.max_memory_size_bytes < 1024:  # At least 1KB
+            raise ValueError("max_memory_size_bytes must be at least 1024 (1KB)")
+        
+        # Validate retrieval gate threshold
+        if not 0.0 <= self.retrieval_gate_threshold <= 1.0:
+            raise ValueError("retrieval_gate_threshold must be between 0.0 and 1.0")
+        
+        # Validate timeouts
+        if self.retrieval_timeout_ms < 100:
+            raise ValueError("retrieval_timeout_ms should be at least 100ms")
+        if self.retrieval_timeout_ms > 30000:
+            raise ValueError("retrieval_timeout_ms should not exceed 30 seconds")
+        
+        return self
 
     def get_expanded_path(self, path: str) -> Path:
         """Expand ~ and environment variables in path."""

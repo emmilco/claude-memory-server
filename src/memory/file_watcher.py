@@ -62,9 +62,49 @@ class DebouncedFileWatcher(FileSystemEventHandler):
         # File hash tracking (to detect actual content changes)
         self.file_hashes: Dict[Path, str] = {}
 
+        # File modification time tracking (quick change detection)
+        self.file_mtimes: Dict[Path, float] = {}
+
+        # Statistics tracking (NEW)
+        self.stats = {
+            "started_at": datetime.now(UTC),
+            "files_watched": 0,
+            "events_received": 0,
+            "events_processed": 0,
+            "events_ignored": 0,
+            "reindex_triggered": 0,
+            "last_event_at": None,
+            "last_reindex_at": None,
+        }
+
         logger.info(f"File watcher initialized for {watch_path}")
         logger.info(f"Watching patterns: {self.patterns}")
         logger.info(f"Debounce: {debounce_ms}ms, Recursive: {recursive}")
+
+    def get_stats(self) -> Dict[str, Any]:
+        """
+        Get file watcher statistics.
+
+        Returns:
+            Dict with statistics including events received, processed, and reindex count
+        """
+        uptime_seconds = (datetime.now(UTC) - self.stats["started_at"]).total_seconds()
+
+        return {
+            "watch_path": str(self.watch_path),
+            "recursive": self.recursive,
+            "patterns": list(self.patterns),
+            "debounce_ms": self.debounce_ms,
+            "started_at": self.stats["started_at"].isoformat(),
+            "uptime_seconds": uptime_seconds,
+            "events_received": self.stats["events_received"],
+            "events_processed": self.stats["events_processed"],
+            "events_ignored": self.stats["events_ignored"],
+            "reindex_triggered": self.stats["reindex_triggered"],
+            "last_event_at": self.stats["last_event_at"].isoformat() if self.stats["last_event_at"] else None,
+            "last_reindex_at": self.stats["last_reindex_at"].isoformat() if self.stats["last_reindex_at"] else None,
+            "files_watched": len(self.file_mtimes),
+        }
 
     def _should_process(self, file_path: Path) -> bool:
         """Check if file should be processed based on patterns."""
@@ -84,32 +124,67 @@ class DebouncedFileWatcher(FileSystemEventHandler):
             return None
 
     def _has_changed(self, file_path: Path) -> bool:
-        """Check if file content has actually changed."""
-        current_hash = self._compute_file_hash(file_path)
-        if current_hash is None:
+        """
+        Check if file content has actually changed using efficient multi-step detection.
+        
+        Uses modification time (mtime) for quick detection, only computes hash on mtime changes
+        for conflict resolution. This avoids expensive SHA256 computation for false events.
+        """
+        try:
+            # Step 1: Quick mtime check (10-100x faster than SHA256)
+            stat = file_path.stat()
+            current_mtime = stat.st_mtime
+            previous_mtime = self.file_mtimes.get(file_path)
+            
+            if current_mtime == previous_mtime:
+                # Same mtime = no change needed
+                return False
+            
+            # Step 2: Update mtime tracking
+            self.file_mtimes[file_path] = current_mtime
+            
+            # Step 3: On mtime change, verify with hash for accuracy
+            # (catches watchdog false events and symlink issues)
+            current_hash = self._compute_file_hash(file_path)
+            if current_hash is None:
+                return False
+
+            previous_hash = self.file_hashes.get(file_path)
+            has_changed = previous_hash != current_hash
+
+            # Update hash cache
+            self.file_hashes[file_path] = current_hash
+
+            return has_changed
+            
+        except Exception as e:
+            logger.warning(f"Error checking if {file_path} changed: {e}")
             return False
-
-        previous_hash = self.file_hashes.get(file_path)
-        has_changed = previous_hash != current_hash
-
-        # Update hash
-        self.file_hashes[file_path] = current_hash
-
-        return has_changed
 
     def on_modified(self, event: FileSystemEvent):
         """Handle file modification events."""
+        self.stats["events_received"] += 1
+        self.stats["last_event_at"] = datetime.now(UTC)
+
         if event.is_directory:
+            self.stats["events_ignored"] += 1
             return
 
         file_path = Path(event.src_path)
         if self._should_process(file_path) and self._has_changed(file_path):
             logger.debug(f"File modified: {file_path}")
+            self.stats["events_processed"] += 1
             asyncio.create_task(self._debounce_callback(file_path))
+        else:
+            self.stats["events_ignored"] += 1
 
     def on_created(self, event: FileSystemEvent):
         """Handle file creation events."""
+        self.stats["events_received"] += 1
+        self.stats["last_event_at"] = datetime.now(UTC)
+
         if event.is_directory:
+            self.stats["events_ignored"] += 1
             return
 
         file_path = Path(event.src_path)
@@ -117,7 +192,10 @@ class DebouncedFileWatcher(FileSystemEventHandler):
             logger.debug(f"File created: {file_path}")
             # New file - mark as changed
             self._compute_file_hash(file_path)  # Initialize hash
+            self.stats["events_processed"] += 1
             asyncio.create_task(self._debounce_callback(file_path))
+        else:
+            self.stats["events_ignored"] += 1
 
     def on_deleted(self, event: FileSystemEvent):
         """Handle file deletion events."""
@@ -135,12 +213,19 @@ class DebouncedFileWatcher(FileSystemEventHandler):
         """Add file to pending queue and schedule debounced callback."""
         async with self.pending_lock:
             self.pending_files.add(file_path)
-
-            # Cancel existing debounce task
-            if self.debounce_task and not self.debounce_task.done():
-                self.debounce_task.cancel()
-
-            # Schedule new debounced callback
+            old_task = self.debounce_task
+        
+        # Release lock before creating/canceling tasks
+        # (these operations don't need the lock and can block other changes)
+        if old_task and not old_task.done():
+            old_task.cancel()
+            try:
+                # Wait for cancellation to complete
+                await old_task
+            except asyncio.CancelledError:
+                pass  # Expected
+        
+        async with self.pending_lock:
             self.debounce_task = asyncio.create_task(
                 self._execute_debounced_callback()
             )
@@ -159,6 +244,10 @@ class DebouncedFileWatcher(FileSystemEventHandler):
             self.pending_files.clear()
 
         logger.info(f"Processing {len(files_to_process)} changed files")
+
+        # Update statistics
+        self.stats["reindex_triggered"] += len(files_to_process)
+        self.stats["last_reindex_at"] = datetime.now(UTC)
 
         # Call callback for each file
         for file_path in files_to_process:

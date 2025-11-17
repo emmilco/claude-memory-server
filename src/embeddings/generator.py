@@ -11,6 +11,7 @@ from sentence_transformers import SentenceTransformer
 from src.config import ServerConfig
 from src.core.exceptions import EmbeddingError
 from src.embeddings.rust_bridge import RustBridge
+from src.embeddings.cache import EmbeddingCache
 
 logger = logging.getLogger(__name__)
 
@@ -59,8 +60,29 @@ class EmbeddingGenerator:
         self.embedding_dim = self.MODELS[self.model_name]
         self.model: Optional[SentenceTransformer] = None
         self.executor = ThreadPoolExecutor(max_workers=2)
+        
+        # Initialize cache (if enabled)
+        self.cache = EmbeddingCache(config) if config.embedding_cache_enabled else None
 
         logger.info(f"Embedding generator initialized with model: {self.model_name}")
+        if self.cache and self.cache.enabled:
+            logger.info("Embedding cache enabled")
+
+    async def initialize(self) -> None:
+        """
+        Preload the embedding model on startup.
+
+        Prevents 2-second hang on first query. Should be called during server initialization.
+        Runs the model loading in a thread pool to avoid blocking the event loop.
+        """
+        try:
+            logger.info(f"Preloading embedding model: {self.model_name}")
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(self.executor, self._load_model)
+            logger.info("Embedding model preloaded and ready")
+        except Exception as e:
+            logger.error(f"Failed to preload embedding model: {e}")
+            raise
 
     def _load_model(self) -> SentenceTransformer:
         """
@@ -87,6 +109,8 @@ class EmbeddingGenerator:
         """
         Generate embedding for a single text.
 
+        First checks the cache, then generates if not cached.
+
         Args:
             text: Input text to embed.
 
@@ -100,13 +124,24 @@ class EmbeddingGenerator:
             raise EmbeddingError("Cannot generate embedding for empty text")
 
         try:
-            # Run in thread pool to avoid blocking
+            # Try cache first
+            if self.cache and self.cache.enabled:
+                cached = await self.cache.get(text, self.model_name)
+                if cached is not None:
+                    return cached
+
+            # Run generation in thread pool to avoid blocking
             loop = asyncio.get_event_loop()
             embedding = await loop.run_in_executor(
                 self.executor,
                 self._generate_sync,
                 text
             )
+
+            # Cache the result
+            if self.cache and self.cache.enabled:
+                await self.cache.set(text, self.model_name, embedding)
+
             return embedding
 
         except Exception as e:
@@ -146,6 +181,8 @@ class EmbeddingGenerator:
         """
         Generate embeddings for multiple texts in batches.
 
+        Checks cache first for each text, generating only uncached items.
+
         Args:
             texts: List of texts to embed.
             batch_size: Batch size (defaults to config value).
@@ -163,16 +200,48 @@ class EmbeddingGenerator:
         batch_size = batch_size or self.batch_size
 
         try:
-            # Run batch generation in thread pool
+            # Check cache for all texts (if enabled)
+            cache_results = None
+            texts_to_generate = texts
+            indices_to_generate = list(range(len(texts)))
+            
+            if self.cache and self.cache.enabled:
+                cache_results = await self.cache.batch_get(texts, self.model_name)
+                
+                # Find which texts need generation
+                texts_to_generate = []
+                indices_to_generate = []
+                for i, cached in enumerate(cache_results):
+                    if cached is None:
+                        texts_to_generate.append(texts[i])
+                        indices_to_generate.append(i)
+                
+                if not texts_to_generate:
+                    # All texts were cached
+                    return cache_results
+
+            # Run batch generation in thread pool for uncached texts
             loop = asyncio.get_event_loop()
-            embeddings = await loop.run_in_executor(
+            generated_embeddings = await loop.run_in_executor(
                 self.executor,
                 self._batch_generate_sync,
-                texts,
+                texts_to_generate,
                 batch_size,
                 show_progress
             )
-            return embeddings
+            
+            # Cache generated embeddings
+            if self.cache and self.cache.enabled:
+                for text, embedding in zip(texts_to_generate, generated_embeddings):
+                    await self.cache.set(text, self.model_name, embedding)
+            
+            # Merge results back into original order
+            if cache_results is not None:
+                for i, generated in zip(indices_to_generate, generated_embeddings):
+                    cache_results[i] = generated
+                return cache_results
+            else:
+                return generated_embeddings
 
         except Exception as e:
             raise EmbeddingError(f"Failed to batch generate embeddings: {e}")
@@ -268,6 +337,25 @@ class EmbeddingGenerator:
         }
 
     async def close(self) -> None:
-        """Clean up resources."""
+        """
+        Clean up resources.
+        
+        Should be called when the generator is no longer needed.
+        Shuts down the thread pool executor, closes the cache, and unloads the model.
+        """
         self.executor.shutdown(wait=True)
+        if self.cache:
+            self.cache.close()
+        if self.model is not None:
+            # Unload model from memory
+            del self.model
+            self.model = None
         logger.info("Embedding generator closed")
+
+    def __del__(self):
+        """Fallback cleanup if close() not called."""
+        try:
+            self.executor.shutdown(wait=False)
+        except:
+            pass
+

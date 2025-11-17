@@ -72,10 +72,30 @@ class MemoryRAGServer:
 
         # Statistics
         self.stats = {
+            # Core operations
             "memories_stored": 0,
             "memories_retrieved": 0,
             "memories_deleted": 0,
             "queries_processed": 0,
+            
+            # Performance metrics
+            "total_query_time_ms": 0.0,
+            "total_store_time_ms": 0.0,
+            "total_retrieval_time_ms": 0.0,
+            
+            # Cache metrics
+            "cache_hits": 0,
+            "cache_misses": 0,
+            
+            # Error tracking
+            "embedding_generation_errors": 0,
+            "storage_errors": 0,
+            "retrieval_errors": 0,
+            "validation_errors": 0,
+            
+            # Timestamps
+            "server_start_time": datetime.now().isoformat(),
+            "last_query_time": None,
         }
 
     async def initialize(self) -> None:
@@ -93,6 +113,9 @@ class MemoryRAGServer:
 
             # Initialize embedding generator
             self.embedding_generator = EmbeddingGenerator(self.config)
+            
+            # Preload embedding model on startup to avoid delay on first query
+            await self.embedding_generator.initialize()
 
             # Initialize embedding cache
             self.embedding_cache = EmbeddingCache(self.config)
@@ -426,6 +449,85 @@ class MemoryRAGServer:
             context_level="SESSION_STATE",
         )
 
+    def _analyze_search_quality(
+        self,
+        results: List[Dict[str, Any]],
+        query: str,
+        project_name: Optional[str],
+    ) -> Dict[str, Any]:
+        """
+        Analyze search result quality and provide helpful suggestions.
+
+        Args:
+            results: Search results with relevance scores
+            query: Original search query
+            project_name: Project being searched
+
+        Returns:
+            Dict with quality assessment, confidence level, and suggestions
+        """
+        if not results:
+            return {
+                "quality": "no_results",
+                "confidence": 0.0,
+                "interpretation": "No results found",
+                "suggestions": [
+                    f"Verify that code has been indexed for project '{project_name}'",
+                    "Try a different query with more general terms",
+                    "Check if the project name is correct",
+                    "Run: python -m src.cli index ./your-project",
+                ],
+            }
+
+        # Analyze score distribution
+        scores = [r["relevance_score"] for r in results]
+        avg_score = sum(scores) / len(scores)
+        max_score = max(scores)
+        min_score = min(scores)
+
+        # Determine quality level based on scores
+        if max_score >= 0.85:
+            quality = "excellent"
+            confidence = max_score
+            interpretation = f"Found {len(results)} highly relevant results (confidence: {max_score:.0%})"
+            suggestions = []
+        elif max_score >= 0.70:
+            quality = "good"
+            confidence = max_score
+            interpretation = f"Found {len(results)} relevant results (confidence: {max_score:.0%})"
+            suggestions = []
+        elif max_score >= 0.55:
+            quality = "moderate"
+            confidence = max_score
+            interpretation = f"Found {len(results)} potentially relevant results (confidence: {max_score:.0%})"
+            suggestions = [
+                "Consider refining your query to be more specific",
+                "Try including keywords from your codebase",
+            ]
+        else:
+            quality = "low"
+            confidence = max_score
+            interpretation = f"Found {len(results)} results with low relevance (confidence: {max_score:.0%})"
+            suggestions = [
+                "Query may be too vague or not matching indexed code",
+                "Try a more specific query describing the functionality",
+                "Verify the code you're looking for has been indexed",
+            ]
+
+        # Add suggestions based on score distribution
+        if max_score - min_score > 0.3:
+            suggestions.append(
+                f"Results vary in relevance ({min_score:.0%}-{max_score:.0%}). "
+                "Top results are most relevant."
+            )
+
+        return {
+            "quality": quality,
+            "confidence": confidence,
+            "interpretation": interpretation,
+            "suggestions": suggestions,
+        }
+
     async def search_code(
         self,
         query: str,
@@ -506,12 +608,19 @@ class MemoryRAGServer:
                 f"in {query_time_ms:.2f}ms (project: {filter_project_name})"
             )
 
+            # Add quality indicators and suggestions
+            quality_info = self._analyze_search_quality(code_results, query, filter_project_name)
+
             return {
                 "results": code_results,
                 "total_found": len(code_results),
                 "query": query,
                 "project_name": filter_project_name,
                 "query_time_ms": query_time_ms,
+                "quality": quality_info["quality"],
+                "confidence": quality_info["confidence"],
+                "suggestions": quality_info["suggestions"],
+                "interpretation": quality_info["interpretation"],
             }
 
         except Exception as e:
