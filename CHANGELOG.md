@@ -94,6 +94,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Impact:** Faster incremental indexing by updating only changed code units
   - **Example:** Modified one function → only reindex that function, not entire file
 
+- **FEAT-012: Docstring Extraction ✅ COMPLETE** - Extract and index documentation from code
+  - Created `src/memory/docstring_extractor.py` - Multi-language docstring extraction (400+ lines)
+  - Implemented `DocstringExtractor` class supporting 6 languages:
+    - Python: Triple-quoted strings (""" or ''')
+    - JavaScript/TypeScript: JSDoc comments (/** ... */)
+    - Java: Javadoc comments (/** ... */)
+    - Go: GoDoc comments (consecutive //)
+    - Rust: RustDoc comments (/// or //!)
+  - Features:
+    - `Docstring` dataclass: content, style, line numbers, linked unit info
+    - `DocstringStyle` enum: PYTHON, JSDOC, JAVADOC, GODOC, RUSTDOC
+    - Extract docstrings with accurate line number tracking
+    - Link docstrings to semantic units (functions, classes, methods)
+    - Smart linking: Python (inside unit), others (before unit)
+    - Clean and normalize docstring content
+  - Core methods:
+    - `extract_from_code()` - Extract all docstrings from source
+    - `link_docstrings_to_units()` - Match docs to code units
+    - `extract_and_link()` - One-step extraction and linking
+  - Utility functions:
+    - `format_docstring_for_search()` - Format for indexing
+    - `extract_summary()` - Generate brief summaries (max 200 chars)
+  - Language-specific extraction methods for each supported language
+  - Statistics tracking: docstrings extracted, languages processed
+  - Created comprehensive test suite (29 tests): `tests/unit/test_docstring_extractor.py`
+  - **Impact:** Better code understanding through documentation extraction and search
+  - **Example:** Search "authentication" → find functions with auth-related docstrings
+  - **Use case:** Index documentation separately, enable doc-focused search
+
 - **FEAT-031: Git-Aware Semantic Search ✅ COMPLETE** - Index and search git commit history
   - **Phase 1: Basic Commit Indexing (Complete)**
     - Created `src/memory/git_indexer.py` - Extract and index git commits with GitPython

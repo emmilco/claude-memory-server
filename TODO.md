@@ -216,10 +216,16 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Tests:** 21 tests passing
   - **Completed:** 2025-11-17
 
-- [ ] **FEAT-012**: Docstring extraction
-  - [ ] Separate indexing for documentation
-  - [ ] Link docs to code units
-  - **Impact:** Better code understanding
+- [x] **FEAT-012**: Docstring extraction ✅ **COMPLETE**
+  - [x] Separate indexing for documentation
+  - [x] Link docs to code units
+  - [x] Multi-language support (Python, JS/TS, Java, Go, Rust)
+  - [x] Extract and clean docstrings with proper formatting
+  - [x] Link docstrings to their semantic units
+  - [x] Utility functions for search formatting and summarization
+  - **Impact:** Better code understanding through documentation
+  - **Tests:** 29 tests passing
+  - **Completed:** 2025-11-17
 
 ### 🟢 Tier 4: High-Value UX Quick Wins
 
