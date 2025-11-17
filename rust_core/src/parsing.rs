@@ -15,6 +15,7 @@ pub enum SupportedLanguage {
     Rust,
     C,
     Cpp,
+    CSharp,
     Sql,
 }
 
@@ -29,6 +30,7 @@ impl SupportedLanguage {
             "rs" => Some(SupportedLanguage::Rust),
             "c" => Some(SupportedLanguage::C),
             "cpp" | "cc" | "cxx" | "hpp" | "h" | "hxx" | "hh" => Some(SupportedLanguage::Cpp),
+            "cs" => Some(SupportedLanguage::CSharp),
             "sql" => Some(SupportedLanguage::Sql),
             _ => None,
         }
@@ -44,6 +46,7 @@ impl SupportedLanguage {
             SupportedLanguage::Rust => tree_sitter_rust::LANGUAGE.into(),
             SupportedLanguage::C => tree_sitter_cpp::LANGUAGE.into(),
             SupportedLanguage::Cpp => tree_sitter_cpp::LANGUAGE.into(),
+            SupportedLanguage::CSharp => tree_sitter_c_sharp::LANGUAGE.into(),
             SupportedLanguage::Sql => tree_sitter_sequel::LANGUAGE.into(),
         }
     }
@@ -105,6 +108,12 @@ impl SupportedLanguage {
                   declarator: (function_declarator
                     declarator: (_) @name)
                   body: (compound_statement) @body) @function
+                "#
+            }
+            SupportedLanguage::CSharp => {
+                r#"
+                (method_declaration
+                  name: (identifier) @name) @function
                 "#
             }
             SupportedLanguage::Sql => {
@@ -179,6 +188,16 @@ impl SupportedLanguage {
                  (struct_specifier
                   name: (type_identifier) @name
                   body: (field_declaration_list) @body)] @class
+                "#
+            }
+            SupportedLanguage::CSharp => {
+                r#"
+                [(class_declaration
+                  name: (identifier) @name)
+                 (interface_declaration
+                  name: (identifier) @name)
+                 (struct_declaration
+                  name: (identifier) @name)] @class
                 "#
             }
             SupportedLanguage::Sql => {
@@ -274,6 +293,7 @@ impl CodeParser {
             SupportedLanguage::Rust,
             SupportedLanguage::C,
             SupportedLanguage::Cpp,
+            SupportedLanguage::CSharp,
             SupportedLanguage::Sql,
         ] {
             let mut parser = Parser::new();
