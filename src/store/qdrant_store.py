@@ -490,7 +490,7 @@ class QdrantMemoryStore(MemoryStore):
         Returns:
             MemoryUnit: Parsed memory unit.
         """
-        from src.core.models import LifecycleState
+        from src.core.models import LifecycleState, MemoryProvenance, ProvenanceSource
 
         # Parse datetime strings
         created_at = payload.get("created_at")
@@ -523,12 +523,31 @@ class QdrantMemoryStore(MemoryStore):
         except ValueError:
             lifecycle_state = LifecycleState.ACTIVE
 
+        # Parse provenance
+        provenance_last_confirmed = payload.get("provenance_last_confirmed")
+        if provenance_last_confirmed and isinstance(provenance_last_confirmed, str):
+            provenance_last_confirmed = datetime.fromisoformat(provenance_last_confirmed)
+
+        provenance = MemoryProvenance(
+            source=ProvenanceSource(payload.get("provenance_source", "user_explicit")),
+            created_by=payload.get("provenance_created_by", "user_statement"),
+            last_confirmed=provenance_last_confirmed,
+            confidence=float(payload.get("provenance_confidence", 0.8)),
+            verified=bool(payload.get("provenance_verified", False)),
+            conversation_id=payload.get("provenance_conversation_id"),
+            file_context=payload.get("provenance_file_context", []),
+            notes=payload.get("provenance_notes")
+        )
+
         # Extract metadata fields (these were flattened by batch_store with **metadata)
         # Known standard fields that shouldn't go into metadata
         standard_fields = {
             "id", "content", "category", "context_level", "scope",
             "project_name", "importance", "embedding_model",
-            "created_at", "updated_at", "last_accessed", "lifecycle_state", "tags"
+            "created_at", "updated_at", "last_accessed", "lifecycle_state", "tags",
+            "provenance_source", "provenance_created_by", "provenance_last_confirmed",
+            "provenance_confidence", "provenance_verified", "provenance_conversation_id",
+            "provenance_file_context", "provenance_notes"
         }
 
         # Collect any extra fields as metadata
@@ -550,6 +569,7 @@ class QdrantMemoryStore(MemoryStore):
             updated_at=updated_at,
             last_accessed=last_accessed,
             lifecycle_state=lifecycle_state,
+            provenance=provenance,
             tags=payload.get("tags", []),
             metadata=metadata,
         )

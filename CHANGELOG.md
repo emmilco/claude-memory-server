@@ -25,6 +25,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Impact:** Prevents 30% abandonment via automatic quality management
   - **Next:** Phase 2 will add health dashboard, metrics tracking, and background jobs
 
+- **FEAT-034: Memory Provenance & Trust Signals - Phase 1 (Database Schema)** 🏗️ FOUNDATION COMPLETE
+  - Added provenance tracking models to `src/core/models.py`:
+    - `ProvenanceSource` enum (user_explicit, claude_inferred, documentation, code_indexed, etc.)
+    - `MemoryProvenance` model with source, created_by, confidence, verified, conversation_id, file_context
+    - `RelationshipType` enum (supports, contradicts, related, supersedes, duplicate)
+    - `MemoryRelationship` model for tracking memory relationships
+    - `TrustSignals` model for search result explanations
+  - Extended `MemoryUnit` with `provenance: MemoryProvenance` field
+  - Enhanced `MemoryResult` with optional `trust_signals` and `explanation` fields
+  - Updated SQLite store (`src/store/sqlite_store.py`):
+    - Added 8 provenance columns to memories table (migration-safe)
+    - Created `memory_relationships` table with indices
+    - Updated `_row_to_memory_unit()` to parse provenance fields
+    - Updated `store()` method to save provenance data
+    - Added relationship management methods: `store_relationship()`, `get_relationships()`, `delete_relationship()`, `dismiss_relationship()`
+  - Updated Qdrant store (`src/store/qdrant_store.py`):
+    - Extended `_build_payload()` to include provenance fields
+    - Updated `_payload_to_memory_unit()` to parse provenance
+    - Added provenance fields to standard_fields list
+  - **Status:** Foundation complete, ready for provenance tracking logic (Phases 2-7 pending)
+  - **Planning:** See `planning_docs/FEAT-034_memory_provenance_trust.md` for full implementation plan
+  - **Impact:** Enables trust signals, relationship tracking, and verification workflows (P1 strategic priority)
+  - **Next:** Phase 2 will add provenance tracker, Phase 3 relationship detector, Phase 4 trust signals
+
 - **Pre-commit Hook: Documentation Sync Enforcement**
   - Created `.git/hooks/pre-commit` - Validates CHANGELOG.md updates before commits
   - Blocks commits without changelog entries with helpful message

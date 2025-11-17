@@ -1007,6 +1007,9 @@ class MemoryRAGServer:
                 if language and language_val.lower() != language.lower():
                     continue
 
+                relevance_score = min(max(score, 0.0), 1.0)
+                confidence_label = self._get_confidence_label(relevance_score)
+
                 code_results.append({
                     "file_path": file_path or "(no path)",
                     "start_line": nested_metadata.get("start_line", 0),
@@ -1016,7 +1019,9 @@ class MemoryRAGServer:
                     "signature": nested_metadata.get("signature", ""),
                     "language": language_val or "(unknown language)",
                     "code": memory.content,
-                    "relevance_score": min(max(score, 0.0), 1.0),
+                    "relevance_score": relevance_score,
+                    "confidence_label": confidence_label,
+                    "confidence_display": f"{relevance_score:.0%} ({confidence_label})",
                 })
 
             query_time_ms = (time.time() - start_time) * 1000
@@ -1077,13 +1082,13 @@ class MemoryRAGServer:
         Returns:
             Dict with similar code results including file paths, line numbers, and similarity scores
         """
+        # Validate input first (before try block to let ValidationError propagate)
+        if not code_snippet or not code_snippet.strip():
+            raise ValidationError("code_snippet cannot be empty")
+
         try:
             import time
             start_time = time.time()
-
-            # Validate input
-            if not code_snippet or not code_snippet.strip():
-                raise ValidationError("code_snippet cannot be empty")
 
             # Use current project if not specified
             filter_project_name = project_name or self.project_name
@@ -1123,6 +1128,9 @@ class MemoryRAGServer:
                 if language and language_val.lower() != language.lower():
                     continue
 
+                similarity_score = min(max(score, 0.0), 1.0)
+                confidence_label = self._get_confidence_label(similarity_score)
+
                 code_results.append({
                     "file_path": file_path or "(no path)",
                     "start_line": nested_metadata.get("start_line", 0),
@@ -1132,7 +1140,9 @@ class MemoryRAGServer:
                     "signature": nested_metadata.get("signature", ""),
                     "language": language_val or "(unknown language)",
                     "code": memory.content,
-                    "similarity_score": min(max(score, 0.0), 1.0),
+                    "similarity_score": similarity_score,
+                    "confidence_label": confidence_label,
+                    "confidence_display": f"{similarity_score:.0%} ({confidence_label})",
                 })
 
             query_time_ms = (time.time() - start_time) * 1000
