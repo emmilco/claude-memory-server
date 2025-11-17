@@ -530,3 +530,112 @@ class TestRunCommand:
         cmd.get_parser_info.assert_called_once()
         cmd.get_embedding_model_info.assert_called_once()
         cmd.get_indexed_projects.assert_called_once()
+
+class TestFileWatcherInfo:
+    """Test file watcher information methods."""
+
+    @pytest.mark.asyncio
+    async def test_get_file_watcher_info_enabled(self):
+        """Test getting file watcher info when enabled."""
+        cmd = StatusCommand()
+
+        with patch('src.config.get_config') as mock_get_config:
+            mock_config = MagicMock()
+            mock_config.enable_file_watcher = True
+            mock_config.watch_debounce_ms = 1000
+            mock_get_config.return_value = mock_config
+
+            info = await cmd.get_file_watcher_info()
+
+            assert info["enabled"] is True
+            assert info["debounce_ms"] == 1000
+            assert "supported_extensions" in info
+            assert ".py" in info["supported_extensions"]
+            assert ".js" in info["supported_extensions"]
+
+    @pytest.mark.asyncio
+    async def test_get_file_watcher_info_disabled(self):
+        """Test getting file watcher info when disabled."""
+        cmd = StatusCommand()
+
+        with patch('src.config.get_config') as mock_get_config:
+            mock_config = MagicMock()
+            mock_config.enable_file_watcher = False
+            mock_config.watch_debounce_ms = 500
+            mock_get_config.return_value = mock_config
+
+            info = await cmd.get_file_watcher_info()
+
+            assert info["enabled"] is False
+            assert info["debounce_ms"] == 500
+
+    def test_print_file_watcher_info_enabled_with_rich(self):
+        """Test printing file watcher info when enabled with rich."""
+        cmd = StatusCommand()
+        
+        info = {
+            "enabled": True,
+            "debounce_ms": 1000,
+            "supported_extensions": [".py", ".js", ".ts"],
+            "description": "Auto-reindex files on change"
+        }
+        
+        # Should not raise an error
+        cmd.print_file_watcher_info(info)
+
+    def test_print_file_watcher_info_disabled_with_rich(self):
+        """Test printing file watcher info when disabled with rich."""
+        cmd = StatusCommand()
+        
+        info = {
+            "enabled": False,
+            "debounce_ms": 1000,
+            "supported_extensions": [".py"],
+            "description": "Auto-reindex files on change"
+        }
+        
+        # Should not raise an error
+        cmd.print_file_watcher_info(info)
+
+    def test_print_file_watcher_info_without_rich(self):
+        """Test printing file watcher info without rich."""
+        with patch('src.cli.status_command.RICH_AVAILABLE', False):
+            cmd = StatusCommand()
+            
+            info = {
+                "enabled": True,
+                "debounce_ms": 1000,
+                "supported_extensions": [".py", ".js"],
+                "description": "Auto-reindex files on change"
+            }
+            
+            # Should not raise an error
+            cmd.print_file_watcher_info(info)
+
+    @pytest.mark.asyncio
+    async def test_run_includes_file_watcher_info(self):
+        """Test that run() calls file watcher info methods."""
+        cmd = StatusCommand()
+        
+        # Mock all methods
+        cmd.print_header = Mock()
+        cmd.get_storage_stats = AsyncMock(return_value={})
+        cmd.get_cache_stats = AsyncMock(return_value={})
+        cmd.get_parser_info = AsyncMock(return_value={})
+        cmd.get_embedding_model_info = AsyncMock(return_value={})
+        cmd.get_file_watcher_info = AsyncMock(return_value={})
+        cmd.get_indexed_projects = AsyncMock(return_value=[])
+        cmd.print_storage_stats = Mock()
+        cmd.print_cache_stats = Mock()
+        cmd.print_parser_info = Mock()
+        cmd.print_embedding_info = Mock()
+        cmd.print_file_watcher_info = Mock()
+        cmd.print_projects_table = Mock()
+        cmd.print_quick_commands = Mock()
+        
+        args = MagicMock()
+        await cmd.run(args)
+        
+        # Verify file watcher methods were called
+        cmd.get_file_watcher_info.assert_called_once()
+        cmd.print_file_watcher_info.assert_called_once()

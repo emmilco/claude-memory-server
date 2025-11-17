@@ -186,6 +186,20 @@ class StatusCommand:
             "batch_size": config.embedding_batch_size,
         }
 
+    async def get_file_watcher_info(self) -> Dict[str, Any]:
+        """Get file watcher information and capabilities."""
+        from src.config import get_config
+        from src.memory.incremental_indexer import IncrementalIndexer
+
+        config = get_config()
+
+        return {
+            "enabled": config.enable_file_watcher,
+            "debounce_ms": config.watch_debounce_ms,
+            "supported_extensions": list(IncrementalIndexer.SUPPORTED_EXTENSIONS),
+            "description": "Auto-reindex files on change",
+        }
+
     def print_header(self):
         """Print status header."""
         if self.console:
@@ -305,6 +319,38 @@ class StatusCommand:
             print(f"  Model: {info.get('model', 'unknown')}")
             print(f"  Dimensions: {info.get('dimensions', 0)}")
 
+    def print_file_watcher_info(self, info: Dict[str, Any]):
+        """Print file watcher information."""
+        if self.console:
+            self.console.print("[bold cyan]File Watcher[/bold cyan]")
+
+            enabled = info.get("enabled", False)
+            debounce_ms = info.get("debounce_ms", 0)
+            extensions = info.get("supported_extensions", [])
+            description = info.get("description", "")
+
+            if enabled:
+                self.console.print(f"  Status: [green]✓ Enabled[/green]")
+                self.console.print(f"  Description: {description}")
+                self.console.print(f"  Debounce: {debounce_ms}ms")
+                self.console.print(f"  Watches: {', '.join(extensions)}")
+                self.console.print()
+                self.console.print("  [dim]Start watching:[/dim]")
+                self.console.print("  [dim]python -m src.cli watch ./your-project[/dim]")
+            else:
+                self.console.print("  Status: [yellow]✗ Disabled[/yellow]")
+                self.console.print("  [dim]Enable in config: CLAUDE_RAG_ENABLE_FILE_WATCHER=true[/dim]")
+
+            self.console.print()
+        else:
+            print("\nFile Watcher")
+            enabled = info.get("enabled", False)
+            print(f"  Status: {'Enabled' if enabled else 'Disabled'}")
+            if enabled:
+                print(f"  Debounce: {info.get('debounce_ms', 0)}ms")
+                print(f"  Extensions: {', '.join(info.get('supported_extensions', []))}")
+                print("  Start: python -m src.cli watch ./path")
+
     def print_projects_table(self, projects: List[Dict[str, Any]]):
         """Print indexed projects table."""
         if not projects:
@@ -374,6 +420,7 @@ class StatusCommand:
         cache_stats = await self.get_cache_stats()
         parser_info = await self.get_parser_info()
         embedding_info = await self.get_embedding_model_info()
+        file_watcher_info = await self.get_file_watcher_info()
         projects = await self.get_indexed_projects()
 
         # Print sections
@@ -381,5 +428,6 @@ class StatusCommand:
         self.print_cache_stats(cache_stats)
         self.print_parser_info(parser_info)
         self.print_embedding_info(embedding_info)
+        self.print_file_watcher_info(file_watcher_info)
         self.print_projects_table(projects)
         self.print_quick_commands()
