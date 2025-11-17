@@ -245,6 +245,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Impact:** Reduces noise by 40%, prevents duplicate accumulation, catches preference drift (P1 strategic priority)
   - **Next:** Phase 3 will add background jobs, Phase 4 CLI tools, Phase 5 contradiction detection
 
+- **FEAT-035: Intelligent Memory Consolidation - Phase 5 (CLI Tool)** ✅ COMPLETE
+  - Created `src/cli/consolidate_command.py` - Interactive consolidation CLI (250+ lines)
+    - Three operating modes: --auto (auto-merge high-confidence), --interactive (review each), --dry-run (preview only)
+    - Category filtering: Filter by preference, fact, event, workflow, or context
+    - Rich UI with tables showing: canonical memory, duplicates count, confidence level
+    - Detailed duplicate preview with truncated content display
+    - Interactive prompts: y/n/skip all for user control
+    - Summary panel: Shows suggestions found, merged count, skipped count
+    - Safe by default: --dry-run is default, requires --execute to apply changes
+    - Integration with DuplicateDetector and ConsolidationEngine
+  - **Usage:** `python -m src.cli.consolidate --interactive --execute --category preference`
+  - **Impact:** User-friendly duplicate management, prevents noise accumulation
+  - **Status:** CLI tool complete, background jobs and auto-scheduler pending (Phases 3-4)
+
 - **Pre-commit Hook: Documentation Sync Enforcement**
   - Created `.git/hooks/pre-commit` - Validates CHANGELOG.md updates before commits
   - Blocks commits without changelog entries with helpful message
