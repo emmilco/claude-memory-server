@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2025-11-17
+
+- **FEAT-011: Import/Dependency Tracking** - Comprehensive dependency analysis for all supported languages
+  - Created `src/memory/import_extractor.py` - Extract imports from Python, JavaScript, TypeScript, Java, Go, and Rust
+  - Created `src/memory/dependency_graph.py` - Build and query file dependency graphs
+  - Integrated import extraction into `src/memory/incremental_indexer.py` - Automatic extraction during code indexing
+  - Added import metadata to stored semantic units (imports, dependencies, import_count)
+  - Added MCP tools to `src/core/server.py`:
+    - `get_file_dependencies()` - Query what a file imports (direct or transitive)
+    - `get_file_dependents()` - Query what imports a file (reverse dependencies)
+    - `find_dependency_path()` - Find import path between two files
+    - `get_dependency_stats()` - Get dependency statistics and detect circular dependencies
+  - Comprehensive test coverage: 66 tests (40 import extraction + 26 dependency graph)
+  - Supports all import patterns: absolute, relative, wildcard, aliases, static imports
+  - Impact: Enables multi-hop queries, architectural understanding, impact analysis
+
 ### Added - 2025-11-16
 
 - **Phase 3.5: Adaptive Retrieval Gate** (FEAT-001 through FEAT-004, TEST-009)

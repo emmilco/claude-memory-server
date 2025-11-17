@@ -68,6 +68,15 @@ class ServerConfig(BaseSettings):
     query_expansion_similarity_threshold: float = 0.7
     deduplication_fetch_multiplier: int = 3
 
+    # Git history indexing
+    enable_git_indexing: bool = True
+    git_index_commit_count: int = 1000
+    git_index_branches: str = "current"  # current|all
+    git_index_tags: bool = True
+    git_index_diffs: bool = True  # Auto-disabled for large repos
+    git_auto_size_threshold_mb: int = 500
+    git_diff_size_limit_kb: int = 10  # Skip diffs larger than this
+
     model_config = SettingsConfigDict(
         env_prefix="CLAUDE_RAG_",
         env_file=".env",
@@ -157,6 +166,21 @@ class ServerConfig(BaseSettings):
             raise ValueError("deduplication_fetch_multiplier must be at least 1")
         if self.deduplication_fetch_multiplier > 10:
             raise ValueError("deduplication_fetch_multiplier should not exceed 10")
+
+        # Validate git indexing settings
+        if self.git_index_commit_count < 1:
+            raise ValueError("git_index_commit_count must be at least 1")
+        if self.git_index_commit_count > 100000:
+            raise ValueError("git_index_commit_count should not exceed 100000")
+
+        if self.git_index_branches not in ["current", "all"]:
+            raise ValueError("git_index_branches must be 'current' or 'all'")
+
+        if self.git_auto_size_threshold_mb < 1:
+            raise ValueError("git_auto_size_threshold_mb must be at least 1")
+
+        if self.git_diff_size_limit_kb < 1:
+            raise ValueError("git_diff_size_limit_kb must be at least 1")
 
         return self
 

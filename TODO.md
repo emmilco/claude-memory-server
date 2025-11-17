@@ -82,26 +82,27 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
 
 **These are the highest-impact features that directly enhance search, retrieval, and core capabilities**
 
-- [ ] **FEAT-026**: Smart Context Ranking & Pruning (~3-5 days) 🔥🔥🔥
-  - [ ] **Confirm overall feature design with user before proceeding**
-  - [ ] Track which memories/code were actually referenced by Claude
-  - [ ] Rank results by: recency + relevance + usage frequency
-  - [ ] Auto-expire unused SESSION_STATE memories (24h default)
-  - [ ] Decay algorithm for importance scores
-  - [ ] Background cleanup job (runs daily)
-  - [ ] New table: memory_usage_tracking (memory_id, last_used, use_count)
+- [x] **FEAT-026**: Smart Context Ranking & Pruning (~3-5 days) 🔥🔥🔥 ✅ **COMPLETE**
+  - [x] Track which memories/code were actually referenced by Claude
+  - [x] Rank results by: recency + relevance + usage frequency (60/20/20)
+  - [x] Auto-expire unused SESSION_STATE memories (48h)
+  - [x] Decay algorithm for importance scores (7-day half-life)
+  - [x] Background cleanup job (runs daily at 2 AM)
+  - [x] New table: memory_usage_tracking (memory_id, last_used, use_count)
+  - [x] Batched updates for efficiency
+  - [x] CLI prune command with dry-run support
   - **Impact:** 30-50% noise reduction, better search quality
   - **Complexity:** Medium (~500 lines, new DB schema)
   - **Runtime Cost:** +50MB storage, +1-2ms per search
 
-- [ ] **FEAT-029**: Conversation-Aware Retrieval (~5-7 days) 🔥🔥🔥
-  - [ ] **Confirm overall feature design with user before proceeding**
-  - [ ] Track last N messages in conversation
-  - [ ] Deduplication: don't return context already shown
-  - [ ] Contextual query expansion using conversation history
-  - [ ] "auth middleware" in debugging context → prioritize error handling
-  - [ ] Requires MCP conversation access (check API availability)
-  - [ ] Cache recent conversation (rolling window)
+- [x] **FEAT-029**: Conversation-Aware Retrieval (~5-7 days) 🔥🔥🔥 ✅ **COMPLETE**
+  - [x] Explicit session management (MCP tools)
+  - [x] Track last N messages in conversation (rolling window)
+  - [x] Deduplication: don't return context already shown
+  - [x] Contextual query expansion using conversation history (semantic)
+  - [x] Cosine similarity for related query detection (0.7 threshold)
+  - [x] Session timeout handling (30 minutes)
+  - [x] Background session cleanup
   - **Impact:** 30-50% additional token savings, better relevance
   - **Complexity:** Medium-High (~800 lines)
   - **Runtime Cost:** +5-10MB per conversation, +5-10ms latency
@@ -159,11 +160,13 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
 
 **These extend core capabilities with new features**
 
-- [ ] **FEAT-011**: Import/dependency tracking
-  - [ ] Extract import statements
-  - [ ] Build dependency graph
-  - [ ] Track usage relationships
+- [x] **FEAT-011**: Import/dependency tracking ✅ **COMPLETE**
+  - [x] Extract import statements from all 6 supported languages
+  - [x] Build dependency graph with transitive queries
+  - [x] Track usage relationships and detect circular dependencies
+  - [x] MCP tools for dependency queries
   - **Impact:** Enables multi-hop queries, architectural understanding
+  - **Completed:** 2025-11-17
 
 - [ ] **FEAT-023**: Hybrid search (BM25 + vector)
   - [ ] Combine keyword and semantic search

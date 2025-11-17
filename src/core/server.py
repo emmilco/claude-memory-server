@@ -1041,6 +1041,270 @@ class MemoryRAGServer:
             logger.error(f"Failed to index codebase: {e}")
             raise StorageError(f"Failed to index codebase: {e}")
 
+    async def get_file_dependencies(
+        self,
+        file_path: str,
+        project_name: Optional[str] = None,
+        include_transitive: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        Get dependencies for a specific file (what it imports).
+
+        Args:
+            file_path: File path to query
+            project_name: Optional project filter
+            include_transitive: If True, include transitive dependencies
+
+        Returns:
+            Dict with dependency information
+        """
+        try:
+            from pathlib import Path
+            from src.memory.dependency_graph import DependencyGraph
+
+            file_path = str(Path(file_path).resolve())
+            filter_project_name = project_name or self.project_name
+
+            # Build dependency graph from stored metadata
+            graph = await self._build_dependency_graph(filter_project_name)
+
+            # Get dependencies
+            if include_transitive:
+                deps = graph.get_all_dependencies(file_path)
+            else:
+                deps = graph.get_dependencies(file_path)
+
+            # Get import details
+            import_details = []
+            for dep in deps:
+                details = graph.get_import_details(file_path, dep)
+                if details:
+                    import_details.extend([
+                        {
+                            "target_file": dep,
+                            "module": d["module"],
+                            "items": d["items"],
+                            "type": d["type"],
+                            "line": d["line"],
+                        }
+                        for d in details
+                    ])
+
+            return {
+                "file": file_path,
+                "project": filter_project_name,
+                "dependency_count": len(deps),
+                "dependencies": sorted(list(deps)),
+                "import_details": import_details,
+                "transitive": include_transitive,
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to get file dependencies: {e}")
+            raise RetrievalError(f"Failed to get file dependencies: {e}")
+
+    async def get_file_dependents(
+        self,
+        file_path: str,
+        project_name: Optional[str] = None,
+        include_transitive: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        Get dependents for a specific file (what imports it).
+
+        Args:
+            file_path: File path to query
+            project_name: Optional project filter
+            include_transitive: If True, include transitive dependents
+
+        Returns:
+            Dict with dependent information
+        """
+        try:
+            from pathlib import Path
+            from src.memory.dependency_graph import DependencyGraph
+
+            file_path = str(Path(file_path).resolve())
+            filter_project_name = project_name or self.project_name
+
+            # Build dependency graph from stored metadata
+            graph = await self._build_dependency_graph(filter_project_name)
+
+            # Get dependents
+            if include_transitive:
+                deps = graph.get_all_dependents(file_path)
+            else:
+                deps = graph.get_dependents(file_path)
+
+            return {
+                "file": file_path,
+                "project": filter_project_name,
+                "dependent_count": len(deps),
+                "dependents": sorted(list(deps)),
+                "transitive": include_transitive,
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to get file dependents: {e}")
+            raise RetrievalError(f"Failed to get file dependents: {e}")
+
+    async def find_dependency_path(
+        self,
+        source_file: str,
+        target_file: str,
+        project_name: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Find import path between two files.
+
+        Args:
+            source_file: Source file path
+            target_file: Target file path
+            project_name: Optional project filter
+
+        Returns:
+            Dict with path information
+        """
+        try:
+            from pathlib import Path
+            from src.memory.dependency_graph import DependencyGraph
+
+            source_file = str(Path(source_file).resolve())
+            target_file = str(Path(target_file).resolve())
+            filter_project_name = project_name or self.project_name
+
+            # Build dependency graph from stored metadata
+            graph = await self._build_dependency_graph(filter_project_name)
+
+            # Find path
+            path = graph.find_path(source_file, target_file)
+
+            if path:
+                # Get import details for each edge in the path
+                path_details = []
+                for i in range(len(path) - 1):
+                    src = path[i]
+                    tgt = path[i + 1]
+                    details = graph.get_import_details(src, tgt)
+                    path_details.append({
+                        "from": src,
+                        "to": tgt,
+                        "imports": details,
+                    })
+
+                return {
+                    "source": source_file,
+                    "target": target_file,
+                    "path_found": True,
+                    "path_length": len(path) - 1,
+                    "path": path,
+                    "path_details": path_details,
+                }
+            else:
+                return {
+                    "source": source_file,
+                    "target": target_file,
+                    "path_found": False,
+                    "message": "No import path exists between these files",
+                }
+
+        except Exception as e:
+            logger.error(f"Failed to find dependency path: {e}")
+            raise RetrievalError(f"Failed to find dependency path: {e}")
+
+    async def get_dependency_stats(
+        self,
+        project_name: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Get dependency graph statistics for a project.
+
+        Args:
+            project_name: Optional project filter
+
+        Returns:
+            Dict with dependency statistics
+        """
+        try:
+            from src.memory.dependency_graph import DependencyGraph
+
+            filter_project_name = project_name or self.project_name
+
+            # Build dependency graph from stored metadata
+            graph = await self._build_dependency_graph(filter_project_name)
+
+            # Get statistics
+            stats = graph.get_statistics()
+
+            # Detect circular dependencies
+            cycles = graph.detect_circular_dependencies()
+
+            return {
+                "project": filter_project_name,
+                "statistics": stats,
+                "circular_dependencies": len(cycles),
+                "circular_dependency_chains": cycles[:5],  # Limit to first 5
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to get dependency stats: {e}")
+            raise RetrievalError(f"Failed to get dependency stats: {e}")
+
+    async def _build_dependency_graph(
+        self,
+        project_name: Optional[str]
+    ) -> "DependencyGraph":
+        """
+        Build dependency graph from stored metadata.
+
+        Args:
+            project_name: Project to build graph for
+
+        Returns:
+            DependencyGraph instance
+        """
+        from src.memory.dependency_graph import DependencyGraph
+        from src.core.models import SearchFilters, MemoryCategory, ContextLevel
+
+        graph = DependencyGraph()
+
+        # Query all code units for this project
+        filters = SearchFilters(
+            project_name=project_name,
+            category=MemoryCategory.CONTEXT,
+            context_level=ContextLevel.PROJECT_CONTEXT,
+            tags=["code"],
+        )
+
+        # Get all code units (use empty embedding to get all)
+        # This is a bit of a hack - we need all units, not just similar ones
+        # We'll retrieve a large number to get most/all units
+        empty_embedding = [0.0] * 384  # Match embedding dimension
+        results = await self.store.retrieve(
+            query_embedding=empty_embedding,
+            filters=filters,
+            limit=10000,  # Large limit to get all units
+        )
+
+        # Group by file and collect import metadata
+        file_imports: Dict[str, List[Dict[str, Any]]] = {}
+        for memory, _ in results:
+            metadata = memory.metadata
+            file_path = metadata.get("file_path")
+            imports = metadata.get("imports", [])
+
+            if file_path and imports:
+                if file_path not in file_imports:
+                    file_imports[file_path] = imports
+                # Note: All units from same file have same imports,
+                # so we only need to process each file once
+
+        # Add dependencies to graph
+        for file_path, imports in file_imports.items():
+            graph.add_file_dependencies(file_path, imports)
+
+        return graph
+
     async def get_status(self) -> Dict[str, Any]:
         """
         Get server status and statistics.

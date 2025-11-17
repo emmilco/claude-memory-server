@@ -321,8 +321,19 @@ python -m src.mcp_server
   - Enhanced status command with real project statistics
   - Real-time indexing progress indicators with rich UI
   - File watcher status visibility in status command
-- **IN PROGRESS:** Additional UX improvements (UX-008, UX-009)
-- Phase 3.5: Adaptive Retrieval Gate (optional)
+  - Memory browser TUI with filters and bulk operations (UX-008)
+  - Search result quality indicators with confidence scores (UX-009)
+- ✅ **COMPLETED (Nov 17):** FEAT-026 Smart Context Ranking & Pruning
+  - Usage tracking with batched updates
+  - Composite scoring (60% similarity, 20% recency, 20% usage)
+  - Automated pruning with APScheduler
+  - CLI prune command
+- ✅ **COMPLETED (Nov 17):** FEAT-029 Conversation-Aware Retrieval
+  - Explicit session management via MCP tools
+  - Semantic query expansion with cosine similarity
+  - Deduplication of shown context
+  - Session timeout and cleanup
+- **IN PROGRESS:** FEAT-031 Git-Aware Semantic Search (design phase)
 - Additional language support planning
 
 ### Known Issues

@@ -103,6 +103,7 @@ from src.embeddings.generator import EmbeddingGenerator
 from src.store.qdrant_store import QdrantMemoryStore
 from src.core.models import MemoryCategory, ContextLevel, MemoryScope
 from src.core.exceptions import StorageError
+from src.memory.import_extractor import ImportExtractor, build_dependency_metadata
 
 logger = logging.getLogger(__name__)
 
@@ -230,6 +231,9 @@ class IncrementalIndexer(BaseCodeIndexer):
         # Project name for scoping
         self.project_name = project_name or Path.cwd().name
 
+        # Import extractor for dependency tracking
+        self.import_extractor = ImportExtractor()
+
         logger.info(f"Incremental indexer initialized for project: {self.project_name}")
 
     async def initialize(self) -> None:
@@ -271,12 +275,22 @@ class IncrementalIndexer(BaseCodeIndexer):
             parse_result = parse_source_file(str(file_path), source_code)
             logger.debug(f"Parsed {len(parse_result.units)} units in {parse_result.parse_time_ms:.2f}ms")
 
+            # Extract imports for dependency tracking
+            imports = self.import_extractor.extract_imports(
+                str(file_path),
+                source_code,
+                parse_result.language
+            )
+            import_metadata = build_dependency_metadata(imports)
+            logger.debug(f"Extracted {len(imports)} imports from {file_path.name}")
+
             if not parse_result.units:
                 logger.debug(f"No semantic units found in {file_path}")
                 return {
                     "units_indexed": 0,
                     "parse_time_ms": parse_result.parse_time_ms,
                     "file_path": str(file_path),
+                    "imports_extracted": len(imports),
                 }
 
             # Step 2: Build indexable content for each unit
@@ -296,13 +310,14 @@ class IncrementalIndexer(BaseCodeIndexer):
             logger.debug(f"Removing old index entries for {file_path}")
             await self._delete_file_units(file_path)
 
-            # Step 5: Store new units
+            # Step 5: Store new units with import metadata
             logger.debug(f"Storing {len(parse_result.units)} semantic units")
             stored_ids = await self._store_units(
                 file_path,
                 parse_result.units,
                 embeddings,
                 parse_result.language,
+                import_metadata,
             )
 
             logger.info(
@@ -316,6 +331,8 @@ class IncrementalIndexer(BaseCodeIndexer):
                 "file_path": str(file_path),
                 "language": parse_result.language,
                 "unit_ids": stored_ids,
+                "imports_extracted": len(imports),
+                "dependencies": import_metadata.get("dependencies", []),
             }
 
         except Exception as e:
@@ -572,6 +589,7 @@ class IncrementalIndexer(BaseCodeIndexer):
         units: List["SemanticUnit"],
         embeddings: List[List[float]],
         language: str,
+        import_metadata: Optional[Dict[str, Any]] = None,
     ) -> List[str]:
         """
         Store semantic units in vector DB.
@@ -581,6 +599,7 @@ class IncrementalIndexer(BaseCodeIndexer):
             units: List of semantic units
             embeddings: List of embedding vectors
             language: Programming language
+            import_metadata: Optional import/dependency metadata for the file
 
         Returns:
             List of stored unit IDs
@@ -588,13 +607,32 @@ class IncrementalIndexer(BaseCodeIndexer):
         if len(units) != len(embeddings):
             raise ValueError("Units and embeddings must have same length")
 
+        if import_metadata is None:
+            import_metadata = {"imports": [], "dependencies": [], "import_count": 0}
+
         # Build batch store items
         items = []
         for unit, embedding in zip(units, embeddings):
             # Build content for storage
             content = self._build_indexable_content(file_path, unit)
 
-            # Build metadata
+            # Build metadata with import information
+            unit_metadata = {
+                "file_path": str(file_path.resolve()),
+                "unit_type": unit.unit_type,
+                "unit_name": unit.name,
+                "start_line": unit.start_line,
+                "end_line": unit.end_line,
+                "start_byte": unit.start_byte,
+                "end_byte": unit.end_byte,
+                "signature": unit.signature,
+                "language": language,
+                # Add import/dependency information
+                "imports": import_metadata.get("imports", []),
+                "dependencies": import_metadata.get("dependencies", []),
+                "import_count": import_metadata.get("import_count", 0),
+            }
+
             metadata = {
                 "category": MemoryCategory.CONTEXT.value,
                 "context_level": ContextLevel.PROJECT_CONTEXT.value,
@@ -602,17 +640,7 @@ class IncrementalIndexer(BaseCodeIndexer):
                 "project_name": self.project_name,
                 "importance": 0.7,  # Code units have moderate importance
                 "tags": ["code", unit.unit_type, language.lower()],
-                "metadata": {
-                    "file_path": str(file_path.resolve()),
-                    "unit_type": unit.unit_type,
-                    "unit_name": unit.name,
-                    "start_line": unit.start_line,
-                    "end_line": unit.end_line,
-                    "start_byte": unit.start_byte,
-                    "end_byte": unit.end_byte,
-                    "signature": unit.signature,
-                    "language": language,
-                },
+                "metadata": unit_metadata,
             }
 
             items.append((content, embedding, metadata))
