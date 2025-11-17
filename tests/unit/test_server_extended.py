@@ -393,12 +393,196 @@ class TestEmbeddingCaching:
     async def test_same_text_uses_cache(self, server):
         """Test that repeated text uses cached embeddings."""
         text = "This is a test for caching"
-        
+
         # First call - generates and caches
         embedding1 = await server._get_embedding(text)
-        
+
         # Second call - should use cache
         embedding2 = await server._get_embedding(text)
-        
+
         # Should be identical (same cache entry)
         assert embedding1 == embedding2
+
+
+class TestFindSimilarCode:
+    """Test find_similar_code functionality."""
+
+    @pytest.mark.asyncio
+    async def test_find_similar_code_basic(self, server):
+        """Test basic find similar code."""
+        # First index some code
+        test_dir = Path(__file__).parent.parent / "unit"
+
+        result = await server.index_codebase(
+            directory_path=str(test_dir),
+            project_name="test-project",
+            recursive=False
+        )
+
+        assert "files_indexed" in result
+
+        # Now search for similar code using a code snippet
+        code_snippet = """
+def test_example():
+    assert True
+"""
+
+        search_results = await server.find_similar_code(
+            code_snippet=code_snippet,
+            project_name="test-project",
+            limit=5
+        )
+
+        assert "results" in search_results
+        assert isinstance(search_results["results"], list)
+        assert "interpretation" in search_results
+        assert "suggestions" in search_results
+        assert "query_time_ms" in search_results
+
+    @pytest.mark.asyncio
+    async def test_find_similar_code_empty_snippet(self, server):
+        """Test with empty code snippet."""
+        with pytest.raises(ValidationError):
+            await server.find_similar_code(
+                code_snippet="",
+                project_name="test-project"
+            )
+
+    @pytest.mark.asyncio
+    async def test_find_similar_code_whitespace_only(self, server):
+        """Test with whitespace-only code snippet."""
+        with pytest.raises(ValidationError):
+            await server.find_similar_code(
+                code_snippet="   \n\t  ",
+                project_name="test-project"
+            )
+
+    @pytest.mark.asyncio
+    async def test_find_similar_code_with_language_filter(self, server):
+        """Test find similar code with language filter."""
+        test_dir = Path(__file__).parent.parent / "unit"
+
+        await server.index_codebase(
+            directory_path=str(test_dir),
+            project_name="test-project"
+        )
+
+        code_snippet = "def test_func(): pass"
+
+        # Search with language filter
+        results = await server.find_similar_code(
+            code_snippet=code_snippet,
+            project_name="test-project",
+            language="python",
+            limit=10
+        )
+
+        assert "results" in results
+        for result in results["results"]:
+            if "language" in result:
+                assert result["language"].lower() == "python"
+
+    @pytest.mark.asyncio
+    async def test_find_similar_code_no_results(self, server):
+        """Test find similar with query that has no results."""
+        # Search without indexing anything
+        code_snippet = "function unique_xyz_123() {}"
+
+        results = await server.find_similar_code(
+            code_snippet=code_snippet,
+            project_name="nonexistent-project",
+            limit=5
+        )
+
+        assert "results" in results
+        assert isinstance(results["results"], list)
+        # Should have interpretation and suggestions even with no results
+        assert "interpretation" in results
+        assert "suggestions" in results
+
+    @pytest.mark.asyncio
+    async def test_find_similar_code_result_format(self, server):
+        """Test that results have correct format."""
+        test_dir = Path(__file__).parent.parent / "unit"
+
+        await server.index_codebase(
+            directory_path=str(test_dir),
+            project_name="test-project"
+        )
+
+        code_snippet = "def test(): pass"
+
+        results = await server.find_similar_code(
+            code_snippet=code_snippet,
+            project_name="test-project",
+            limit=3
+        )
+
+        assert "total_found" in results
+        assert "code_snippet_length" in results
+        assert "project_name" in results
+
+        # Check result structure
+        for result in results["results"]:
+            assert "file_path" in result
+            assert "start_line" in result
+            assert "end_line" in result
+            assert "unit_name" in result
+            assert "unit_type" in result
+            assert "language" in result
+            assert "code" in result
+            assert "similarity_score" in result
+            # Similarity scores should be between 0 and 1
+            assert 0.0 <= result["similarity_score"] <= 1.0
+
+    @pytest.mark.asyncio
+    async def test_find_similar_code_high_similarity_interpretation(self, server):
+        """Test interpretation for high similarity results."""
+        test_dir = Path(__file__).parent.parent / "unit"
+
+        await server.index_codebase(
+            directory_path=str(test_dir),
+            project_name="test-project"
+        )
+
+        # Use a code snippet that should match well with indexed code
+        code_snippet = """
+import pytest
+
+def test_something():
+    assert True
+"""
+
+        results = await server.find_similar_code(
+            code_snippet=code_snippet,
+            project_name="test-project",
+            limit=5
+        )
+
+        # Should have an interpretation
+        assert "interpretation" in results
+        assert isinstance(results["interpretation"], str)
+
+    @pytest.mark.asyncio
+    async def test_find_similar_code_with_file_pattern(self, server):
+        """Test find similar code with file pattern filter."""
+        test_dir = Path(__file__).parent.parent / "unit"
+
+        await server.index_codebase(
+            directory_path=str(test_dir),
+            project_name="test-project"
+        )
+
+        code_snippet = "def test(): pass"
+
+        # Search with file pattern filter
+        results = await server.find_similar_code(
+            code_snippet=code_snippet,
+            project_name="test-project",
+            file_pattern="test_",  # Files containing "test_"
+            limit=10
+        )
+
+        assert "results" in results
+        for result in results["results"]:
+            assert "test_" in result["file_path"]

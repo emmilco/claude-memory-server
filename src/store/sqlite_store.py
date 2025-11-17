@@ -61,6 +61,8 @@ class SQLiteMemoryStore(MemoryStore):
                     embedding TEXT NOT NULL,
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL,
+                    last_accessed TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    lifecycle_state TEXT NOT NULL DEFAULT 'ACTIVE',
                     tags TEXT,
                     metadata TEXT
                 )
@@ -79,6 +81,32 @@ class SQLiteMemoryStore(MemoryStore):
             self.conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_project_name ON memories(project_name)"
             )
+            self.conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_lifecycle_state ON memories(lifecycle_state)"
+            )
+            self.conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_last_accessed ON memories(last_accessed)"
+            )
+
+            # Add provenance columns if they don't exist (migration-safe)
+            cursor = self.conn.execute("PRAGMA table_info(memories)")
+            existing_columns = {row[1] for row in cursor.fetchall()}
+
+            provenance_columns = {
+                'provenance_source': "TEXT NOT NULL DEFAULT 'user_explicit'",
+                'provenance_created_by': "TEXT NOT NULL DEFAULT 'user_statement'",
+                'provenance_last_confirmed': "TEXT",
+                'provenance_confidence': "REAL NOT NULL DEFAULT 0.8",
+                'provenance_verified': "INTEGER NOT NULL DEFAULT 0",
+                'provenance_conversation_id': "TEXT",
+                'provenance_file_context': "TEXT",  # JSON array
+                'provenance_notes': "TEXT"
+            }
+
+            for col_name, col_def in provenance_columns.items():
+                if col_name not in existing_columns:
+                    self.conn.execute(f"ALTER TABLE memories ADD COLUMN {col_name} {col_def}")
+                    logger.info(f"Added provenance column: {col_name}")
 
             # Enable FTS (Full-Text Search)
             self.conn.execute("""
@@ -167,6 +195,37 @@ class SQLiteMemoryStore(MemoryStore):
                 )
             """)
 
+            # Create memory relationships table
+            self.conn.execute("""
+                CREATE TABLE IF NOT EXISTS memory_relationships (
+                    id TEXT PRIMARY KEY,
+                    source_memory_id TEXT NOT NULL,
+                    target_memory_id TEXT NOT NULL,
+                    relationship_type TEXT NOT NULL,
+                    confidence REAL NOT NULL,
+                    detected_at TEXT NOT NULL,
+                    detected_by TEXT NOT NULL DEFAULT 'auto',
+                    notes TEXT,
+                    dismissed INTEGER NOT NULL DEFAULT 0,
+                    FOREIGN KEY (source_memory_id) REFERENCES memories(id) ON DELETE CASCADE,
+                    FOREIGN KEY (target_memory_id) REFERENCES memories(id) ON DELETE CASCADE
+                )
+            """)
+
+            # Create indices for relationships table
+            self.conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_rel_source ON memory_relationships(source_memory_id)"
+            )
+            self.conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_rel_target ON memory_relationships(target_memory_id)"
+            )
+            self.conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_rel_type ON memory_relationships(relationship_type)"
+            )
+            self.conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_rel_dismissed ON memory_relationships(dismissed)"
+            )
+
             self.conn.commit()
             logger.info("SQLite store initialized successfully")
 
@@ -190,14 +249,29 @@ class SQLiteMemoryStore(MemoryStore):
             tags_json = json.dumps(metadata.get("tags", []))
             metadata_json = json.dumps(metadata.get("metadata", {}))
 
+            # Extract provenance from metadata
+            provenance = metadata.get("provenance", {})
+            if not isinstance(provenance, dict):
+                # Handle MemoryProvenance object
+                provenance = provenance.model_dump() if hasattr(provenance, 'model_dump') else {}
+
+            provenance_last_confirmed = provenance.get("last_confirmed")
+            if provenance_last_confirmed and isinstance(provenance_last_confirmed, datetime):
+                provenance_last_confirmed = provenance_last_confirmed.isoformat()
+
+            provenance_file_context_json = json.dumps(provenance.get("file_context", []))
+
             # Insert into main table
             self.conn.execute(
                 """
                 INSERT OR REPLACE INTO memories
                 (id, content, category, context_level, scope, project_name,
                  importance, embedding_model, embedding, created_at, updated_at,
-                 tags, metadata)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 last_accessed, lifecycle_state, tags, metadata,
+                 provenance_source, provenance_created_by, provenance_last_confirmed,
+                 provenance_confidence, provenance_verified, provenance_conversation_id,
+                 provenance_file_context, provenance_notes)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     memory_id,
@@ -211,8 +285,18 @@ class SQLiteMemoryStore(MemoryStore):
                     embedding_json,
                     metadata.get("created_at", datetime.now(UTC)).isoformat() if isinstance(metadata.get("created_at"), datetime) else metadata.get("created_at", datetime.now(UTC).isoformat()),
                     datetime.now(UTC).isoformat(),
+                    metadata.get("last_accessed", datetime.now(UTC)).isoformat() if isinstance(metadata.get("last_accessed"), datetime) else metadata.get("last_accessed", datetime.now(UTC).isoformat()),
+                    metadata.get("lifecycle_state", "ACTIVE"),
                     tags_json,
                     metadata_json,
+                    provenance.get("source", "user_explicit"),
+                    provenance.get("created_by", "user_statement"),
+                    provenance_last_confirmed,
+                    provenance.get("confidence", 0.8),
+                    1 if provenance.get("verified", False) else 0,
+                    provenance.get("conversation_id"),
+                    provenance_file_context_json,
+                    provenance.get("notes"),
                 ),
             )
 
@@ -438,6 +522,8 @@ class SQLiteMemoryStore(MemoryStore):
 
     def _row_to_memory_unit(self, row: Dict[str, Any]) -> MemoryUnit:
         """Convert database row to MemoryUnit."""
+        from src.core.models import LifecycleState, MemoryProvenance, ProvenanceSource
+
         # Parse datetime strings
         created_at = row.get("created_at")
         if isinstance(created_at, str):
@@ -447,9 +533,42 @@ class SQLiteMemoryStore(MemoryStore):
         if isinstance(updated_at, str):
             updated_at = datetime.fromisoformat(updated_at)
 
+        last_accessed = row.get("last_accessed", updated_at)
+        if isinstance(last_accessed, str):
+            last_accessed = datetime.fromisoformat(last_accessed)
+        elif last_accessed is None:
+            last_accessed = updated_at or datetime.now(UTC)
+
         # Parse JSON fields
         tags = json.loads(row.get("tags", "[]"))
         metadata = json.loads(row.get("metadata", "{}"))
+
+        # Parse lifecycle state
+        lifecycle_state_str = row.get("lifecycle_state", "ACTIVE")
+        try:
+            lifecycle_state = LifecycleState(lifecycle_state_str)
+        except ValueError:
+            lifecycle_state = LifecycleState.ACTIVE
+
+        # Parse provenance
+        provenance_last_confirmed = row.get("provenance_last_confirmed")
+        if provenance_last_confirmed and isinstance(provenance_last_confirmed, str):
+            provenance_last_confirmed = datetime.fromisoformat(provenance_last_confirmed)
+
+        provenance_file_context = row.get("provenance_file_context", "[]")
+        if isinstance(provenance_file_context, str):
+            provenance_file_context = json.loads(provenance_file_context)
+
+        provenance = MemoryProvenance(
+            source=ProvenanceSource(row.get("provenance_source", "user_explicit")),
+            created_by=row.get("provenance_created_by", "user_statement"),
+            last_confirmed=provenance_last_confirmed,
+            confidence=float(row.get("provenance_confidence", 0.8)),
+            verified=bool(row.get("provenance_verified", 0)),
+            conversation_id=row.get("provenance_conversation_id"),
+            file_context=provenance_file_context,
+            notes=row.get("provenance_notes")
+        )
 
         return MemoryUnit(
             id=row["id"],
@@ -462,6 +581,9 @@ class SQLiteMemoryStore(MemoryStore):
             embedding_model=row["embedding_model"],
             created_at=created_at,
             updated_at=updated_at,
+            last_accessed=last_accessed,
+            lifecycle_state=lifecycle_state,
+            provenance=provenance,
             tags=tags,
             metadata=metadata,
         )
@@ -1137,3 +1259,165 @@ class SQLiteMemoryStore(MemoryStore):
         except Exception as e:
             logger.error(f"Failed to get commits by file: {e}")
             return []
+
+    # Relationship management methods
+
+    async def store_relationship(self, relationship_data: Dict[str, Any]) -> str:
+        """
+        Store a relationship between two memories.
+
+        Args:
+            relationship_data: Dictionary with relationship fields
+
+        Returns:
+            Relationship ID
+        """
+        if not self.conn:
+            await self.initialize()
+
+        try:
+            from uuid import uuid4
+            relationship_id = relationship_data.get("id") or str(uuid4())
+
+            detected_at = relationship_data.get("detected_at")
+            if isinstance(detected_at, datetime):
+                detected_at = detected_at.isoformat()
+            elif not detected_at:
+                detected_at = datetime.now(UTC).isoformat()
+
+            self.conn.execute(
+                """
+                INSERT OR REPLACE INTO memory_relationships
+                (id, source_memory_id, target_memory_id, relationship_type,
+                 confidence, detected_at, detected_by, notes, dismissed)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    relationship_id,
+                    relationship_data["source_memory_id"],
+                    relationship_data["target_memory_id"],
+                    relationship_data["relationship_type"],
+                    relationship_data.get("confidence", 0.8),
+                    detected_at,
+                    relationship_data.get("detected_by", "auto"),
+                    relationship_data.get("notes"),
+                    1 if relationship_data.get("dismissed", False) else 0,
+                ),
+            )
+
+            self.conn.commit()
+            logger.debug(f"Stored relationship: {relationship_id}")
+            return relationship_id
+
+        except Exception as e:
+            raise StorageError(f"Failed to store relationship: {e}")
+
+    async def get_relationships(
+        self,
+        memory_id: str,
+        relationship_type: Optional[str] = None,
+        include_dismissed: bool = False
+    ) -> List[Dict[str, Any]]:
+        """
+        Get relationships for a memory.
+
+        Args:
+            memory_id: Memory ID
+            relationship_type: Filter by relationship type (optional)
+            include_dismissed: Include dismissed relationships
+
+        Returns:
+            List of relationships
+        """
+        if not self.conn:
+            await self.initialize()
+
+        try:
+            query = """
+                SELECT * FROM memory_relationships
+                WHERE (source_memory_id = ? OR target_memory_id = ?)
+            """
+            params = [memory_id, memory_id]
+
+            if relationship_type:
+                query += " AND relationship_type = ?"
+                params.append(relationship_type)
+
+            if not include_dismissed:
+                query += " AND dismissed = 0"
+
+            cursor = self.conn.execute(query, params)
+            rows = cursor.fetchall()
+
+            relationships = []
+            for row in rows:
+                relationship = dict(row)
+                # Parse datetime
+                if relationship.get("detected_at"):
+                    relationship["detected_at"] = datetime.fromisoformat(relationship["detected_at"])
+                # Parse boolean
+                relationship["dismissed"] = bool(relationship.get("dismissed", 0))
+                relationships.append(relationship)
+
+            logger.debug(f"Retrieved {len(relationships)} relationships for memory {memory_id}")
+            return relationships
+
+        except Exception as e:
+            logger.error(f"Failed to get relationships: {e}")
+            return []
+
+    async def delete_relationship(self, relationship_id: str) -> bool:
+        """
+        Delete a relationship.
+
+        Args:
+            relationship_id: Relationship ID
+
+        Returns:
+            True if deleted, False otherwise
+        """
+        if not self.conn:
+            await self.initialize()
+
+        try:
+            cursor = self.conn.execute(
+                "DELETE FROM memory_relationships WHERE id = ?",
+                (relationship_id,)
+            )
+            self.conn.commit()
+
+            deleted = cursor.rowcount > 0
+            if deleted:
+                logger.debug(f"Deleted relationship: {relationship_id}")
+            return deleted
+
+        except Exception as e:
+            raise StorageError(f"Failed to delete relationship: {e}")
+
+    async def dismiss_relationship(self, relationship_id: str) -> bool:
+        """
+        Mark a relationship as dismissed by user.
+
+        Args:
+            relationship_id: Relationship ID
+
+        Returns:
+            True if updated, False otherwise
+        """
+        if not self.conn:
+            await self.initialize()
+
+        try:
+            cursor = self.conn.execute(
+                "UPDATE memory_relationships SET dismissed = 1 WHERE id = ?",
+                (relationship_id,)
+            )
+            self.conn.commit()
+
+            updated = cursor.rowcount > 0
+            if updated:
+                logger.debug(f"Dismissed relationship: {relationship_id}")
+            return updated
+
+        except Exception as e:
+            raise StorageError(f"Failed to dismiss relationship: {e}")

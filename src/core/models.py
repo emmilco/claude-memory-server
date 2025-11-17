@@ -32,6 +32,68 @@ class MemoryScope(str, Enum):
     PROJECT = "project"
 
 
+class LifecycleState(str, Enum):
+    """Memory lifecycle states for automatic archival and weighting."""
+
+    ACTIVE = "ACTIVE"  # 0-7 days, frequently accessed, full weight (1.0x)
+    RECENT = "RECENT"  # 7-30 days, moderately relevant, reduced weight (0.7x)
+    ARCHIVED = "ARCHIVED"  # 30-180 days, historical, heavy penalty (0.3x)
+    STALE = "STALE"  # 180+ days, candidate for deletion, minimal weight (0.1x)
+
+
+class ProvenanceSource(str, Enum):
+    """Source of memory creation."""
+
+    USER_EXPLICIT = "user_explicit"  # User directly stated
+    CLAUDE_INFERRED = "claude_inferred"  # Claude inferred from conversation
+    DOCUMENTATION = "documentation"  # From code docs/comments
+    AUTO_CLASSIFIED = "auto_classified"  # Auto-classified category
+    IMPORTED = "imported"  # Imported from external source
+    CODE_INDEXED = "code_indexed"  # From code indexing
+    LEGACY = "legacy"  # Migrated from old system
+
+
+class RelationshipType(str, Enum):
+    """Type of relationship between memories."""
+
+    SUPPORTS = "supports"  # Memory A supports/reinforces memory B
+    CONTRADICTS = "contradicts"  # Memory A contradicts memory B
+    RELATED = "related"  # Memories are related/similar
+    SUPERSEDES = "supersedes"  # Memory A replaces memory B
+    DUPLICATE = "duplicate"  # Memory A is a duplicate of memory B
+
+
+class MemoryProvenance(BaseModel):
+    """Provenance metadata for a memory."""
+
+    source: ProvenanceSource = ProvenanceSource.USER_EXPLICIT
+    created_by: str = "user_statement"  # Description of creation method
+    last_confirmed: Optional[datetime] = None  # When user last verified
+    confidence: float = Field(default=0.8, ge=0.0, le=1.0)  # System confidence
+    verified: bool = False  # User explicitly verified
+    conversation_id: Optional[str] = None  # Associated conversation
+    file_context: List[str] = Field(default_factory=list)  # Files being worked on
+    notes: Optional[str] = None  # Additional provenance notes
+
+    model_config = ConfigDict(use_enum_values=False)
+
+
+class MemoryRelationship(BaseModel):
+    """Relationship between two memories."""
+
+    id: str = Field(default_factory=lambda: str(uuid4()))
+    source_memory_id: str  # The memory that has the relationship
+    target_memory_id: str  # The memory it relates to
+    relationship_type: RelationshipType
+    confidence: float = Field(ge=0.0, le=1.0)  # Confidence in relationship
+    detected_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    detected_by: str = "auto"  # "auto", "user", "system"
+    notes: Optional[str] = None  # Explanation of relationship
+    dismissed: bool = False  # User dismissed this relationship
+
+    model_config = ConfigDict(use_enum_values=False)
+
+
 class MemoryUnit(BaseModel):
     """Core memory record with metadata."""
 
@@ -45,6 +107,9 @@ class MemoryUnit(BaseModel):
     embedding_model: str = "all-MiniLM-L6-v2"
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    last_accessed: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    lifecycle_state: LifecycleState = LifecycleState.ACTIVE
+    provenance: MemoryProvenance = Field(default_factory=MemoryProvenance)
     tags: List[str] = Field(default_factory=list)
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
@@ -139,12 +204,28 @@ class QueryRequest(BaseModel):
         return v
 
 
+class TrustSignals(BaseModel):
+    """Trust signals and explanations for a search result."""
+
+    why_shown: List[str] = Field(default_factory=list)  # Reasons why this result matched
+    trust_score: float = Field(ge=0.0, le=1.0)  # Overall trust score (0-1)
+    confidence_level: str  # "excellent", "good", "fair", "poor"
+    last_verified: Optional[str] = None  # Human-readable time since verification
+    provenance_summary: Dict[str, Any] = Field(default_factory=dict)  # Provenance info
+    related_count: int = 0  # Number of related memories
+    contradiction_detected: bool = False  # Whether contradictions exist
+
+    model_config = ConfigDict(use_enum_values=False)
+
+
 class MemoryResult(BaseModel):
     """A single memory search result with score."""
 
     memory: MemoryUnit
     score: float = Field(..., ge=0.0, le=1.0)
     relevance_reason: Optional[str] = None
+    trust_signals: Optional[TrustSignals] = None  # Trust and provenance information
+    explanation: Optional[List[str]] = None  # Detailed explanation of result
 
 
 class RetrievalResponse(BaseModel):

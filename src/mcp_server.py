@@ -288,6 +288,39 @@ class MemoryRAGServer:
         finally:
             await new_server.close()
 
+    async def find_similar_code(
+        self,
+        code_snippet: str,
+        project_name: Optional[str] = None,
+        limit: int = 10,
+        file_pattern: Optional[str] = None,
+        language: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Find similar code snippets in the indexed codebase.
+
+        This uses the new architecture from src/core/server.py
+        """
+        from src.core.server import MemoryRAGServer as NewServer
+        from src.config import get_config
+
+        # Create new server instance
+        config = get_config()
+        new_server = NewServer(config)
+        await new_server.initialize()
+
+        try:
+            result = await new_server.find_similar_code(
+                code_snippet=code_snippet,
+                project_name=project_name,
+                limit=limit,
+                file_pattern=file_pattern,
+                language=language,
+            )
+            return result
+        finally:
+            await new_server.close()
+
 
 # Initialize MCP server
 app = Server("claude-memory-rag")
@@ -485,6 +518,36 @@ async def list_tools() -> List[Tool]:
                 },
                 "required": ["directory_path"]
             }
+        ),
+        Tool(
+            name="find_similar_code",
+            description="Find similar code snippets in the indexed codebase. Useful for finding duplicates, similar implementations, or code patterns.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "code_snippet": {
+                        "type": "string",
+                        "description": "The code snippet to find similar matches for"
+                    },
+                    "project_name": {
+                        "type": "string",
+                        "description": "Optional project name filter (uses current project if not specified)"
+                    },
+                    "limit": {
+                        "type": "number",
+                        "description": "Maximum number of results (default: 10)"
+                    },
+                    "file_pattern": {
+                        "type": "string",
+                        "description": "Optional file path pattern filter (e.g., '*/auth/*')"
+                    },
+                    "language": {
+                        "type": "string",
+                        "description": "Optional language filter (e.g., 'python', 'javascript')"
+                    }
+                },
+                "required": ["code_snippet"]
+            }
         )
     ]
 
@@ -650,6 +713,46 @@ async def call_tool(name: str, arguments: Any) -> List[TextContent]:
                 output += f"\nLanguages:\n"
                 for lang, count in result['languages'].items():
                     output += f"  - {lang}: {count} files\n"
+
+            return [TextContent(type="text", text=output)]
+
+        elif name == "find_similar_code":
+            result = await memory_rag_server.find_similar_code(
+                code_snippet=arguments["code_snippet"],
+                project_name=arguments.get("project_name"),
+                limit=arguments.get("limit", 10),
+                file_pattern=arguments.get("file_pattern"),
+                language=arguments.get("language")
+            )
+
+            if not result["results"]:
+                output = f"No similar code found.\n\n"
+                output += f"{result['interpretation']}\n\n"
+                output += "Suggestions:\n"
+                for suggestion in result["suggestions"]:
+                    output += f"  - {suggestion}\n"
+                return [TextContent(type="text", text=output)]
+
+            output = f"✅ Similar Code Found ({result['total_found']} results)\n\n"
+            output += f"Project: {result['project_name']}\n"
+            output += f"Code snippet length: {result['code_snippet_length']} chars\n"
+            output += f"Search time: {result['query_time_ms']:.2f}ms\n\n"
+            output += f"{result['interpretation']}\n\n"
+
+            for i, code in enumerate(result["results"], 1):
+                output += f"## {i}. {code['unit_name']} ({code['unit_type']})\n\n"
+                output += f"**File:** `{code['file_path']}`:{code['start_line']}-{code['end_line']}\n"
+                output += f"**Language:** {code['language']}\n"
+                output += f"**Similarity:** {code['similarity_score']:.2%}\n\n"
+                if code['signature']:
+                    output += f"**Signature:**\n```{code['language']}\n{code['signature']}\n```\n\n"
+                output += f"**Code:**\n```{code['language']}\n{code['code']}\n```\n\n"
+                output += "---\n\n"
+
+            if result["suggestions"]:
+                output += "\nSuggestions:\n"
+                for suggestion in result["suggestions"]:
+                    output += f"  - {suggestion}\n"
 
             return [TextContent(type="text", text=output)]
 

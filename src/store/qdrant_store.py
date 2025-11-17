@@ -342,6 +342,24 @@ class QdrantMemoryStore(MemoryStore):
         """
         memory_id = metadata.get("id", str(uuid4()))
 
+        now = datetime.now(UTC)
+        created_at = metadata.get("created_at", now)
+        if isinstance(created_at, datetime):
+            created_at = created_at.isoformat()
+
+        last_accessed = metadata.get("last_accessed", now)
+        if isinstance(last_accessed, datetime):
+            last_accessed = last_accessed.isoformat()
+
+        # Extract and serialize provenance
+        provenance = metadata.get("provenance", {})
+        if not isinstance(provenance, dict):
+            provenance = provenance.model_dump() if hasattr(provenance, 'model_dump') else {}
+
+        provenance_last_confirmed = provenance.get("last_confirmed")
+        if provenance_last_confirmed and isinstance(provenance_last_confirmed, datetime):
+            provenance_last_confirmed = provenance_last_confirmed.isoformat()
+
         payload = {
             "id": memory_id,
             "content": content,
@@ -351,9 +369,20 @@ class QdrantMemoryStore(MemoryStore):
             "project_name": metadata.get("project_name"),
             "importance": metadata.get("importance", 0.5),
             "embedding_model": metadata.get("embedding_model", "all-MiniLM-L6-v2"),
-            "created_at": metadata.get("created_at", datetime.now(UTC)).isoformat(),
-            "updated_at": datetime.now(UTC).isoformat(),
+            "created_at": created_at,
+            "updated_at": now.isoformat(),
+            "last_accessed": last_accessed,
+            "lifecycle_state": metadata.get("lifecycle_state", "ACTIVE"),
             "tags": metadata.get("tags", []),
+            # Provenance fields
+            "provenance_source": provenance.get("source", "user_explicit"),
+            "provenance_created_by": provenance.get("created_by", "user_statement"),
+            "provenance_last_confirmed": provenance_last_confirmed,
+            "provenance_confidence": provenance.get("confidence", 0.8),
+            "provenance_verified": provenance.get("verified", False),
+            "provenance_conversation_id": provenance.get("conversation_id"),
+            "provenance_file_context": provenance.get("file_context", []),
+            "provenance_notes": provenance.get("notes"),
             **metadata.get("metadata", {}),
         }
 
@@ -461,6 +490,8 @@ class QdrantMemoryStore(MemoryStore):
         Returns:
             MemoryUnit: Parsed memory unit.
         """
+        from src.core.models import LifecycleState
+
         # Parse datetime strings
         created_at = payload.get("created_at")
         if isinstance(created_at, str):
@@ -474,17 +505,30 @@ class QdrantMemoryStore(MemoryStore):
         elif updated_at is None:
             updated_at = datetime.now(UTC)
 
+        last_accessed = payload.get("last_accessed", updated_at)
+        if isinstance(last_accessed, str):
+            last_accessed = datetime.fromisoformat(last_accessed)
+        elif last_accessed is None:
+            last_accessed = updated_at
+
         # Parse enums
         category = MemoryCategory(payload.get("category", "context"))
         context_level = ContextLevel(payload.get("context_level", "PROJECT_CONTEXT"))
         scope = MemoryScope(payload.get("scope", "global"))
+
+        # Parse lifecycle state
+        lifecycle_state_str = payload.get("lifecycle_state", "ACTIVE")
+        try:
+            lifecycle_state = LifecycleState(lifecycle_state_str)
+        except ValueError:
+            lifecycle_state = LifecycleState.ACTIVE
 
         # Extract metadata fields (these were flattened by batch_store with **metadata)
         # Known standard fields that shouldn't go into metadata
         standard_fields = {
             "id", "content", "category", "context_level", "scope",
             "project_name", "importance", "embedding_model",
-            "created_at", "updated_at", "tags"
+            "created_at", "updated_at", "last_accessed", "lifecycle_state", "tags"
         }
 
         # Collect any extra fields as metadata
@@ -504,6 +548,8 @@ class QdrantMemoryStore(MemoryStore):
             embedding_model=payload.get("embedding_model", "all-MiniLM-L6-v2"),
             created_at=created_at,
             updated_at=updated_at,
+            last_accessed=last_accessed,
+            lifecycle_state=lifecycle_state,
             tags=payload.get("tags", []),
             metadata=metadata,
         )

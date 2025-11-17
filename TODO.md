@@ -107,20 +107,22 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Complexity:** Medium-High (~800 lines)
   - **Runtime Cost:** +5-10MB per conversation, +5-10ms latency
 
-- [ ] **FEAT-032**: Memory Lifecycle & Health System (~2-3 weeks) 🔥🔥🔥🔥🔥
-  - [ ] **Planning doc:** `planning_docs/STRATEGIC-001_long_term_product_evolution.md`
+- [ ] **FEAT-032**: Memory Lifecycle & Health System (~2-3 weeks) 🔥🔥🔥🔥🔥 ⚡ **PHASE 1 COMPLETE**
+  - [x] **Planning doc:** `planning_docs/STRATEGIC-001_long_term_product_evolution.md`
   - [ ] **CRITICAL: Prevents 70% user abandonment at 6-12 months**
-  - [ ] Implement 4-tier lifecycle: ACTIVE (0-7d), RECENT (7-30d), ARCHIVED (30-180d), STALE (180d+)
-  - [ ] Automatic transitions based on age, access frequency, project activity
-  - [ ] Search weighting by lifecycle state (1.0x → 0.7x → 0.3x → 0.1x)
-  - [ ] Health monitoring dashboard with quality metrics
-  - [ ] Auto-actions: weekly archival, monthly stale deletion
-  - [ ] Health scoring: overall health, noise ratio, duplicate rate, contradiction rate
-  - [ ] Weekly automated health reports with recommendations
+  - [x] **Phase 1:** Implement 4-tier lifecycle: ACTIVE (0-7d), RECENT (7-30d), ARCHIVED (30-180d), STALE (180d+)
+  - [x] **Phase 1:** Automatic transitions based on age, access frequency, context level
+  - [x] **Phase 1:** Search weighting by lifecycle state (1.0x → 0.7x → 0.3x → 0.1x)
+  - [x] **Phase 1:** LifecycleManager with 26 comprehensive tests passing
+  - [ ] **Phase 2:** Health monitoring dashboard with quality metrics (CLI command started)
+  - [ ] **Phase 2:** Auto-actions: weekly archival, monthly stale deletion (background jobs)
+  - [ ] **Phase 2:** Health scoring: overall health, noise ratio, duplicate rate, contradiction rate
+  - [ ] **Phase 2:** Weekly automated health reports with recommendations
   - **Impact:** Prevents degradation, 30-50% noise reduction, maintains quality long-term
   - **Complexity:** High (lifecycle enum, background jobs, health algorithms, dashboard UI)
   - **Runtime Cost:** +50-100MB storage, +2-5ms per search
   - **Strategic Priority:** P0 - Foundation for sustainable long-term use
+  - **Status:** Phase 1 complete (lifecycle states, transitions, weighting), Phase 2 pending (dashboard, background jobs)
 
 - [ ] **FEAT-033**: Smart Project Context Detection (~1-2 weeks) 🔥🔥🔥🔥
   - [ ] **Planning doc:** `planning_docs/STRATEGIC-001_long_term_product_evolution.md`

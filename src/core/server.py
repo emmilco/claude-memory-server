@@ -881,6 +881,24 @@ class MemoryRAGServer:
             "matched_keywords": matched_keywords,
         }
 
+    @staticmethod
+    def _get_confidence_label(score: float) -> str:
+        """
+        Convert a relevance score to a human-readable confidence label.
+
+        Args:
+            score: Relevance score between 0.0 and 1.0
+
+        Returns:
+            Confidence label: "excellent", "good", or "weak"
+        """
+        if score > 0.8:
+            return "excellent"
+        elif score >= 0.6:
+            return "good"
+        else:
+            return "weak"
+
     async def search_code(
         self,
         query: str,
@@ -1033,6 +1051,128 @@ class MemoryRAGServer:
         except Exception as e:
             logger.error(f"Failed to search code: {e}")
             raise RetrievalError(f"Failed to search code: {e}")
+
+    async def find_similar_code(
+        self,
+        code_snippet: str,
+        project_name: Optional[str] = None,
+        limit: int = 10,
+        file_pattern: Optional[str] = None,
+        language: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Find similar code snippets in the indexed codebase.
+
+        This generates an embedding for the provided code snippet and searches
+        for similar code in the index. Great for finding duplicates, similar
+        implementations, or code patterns.
+
+        Args:
+            code_snippet: The code snippet to find similar matches for
+            project_name: Optional project name filter (uses current project if not specified)
+            limit: Maximum number of results (default 10)
+            file_pattern: Optional file path pattern filter (e.g., "*/auth/*")
+            language: Optional language filter (e.g., "python", "javascript")
+
+        Returns:
+            Dict with similar code results including file paths, line numbers, and similarity scores
+        """
+        try:
+            import time
+            start_time = time.time()
+
+            # Validate input
+            if not code_snippet or not code_snippet.strip():
+                raise ValidationError("code_snippet cannot be empty")
+
+            # Use current project if not specified
+            filter_project_name = project_name or self.project_name
+
+            # Generate embedding for the code snippet
+            code_embedding = await self._get_embedding(code_snippet)
+
+            # Build filters for code search
+            filters = SearchFilters(
+                scope=MemoryScope.PROJECT,
+                project_name=filter_project_name,
+                category=MemoryCategory.CONTEXT,
+                context_level=ContextLevel.PROJECT_CONTEXT,
+                tags=["code"],  # Code semantic units are tagged with "code"
+            )
+
+            # Retrieve similar code from store
+            results = await self.store.retrieve(
+                query_embedding=code_embedding,
+                filters=filters,
+                limit=limit,
+            )
+
+            # Format results for code search
+            code_results = []
+            for memory, score in results:
+                # Extract code-specific metadata (stored in nested metadata dict during indexing)
+                metadata = memory.metadata or {}
+                nested_metadata = metadata if isinstance(metadata, dict) else {}
+
+                # Apply post-filter for file pattern and language if specified
+                file_path = nested_metadata.get("file_path", "")
+                language_val = nested_metadata.get("language", "")
+
+                if file_pattern and file_pattern not in file_path:
+                    continue
+                if language and language_val.lower() != language.lower():
+                    continue
+
+                code_results.append({
+                    "file_path": file_path or "(no path)",
+                    "start_line": nested_metadata.get("start_line", 0),
+                    "end_line": nested_metadata.get("end_line", 0),
+                    "unit_name": nested_metadata.get("unit_name") or nested_metadata.get("name", "(unnamed)"),
+                    "unit_type": nested_metadata.get("unit_type", "(unknown type)"),
+                    "signature": nested_metadata.get("signature", ""),
+                    "language": language_val or "(unknown language)",
+                    "code": memory.content,
+                    "similarity_score": min(max(score, 0.0), 1.0),
+                })
+
+            query_time_ms = (time.time() - start_time) * 1000
+
+            logger.info(
+                f"Find similar code: found {len(code_results)} results "
+                f"in {query_time_ms:.2f}ms (project: {filter_project_name})"
+            )
+
+            # Provide interpretation
+            if not code_results:
+                interpretation = "No similar code found in the indexed codebase"
+                suggestions = [
+                    f"Verify that code has been indexed for project '{filter_project_name or 'current'}'",
+                    "Try indexing more code: python -m src.cli index ./your-project",
+                    "The code snippet might be unique or use different patterns",
+                ]
+            elif code_results[0]["similarity_score"] >= 0.95:
+                interpretation = f"Found {len(code_results)} very similar code snippets (likely duplicates or near-duplicates)"
+                suggestions = ["Consider consolidating duplicate code", "These snippets may share significant logic"]
+            elif code_results[0]["similarity_score"] >= 0.80:
+                interpretation = f"Found {len(code_results)} similar code patterns"
+                suggestions = ["These snippets implement similar functionality", "Good candidates for refactoring or code reuse"]
+            else:
+                interpretation = f"Found {len(code_results)} somewhat related code snippets"
+                suggestions = ["These snippets may share some concepts but differ significantly", "Consider if these patterns are applicable to your use case"]
+
+            return {
+                "results": code_results,
+                "total_found": len(code_results),
+                "code_snippet_length": len(code_snippet),
+                "project_name": filter_project_name,
+                "query_time_ms": query_time_ms,
+                "interpretation": interpretation,
+                "suggestions": suggestions,
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to find similar code: {e}")
+            raise RetrievalError(f"Failed to find similar code: {e}")
 
     async def index_codebase(
         self,
