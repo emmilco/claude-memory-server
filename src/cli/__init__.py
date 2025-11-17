@@ -18,6 +18,8 @@ from src.cli.session_summary_command import run_session_summary_command
 from src.cli.health_monitor_command import HealthMonitorCommand
 from src.cli.verify_command import verify_command
 from src.cli.consolidate_command import consolidate_command
+from src.cli.repository_command import add_repository_parser, RepositoryCommand
+from src.cli.workspace_command import add_workspace_parser, WorkspaceCommand
 
 
 def setup_logging(level: str = "INFO"):
@@ -382,6 +384,12 @@ def create_parser() -> argparse.ArgumentParser:
         help="Filter by category (preference, fact, event, workflow, context)",
     )
 
+    # Repository command
+    add_repository_parser(subparsers)
+
+    # Workspace command
+    add_workspace_parser(subparsers)
+
     return parser
 
 
@@ -449,6 +457,12 @@ async def main_async(args):
             dry_run=dry_run,
             category=args.category,
         )
+    elif args.command in ("repository", "repo"):
+        cmd = RepositoryCommand()
+        await cmd.run(args)
+    elif args.command in ("workspace", "ws"):
+        cmd = WorkspaceCommand()
+        await cmd.run(args)
     else:
         print("No command specified. Use --help for usage information.")
         sys.exit(1)

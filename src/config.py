@@ -100,6 +100,12 @@ class ServerConfig(BaseSettings):
     cross_project_default_mode: str = "current"  # "current" or "all"
     cross_project_opt_in_file: str = "~/.claude-rag/cross_project_consent.json"
 
+    # Multi-repository support (FEAT-017)
+    enable_multi_repository: bool = True  # Enable multi-repository features
+    multi_repo_max_parallel: int = 3  # Max concurrent repository operations
+    repository_storage_path: str = "~/.claude-rag/repositories.json"
+    workspace_storage_path: str = "~/.claude-rag/workspaces.json"
+
     model_config = SettingsConfigDict(
         env_prefix="CLAUDE_RAG_",
         env_file=".env",
