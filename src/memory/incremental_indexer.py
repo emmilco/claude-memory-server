@@ -68,6 +68,7 @@ except ImportError:
             ".java": "java",
             ".go": "go",
             ".rs": "rust",
+            ".sql": "sql",
         }
         language = language_map.get(ext, "unknown")
 
@@ -197,7 +198,7 @@ class IncrementalIndexer(BaseCodeIndexer):
     """
 
     # Supported file extensions
-    SUPPORTED_EXTENSIONS = {".py", ".js", ".jsx", ".ts", ".tsx", ".java", ".go", ".rs"}
+    SUPPORTED_EXTENSIONS = {".py", ".js", ".jsx", ".ts", ".tsx", ".java", ".go", ".rs", ".sql"}
 
     def __init__(
         self,
