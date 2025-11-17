@@ -168,10 +168,15 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Impact:** Enables multi-hop queries, architectural understanding
   - **Completed:** 2025-11-17
 
-- [ ] **FEAT-023**: Hybrid search (BM25 + vector)
-  - [ ] Combine keyword and semantic search
-  - [ ] Better recall for specific terms
-  - **Impact:** Improved search accuracy for technical terms
+- [x] **FEAT-023**: Hybrid search (BM25 + vector) ✅ **COMPLETE**
+  - [x] Implemented BM25 keyword search algorithm (src/search/bm25.py)
+  - [x] Created hybrid search module with 3 fusion strategies (src/search/hybrid_search.py)
+  - [x] Integrated into server.py search_code() with search_mode parameter
+  - [x] Added configuration options (alpha, fusion_method, BM25 parameters)
+  - [x] Comprehensive tests (61 tests: unit + integration)
+  - **Fusion Methods:** weighted, RRF (Reciprocal Rank Fusion), cascade
+  - **Impact:** Improved search accuracy for technical terms, exact matches
+  - **Completed:** 2025-11-17
 
 - [ ] **FEAT-024**: Query expansion
   - [ ] Expand queries with synonyms

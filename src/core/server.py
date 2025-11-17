@@ -35,6 +35,7 @@ from src.memory.usage_tracker import UsageTracker
 from src.memory.pruner import MemoryPruner
 from src.memory.conversation_tracker import ConversationTracker
 from src.memory.query_expander import QueryExpander
+from src.search.hybrid_search import HybridSearcher, FusionMethod
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +80,7 @@ class MemoryRAGServer:
         self.pruner: Optional[MemoryPruner] = None
         self.conversation_tracker: Optional[ConversationTracker] = None
         self.query_expander: Optional[QueryExpander] = None
+        self.hybrid_searcher: Optional[HybridSearcher] = None
         self.scheduler = None  # APScheduler instance
 
         # Statistics
@@ -182,6 +184,31 @@ class MemoryRAGServer:
                 self.conversation_tracker = None
                 self.query_expander = None
                 logger.info("Conversation tracking disabled")
+
+            # Initialize hybrid searcher if enabled
+            if self.config.enable_hybrid_search:
+                fusion_method_map = {
+                    "weighted": FusionMethod.WEIGHTED,
+                    "rrf": FusionMethod.RRF,
+                    "cascade": FusionMethod.CASCADE,
+                }
+                fusion_method = fusion_method_map.get(
+                    self.config.hybrid_fusion_method.lower(),
+                    FusionMethod.WEIGHTED
+                )
+                self.hybrid_searcher = HybridSearcher(
+                    alpha=self.config.hybrid_search_alpha,
+                    fusion_method=fusion_method,
+                    bm25_k1=self.config.bm25_k1,
+                    bm25_b=self.config.bm25_b,
+                )
+                logger.info(
+                    f"Hybrid search enabled (method: {self.config.hybrid_fusion_method}, "
+                    f"alpha: {self.config.hybrid_search_alpha})"
+                )
+            else:
+                self.hybrid_searcher = None
+                logger.info("Hybrid search disabled")
 
             logger.info("Server initialized successfully")
 
@@ -861,9 +888,10 @@ class MemoryRAGServer:
         limit: int = 5,
         file_pattern: Optional[str] = None,
         language: Optional[str] = None,
+        search_mode: str = "semantic",
     ) -> Dict[str, Any]:
         """
-        Search indexed code semantically.
+        Search indexed code semantically, with keyword search, or hybrid.
 
         This searches through indexed code semantic units (functions, classes)
         and returns relevant code snippets with file locations.
@@ -874,6 +902,7 @@ class MemoryRAGServer:
             limit: Maximum number of results (default 5)
             file_pattern: Optional file path pattern filter (e.g., "*/auth/*")
             language: Optional language filter (e.g., "python", "javascript")
+            search_mode: Search mode - "semantic" (default), "keyword", or "hybrid"
 
         Returns:
             Dict with code search results including file paths, line numbers, and code snippets
@@ -881,6 +910,10 @@ class MemoryRAGServer:
         try:
             import time
             start_time = time.time()
+
+            # Validate search mode
+            if search_mode not in ["semantic", "keyword", "hybrid"]:
+                raise ValidationError(f"Invalid search_mode: {search_mode}. Must be 'semantic', 'keyword', or 'hybrid'")
 
             # Use current project if not specified
             filter_project_name = project_name or self.project_name
@@ -897,12 +930,48 @@ class MemoryRAGServer:
                 tags=["code"],  # Code semantic units are tagged with "code"
             )
 
-            # Retrieve from store
-            results = await self.store.retrieve(
-                query_embedding=query_embedding,
-                filters=filters,
-                limit=limit,
-            )
+            # Retrieve from store based on search mode
+            if search_mode == "hybrid" and self.hybrid_searcher:
+                # For hybrid search, retrieve more results to have a larger pool for BM25
+                retrieval_limit = max(limit * 3, 50)  # Get 3x more for hybrid ranking
+
+                vector_results = await self.store.retrieve(
+                    query_embedding=query_embedding,
+                    filters=filters,
+                    limit=retrieval_limit,
+                )
+
+                # Build BM25 index from retrieved documents
+                documents = [memory.content for memory, _ in vector_results]
+                memory_units = [memory for memory, _ in vector_results]
+
+                # Index documents for BM25 search
+                self.hybrid_searcher.index_documents(documents, memory_units)
+
+                # Perform hybrid search
+                hybrid_results = self.hybrid_searcher.hybrid_search(
+                    query=query,
+                    vector_results=vector_results,
+                    limit=limit,
+                )
+
+                # Convert to standard (memory, score) format
+                results = [(hr.memory, hr.total_score) for hr in hybrid_results]
+
+                logger.info(
+                    f"Hybrid search used (method: {self.config.hybrid_fusion_method}, "
+                    f"alpha: {self.config.hybrid_search_alpha})"
+                )
+            else:
+                # Standard semantic search (or fallback if hybrid not available)
+                if search_mode == "hybrid":
+                    logger.warning("Hybrid search requested but not enabled, falling back to semantic search")
+
+                results = await self.store.retrieve(
+                    query_embedding=query_embedding,
+                    filters=filters,
+                    limit=limit,
+                )
 
             # Format results for code search
             code_results = []
@@ -942,11 +1011,17 @@ class MemoryRAGServer:
             # Add quality indicators and suggestions
             quality_info = self._analyze_search_quality(code_results, query, filter_project_name)
 
+            # Determine actual search mode used
+            actual_search_mode = search_mode
+            if search_mode == "hybrid" and not self.hybrid_searcher:
+                actual_search_mode = "semantic"  # Fallback
+
             return {
                 "results": code_results,
                 "total_found": len(code_results),
                 "query": query,
                 "project_name": filter_project_name,
+                "search_mode": actual_search_mode,
                 "query_time_ms": query_time_ms,
                 "quality": quality_info["quality"],
                 "confidence": quality_info["confidence"],
@@ -1344,6 +1419,377 @@ class MemoryRAGServer:
                 "version": "2.0.0",
                 "error": str(e),
             }
+
+    async def search_git_history(
+        self,
+        query: str,
+        project_name: Optional[str] = None,
+        author: Optional[str] = None,
+        since: Optional[str] = None,
+        until: Optional[str] = None,
+        file_path: Optional[str] = None,
+        limit: int = 10,
+    ) -> Dict[str, Any]:
+        """
+        Search git commit history semantically.
+
+        Searches both commit messages and diff content (if indexed) for relevant
+        code changes. Useful for queries like:
+        - "commits related to authentication"
+        - "bug fixes from last week"
+        - "changes to login functionality"
+
+        Args:
+            query: Search query (natural language)
+            project_name: Filter by project
+            author: Filter by author email
+            since: Date filter (e.g., "2024-01-01", "last week")
+            until: Date filter (e.g., "2024-12-31", "yesterday")
+            file_path: Filter by file path pattern
+            limit: Maximum results (default 10)
+
+        Returns:
+            Dict with matching commits
+        """
+        try:
+            from datetime import datetime, timedelta, UTC
+            import re
+
+            logger.info(f"Searching git history: '{query}' (project: {project_name})")
+
+            # Parse date filters
+            since_dt = None
+            until_dt = None
+
+            if since:
+                since_dt = self._parse_date_filter(since)
+            if until:
+                until_dt = self._parse_date_filter(until)
+
+            # Search commits in SQLite store
+            commits = await self.store.search_git_commits(
+                query=query,
+                repository_path=None,  # TODO: Map project_name to repo_path
+                author=author,
+                since=since_dt,
+                until=until_dt,
+                limit=limit * 2,  # Fetch more for filtering
+            )
+
+            # Filter by file path if specified
+            if file_path and commits:
+                filtered_commits = []
+                for commit in commits:
+                    # Get file changes for this commit
+                    file_changes = await self.store.get_commits_by_file(
+                        file_path, limit=100
+                    )
+                    if any(fc["commit_hash"] == commit["commit_hash"] for fc in file_changes):
+                        filtered_commits.append(commit)
+                        if len(filtered_commits) >= limit:
+                            break
+                commits = filtered_commits
+            else:
+                commits = commits[:limit]
+
+            # Format results
+            results = []
+            for commit in commits:
+                results.append({
+                    "commit_hash": commit["commit_hash"],
+                    "author": f"{commit['author_name']} <{commit['author_email']}>",
+                    "date": commit["author_date"],
+                    "message": commit["message"],
+                    "branches": commit.get("branch_names", []),
+                    "tags": commit.get("tags", []),
+                    "stats": commit.get("stats", {}),
+                })
+
+            logger.info(f"Found {len(results)} matching commits")
+
+            return {
+                "status": "success",
+                "query": query,
+                "results": results,
+                "count": len(results),
+                "filters": {
+                    "project": project_name,
+                    "author": author,
+                    "since": since,
+                    "until": until,
+                    "file_path": file_path,
+                },
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to search git history: {e}")
+            raise RetrievalError(f"Failed to search git history: {e}")
+
+    async def index_git_history(
+        self,
+        repository_path: str,
+        project_name: str,
+        num_commits: Optional[int] = None,
+        include_diffs: Optional[bool] = None,
+    ) -> Dict[str, Any]:
+        """
+        Index git repository history for semantic search.
+
+        This will extract and index commit metadata, messages, and optionally
+        diffs for semantic search over code changes.
+
+        Args:
+            repository_path: Path to git repository
+            project_name: Project name for organization
+            num_commits: Number of commits to index (default from config)
+            include_diffs: Whether to index diff content (default: auto-detect)
+
+        Returns:
+            Dict with indexing statistics
+        """
+        if self.config.read_only_mode:
+            raise ReadOnlyError("Cannot index git history in read-only mode")
+
+        try:
+            from src.memory.git_indexer import GitIndexer
+            from pathlib import Path
+            import time
+
+            start_time = time.time()
+            repo_path = Path(repository_path).resolve()
+
+            if not repo_path.exists():
+                raise ValueError(f"Repository does not exist: {repository_path}")
+
+            logger.info(
+                f"Indexing git history: {repo_path} "
+                f"(project: {project_name}, commits: {num_commits or 'config default'})"
+            )
+
+            # Create git indexer
+            git_indexer = GitIndexer(self.config, self.embedding_generator)
+
+            # Index repository
+            commits_data, file_changes_data = await git_indexer.index_repository(
+                str(repo_path),
+                project_name,
+                num_commits=num_commits,
+                include_diffs=include_diffs,
+            )
+
+            # Store in database
+            # Convert to dicts
+            commits_dicts = [
+                {
+                    "commit_hash": c.commit_hash,
+                    "repository_path": c.repository_path,
+                    "author_name": c.author_name,
+                    "author_email": c.author_email,
+                    "author_date": c.author_date,
+                    "committer_name": c.committer_name,
+                    "committer_date": c.committer_date,
+                    "message": c.message,
+                    "message_embedding": c.message_embedding,
+                    "branch_names": c.branch_names,
+                    "tags": c.tags,
+                    "parent_hashes": c.parent_hashes,
+                    "stats": c.stats,
+                }
+                for c in commits_data
+            ]
+
+            file_changes_dicts = [
+                {
+                    "id": f.id,
+                    "commit_hash": f.commit_hash,
+                    "file_path": f.file_path,
+                    "change_type": f.change_type,
+                    "lines_added": f.lines_added,
+                    "lines_deleted": f.lines_deleted,
+                    "diff_content": f.diff_content,
+                    "diff_embedding": f.diff_embedding,
+                }
+                for f in file_changes_data
+            ]
+
+            # Store commits
+            commits_stored = await self.store.store_git_commits(commits_dicts)
+
+            # Store file changes
+            changes_stored = 0
+            if file_changes_dicts:
+                changes_stored = await self.store.store_git_file_changes(file_changes_dicts)
+
+            total_time_s = time.time() - start_time
+            stats = git_indexer.get_stats()
+
+            logger.info(
+                f"Indexed {commits_stored} commits and {changes_stored} file changes "
+                f"in {total_time_s:.2f}s"
+            )
+
+            return {
+                "status": "success",
+                "project_name": project_name,
+                "repository_path": str(repo_path),
+                "commits_indexed": stats["commits_indexed"],
+                "commits_stored": commits_stored,
+                "file_changes_indexed": stats["file_changes_indexed"],
+                "file_changes_stored": changes_stored,
+                "diffs_embedded": stats["diffs_embedded"],
+                "errors": stats["errors"],
+                "indexing_time_seconds": round(total_time_s, 2),
+            }
+
+        except ImportError as e:
+            raise ValidationError(
+                "GitPython is required for git indexing. "
+                "Install with: pip install GitPython>=3.1.40"
+            )
+        except Exception as e:
+            logger.error(f"Failed to index git history: {e}")
+            raise StorageError(f"Failed to index git history: {e}")
+
+    async def show_function_evolution(
+        self,
+        file_path: str,
+        function_name: Optional[str] = None,
+        limit: int = 10,
+    ) -> Dict[str, Any]:
+        """
+        Show the evolution of a file or function over time.
+
+        Returns commits that modified the specified file, optionally filtered
+        to commits that likely affected a specific function.
+
+        Args:
+            file_path: File path to track
+            function_name: Optional function name to focus on
+            limit: Maximum commits to return (default 10)
+
+        Returns:
+            Dict with commit history
+        """
+        try:
+            logger.info(f"Showing evolution: {file_path}" + (f" ({function_name})" if function_name else ""))
+
+            # Get commits that modified this file
+            commits = await self.store.get_commits_by_file(file_path, limit=limit * 2)
+
+            # If function name specified, try to filter to relevant commits
+            if function_name and commits:
+                filtered = []
+                for commit in commits:
+                    # Check if commit message or diff mentions the function
+                    message_lower = commit.get("message", "").lower()
+                    function_lower = function_name.lower()
+
+                    if function_lower in message_lower:
+                        filtered.append(commit)
+                        continue
+
+                    # TODO: Could also check diff content if available
+                    # For now, if message doesn't mention it, include it anyway
+                    # since we want to show all changes to the file
+                    filtered.append(commit)
+
+                commits = filtered[:limit]
+            else:
+                commits = commits[:limit]
+
+            # Format results
+            results = []
+            for commit in commits:
+                result = {
+                    "commit_hash": commit["commit_hash"],
+                    "author": f"{commit['author_name']} <{commit['author_email']}>",
+                    "date": commit["author_date"],
+                    "message": commit["message"],
+                    "change_type": commit.get("change_type", "modified"),
+                    "lines_added": commit.get("lines_added", 0),
+                    "lines_deleted": commit.get("lines_deleted", 0),
+                }
+
+                # Add branches and tags if available
+                if "branch_names" in commit:
+                    result["branches"] = commit["branch_names"]
+                if "tags" in commit:
+                    result["tags"] = commit["tags"]
+
+                results.append(result)
+
+            logger.info(f"Found {len(results)} commits modifying {file_path}")
+
+            return {
+                "status": "success",
+                "file_path": file_path,
+                "function_name": function_name,
+                "commits": results,
+                "count": len(results),
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to show function evolution: {e}")
+            raise RetrievalError(f"Failed to show function evolution: {e}")
+
+    def _parse_date_filter(self, date_str: str) -> datetime:
+        """
+        Parse date filter string to datetime.
+
+        Supports:
+        - ISO format: "2024-01-01"
+        - Relative: "last week", "yesterday", "last month"
+
+        Args:
+            date_str: Date filter string
+
+        Returns:
+            Parsed datetime
+        """
+        from datetime import datetime, timedelta, UTC
+        import re
+
+        date_str = date_str.lower().strip()
+
+        # Relative dates
+        now = datetime.now(UTC)
+
+        if date_str in ["today", "now"]:
+            return now
+        elif date_str == "yesterday":
+            return now - timedelta(days=1)
+        elif date_str == "last week" or date_str == "1 week ago":
+            return now - timedelta(weeks=1)
+        elif date_str == "last month" or date_str == "1 month ago":
+            return now - timedelta(days=30)
+        elif date_str == "last year" or date_str == "1 year ago":
+            return now - timedelta(days=365)
+
+        # Pattern: "N days/weeks/months ago"
+        match = re.match(r"(\d+)\s+(day|week|month|year)s?\s+ago", date_str)
+        if match:
+            num = int(match.group(1))
+            unit = match.group(2)
+            if unit == "day":
+                return now - timedelta(days=num)
+            elif unit == "week":
+                return now - timedelta(weeks=num)
+            elif unit == "month":
+                return now - timedelta(days=num * 30)
+            elif unit == "year":
+                return now - timedelta(days=num * 365)
+
+        # ISO format
+        try:
+            return datetime.fromisoformat(date_str).replace(tzinfo=UTC)
+        except ValueError:
+            pass
+
+        # Default: treat as ISO date only
+        try:
+            return datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=UTC)
+        except ValueError:
+            raise ValidationError(f"Invalid date format: {date_str}")
 
     async def _get_embedding(self, text: str) -> List[float]:
         """

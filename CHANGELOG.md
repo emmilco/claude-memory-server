@@ -9,13 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - 2025-11-17
 
-- **FEAT-023: Hybrid Search (BM25 + Vector) - PARTIAL** - Keyword and semantic search combination
+- **Pre-commit Hook: Documentation Sync Enforcement**
+  - Created `.git/hooks/pre-commit` - Validates CHANGELOG.md updates before commits
+  - Blocks commits without changelog entries with helpful message
+  - Prompts review of CLAUDE.md, CHANGELOG.md, and TODO.md
+  - Provides bypass option via `--no-verify` for verified cases
+  - Ensures documentation stays synchronized with code changes
+
+### Added - 2025-11-17
+
+- **FEAT-023: Hybrid Search (BM25 + Vector) ✅ COMPLETE** - Keyword and semantic search combination
   - Created `src/search/bm25.py` - BM25 ranking algorithm implementation (282 lines)
+  - Created `src/search/bm25.py::BM25Plus` - BM25+ variant for better long document handling
   - Created `src/search/hybrid_search.py` - Hybrid search with 3 fusion methods (385 lines)
+  - Integrated into `src/core/server.py::search_code()` - Added search_mode parameter
   - Added configuration options to `src/config.py` for hybrid search tuning
-  - Supports weighted combination, RRF, and cascade fusion strategies
-  - **Status:** Core implementation complete, integration and testing pending
-  - **Remaining:** Integrate into search_code(), write tests, documentation
+  - Supports 3 fusion strategies: weighted (alpha-based), RRF (rank fusion), cascade (BM25-first)
+  - Created comprehensive test suite (61 tests total):
+    - `tests/unit/test_bm25.py` - 30 tests for BM25 algorithm
+    - `tests/unit/test_hybrid_search.py` - 31 tests for fusion strategies
+    - `tests/integration/test_hybrid_search_integration.py` - End-to-end tests
+  - **Configuration:** enable_hybrid_search, hybrid_search_alpha (0-1), hybrid_fusion_method
+  - **Usage:** search_code(query, search_mode="hybrid") for combined keyword+semantic search
+  - **Impact:** Better recall for technical terms, exact matches, and rare keywords
 
 - **FEAT-031: Git-Aware Semantic Search (Phase 1)** - Index and search git commit history
   - Created `src/memory/git_indexer.py` - Extract and index git commits with GitPython
