@@ -664,22 +664,27 @@ class MemoryRAGServer:
             # Format results for code search
             code_results = []
             for memory, score in results:
+                # Extract code-specific metadata (stored in nested metadata dict during indexing)
                 metadata = memory.metadata or {}
+                nested_metadata = metadata if isinstance(metadata, dict) else {}
 
                 # Apply post-filter for file pattern and language if specified
-                if file_pattern and file_pattern not in metadata.get("file_path", ""):
+                file_path = nested_metadata.get("file_path", "")
+                language_val = nested_metadata.get("language", "")
+
+                if file_pattern and file_pattern not in file_path:
                     continue
-                if language and metadata.get("language", "").lower() != language.lower():
+                if language and language_val.lower() != language.lower():
                     continue
 
                 code_results.append({
-                    "file_path": metadata.get("file_path", "unknown"),
-                    "start_line": metadata.get("start_line", 0),
-                    "end_line": metadata.get("end_line", 0),
-                    "unit_name": metadata.get("unit_name", "unknown"),
-                    "unit_type": metadata.get("unit_type", "unknown"),
-                    "signature": metadata.get("signature", ""),
-                    "language": metadata.get("language", "unknown"),
+                    "file_path": file_path or "(no path)",
+                    "start_line": nested_metadata.get("start_line", 0),
+                    "end_line": nested_metadata.get("end_line", 0),
+                    "unit_name": nested_metadata.get("unit_name") or nested_metadata.get("name", "(unnamed)"),
+                    "unit_type": nested_metadata.get("unit_type", "(unknown type)"),
+                    "signature": nested_metadata.get("signature", ""),
+                    "language": language_val or "(unknown language)",
                     "code": memory.content,
                     "relevance_score": min(max(score, 0.0), 1.0),
                 })
