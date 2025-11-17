@@ -356,6 +356,7 @@ class EmbeddingGenerator:
         """Fallback cleanup if close() not called."""
         try:
             self.executor.shutdown(wait=False)
-        except:
-            pass
+        except Exception as e:
+            # Log but don't raise in __del__
+            logger.debug(f"Error during EmbeddingGenerator cleanup: {e}")
 

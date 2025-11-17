@@ -5,6 +5,7 @@ Provides automated fixes for common degradation problems with
 dry-run support and history tracking.
 """
 
+import logging
 import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timedelta, UTC
@@ -13,6 +14,8 @@ from enum import Enum
 
 from src.store.base import MemoryStore
 from src.core.models import LifecycleState
+
+logger = logging.getLogger(__name__)
 
 
 class RemediationTrigger(str, Enum):
@@ -392,7 +395,8 @@ class RemediationEngine:
             # This would query the store for STALE lifecycle state
             # For now, return placeholder
             return 0
-        except Exception:
+        except Exception as e:
+            logger.error(f"Failed to count stale memories: {e}", exc_info=True)
             return 0
 
     def _count_old_sessions(self) -> int:
@@ -404,7 +408,8 @@ class RemediationEngine:
             # This would query the store for old session state
             # For now, return placeholder
             return 0
-        except Exception:
+        except Exception as e:
+            logger.error(f"Failed to count old session memories: {e}", exc_info=True)
             return 0
 
     def _log_remediation(

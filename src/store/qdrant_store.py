@@ -1,7 +1,8 @@
 """Qdrant vector store implementation."""
 
 import logging
-from typing import List, Tuple, Optional, Dict, Any
+from enum import Enum
+from typing import List, Tuple, Optional, Dict, Any, Union
 from uuid import uuid4
 from datetime import datetime, UTC
 
@@ -391,7 +392,7 @@ class QdrantMemoryStore(MemoryStore):
     def _build_field_condition(
         self,
         key: str,
-        value: Any,
+        value: Optional[Union[str, int, float, Enum]],
         use_range: bool = False,
     ) -> Optional[FieldCondition]:
         """

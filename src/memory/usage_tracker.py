@@ -3,11 +3,14 @@
 import asyncio
 import logging
 import math
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, TYPE_CHECKING
 from datetime import datetime, UTC, timedelta
 from collections import defaultdict
 
 from src.config import ServerConfig
+
+if TYPE_CHECKING:
+    from src.store.base import MemoryStore
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +57,7 @@ class UsageTracker:
     to minimize I/O overhead.
     """
 
-    def __init__(self, config: ServerConfig, storage_backend: Any):
+    def __init__(self, config: ServerConfig, storage_backend: "MemoryStore"):
         """
         Initialize usage tracker.
 

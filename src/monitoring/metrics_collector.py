@@ -5,6 +5,7 @@ Collects performance, quality, database health, and usage metrics
 from various sources and stores time-series data for trend analysis.
 """
 
+import logging
 import sqlite3
 from dataclasses import dataclass, asdict
 from datetime import datetime, timedelta, UTC
@@ -13,6 +14,8 @@ from pathlib import Path
 
 from src.core.models import ContextLevel, LifecycleState
 from src.store.base import MemoryStore
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -233,7 +236,8 @@ class MetricsCollector:
             if hasattr(self.store, "count"):
                 return await self.store.count()
             return 0
-        except Exception:
+        except Exception as e:
+            logger.error(f"Failed to count total memories: {e}", exc_info=True)
             return 0
 
     async def _count_memories_by_lifecycle(self, state: LifecycleState) -> int:
@@ -245,7 +249,8 @@ class MetricsCollector:
             if hasattr(self.store, "count_by_lifecycle"):
                 return await self.store.count_by_lifecycle(state)
             return 0
-        except Exception:
+        except Exception as e:
+            logger.error(f"Failed to count memories by lifecycle state {state}: {e}", exc_info=True)
             return 0
 
     async def _get_all_projects(self) -> List[Dict[str, Any]]:
@@ -256,7 +261,8 @@ class MetricsCollector:
             if hasattr(self.store, "get_all_projects"):
                 return await self.store.get_all_projects()
             return []
-        except Exception:
+        except Exception as e:
+            logger.error(f"Failed to get all projects: {e}", exc_info=True)
             return []
 
     async def _calculate_noise_ratio(self) -> float:
@@ -278,7 +284,8 @@ class MetricsCollector:
             # Noise = stale memories / total
             # This is a simplified calculation; could be enhanced
             return float(stale) / float(total)
-        except Exception:
+        except Exception as e:
+            logger.error(f"Failed to calculate noise ratio: {e}", exc_info=True)
             return 0.0
 
     async def _calculate_duplicate_rate(self) -> float:
@@ -425,7 +432,8 @@ class MetricsCollector:
                 size_bytes = db_path.stat().st_size
                 return size_bytes / (1024 * 1024)
             return 0.0
-        except Exception:
+        except Exception as e:
+            logger.error(f"Failed to get database size: {e}", exc_info=True)
             return 0.0
 
     def log_query(

@@ -197,8 +197,8 @@ class StatusCommand:
         finally:
             try:
                 await server.close()
-            except:
-                pass
+            except Exception as e:
+                logger.debug(f"Error closing server during file watcher status check: {e}")
 
     async def get_parser_info(self) -> Dict[str, Any]:
         """Get parser information."""
@@ -407,8 +407,8 @@ class StatusCommand:
                         last_activity = datetime.fromisoformat(project_info["last_activity"])
                         activity_str = self._format_relative_time(last_activity)
                         self.console.print(f"  Last Activity: {activity_str}")
-                    except:
-                        pass
+                    except Exception as e:
+                        logger.debug(f"Failed to format last activity time for project {project_info.get('name', 'unknown')}: {e}")
 
                 file_count = project_info.get("file_activity_count", 0)
                 self.console.print(f"  File Activity: {file_count} files accessed")

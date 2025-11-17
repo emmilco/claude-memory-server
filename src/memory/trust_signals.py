@@ -144,8 +144,9 @@ class TrustSignalGenerator:
                     r.get("relationship_type") == "contradicts"
                     for r in relationships
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Failed to check relationships for memory {memory.id}: {e}")
+                pass  # Assume no contradictions if we can't check
 
             # Get confidence level
             confidence_level = self.generate_confidence_explanation(trust_score)
@@ -172,8 +173,9 @@ class TrustSignalGenerator:
             try:
                 relationships = await self.store.get_relationships(memory.id)
                 related_count = len(relationships)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Failed to get relationship count for memory {memory.id}: {e}")
+                pass  # Assume 0 relationships if we can't check
 
             return TrustSignals(
                 why_shown=why_shown,
@@ -259,7 +261,8 @@ class TrustSignalGenerator:
                     for r in relationships
                 )
                 contradiction_score = 0.0 if has_contradictions else 0.1
-            except Exception:
+            except Exception as e:
+                logger.debug(f"Failed to check contradictions for memory {memory.id}: {e}")
                 contradiction_score = 0.05  # Neutral if we can't check
 
             # Calculate total

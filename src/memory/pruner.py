@@ -1,11 +1,14 @@
 """Memory pruning service for cleaning up stale memories."""
 
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, TYPE_CHECKING
 from datetime import datetime, UTC, timedelta
 
 from src.config import ServerConfig
 from src.core.models import ContextLevel
+
+if TYPE_CHECKING:
+    from src.store.base import MemoryStore
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +45,7 @@ class MemoryPruner:
     - Usage tracking cleanup
     """
 
-    def __init__(self, config: ServerConfig, storage_backend: Any):
+    def __init__(self, config: ServerConfig, storage_backend: "MemoryStore"):
         """
         Initialize memory pruner.
 
