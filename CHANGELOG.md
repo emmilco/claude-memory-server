@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - 2025-11-17
 
+- **UX-014: Explicit Project Switching** - Implemented project context management with manual switching and status display
+  - Added `switch_project(project_name)` MCP tool for explicit project switching
+  - Added `get_active_project()` MCP tool to retrieve current active project information
+  - Created `src/cli/project_command.py` with `switch` and `current` subcommands
+  - Enhanced status command to display active project information (name, path, branch, activity)
+  - Added ProjectContextDetector integration to MemoryRAGServer
+  - **Usage:** `python -m src.cli.project switch <name>` or `python -m src.cli.project current`
+  - **Impact:** Users can explicitly control which project context is active for memory operations
+
 - **WORKFLOW: Git worktree support for parallel agent development** - Configured repository to use git worktrees for concurrent feature development
   - Created `.worktrees/` directory for isolated feature branches
   - Added `.worktrees/` to `.gitignore` to prevent committing worktree directories
