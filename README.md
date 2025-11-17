@@ -65,7 +65,11 @@ Claude: [Searches semantically]
 ```
 
 **Supported Languages:**
+<<<<<<< HEAD
 - Python, JavaScript, TypeScript, Java, Go, Rust, C, C++, SQL
+=======
+- Python, JavaScript, TypeScript, Java, Go, Rust, C, C++, SQL, C#
+>>>>>>> origin/main
 - Configuration files: JSON, YAML, TOML
 
 **Performance:**
