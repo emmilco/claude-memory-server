@@ -78,11 +78,11 @@ except ImportError:
             ".go": "go",
             ".rs": "rust",
             ".c": "c",
-            ".h": "c",
             ".cpp": "cpp",
             ".cc": "cpp",
             ".cxx": "cpp",
             ".hpp": "cpp",
+            ".h": "cpp",
             ".hxx": "cpp",
             ".hh": "cpp",
             ".sql": "sql",
@@ -215,8 +215,7 @@ class IncrementalIndexer(BaseCodeIndexer):
     """
 
     # Supported file extensions
-    SUPPORTED_EXTENSIONS = {".py", ".js", ".jsx", ".ts", ".tsx", ".java", ".go", ".rs", ".c", ".h", ".cpp", ".cc", ".cxx", ".hpp", ".hxx", ".hh"}
-    SUPPORTED_EXTENSIONS = {".py", ".js", ".jsx", ".ts", ".tsx", ".java", ".go", ".rs", ".sql"}
+    SUPPORTED_EXTENSIONS = {".py", ".js", ".jsx", ".ts", ".tsx", ".java", ".go", ".rs", ".c", ".h", ".cpp", ".cc", ".cxx", ".hpp", ".hxx", ".hh", ".sql"}
 
     def __init__(
         self,

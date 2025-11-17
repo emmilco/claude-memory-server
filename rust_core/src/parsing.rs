@@ -27,8 +27,8 @@ impl SupportedLanguage {
             "java" => Some(SupportedLanguage::Java),
             "go" => Some(SupportedLanguage::Go),
             "rs" => Some(SupportedLanguage::Rust),
-            "c" | "h" => Some(SupportedLanguage::C),
-            "cpp" | "cc" | "cxx" | "hpp" | "hxx" | "hh" => Some(SupportedLanguage::Cpp),
+            "c" => Some(SupportedLanguage::C),
+            "cpp" | "cc" | "cxx" | "hpp" | "h" | "hxx" | "hh" => Some(SupportedLanguage::Cpp),
             "sql" => Some(SupportedLanguage::Sql),
             _ => None,
         }
@@ -105,6 +105,8 @@ impl SupportedLanguage {
                   declarator: (function_declarator
                     declarator: (_) @name)
                   body: (compound_statement) @body) @function
+                "#
+            }
             SupportedLanguage::Sql => {
                 // SQL functions and procedures
                 r#"
@@ -169,11 +171,16 @@ impl SupportedLanguage {
                 "#
             }
             SupportedLanguage::Cpp => {
-                // C++ has both classes and structs - query for classes
+                // C++ has both classes and structs - use alternation to capture both
                 r#"
-                (class_specifier
+                [(class_specifier
                   name: (type_identifier) @name
-                  body: (field_declaration_list) @body) @class
+                  body: (field_declaration_list) @body)
+                 (struct_specifier
+                  name: (type_identifier) @name
+                  body: (field_declaration_list) @body)] @class
+                "#
+            }
             SupportedLanguage::Sql => {
                 // SQL tables and views as "class" equivalents
                 r#"

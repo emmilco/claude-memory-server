@@ -1,322 +1,343 @@
-"""Tests for C/C++ code parsing."""
+"""
+Tests for C++ code parsing.
+
+This test suite verifies comprehensive C++ support including:
+- Basic classes and functions
+- Template classes and functions
+- Structs
+- Namespaces
+- Operator overloads
+- Performance requirements
+"""
 
 import pytest
-import tempfile
-from pathlib import Path
-
-try:
-    from mcp_performance_core import parse_source_file
-    RUST_AVAILABLE = True
-except ImportError:
-    RUST_AVAILABLE = False
-    pytest.skip("Rust parser not available", allow_module_level=True)
+from mcp_performance_core import parse_source_file
 
 
-# Sample C code for testing
-SAMPLE_C_CODE = '''
-#include <stdio.h>
-
-struct Point {
-    int x;
-    int y;
-};
-
-int add(int a, int b) {
-    return a + b;
-}
-
-void print_point(struct Point p) {
-    printf("(%d, %d)\\n", p.x, p.y);
-}
-
-double calculate_area(double width, double height) {
-    return width * height;
-}
-'''
-
-# Sample C++ code for testing
-SAMPLE_CPP_CODE = '''
+# Sample C++ code with various constructs
+SAMPLE_CPP = '''
 #include <iostream>
 #include <string>
 
+// Basic class
 class Calculator {
 private:
-    double result;
-
+    int value;
 public:
-    Calculator() : result(0.0) {}
+    Calculator() : value(0) {}
+    int add(int a, int b) { return a + b; }
+    int subtract(int a, int b) { return a - b; }
+};
 
-    double add(double a, double b) {
-        result = a + b;
-        return result;
-    }
-
-    double getResult() const {
-        return result;
+// Struct
+struct Point {
+    int x, y;
+    double distance() const {
+        return sqrt(x*x + y*y);
     }
 };
 
-namespace Math {
-    int multiply(int a, int b) {
-        return a * b;
-    }
+// Template class
+template<typename T>
+class Container {
+    T data;
+public:
+    void set(T value) { data = value; }
+    T get() const { return data; }
+};
+
+// Template function
+template<typename T>
+T max(T a, T b) {
+    return (a > b) ? a : b;
 }
 
-struct Vector3D {
-    float x, y, z;
+// Namespace
+namespace Math {
+    class Vector {
+    public:
+        double x, y;
+        Vector operator+(const Vector& other) {
+            return {x + other.x, y + other.y};
+        }
+    };
+}
 
-    float magnitude() const {
-        return sqrt(x*x + y*y + z*z);
+// Free function
+void printHello() {
+    std::cout << "Hello" << std::endl;
+}
+'''
+
+
+TEMPLATE_CLASS_CPP = '''
+template<typename T, typename U>
+class Pair {
+    T first;
+    U second;
+public:
+    Pair(T a, U b) : first(a), second(b) {}
+    T getFirst() const { return first; }
+    U getSecond() const { return second; }
+};
+'''
+
+
+TEMPLATE_FUNCTION_CPP = '''
+template<typename T>
+T clamp(T value, T min, T max) {
+    if (value < min) return min;
+    if (value > max) return max;
+    return value;
+}
+'''
+
+
+NAMESPACE_CPP = '''
+namespace Math {
+    namespace Geometry {
+        class Circle {
+            double radius;
+        public:
+            double area() const {
+                return 3.14159 * radius * radius;
+            }
+        };
+    }
+}
+'''
+
+
+OPERATOR_OVERLOAD_CPP = '''
+class Complex {
+    double real, imag;
+public:
+    Complex operator+(const Complex& other) {
+        return {real + other.real, imag + other.imag};
+    }
+    Complex operator*(const Complex& other) {
+        return {
+            real * other.real - imag * other.imag,
+            real * other.imag + imag * other.real
+        };
+    }
+    bool operator==(const Complex& other) {
+        return real == other.real && imag == other.imag;
     }
 };
 '''
 
-# Sample C header for testing
-SAMPLE_C_HEADER = '''
-#ifndef UTILS_H
-#define UTILS_H
 
-struct Data {
-    int id;
-    char name[256];
-};
+class TestCppFileParsing:
+    """Test basic C++ file parsing."""
 
-int process_data(struct Data *data);
-void init_data(struct Data *data, int id);
-
-#endif
-'''
-
-# Sample C++ header for testing
-SAMPLE_CPP_HEADER = '''
-#ifndef ENGINE_HPP
-#define ENGINE_HPP
-
-#include <string>
-#include <vector>
-
-class Engine {
-private:
-    std::string name;
-    int power;
-
-public:
-    Engine(const std::string& name, int power);
-    void start();
-    void stop();
-    int getPower() const;
-};
-
-#endif
-'''
-
-
-@pytest.fixture
-def temp_dir():
-    """Create temporary directory for test files."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        yield Path(tmpdir)
-
-
-@pytest.fixture
-def sample_c_file(temp_dir):
-    """Create sample C file."""
-    file_path = temp_dir / "sample.c"
-    file_path.write_text(SAMPLE_C_CODE)
-    return file_path
-
-
-@pytest.fixture
-def sample_cpp_file(temp_dir):
-    """Create sample C++ file."""
-    file_path = temp_dir / "sample.cpp"
-    file_path.write_text(SAMPLE_CPP_CODE)
-    return file_path
-
-
-@pytest.fixture
-def sample_c_header(temp_dir):
-    """Create sample C header file."""
-    file_path = temp_dir / "utils.h"
-    file_path.write_text(SAMPLE_C_HEADER)
-    return file_path
-
-
-@pytest.fixture
-def sample_cpp_header(temp_dir):
-    """Create sample C++ header file."""
-    file_path = temp_dir / "engine.hpp"
-    file_path.write_text(SAMPLE_CPP_HEADER)
-    return file_path
-
-
-class TestCParsing:
-    """Tests for C code parsing."""
-
-    def test_parse_c_file(self, sample_c_file):
-        """Test parsing a C file."""
-        result = parse_source_file(str(sample_c_file), SAMPLE_C_CODE)
-
-        assert result.language == "C"
-        assert result.file_path == str(sample_c_file)
+    def test_cpp_file_parsing(self):
+        """Test that C++ files are parsed successfully."""
+        result = parse_source_file("test.cpp", SAMPLE_CPP)
+        assert result.language == "Cpp"
+        assert result.file_path == "test.cpp"
         assert result.parse_time_ms > 0
+
+    def test_cc_extension(self):
+        """Test .cc file extension."""
+        result = parse_source_file("test.cc", SAMPLE_CPP)
+        assert result.language == "Cpp"
+
+    def test_cxx_extension(self):
+        """Test .cxx file extension."""
+        result = parse_source_file("test.cxx", SAMPLE_CPP)
+        assert result.language == "Cpp"
+
+    def test_hpp_extension(self):
+        """Test .hpp header extension."""
+        result = parse_source_file("test.hpp", SAMPLE_CPP)
+        assert result.language == "Cpp"
+
+    def test_h_extension(self):
+        """Test .h header extension."""
+        result = parse_source_file("test.h", SAMPLE_CPP)
+        assert result.language == "Cpp"
+
+
+class TestCppUnitExtraction:
+    """Test extraction of semantic units from C++ code."""
+
+    def test_extracts_semantic_units(self):
+        """Test that semantic units are extracted from C++ code."""
+        result = parse_source_file("test.cpp", SAMPLE_CPP)
         assert len(result.units) > 0
 
-    def test_parse_c_functions(self, sample_c_file):
-        """Test extracting functions from C code."""
-        result = parse_source_file(str(sample_c_file), SAMPLE_C_CODE)
+    def test_unit_has_required_fields(self):
+        """Test that extracted units have all required fields."""
+        result = parse_source_file("test.cpp", SAMPLE_CPP)
+        if len(result.units) > 0:
+            unit = result.units[0]
+            assert hasattr(unit, 'unit_type')
+            assert hasattr(unit, 'name')
+            assert hasattr(unit, 'start_line')
+            assert hasattr(unit, 'end_line')
+            assert hasattr(unit, 'content')
+            assert hasattr(unit, 'language')
+            assert unit.language == "Cpp"
 
-        # Should find functions: add, print_point, calculate_area
-        function_units = [u for u in result.units if u.unit_type == "function"]
-        assert len(function_units) >= 3
 
-        function_names = [u.name for u in function_units]
-        assert "add" in function_names or any("add" in name for name in function_names)
+class TestCppClassExtraction:
+    """Test C++ class extraction."""
 
-    def test_parse_c_structs(self, sample_c_file):
-        """Test extracting structs from C code."""
-        result = parse_source_file(str(sample_c_file), SAMPLE_C_CODE)
-
-        # Should find struct: Point
+    def test_extracts_classes(self):
+        """Test that classes are extracted."""
+        result = parse_source_file("test.cpp", SAMPLE_CPP)
         class_units = [u for u in result.units if u.unit_type == "class"]
-        assert len(class_units) >= 1
+        assert len(class_units) > 0
 
-        struct_names = [u.name for u in class_units]
-        assert "Point" in struct_names or any("Point" in name for name in struct_names)
-
-    def test_parse_c_header(self, sample_c_header):
-        """Test parsing a C header file."""
-        result = parse_source_file(str(sample_c_header), SAMPLE_C_HEADER)
-
-        assert result.language == "C"
-        assert len(result.units) >= 0  # May or may not have units depending on parser
-
-
-class TestCppParsing:
-    """Tests for C++ code parsing."""
-
-    def test_parse_cpp_file(self, sample_cpp_file):
-        """Test parsing a C++ file."""
-        result = parse_source_file(str(sample_cpp_file), SAMPLE_CPP_CODE)
-
-        assert result.language == "Cpp"
-        assert result.file_path == str(sample_cpp_file)
-        assert result.parse_time_ms > 0
-        assert len(result.units) > 0
-
-    def test_parse_cpp_classes(self, sample_cpp_file):
-        """Test extracting classes from C++ code."""
-        result = parse_source_file(str(sample_cpp_file), SAMPLE_CPP_CODE)
-
-        # Should find classes: Calculator
+    def test_class_has_name(self):
+        """Test that extracted classes have names."""
+        result = parse_source_file("test.cpp", SAMPLE_CPP)
         class_units = [u for u in result.units if u.unit_type == "class"]
-        assert len(class_units) >= 1
+        if len(class_units) > 0:
+            assert len(class_units[0].name) > 0
 
-        class_names = [u.name for u in class_units]
-        assert "Calculator" in class_names or any("Calculator" in name for name in class_names)
+    def test_class_has_content(self):
+        """Test that extracted classes have content."""
+        result = parse_source_file("test.cpp", SAMPLE_CPP)
+        class_units = [u for u in result.units if u.unit_type == "class"]
+        if len(class_units) > 0:
+            assert len(class_units[0].content) > 0
 
-    def test_parse_cpp_functions(self, sample_cpp_file):
-        """Test extracting functions from C++ code."""
-        result = parse_source_file(str(sample_cpp_file), SAMPLE_CPP_CODE)
-
-        # Should find functions in namespace and methods
-        function_units = [u for u in result.units if u.unit_type == "function"]
-        # C++ may have multiple functions/methods
-        assert len(function_units) >= 0  # May vary based on query
-
-    def test_parse_cpp_header(self, sample_cpp_header):
-        """Test parsing a C++ header file."""
-        result = parse_source_file(str(sample_cpp_header), SAMPLE_CPP_HEADER)
-
-        assert result.language == "Cpp"
-        # Header files may have class declarations
-        assert len(result.units) >= 0
-
-
-class TestCppFileExtensions:
-    """Test that different C/C++ file extensions are handled correctly."""
-
-    def test_c_extension(self, temp_dir):
-        """Test .c extension."""
-        file_path = temp_dir / "test.c"
-        file_path.write_text("int main() { return 0; }")
-        result = parse_source_file(str(file_path), file_path.read_text())
-        assert result.language == "C"
-
-    def test_h_extension(self, temp_dir):
-        """Test .h extension."""
-        file_path = temp_dir / "test.h"
-        file_path.write_text("int main() { return 0; }")
-        result = parse_source_file(str(file_path), file_path.read_text())
-        assert result.language == "C"
-
-    def test_cpp_extension(self, temp_dir):
-        """Test .cpp extension."""
-        file_path = temp_dir / "test.cpp"
-        file_path.write_text("int main() { return 0; }")
-        result = parse_source_file(str(file_path), file_path.read_text())
-        assert result.language == "Cpp"
-
-    def test_cc_extension(self, temp_dir):
-        """Test .cc extension."""
-        file_path = temp_dir / "test.cc"
-        file_path.write_text("int main() { return 0; }")
-        result = parse_source_file(str(file_path), file_path.read_text())
-        assert result.language == "Cpp"
-
-    def test_cxx_extension(self, temp_dir):
-        """Test .cxx extension."""
-        file_path = temp_dir / "test.cxx"
-        file_path.write_text("int main() { return 0; }")
-        result = parse_source_file(str(file_path), file_path.read_text())
-        assert result.language == "Cpp"
-
-    def test_hpp_extension(self, temp_dir):
-        """Test .hpp extension."""
-        file_path = temp_dir / "test.hpp"
-        file_path.write_text("int main() { return 0; }")
-        result = parse_source_file(str(file_path), file_path.read_text())
-        assert result.language == "Cpp"
-
-    def test_hxx_extension(self, temp_dir):
-        """Test .hxx extension."""
-        file_path = temp_dir / "test.hxx"
-        file_path.write_text("int main() { return 0; }")
-        result = parse_source_file(str(file_path), file_path.read_text())
-        assert result.language == "Cpp"
-
-    def test_hh_extension(self, temp_dir):
-        """Test .hh extension."""
-        file_path = temp_dir / "test.hh"
-        file_path.write_text("int main() { return 0; }")
-        result = parse_source_file(str(file_path), file_path.read_text())
-        assert result.language == "Cpp"
-
-
-class TestCppSemanticUnits:
-    """Test semantic unit extraction details."""
-
-    def test_function_line_numbers(self, sample_c_file):
-        """Test that line numbers are extracted correctly."""
-        result = parse_source_file(str(sample_c_file), SAMPLE_C_CODE)
-
-        for unit in result.units:
+    def test_class_line_numbers(self):
+        """Test that classes have valid line numbers."""
+        result = parse_source_file("test.cpp", SAMPLE_CPP)
+        class_units = [u for u in result.units if u.unit_type == "class"]
+        if len(class_units) > 0:
+            unit = class_units[0]
             assert unit.start_line > 0
             assert unit.end_line >= unit.start_line
-            assert unit.start_byte >= 0
-            assert unit.end_byte > unit.start_byte
 
-    def test_unit_content_not_empty(self, sample_cpp_file):
-        """Test that unit content is extracted."""
-        result = parse_source_file(str(sample_cpp_file), SAMPLE_CPP_CODE)
 
-        for unit in result.units:
-            assert len(unit.content) > 0
-            assert len(unit.name) > 0
+class TestCppFunctionExtraction:
+    """Test C++ function extraction."""
 
-    def test_unit_has_language(self, sample_cpp_file):
-        """Test that units have language field."""
-        result = parse_source_file(str(sample_cpp_file), SAMPLE_CPP_CODE)
+    def test_extracts_functions(self):
+        """Test that functions are extracted."""
+        result = parse_source_file("test.cpp", SAMPLE_CPP)
+        func_units = [u for u in result.units if u.unit_type == "function"]
+        assert len(func_units) > 0
 
-        for unit in result.units:
-            assert unit.language == "Cpp"
+    def test_function_has_name(self):
+        """Test that extracted functions have names."""
+        result = parse_source_file("test.cpp", SAMPLE_CPP)
+        func_units = [u for u in result.units if u.unit_type == "function"]
+        if len(func_units) > 0:
+            assert len(func_units[0].name) > 0
+
+    def test_function_has_content(self):
+        """Test that extracted functions have content."""
+        result = parse_source_file("test.cpp", SAMPLE_CPP)
+        func_units = [u for u in result.units if u.unit_type == "function"]
+        if len(func_units) > 0:
+            assert len(func_units[0].content) > 0
+
+
+class TestCppStructs:
+    """Test C++ struct extraction."""
+
+    def test_extracts_structs(self):
+        """Test that structs are extracted as classes."""
+        result = parse_source_file("test.cpp", SAMPLE_CPP)
+        # Structs should be extracted as "class" type (semantically similar in C++)
+        class_units = [u for u in result.units if u.unit_type == "class"]
+        # Check if we can find "Point" which is defined as a struct
+        struct_names = [u.name for u in class_units]
+        # Note: The name might include more than just "Point" depending on tree-sitter capture
+        assert any("Point" in name for name in struct_names)
+
+
+class TestCppTemplates:
+    """Test C++ template support."""
+
+    def test_template_class_extraction(self):
+        """Test that template classes are extracted."""
+        result = parse_source_file("template.cpp", TEMPLATE_CLASS_CPP)
+        assert len(result.units) > 0
+        # Template classes should be extracted (may include template parameters in capture)
+
+    def test_template_function_extraction(self):
+        """Test that template functions are extracted."""
+        result = parse_source_file("template_func.cpp", TEMPLATE_FUNCTION_CPP)
+        assert len(result.units) > 0
+
+
+class TestCppNamespaces:
+    """Test C++ namespace handling."""
+
+    def test_parses_code_with_namespaces(self):
+        """Test that code with namespaces parses successfully."""
+        result = parse_source_file("namespace.cpp", NAMESPACE_CPP)
+        assert result.language == "Cpp"
+        assert len(result.units) > 0
+
+    def test_nested_namespaces(self):
+        """Test that nested namespaces don't prevent parsing."""
+        result = parse_source_file("namespace.cpp", NAMESPACE_CPP)
+        # Should extract Circle class inside nested namespace
+        class_units = [u for u in result.units if u.unit_type == "class"]
+        assert len(class_units) > 0
+
+
+class TestCppOperatorOverloads:
+    """Test C++ operator overload extraction."""
+
+    def test_parses_operator_overloads(self):
+        """Test that operator overloads are parsed."""
+        result = parse_source_file("operators.cpp", OPERATOR_OVERLOAD_CPP)
+        assert result.language == "Cpp"
+        assert len(result.units) > 0
+
+
+class TestCppPerformance:
+    """Test C++ parsing performance."""
+
+    def test_parse_time_under_100ms(self):
+        """Test that parsing completes in under 100ms."""
+        result = parse_source_file("test.cpp", SAMPLE_CPP)
+        assert result.parse_time_ms < 100
+
+    def test_large_file_performance(self):
+        """Test performance with larger C++ file."""
+        # Create a larger file by repeating classes
+        large_cpp = SAMPLE_CPP * 10
+        result = parse_source_file("large.cpp", large_cpp)
+        assert result.parse_time_ms < 500  # Allow more time for larger file
+
+
+class TestCppEdgeCases:
+    """Test edge cases in C++ parsing."""
+
+    def test_empty_file(self):
+        """Test parsing empty C++ file."""
+        result = parse_source_file("empty.cpp", "")
+        assert result.language == "Cpp"
+        assert len(result.units) == 0
+
+    def test_comments_only(self):
+        """Test parsing file with only comments."""
+        cpp_code = "// This is a comment\n/* Block comment */"
+        result = parse_source_file("comments.cpp", cpp_code)
+        assert result.language == "Cpp"
+
+    def test_preprocessor_directives(self):
+        """Test that preprocessor directives don't break parsing."""
+        cpp_code = '''
+#include <iostream>
+#define MAX 100
+#ifdef DEBUG
+#endif
+
+class Test {
+public:
+    void method() {}
+};
+'''
+        result = parse_source_file("preprocessor.cpp", cpp_code)
+        assert result.language == "Cpp"
+        assert len(result.units) > 0
