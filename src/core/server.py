@@ -85,6 +85,7 @@ class MemoryRAGServer:
         self.cross_project_consent: Optional = None  # Cross-project consent manager
         self.suggestion_engine: Optional[SuggestionEngine] = None  # Proactive suggestions
         self.scheduler = None  # APScheduler instance
+        self.auto_indexing_service: Optional = None  # Auto-indexing service (FEAT-016)
 
         # Statistics
         self.stats = {
@@ -227,6 +228,12 @@ class MemoryRAGServer:
             else:
                 self.cross_project_consent = None
                 logger.info("Cross-project search disabled")
+
+            # Initialize auto-indexing service if enabled (FEAT-016)
+            if self.config.auto_index_enabled and self.config.auto_index_on_startup:
+                await self._start_auto_indexing()
+            else:
+                logger.info("Auto-indexing disabled or not configured for startup")
 
             # Initialize suggestion engine for proactive context
             # Only enabled if store is initialized (needed for searches)
@@ -2315,6 +2322,112 @@ class MemoryRAGServer:
         except Exception as e:
             logger.error(f"Auto-prune job failed: {e}", exc_info=True)
 
+    async def _start_auto_indexing(self) -> None:
+        """
+        Start auto-indexing on server startup (FEAT-016).
+
+        Automatically indexes the current project if configured.
+        """
+        try:
+            # Get current working directory as project path
+            project_path = Path.cwd()
+
+            # Use detected project name or directory name
+            project_name = self.project_name or project_path.name
+
+            logger.info(f"Starting auto-indexing for project: {project_name} at {project_path}")
+
+            # Import here to avoid circular dependency
+            from src.memory.auto_indexing_service import AutoIndexingService
+
+            # Create auto-indexing service
+            self.auto_indexing_service = AutoIndexingService(
+                project_path=project_path,
+                project_name=project_name,
+                config=self.config,
+            )
+
+            await self.auto_indexing_service.initialize()
+
+            # Start auto-indexing (may be background)
+            result = await self.auto_indexing_service.start_auto_indexing()
+
+            if result:
+                if result.get("mode") == "background":
+                    logger.info(
+                        f"Background indexing started for {project_name} "
+                        f"({result.get('file_count', 0)} files)"
+                    )
+                else:
+                    logger.info(
+                        f"Foreground indexing complete for {project_name}: "
+                        f"{result.get('indexed_files', 0)} files, "
+                        f"{result.get('total_units', 0)} units"
+                    )
+
+                # Start file watcher after initial indexing
+                if self.config.enable_file_watcher:
+                    await self.auto_indexing_service.start_watching()
+                    logger.info(f"File watcher started for {project_name}")
+            else:
+                logger.info(f"Project {project_name} is up-to-date, skipping indexing")
+
+        except Exception as e:
+            logger.error(f"Auto-indexing startup failed: {e}", exc_info=True)
+            # Don't raise - auto-indexing failure shouldn't prevent server start
+            self.auto_indexing_service = None
+
+    async def get_indexing_status(self) -> Dict[str, Any]:
+        """
+        Get current auto-indexing status (FEAT-016).
+
+        Returns:
+            Dictionary with indexing progress and status
+        """
+        if not self.auto_indexing_service:
+            return {
+                "enabled": False,
+                "status": "disabled",
+                "message": "Auto-indexing is not enabled or failed to initialize"
+            }
+
+        progress = await self.auto_indexing_service.get_progress()
+
+        return {
+            "enabled": True,
+            "project_name": self.auto_indexing_service.project_name,
+            "project_path": str(self.auto_indexing_service.project_path),
+            "progress": progress,
+        }
+
+    async def trigger_reindex(self) -> Dict[str, Any]:
+        """
+        Manually trigger a full re-index (FEAT-016).
+
+        Returns:
+            Dictionary with re-indexing result
+        """
+        if not self.auto_indexing_service:
+            # Try to create service if it doesn't exist
+            project_path = Path.cwd()
+            project_name = self.project_name or project_path.name
+
+            from src.memory.auto_indexing_service import AutoIndexingService
+
+            self.auto_indexing_service = AutoIndexingService(
+                project_path=project_path,
+                project_name=project_name,
+                config=self.config,
+            )
+            await self.auto_indexing_service.initialize()
+
+        logger.info(f"Manual re-index triggered for {self.auto_indexing_service.project_name}")
+        result = await self.auto_indexing_service.trigger_reindex()
+
+        return {
+            "status": "success",
+            "result": result,
+        }
     async def export_memories(
         self,
         output_path: str,
@@ -2686,6 +2799,11 @@ class MemoryRAGServer:
 
     async def close(self) -> None:
         """Clean up resources."""
+        # Stop auto-indexing service
+        if self.auto_indexing_service:
+            await self.auto_indexing_service.close()
+            logger.info("Auto-indexing service stopped")
+
         # Stop conversation tracker
         if self.conversation_tracker:
             await self.conversation_tracker.stop()
