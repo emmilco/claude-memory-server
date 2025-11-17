@@ -308,17 +308,23 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Tests:** 29 tests passing
   - **Completed:** 2025-11-17
 
-- [ ] **FEAT-036**: Project Archival & Reactivation System (~1-2 weeks) 🔥🔥🔥
-  - [ ] **Planning doc:** `planning_docs/STRATEGIC-001_long_term_product_evolution.md`
-  - [ ] **Graceful project lifecycle management**
-  - [ ] Project states: ACTIVE, PAUSED, ARCHIVED, DELETED
-  - [ ] Automatic activity detection: file changes, searches, index updates
-  - [ ] Archival workflow: suggest inactive projects (45+ days), compress indexes
-  - [ ] Reactivation: restore to ACTIVE state, uncompress, reload embeddings
-  - [ ] Bulk operations: auto-archive, export to file, delete permanently
-  - [ ] Archive manifest: snapshot of all memories/indexes/metadata
-  - [ ] Search weighting: ARCHIVED projects get 0.1x weight
-  - **Impact:** 40% search speed improvement, reduces active dataset, enables recovery
+- [x] **FEAT-036**: Project Archival & Reactivation System - Phase 1 (Core) ✅ **FOUNDATION COMPLETE**
+  - [x] Project states: ACTIVE, PAUSED, ARCHIVED, DELETED
+  - [x] Automatic activity tracking: searches, index updates, files indexed
+  - [x] Archival workflow: archive_project(), reactivate_project() methods
+  - [x] Inactive project detection (45+ days threshold)
+  - [x] Search weighting: ACTIVE=1.0x, PAUSED=0.5x, ARCHIVED=0.1x
+  - [x] State persistence with JSON storage
+  - [x] CLI commands: status, archive, reactivate
+  - [x] Comprehensive test suite (16 tests passing)
+  - **Remaining (Future Phases):**
+    - [ ] Index compression for archived projects
+    - [ ] Bulk operations (auto-archive multiple projects)
+    - [ ] Archive manifests with full snapshot
+    - [ ] Automatic archival scheduler
+    - [ ] Export to file / import from archive
+  - **Impact:** Enables graceful project lifecycle, improves search performance
+  - **Completed Phase 1:** 2025-11-17
   - **Complexity:** Medium (activity tracking, archival state management, compression)
   - **Runtime Cost:** +100-200MB for archived data, -50% active search space
   - **Strategic Priority:** P2 - Important for multi-project pollution

@@ -26,6 +26,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Metrics:** Tokens used/saved, cost savings USD, efficiency ratio, avg relevance, searches, files indexed
   - **Runtime Cost:** +10MB storage (SQLite), negligible CPU/latency
 
+- **FEAT-036: Project Archival & Reactivation System - Phase 1 (Core Functionality)** 🏗️ FOUNDATION COMPLETE
+  - Created `src/memory/project_archival.py` - Project lifecycle state management (280 lines)
+  - Project states: ACTIVE, PAUSED, ARCHIVED, DELETED with automatic state transitions
+  - Activity tracking: last_activity, searches_count, files_indexed, index_updates_count
+  - Archival workflow: `archive_project()` and `reactivate_project()` methods
+  - Search weighting by state: ACTIVE=1.0x, PAUSED=0.5x, ARCHIVED=0.1x, DELETED=0.0x
+  - Inactive project detection: identifies projects inactive for 45+ days
+  - State persistence: JSON storage with atomic save operations
+  - Created `src/cli/archival_command.py` - CLI for archival operations (110 lines)
+  - CLI commands: `status` (show all projects), `archive <project>`, `reactivate <project>`
+  - Rich formatting with colored states and activity tables
+  - Comprehensive test suite: `tests/unit/test_project_archival.py` (16 tests passing)
+  - **Impact:** Enables graceful project lifecycle, improves search performance for active projects
+  - **Next Phases:** Compression, bulk operations, archive manifests, automatic archival scheduler
+  - **Status:** Core functionality complete, advanced features pending
+
 - **FEAT-030: Cross-Project Learning ✅ COMPLETE** - Search code across all opted-in projects
   - Created `src/memory/cross_project_consent.py` - Privacy-respecting consent management (115 lines)
   - Added cross-project config options to `src/config.py` - Enable/disable, default mode, consent file
