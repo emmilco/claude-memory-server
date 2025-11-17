@@ -45,6 +45,26 @@ class ServerConfig(BaseSettings):
     enable_file_watcher: bool = True
     watch_debounce_ms: int = 1000
 
+    # Auto-indexing (FEAT-016)
+    auto_index_enabled: bool = True  # Enable automatic indexing
+    auto_index_on_startup: bool = True  # Index on MCP server startup
+    auto_index_size_threshold: int = 500  # Files threshold for background mode
+    auto_index_recursive: bool = True  # Recursive directory indexing
+    auto_index_show_progress: bool = True  # Show progress indicators
+    auto_index_exclude_patterns: list[str] = [  # Patterns to exclude
+        "node_modules/**",
+        ".git/**",
+        "venv/**",
+        "__pycache__/**",
+        "*.pyc",
+        "dist/**",
+        "build/**",
+        ".next/**",
+        "target/**",
+        "*.min.js",
+        "*.map",
+    ]
+
     # Adaptive retrieval
     enable_retrieval_gate: bool = True
     retrieval_gate_threshold: float = 0.8
@@ -99,6 +119,10 @@ class ServerConfig(BaseSettings):
     enable_cross_project_search: bool = True  # Allow searching across projects
     cross_project_default_mode: str = "current"  # "current" or "all"
     cross_project_opt_in_file: str = "~/.claude-rag/cross_project_consent.json"
+
+    # Proactive context suggestions (FEAT-028)
+    enable_proactive_suggestions: bool = True  # Analyze messages for patterns
+    proactive_suggestions_threshold: float = 0.90  # Confidence threshold for auto-injection
 
     model_config = SettingsConfigDict(
         env_prefix="CLAUDE_RAG_",
@@ -204,6 +228,12 @@ class ServerConfig(BaseSettings):
 
         if self.git_diff_size_limit_kb < 1:
             raise ValueError("git_diff_size_limit_kb must be at least 1")
+
+        # Validate auto-indexing settings
+        if self.auto_index_size_threshold < 1:
+            raise ValueError("auto_index_size_threshold must be at least 1")
+        if self.auto_index_size_threshold > 100000:
+            raise ValueError("auto_index_size_threshold should not exceed 100000")
 
         return self
 

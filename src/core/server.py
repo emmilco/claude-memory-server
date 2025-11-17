@@ -35,6 +35,7 @@ from src.memory.usage_tracker import UsageTracker
 from src.memory.pruner import MemoryPruner
 from src.memory.conversation_tracker import ConversationTracker
 from src.memory.query_expander import QueryExpander
+from src.memory.suggestion_engine import SuggestionEngine
 from src.search.hybrid_search import HybridSearcher, FusionMethod
 
 logger = logging.getLogger(__name__)
@@ -82,7 +83,9 @@ class MemoryRAGServer:
         self.query_expander: Optional[QueryExpander] = None
         self.hybrid_searcher: Optional[HybridSearcher] = None
         self.cross_project_consent: Optional = None  # Cross-project consent manager
+        self.suggestion_engine: Optional[SuggestionEngine] = None  # Proactive suggestions
         self.scheduler = None  # APScheduler instance
+        self.auto_indexing_service: Optional = None  # Auto-indexing service (FEAT-016)
 
         # Statistics
         self.stats = {
@@ -225,6 +228,27 @@ class MemoryRAGServer:
             else:
                 self.cross_project_consent = None
                 logger.info("Cross-project search disabled")
+
+            # Initialize auto-indexing service if enabled (FEAT-016)
+            if self.config.auto_index_enabled and self.config.auto_index_on_startup:
+                await self._start_auto_indexing()
+            else:
+                logger.info("Auto-indexing disabled or not configured for startup")
+
+            # Initialize suggestion engine for proactive context
+            # Only enabled if store is initialized (needed for searches)
+            if self.config.enable_proactive_suggestions:
+                self.suggestion_engine = SuggestionEngine(
+                    config=self.config,
+                    store=self.store,
+                )
+                logger.info(
+                    f"Proactive suggestions enabled "
+                    f"(threshold: {self.suggestion_engine.high_confidence_threshold:.2f})"
+                )
+            else:
+                self.suggestion_engine = None
+                logger.info("Proactive suggestions disabled")
 
             logger.info("Server initialized successfully")
 
@@ -2298,8 +2322,488 @@ class MemoryRAGServer:
         except Exception as e:
             logger.error(f"Auto-prune job failed: {e}", exc_info=True)
 
+    async def _start_auto_indexing(self) -> None:
+        """
+        Start auto-indexing on server startup (FEAT-016).
+
+        Automatically indexes the current project if configured.
+        """
+        try:
+            # Get current working directory as project path
+            project_path = Path.cwd()
+
+            # Use detected project name or directory name
+            project_name = self.project_name or project_path.name
+
+            logger.info(f"Starting auto-indexing for project: {project_name} at {project_path}")
+
+            # Import here to avoid circular dependency
+            from src.memory.auto_indexing_service import AutoIndexingService
+
+            # Create auto-indexing service
+            self.auto_indexing_service = AutoIndexingService(
+                project_path=project_path,
+                project_name=project_name,
+                config=self.config,
+            )
+
+            await self.auto_indexing_service.initialize()
+
+            # Start auto-indexing (may be background)
+            result = await self.auto_indexing_service.start_auto_indexing()
+
+            if result:
+                if result.get("mode") == "background":
+                    logger.info(
+                        f"Background indexing started for {project_name} "
+                        f"({result.get('file_count', 0)} files)"
+                    )
+                else:
+                    logger.info(
+                        f"Foreground indexing complete for {project_name}: "
+                        f"{result.get('indexed_files', 0)} files, "
+                        f"{result.get('total_units', 0)} units"
+                    )
+
+                # Start file watcher after initial indexing
+                if self.config.enable_file_watcher:
+                    await self.auto_indexing_service.start_watching()
+                    logger.info(f"File watcher started for {project_name}")
+            else:
+                logger.info(f"Project {project_name} is up-to-date, skipping indexing")
+
+        except Exception as e:
+            logger.error(f"Auto-indexing startup failed: {e}", exc_info=True)
+            # Don't raise - auto-indexing failure shouldn't prevent server start
+            self.auto_indexing_service = None
+
+    async def get_indexing_status(self) -> Dict[str, Any]:
+        """
+        Get current auto-indexing status (FEAT-016).
+
+        Returns:
+            Dictionary with indexing progress and status
+        """
+        if not self.auto_indexing_service:
+            return {
+                "enabled": False,
+                "status": "disabled",
+                "message": "Auto-indexing is not enabled or failed to initialize"
+            }
+
+        progress = await self.auto_indexing_service.get_progress()
+
+        return {
+            "enabled": True,
+            "project_name": self.auto_indexing_service.project_name,
+            "project_path": str(self.auto_indexing_service.project_path),
+            "progress": progress,
+        }
+
+    async def trigger_reindex(self) -> Dict[str, Any]:
+        """
+        Manually trigger a full re-index (FEAT-016).
+
+        Returns:
+            Dictionary with re-indexing result
+        """
+        if not self.auto_indexing_service:
+            # Try to create service if it doesn't exist
+            project_path = Path.cwd()
+            project_name = self.project_name or project_path.name
+
+            from src.memory.auto_indexing_service import AutoIndexingService
+
+            self.auto_indexing_service = AutoIndexingService(
+                project_path=project_path,
+                project_name=project_name,
+                config=self.config,
+            )
+            await self.auto_indexing_service.initialize()
+
+        logger.info(f"Manual re-index triggered for {self.auto_indexing_service.project_name}")
+        result = await self.auto_indexing_service.trigger_reindex()
+
+        return {
+            "status": "success",
+            "result": result,
+        }
+    async def export_memories(
+        self,
+        output_path: str,
+        format: str = "json",
+        project_name: Optional[str] = None,
+        category: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Export memories to file (MCP tool).
+
+        Args:
+            output_path: Path to write export file
+            format: Export format (json, markdown, archive)
+            project_name: Filter by project name
+            category: Filter by category
+
+        Returns:
+            Export statistics
+
+        Raises:
+            ValueError: If invalid format or category
+            StorageError: If export fails
+        """
+        from src.backup.exporter import DataExporter
+        from src.core.models import MemoryCategory
+        from pathlib import Path
+
+        # Validate parameters
+        if format not in ["json", "markdown", "archive"]:
+            raise ValueError(f"Invalid format: {format}. Must be json, markdown, or archive")
+
+        category_filter = None
+        if category:
+            try:
+                category_filter = MemoryCategory(category)
+            except ValueError:
+                raise ValueError(f"Invalid category: {category}")
+
+        # Create exporter and export
+        exporter = DataExporter(self.store)
+        output = Path(output_path).expanduser()
+
+        if format == "json":
+            stats = await exporter.export_to_json(
+                output_path=output,
+                project_name=project_name,
+                category=category_filter,
+            )
+        elif format == "markdown":
+            stats = await exporter.export_to_markdown(
+                output_path=output,
+                project_name=project_name,
+                include_metadata=True,
+            )
+        elif format == "archive":
+            stats = await exporter.create_portable_archive(
+                output_path=output,
+                project_name=project_name,
+                include_embeddings=True,
+            )
+
+        logger.info(f"MCP export completed: {stats}")
+        return stats
+
+    async def import_memories(
+        self,
+        input_path: str,
+        conflict_strategy: str = "keep_newer",
+        dry_run: bool = False,
+        selective_project: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Import memories from file (MCP tool).
+
+        Args:
+            input_path: Path to import file
+            conflict_strategy: How to handle conflicts (keep_newer, keep_older, keep_both, skip, merge_metadata)
+            dry_run: If True, analyze but don't actually import
+            selective_project: Only import this project
+
+        Returns:
+            Import statistics
+
+        Raises:
+            ValueError: If invalid strategy or file not found
+            StorageError: If import fails
+        """
+        from src.backup.importer import DataImporter, ConflictStrategy
+        from pathlib import Path
+
+        # Validate parameters
+        try:
+            strategy = ConflictStrategy(conflict_strategy)
+        except ValueError:
+            raise ValueError(f"Invalid conflict strategy: {conflict_strategy}")
+
+        input_file = Path(input_path).expanduser()
+        if not input_file.exists():
+            raise ValueError(f"File not found: {input_path}")
+
+        # Create importer and import
+        importer = DataImporter(self.store)
+
+        is_archive = input_file.suffix == ".gz" or input_file.suffixes == [".tar", ".gz"]
+
+        if is_archive:
+            stats = await importer.import_from_archive(
+                archive_path=input_file,
+                conflict_strategy=strategy,
+                dry_run=dry_run,
+                selective_project=selective_project,
+            )
+        else:
+            stats = await importer.import_from_json(
+                input_path=input_file,
+                conflict_strategy=strategy,
+                dry_run=dry_run,
+                selective_project=selective_project,
+            )
+
+        logger.info(f"MCP import completed: {stats}")
+        return stats
+
+    async def list_backups(self, backup_dir: Optional[str] = None) -> Dict[str, Any]:
+        """
+        List available backup files (MCP tool).
+
+        Args:
+            backup_dir: Backup directory path (default: ~/.claude-rag/backups/)
+
+        Returns:
+            Dictionary with backup list and statistics
+        """
+        from pathlib import Path
+
+        # Determine backup directory
+        if backup_dir:
+            backup_path = Path(backup_dir).expanduser()
+        else:
+            backup_path = self.config.data_dir / "backups"
+
+        if not backup_path.exists():
+            return {
+                "backup_dir": str(backup_path),
+                "backups": [],
+                "count": 0,
+            }
+
+        # Find backup files
+        backups = []
+        for pattern in ["backup_*.tar.gz", "backup_*.json"]:
+            backups.extend(backup_path.glob(pattern))
+
+        backups.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+
+        # Build response
+        backup_list = []
+        for backup_file in backups:
+            stat = backup_file.stat()
+            backup_list.append({
+                "filename": backup_file.name,
+                "full_path": str(backup_file),
+                "created": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                "size_bytes": stat.st_size,
+                "format": "archive" if backup_file.suffix == ".gz" else "json",
+            })
+
+        return {
+            "backup_dir": str(backup_path),
+            "backups": backup_list,
+            "count": len(backup_list),
+        }
+    async def analyze_conversation(
+        self,
+        message: str,
+        session_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Analyze a conversation message for proactive context suggestions.
+
+        This tool detects patterns in user messages (implementation requests,
+        error debugging, code questions, refactoring) and automatically suggests
+        relevant code or memories.
+
+        Args:
+            message: The user's message to analyze
+            session_id: Optional conversation session ID
+
+        Returns:
+            Dict with patterns detected and suggestions
+
+        Example:
+            User: "I need to add user authentication"
+            Returns: Suggestions for authentication implementations
+        """
+        if not self.suggestion_engine:
+            return {
+                "enabled": False,
+                "message": "Proactive suggestions are disabled",
+            }
+
+        try:
+            result = await self.suggestion_engine.analyze_message(
+                message=message,
+                session_id=session_id,
+                project_name=self.project_name,
+            )
+
+            return {
+                "enabled": True,
+                **result.to_dict(),
+            }
+
+        except Exception as e:
+            logger.error(f"Error analyzing conversation: {e}")
+            raise RetrievalError(
+                f"Failed to analyze conversation: {str(e)}",
+                solution="Check the message format and try again",
+            )
+
+    async def get_suggestion_stats(self) -> Dict[str, Any]:
+        """
+        Get statistics about proactive suggestions.
+
+        Returns:
+            Dict with suggestion metrics, acceptance rates, and threshold info
+
+        Example response:
+            {
+                "enabled": true,
+                "messages_analyzed": 150,
+                "suggestions_made": 45,
+                "auto_injections": 23,
+                "high_confidence_threshold": 0.90,
+                "feedback": {
+                    "overall_acceptance_rate": 0.72,
+                    "per_pattern": {...}
+                }
+            }
+        """
+        if not self.suggestion_engine:
+            return {
+                "enabled": False,
+                "message": "Proactive suggestions are disabled",
+            }
+
+        try:
+            return self.suggestion_engine.get_stats()
+        except Exception as e:
+            logger.error(f"Error getting suggestion stats: {e}")
+            raise RetrievalError(f"Failed to get suggestion stats: {str(e)}")
+
+    async def provide_suggestion_feedback(
+        self,
+        suggestion_id: str,
+        accepted: bool,
+        implicit: bool = True,
+    ) -> Dict[str, Any]:
+        """
+        Provide feedback on a proactive suggestion.
+
+        This helps the system learn and adapt its confidence threshold over time.
+
+        Args:
+            suggestion_id: ID of the suggestion (from analyze_conversation)
+            accepted: True if the suggestion was helpful
+            implicit: True if inferred from behavior (default), False for explicit
+
+        Returns:
+            Dict with feedback status
+
+        Example:
+            provide_suggestion_feedback(
+                suggestion_id="abc-123",
+                accepted=True,
+                implicit=False  # User explicitly marked as helpful
+            )
+        """
+        if not self.suggestion_engine:
+            return {
+                "enabled": False,
+                "message": "Proactive suggestions are disabled",
+            }
+
+        try:
+            success = self.suggestion_engine.record_feedback(
+                suggestion_id=suggestion_id,
+                accepted=accepted,
+                implicit=implicit,
+            )
+
+            if success:
+                # Check if threshold should be updated
+                new_threshold, explanation = self.suggestion_engine.update_threshold()
+
+                return {
+                    "success": True,
+                    "suggestion_id": suggestion_id,
+                    "accepted": accepted,
+                    "threshold_updated": new_threshold != self.suggestion_engine.high_confidence_threshold,
+                    "current_threshold": new_threshold,
+                    "explanation": explanation,
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": "Suggestion ID not found",
+                    "suggestion_id": suggestion_id,
+                }
+
+        except Exception as e:
+            logger.error(f"Error recording feedback: {e}")
+            raise ValidationError(f"Failed to record feedback: {str(e)}")
+
+    async def set_suggestion_mode(
+        self,
+        enabled: bool,
+        threshold: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        """
+        Enable or disable proactive suggestions, and optionally set threshold.
+
+        Args:
+            enabled: True to enable, False to disable
+            threshold: Optional confidence threshold (0-1) for auto-injection
+
+        Returns:
+            Dict with current configuration
+
+        Example:
+            # Disable suggestions
+            set_suggestion_mode(enabled=False)
+
+            # Enable with custom threshold
+            set_suggestion_mode(enabled=True, threshold=0.85)
+        """
+        if not self.suggestion_engine:
+            return {
+                "error": "Suggestion engine not initialized",
+                "message": "Set enable_proactive_suggestions=True in config",
+            }
+
+        try:
+            # Update enabled state
+            if enabled:
+                self.suggestion_engine.enable()
+            else:
+                self.suggestion_engine.disable()
+
+            # Update threshold if provided
+            if threshold is not None:
+                if not 0.0 <= threshold <= 1.0:
+                    raise ValidationError(
+                        "Threshold must be between 0.0 and 1.0",
+                        solution=f"Use a value between 0.0 and 1.0 (got {threshold})",
+                    )
+                self.suggestion_engine.set_threshold(threshold)
+
+            return {
+                "success": True,
+                "enabled": self.suggestion_engine.enabled,
+                "high_confidence_threshold": self.suggestion_engine.high_confidence_threshold,
+                "medium_confidence_threshold": self.suggestion_engine.medium_confidence_threshold,
+            }
+
+        except Exception as e:
+            logger.error(f"Error setting suggestion mode: {e}")
+            raise ValidationError(f"Failed to set suggestion mode: {str(e)}")
+
     async def close(self) -> None:
         """Clean up resources."""
+        # Stop auto-indexing service
+        if self.auto_indexing_service:
+            await self.auto_indexing_service.close()
+            logger.info("Auto-indexing service stopped")
+
         # Stop conversation tracker
         if self.conversation_tracker:
             await self.conversation_tracker.stop()
