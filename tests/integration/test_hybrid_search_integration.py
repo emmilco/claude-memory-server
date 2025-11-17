@@ -1,6 +1,7 @@
 """Integration tests for hybrid search in the full server context."""
 
 import pytest
+import pytest_asyncio
 import asyncio
 from pathlib import Path
 import tempfile
@@ -10,7 +11,7 @@ from src.core.server import MemoryRAGServer
 from src.config import ServerConfig
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def server_with_hybrid_search():
     """Create a server instance with hybrid search enabled."""
     # Create temp directory for test data
@@ -34,13 +35,13 @@ async def server_with_hybrid_search():
         yield server
 
         # Cleanup
-        await server.cleanup()
+        await server.close()
 
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def server_without_hybrid_search():
     """Create a server instance with hybrid search disabled."""
     temp_dir = tempfile.mkdtemp()
@@ -58,13 +59,13 @@ async def server_without_hybrid_search():
 
         yield server
 
-        await server.cleanup()
+        await server.close()
 
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def indexed_code_server(server_with_hybrid_search):
     """Server with sample code already indexed."""
     server = server_with_hybrid_search
@@ -317,7 +318,7 @@ class TestHybridSearchIntegration:
                 finally:
                     shutil.rmtree(code_dir, ignore_errors=True)
 
-                await server.cleanup()
+                await server.close()
 
             finally:
                 shutil.rmtree(temp_dir, ignore_errors=True)
@@ -520,7 +521,7 @@ class TestHybridSearchConfiguration:
 
                 assert server.hybrid_searcher.alpha == alpha
 
-                await server.cleanup()
+                await server.close()
 
             finally:
                 shutil.rmtree(temp_dir, ignore_errors=True)
@@ -547,7 +548,7 @@ class TestHybridSearchConfiguration:
                 assert server.hybrid_searcher.bm25.k1 == k1
                 assert server.hybrid_searcher.bm25.b == b
 
-                await server.cleanup()
+                await server.close()
 
             finally:
                 shutil.rmtree(temp_dir, ignore_errors=True)

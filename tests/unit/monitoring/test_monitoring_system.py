@@ -7,7 +7,7 @@ Tests metrics collection, alert engine, health reporting, and remediation.
 import pytest
 import sqlite3
 import tempfile
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from pathlib import Path
 from unittest.mock import Mock, AsyncMock, patch
 
@@ -111,7 +111,7 @@ class TestMetricsCollector:
     def test_store_metrics(self, collector):
         """Test storing metrics."""
         metrics = HealthMetrics(
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             avg_search_latency_ms=10.0,
             avg_result_relevance=0.75,
             total_memories=1000,
@@ -130,11 +130,11 @@ class TestMetricsCollector:
         """Test retrieving latest metrics."""
         # Store some metrics
         metrics1 = HealthMetrics(
-            timestamp=datetime.utcnow() - timedelta(hours=1),
+            timestamp=datetime.now(UTC) - timedelta(hours=1),
             total_memories=900,
         )
         metrics2 = HealthMetrics(
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             total_memories=1000,
         )
 
@@ -151,7 +151,7 @@ class TestMetricsCollector:
         # Store metrics over several days
         for i in range(5):
             metrics = HealthMetrics(
-                timestamp=datetime.utcnow() - timedelta(days=i),
+                timestamp=datetime.now(UTC) - timedelta(days=i),
                 total_memories=1000 + i * 100,
             )
             collector.store_metrics(metrics)
@@ -165,11 +165,11 @@ class TestMetricsCollector:
         """Test cleanup of old metrics."""
         # Store old and new metrics
         old_metrics = HealthMetrics(
-            timestamp=datetime.utcnow() - timedelta(days=100),
+            timestamp=datetime.now(UTC) - timedelta(days=100),
             total_memories=500,
         )
         new_metrics = HealthMetrics(
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             total_memories=1000,
         )
 
@@ -221,7 +221,7 @@ class TestAlertEngine:
     def test_evaluate_metrics_no_violations(self, alert_engine):
         """Test evaluating metrics with no threshold violations."""
         metrics = HealthMetrics(
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             avg_result_relevance=0.80,  # Above 0.65 threshold
             avg_search_latency_ms=30.0,  # Below 50ms threshold
             noise_ratio=0.20,  # Below 0.30 threshold
@@ -236,7 +236,7 @@ class TestAlertEngine:
     def test_evaluate_metrics_critical_violation(self, alert_engine):
         """Test evaluating metrics with critical violation."""
         metrics = HealthMetrics(
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             avg_result_relevance=0.40,  # Below 0.50 critical threshold
             avg_search_latency_ms=150.0,  # Above 100ms critical threshold
             noise_ratio=0.60,  # Above 0.50 critical threshold
@@ -257,7 +257,7 @@ class TestAlertEngine:
             threshold_value=0.65,
             message="Search quality degrading",
             recommendations=["Run health check"],
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
         )
 
         alert_engine.store_alerts([alert])
@@ -277,7 +277,7 @@ class TestAlertEngine:
             threshold_value=0.6,
             message="Test alert",
             recommendations=[],
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
         )
 
         alert_engine.store_alerts([alert])
@@ -301,7 +301,7 @@ class TestAlertEngine:
             threshold_value=1.0,
             message="Test alert",
             recommendations=[],
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
         )
 
         alert_engine.store_alerts([alert])
@@ -330,7 +330,7 @@ class TestAlertEngine:
                 threshold_value=1.0,
                 message="Critical",
                 recommendations=[],
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(UTC),
             ),
             Alert(
                 id="warning_1",
@@ -340,7 +340,7 @@ class TestAlertEngine:
                 threshold_value=1.0,
                 message="Warning",
                 recommendations=[],
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(UTC),
             ),
             Alert(
                 id="warning_2",
@@ -350,7 +350,7 @@ class TestAlertEngine:
                 threshold_value=1.0,
                 message="Warning 2",
                 recommendations=[],
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(UTC),
             ),
         ]
 
@@ -379,7 +379,7 @@ class TestHealthReporter:
     def test_calculate_health_score_excellent(self, reporter):
         """Test health score calculation for excellent metrics."""
         metrics = HealthMetrics(
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             avg_search_latency_ms=10.0,
             avg_result_relevance=0.90,
             noise_ratio=0.10,
@@ -401,7 +401,7 @@ class TestHealthReporter:
     def test_calculate_health_score_poor(self, reporter):
         """Test health score calculation for poor metrics."""
         metrics = HealthMetrics(
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             avg_search_latency_ms=150.0,
             avg_result_relevance=0.40,
             noise_ratio=0.60,
@@ -423,7 +423,7 @@ class TestHealthReporter:
     def test_alert_penalty(self, reporter):
         """Test that alerts reduce health score."""
         metrics = HealthMetrics(
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             avg_search_latency_ms=20.0,
             avg_result_relevance=0.80,
             noise_ratio=0.15,
@@ -443,7 +443,7 @@ class TestHealthReporter:
                 threshold_value=1.0,
                 message="Test",
                 recommendations=[],
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(UTC),
             )
         ]
         score_with_alerts = reporter.calculate_health_score(metrics, alerts)
@@ -453,13 +453,13 @@ class TestHealthReporter:
     def test_analyze_trends_improving(self, reporter):
         """Test trend analysis with improving metrics."""
         previous_metrics = HealthMetrics(
-            timestamp=datetime.utcnow() - timedelta(days=7),
+            timestamp=datetime.now(UTC) - timedelta(days=7),
             avg_search_latency_ms=50.0,
             avg_result_relevance=0.60,
         )
 
         current_metrics = HealthMetrics(
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             avg_search_latency_ms=30.0,  # Improved (lower is better)
             avg_result_relevance=0.75,  # Improved (higher is better)
         )
@@ -473,13 +473,13 @@ class TestHealthReporter:
     def test_analyze_trends_degrading(self, reporter):
         """Test trend analysis with degrading metrics."""
         previous_metrics = HealthMetrics(
-            timestamp=datetime.utcnow() - timedelta(days=7),
+            timestamp=datetime.now(UTC) - timedelta(days=7),
             avg_search_latency_ms=20.0,
             avg_result_relevance=0.80,
         )
 
         current_metrics = HealthMetrics(
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             avg_search_latency_ms=60.0,  # Degraded
             avg_result_relevance=0.50,  # Degraded
         )
@@ -664,7 +664,7 @@ class TestMonitoringIntegration:
 
         # Create degraded metrics
         metrics = HealthMetrics(
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             avg_result_relevance=0.40,  # Critical
             noise_ratio=0.60,  # Critical
             stale_memories=3000,  # Warning

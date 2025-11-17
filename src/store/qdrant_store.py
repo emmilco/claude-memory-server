@@ -496,18 +496,27 @@ class QdrantMemoryStore(MemoryStore):
         created_at = payload.get("created_at")
         if isinstance(created_at, str):
             created_at = datetime.fromisoformat(created_at)
+            # Ensure timezone-aware
+            if created_at.tzinfo is None:
+                created_at = created_at.replace(tzinfo=UTC)
         elif created_at is None:
             created_at = datetime.now(UTC)
 
         updated_at = payload.get("updated_at")
         if isinstance(updated_at, str):
             updated_at = datetime.fromisoformat(updated_at)
+            # Ensure timezone-aware
+            if updated_at.tzinfo is None:
+                updated_at = updated_at.replace(tzinfo=UTC)
         elif updated_at is None:
             updated_at = datetime.now(UTC)
 
         last_accessed = payload.get("last_accessed", updated_at)
         if isinstance(last_accessed, str):
             last_accessed = datetime.fromisoformat(last_accessed)
+            # Ensure timezone-aware
+            if last_accessed.tzinfo is None:
+                last_accessed = last_accessed.replace(tzinfo=UTC)
         elif last_accessed is None:
             last_accessed = updated_at
 
@@ -527,6 +536,9 @@ class QdrantMemoryStore(MemoryStore):
         provenance_last_confirmed = payload.get("provenance_last_confirmed")
         if provenance_last_confirmed and isinstance(provenance_last_confirmed, str):
             provenance_last_confirmed = datetime.fromisoformat(provenance_last_confirmed)
+            # Ensure timezone-aware
+            if provenance_last_confirmed.tzinfo is None:
+                provenance_last_confirmed = provenance_last_confirmed.replace(tzinfo=UTC)
 
         provenance = MemoryProvenance(
             source=ProvenanceSource(payload.get("provenance_source", "user_explicit")),
@@ -674,6 +686,9 @@ class QdrantMemoryStore(MemoryStore):
                     if updated_at:
                         if isinstance(updated_at, str):
                             updated_at = datetime.fromisoformat(updated_at)
+                            # Ensure timezone-aware
+                            if updated_at.tzinfo is None:
+                                updated_at = updated_at.replace(tzinfo=UTC)
                         if latest_update is None or updated_at > latest_update:
                             latest_update = updated_at
 
@@ -1024,6 +1039,9 @@ class QdrantMemoryStore(MemoryStore):
                         if last_used:
                             if isinstance(last_used, str):
                                 last_used = datetime.fromisoformat(last_used)
+                                # Ensure timezone-aware
+                                if last_used.tzinfo is None:
+                                    last_used = last_used.replace(tzinfo=UTC)
 
                             if last_used >= older_than:
                                 continue  # Not old enough
@@ -1099,6 +1117,9 @@ class QdrantMemoryStore(MemoryStore):
                     if last_used:
                         if isinstance(last_used, str):
                             last_used = datetime.fromisoformat(last_used)
+                            # Ensure timezone-aware
+                            if last_used.tzinfo is None:
+                                last_used = last_used.replace(tzinfo=UTC)
 
                         if last_used >= cutoff_time:
                             continue  # Not old enough

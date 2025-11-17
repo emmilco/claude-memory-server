@@ -7,7 +7,7 @@ dry-run support and history tracking.
 
 import sqlite3
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import List, Optional, Callable, Dict, Any
 from enum import Enum
 
@@ -440,7 +440,7 @@ class RemediationEngine:
                     result.items_affected,
                     result.error_message,
                     details_json,
-                    datetime.utcnow().isoformat(),
+                    datetime.now(UTC).isoformat(),
                 ),
             )
 
@@ -456,7 +456,7 @@ class RemediationEngine:
         Returns:
             List of remediation records
         """
-        cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+        cutoff = (datetime.now(UTC) - timedelta(days=days)).isoformat()
 
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()

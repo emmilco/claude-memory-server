@@ -512,53 +512,91 @@ class IncrementalIndexer(BaseCodeIndexer):
         """
         file_path_str = str(file_path.resolve())
 
-        # Qdrant doesn't have a direct "delete by filter" API,
-        # so we need to:
-        # 1. Search for all points with this file_path
-        # 2. Delete them by ID
-
         try:
-            # Initialize store if needed
-            if self.store.client is None:
-                await self.store.initialize()
-            
-            # Check again after initialization
-            if self.store.client is None:
-                logger.warning(f"Store not initialized, skipping cleanup for {file_path}")
+            # Check if store has client attribute (Qdrant) or conn attribute (SQLite)
+            has_client = hasattr(self.store, 'client')
+            has_conn = hasattr(self.store, 'conn')
+
+            if not has_client and not has_conn:
+                logger.warning(f"Store type not supported for deletion, skipping cleanup for {file_path}")
                 return 0
-            
-            # Build proper Qdrant filter
-            from qdrant_client.models import Filter, FieldCondition, MatchValue
-            
-            file_filter = Filter(
-                must=[
-                    FieldCondition(
-                        key="file_path",
-                        match=MatchValue(value=file_path_str),
-                    )
-                ]
-            )
-            
-            # Get all points for this file using scroll
-            points, _ = self.store.client.scroll(
-                collection_name=self.store.collection_name,
-                scroll_filter=file_filter,
-                limit=10000,  # Max units per file
-                with_payload=False,
-                with_vectors=False,
-            )
 
-            point_ids = [point.id for point in points]
+            # Handle Qdrant store
+            if has_client:
+                # Initialize store if needed
+                if self.store.client is None:
+                    await self.store.initialize()
 
-            if point_ids:
-                # Delete all points
-                self.store.client.delete(
-                    collection_name=self.store.collection_name,
-                    points_selector=point_ids,
+                # Check again after initialization
+                if self.store.client is None:
+                    logger.warning(f"Store not initialized, skipping cleanup for {file_path}")
+                    return 0
+
+                # Build proper Qdrant filter
+                from qdrant_client.models import Filter, FieldCondition, MatchValue
+
+                file_filter = Filter(
+                    must=[
+                        FieldCondition(
+                            key="file_path",
+                            match=MatchValue(value=file_path_str),
+                        )
+                    ]
                 )
-                logger.debug(f"Deleted {len(point_ids)} units for {file_path.name}")
 
-            return len(point_ids)
+                # Get all points for this file using scroll
+                points, _ = self.store.client.scroll(
+                    collection_name=self.store.collection_name,
+                    scroll_filter=file_filter,
+                    limit=10000,  # Max units per file
+                    with_payload=False,
+                    with_vectors=False,
+                )
+
+                point_ids = [point.id for point in points]
+
+                if point_ids:
+                    # Delete all points
+                    self.store.client.delete(
+                        collection_name=self.store.collection_name,
+                        points_selector=point_ids,
+                    )
+                    logger.debug(f"Deleted {len(point_ids)} units for {file_path.name}")
+
+                return len(point_ids)
+
+            # Handle SQLite store
+            else:
+                # Query for all memory units with this file_path
+                from src.core.models import SearchFilters, MemoryCategory
+
+                filters = SearchFilters(
+                    category=MemoryCategory.CONTEXT,
+                    tags=["code"],
+                )
+
+                # Retrieve all memories with dummy embedding (not used for filtering)
+                dummy_embedding = [0.0] * 384
+                results = await self.store.retrieve(
+                    query_embedding=dummy_embedding,
+                    filters=filters,
+                    limit=10000,
+                )
+
+                # Filter by file_path in metadata
+                deleted_count = 0
+                for memory, _ in results:
+                    metadata = memory.metadata or {}
+                    if isinstance(metadata, dict):
+                        mem_file_path = metadata.get("file_path", "")
+                        if mem_file_path == file_path_str:
+                            await self.store.delete(memory.id)
+                            deleted_count += 1
+
+                if deleted_count > 0:
+                    logger.debug(f"Deleted {deleted_count} units for {file_path.name}")
+
+                return deleted_count
 
         except Exception as e:
             logger.warning(f"Failed to delete units for {file_path}: {e}")

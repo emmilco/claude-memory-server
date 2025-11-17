@@ -7,7 +7,7 @@ from various sources and stores time-series data for trend analysis.
 
 import sqlite3
 from dataclasses import dataclass, asdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Optional, List, Dict, Any
 from pathlib import Path
 
@@ -173,7 +173,7 @@ class MetricsCollector:
         Returns:
             HealthMetrics: Complete metrics snapshot
         """
-        metrics = HealthMetrics(timestamp=datetime.utcnow())
+        metrics = HealthMetrics(timestamp=datetime.now(UTC))
 
         if self.store:
             # Collect database health metrics
@@ -303,7 +303,7 @@ class MetricsCollector:
         """Calculate average search latency from query log."""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+            cutoff = (datetime.now(UTC) - timedelta(days=days)).isoformat()
 
             cursor.execute(
                 """
@@ -321,7 +321,7 @@ class MetricsCollector:
         """Calculate 95th percentile search latency."""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+            cutoff = (datetime.now(UTC) - timedelta(days=days)).isoformat()
 
             cursor.execute(
                 """
@@ -344,7 +344,7 @@ class MetricsCollector:
         """Calculate average result relevance from query log."""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+            cutoff = (datetime.now(UTC) - timedelta(days=days)).isoformat()
 
             cursor.execute(
                 """
@@ -362,7 +362,7 @@ class MetricsCollector:
         """Calculate average queries per day."""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+            cutoff = (datetime.now(UTC) - timedelta(days=days)).isoformat()
 
             cursor.execute(
                 """
@@ -387,7 +387,7 @@ class MetricsCollector:
         """Calculate average number of results per query."""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+            cutoff = (datetime.now(UTC) - timedelta(days=days)).isoformat()
 
             cursor.execute(
                 """
@@ -456,7 +456,7 @@ class MetricsCollector:
                     latency_ms,
                     result_count,
                     avg_relevance,
-                    datetime.utcnow().isoformat(),
+                    datetime.now(UTC).isoformat(),
                 ),
             )
             conn.commit()
@@ -547,7 +547,7 @@ class MetricsCollector:
         Returns:
             List of HealthMetrics, ordered by timestamp
         """
-        cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+        cutoff = (datetime.now(UTC) - timedelta(days=days)).isoformat()
 
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
@@ -572,7 +572,7 @@ class MetricsCollector:
         Returns:
             List of daily averaged HealthMetrics
         """
-        cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+        cutoff = (datetime.now(UTC) - timedelta(days=days)).isoformat()
 
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
@@ -677,7 +677,7 @@ class MetricsCollector:
         Returns:
             Number of records deleted
         """
-        cutoff = (datetime.utcnow() - timedelta(days=retention_days)).isoformat()
+        cutoff = (datetime.now(UTC) - timedelta(days=retention_days)).isoformat()
 
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()

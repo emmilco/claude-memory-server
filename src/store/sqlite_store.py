@@ -528,14 +528,23 @@ class SQLiteMemoryStore(MemoryStore):
         created_at = row.get("created_at")
         if isinstance(created_at, str):
             created_at = datetime.fromisoformat(created_at)
+            # Ensure timezone-aware
+            if created_at.tzinfo is None:
+                created_at = created_at.replace(tzinfo=UTC)
 
         updated_at = row.get("updated_at")
         if isinstance(updated_at, str):
             updated_at = datetime.fromisoformat(updated_at)
+            # Ensure timezone-aware
+            if updated_at.tzinfo is None:
+                updated_at = updated_at.replace(tzinfo=UTC)
 
         last_accessed = row.get("last_accessed", updated_at)
         if isinstance(last_accessed, str):
             last_accessed = datetime.fromisoformat(last_accessed)
+            # Ensure timezone-aware
+            if last_accessed.tzinfo is None:
+                last_accessed = last_accessed.replace(tzinfo=UTC)
         elif last_accessed is None:
             last_accessed = updated_at or datetime.now(UTC)
 
@@ -554,6 +563,9 @@ class SQLiteMemoryStore(MemoryStore):
         provenance_last_confirmed = row.get("provenance_last_confirmed")
         if provenance_last_confirmed and isinstance(provenance_last_confirmed, str):
             provenance_last_confirmed = datetime.fromisoformat(provenance_last_confirmed)
+            # Ensure timezone-aware
+            if provenance_last_confirmed.tzinfo is None:
+                provenance_last_confirmed = provenance_last_confirmed.replace(tzinfo=UTC)
 
         provenance_file_context = row.get("provenance_file_context", "[]")
         if isinstance(provenance_file_context, str):
@@ -661,6 +673,9 @@ class SQLiteMemoryStore(MemoryStore):
             latest_update = cursor.fetchone()[0]
             if latest_update:
                 latest_update = datetime.fromisoformat(latest_update)
+                # Ensure timezone-aware
+                if latest_update.tzinfo is None:
+                    latest_update = latest_update.replace(tzinfo=UTC)
 
             # Get unique file count (from metadata)
             cursor.execute("""
@@ -1355,6 +1370,9 @@ class SQLiteMemoryStore(MemoryStore):
                 # Parse datetime
                 if relationship.get("detected_at"):
                     relationship["detected_at"] = datetime.fromisoformat(relationship["detected_at"])
+                    # Ensure timezone-aware
+                    if relationship["detected_at"].tzinfo is None:
+                        relationship["detected_at"] = relationship["detected_at"].replace(tzinfo=UTC)
                 # Parse boolean
                 relationship["dismissed"] = bool(relationship.get("dismissed", 0))
                 relationships.append(relationship)

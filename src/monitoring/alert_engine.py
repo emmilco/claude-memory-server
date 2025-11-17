@@ -8,7 +8,7 @@ with recommendations for remediation.
 import sqlite3
 import json
 from dataclasses import dataclass, asdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import List, Optional, Dict, Any, Literal
 from enum import Enum
 
@@ -409,7 +409,7 @@ class AlertEngine:
             """
 
             if not include_snoozed:
-                now = datetime.utcnow().isoformat()
+                now = datetime.now(UTC).isoformat()
                 query += f" AND (snoozed_until IS NULL OR snoozed_until < '{now}')"
 
             query += " ORDER BY severity DESC, timestamp DESC"
@@ -461,7 +461,7 @@ class AlertEngine:
                 SET resolved = 1, resolved_at = ?
                 WHERE id = ?
                 """,
-                (datetime.utcnow().isoformat(), alert_id),
+                (datetime.now(UTC).isoformat(), alert_id),
             )
             conn.commit()
             return cursor.rowcount > 0
@@ -477,7 +477,7 @@ class AlertEngine:
         Returns:
             True if alert was snoozed, False if not found
         """
-        snooze_until = datetime.utcnow() + timedelta(hours=hours)
+        snooze_until = datetime.now(UTC) + timedelta(hours=hours)
 
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
@@ -550,7 +550,7 @@ class AlertEngine:
         Returns:
             Number of alerts deleted
         """
-        cutoff = (datetime.utcnow() - timedelta(days=retention_days)).isoformat()
+        cutoff = (datetime.now(UTC) - timedelta(days=retention_days)).isoformat()
 
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()

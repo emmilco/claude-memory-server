@@ -949,6 +949,24 @@ class MemoryRAGServer:
             if search_mode not in ["semantic", "keyword", "hybrid"]:
                 raise ValidationError(f"Invalid search_mode: {search_mode}. Must be 'semantic', 'keyword', or 'hybrid'")
 
+            # Handle empty query
+            if not query or not query.strip():
+                logger.warning("Empty query provided, returning empty results")
+                return {
+                    "status": "success",
+                    "results": [],
+                    "total_found": 0,
+                    "query": query,
+                    "project_name": project_name or self.project_name,
+                    "search_mode": search_mode,
+                    "query_time_ms": 0.0,
+                    "quality": "poor",
+                    "confidence": "very_low",
+                    "suggestions": ["Provide a search query with keywords or description"],
+                    "interpretation": "Empty query - no search performed",
+                    "matched_keywords": [],
+                }
+
             # Use current project if not specified
             filter_project_name = project_name or self.project_name
 
@@ -1056,6 +1074,7 @@ class MemoryRAGServer:
                 actual_search_mode = "semantic"  # Fallback
 
             return {
+                "status": "success",
                 "results": code_results,
                 "total_found": len(code_results),
                 "query": query,

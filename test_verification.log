@@ -1,0 +1,100 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.6, pytest-8.4.2, pluggy-1.6.0 -- /Users/elliotmilco/.pyenv/versions/3.13.6/bin/python3.13
+cachedir: .pytest_cache
+rootdir: /Users/elliotmilco/Documents/GitHub/claude-memory-server
+plugins: asyncio-1.2.0, anyio-4.10.0, cov-7.0.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 1414 items
+
+tests/integration/test_concurrent_operations.py::TestConcurrentWrites::test_concurrent_store_operations PASSED [  0%]
+tests/integration/test_concurrent_operations.py::TestConcurrentWrites::test_concurrent_multiple_stores PASSED [  0%]
+tests/integration/test_concurrent_operations.py::TestConcurrentReads::test_concurrent_retrieve_operations PASSED [  0%]
+tests/integration/test_concurrent_operations.py::TestConcurrentReads::test_concurrent_reads_during_writes PASSED [  0%]
+tests/integration/test_concurrent_operations.py::TestConcurrentEmbeddingGeneration::test_concurrent_embedding_requests PASSED [  0%]
+tests/integration/test_concurrent_operations.py::TestConcurrentCacheAccess::test_concurrent_cache_reads PASSED [  0%]
+tests/integration/test_concurrent_operations.py::TestConcurrentCacheAccess::test_concurrent_cache_writes PASSED [  0%]
+tests/integration/test_concurrent_operations.py::TestConcurrentDeletes::test_concurrent_delete_operations PASSED [  0%]
+tests/integration/test_concurrent_operations.py::TestConcurrentMixedOperations::test_mixed_operations_concurrently PASSED [  0%]
+tests/integration/test_concurrent_operations.py::TestRaceConditions::test_simultaneous_store_same_content PASSED [  0%]
+tests/integration/test_concurrent_operations.py::TestRaceConditions::test_read_while_updating PASSED [  0%]
+tests/integration/test_concurrent_operations.py::TestConcurrentStressTest::test_high_concurrency_store PASSED [  0%]
+tests/integration/test_concurrent_operations.py::TestConcurrentStressTest::test_rapid_retrieve_operations PASSED [  0%]
+tests/integration/test_concurrent_operations.py::test_concurrent_operations_coverage PASSED [  0%]
+tests/integration/test_consolidation_integration.py::test_end_to_end_duplicate_detection_and_merge PASSED [  1%]
+tests/integration/test_consolidation_integration.py::test_auto_merge_candidates_detection PASSED [  1%]
+tests/integration/test_consolidation_integration.py::test_user_review_candidates_detection PASSED [  1%]
+tests/integration/test_consolidation_integration.py::test_merge_strategy_keep_most_recent PASSED [  1%]
+tests/integration/test_consolidation_integration.py::test_merge_strategy_keep_highest_importance PASSED [  1%]
+tests/integration/test_consolidation_integration.py::test_dry_run_mode PASSED [  1%]
+tests/integration/test_consolidation_integration.py::test_consolidation_suggestions PASSED [  1%]
+tests/integration/test_consolidation_integration.py::test_category_filtering_in_detection PASSED [  1%]
+tests/integration/test_embeddings.py::test_generate_single_embedding PASSED [  1%]
+tests/integration/test_embeddings.py::test_batch_generate_embeddings PASSED [  1%]
+tests/integration/test_embeddings.py::test_embedding_deterministic PASSED [  1%]
+tests/integration/test_embeddings.py::test_cache_functionality PASSED    [  1%]
+tests/integration/test_embeddings.py::test_cache_statistics PASSED       [  1%]
+tests/integration/test_embeddings.py::test_large_batch_processing PASSED [  1%]
+tests/integration/test_embeddings.py::test_empty_text_handling PASSED    [  2%]
+tests/integration/test_embeddings.py::test_benchmark PASSED              [  2%]
+tests/integration/test_error_recovery.py::TestStoreFailureRecovery::test_store_retry_on_temporary_failure PASSED [  2%]
+tests/integration/test_error_recovery.py::TestStoreFailureRecovery::test_partial_batch_failure_handling PASSED [  2%]
+tests/integration/test_error_recovery.py::TestStoreFailureRecovery::test_store_handles_connection_loss PASSED [  2%]
+tests/integration/test_error_recovery.py::TestEmbeddingFailureRecovery::test_embedding_generation_timeout_handling PASSED [  2%]
+tests/integration/test_error_recovery.py::TestEmbeddingFailureRecovery::test_embedding_generation_error_handling PASSED [  2%]
+tests/integration/test_error_recovery.py::TestCacheFailureRecovery::test_cache_corruption_recovery PASSED [  2%]
+tests/integration/test_error_recovery.py::TestCacheFailureRecovery::test_cache_unavailable_fallback PASSED [  2%]
+tests/integration/test_error_recovery.py::TestReadOnlyModeEnforcement::test_readonly_mode_raises_on_write PASSED [  2%]
+tests/integration/test_error_recovery.py::TestReadOnlyModeEnforcement::test_readonly_mode_allows_reads PASSED [  2%]
+tests/integration/test_error_recovery.py::TestValidationErrorRecovery::test_invalid_content_rejection PASSED [  2%]
+tests/integration/test_error_recovery.py::TestValidationErrorRecovery::test_injection_attack_rejection PASSED [  2%]
+tests/integration/test_error_recovery.py::TestResourceExhaustionHandling::test_large_batch_size_handling PASSED [  2%]
+tests/integration/test_error_recovery.py::TestResourceExhaustionHandling::test_oversized_content_rejection PASSED [  3%]
+tests/integration/test_error_recovery.py::TestHealthCheckResilience::test_health_check_with_degraded_store PASSED [  3%]
+tests/integration/test_error_recovery.py::TestHealthCheckResilience::test_health_check_survives_errors PASSED [  3%]
+tests/integration/test_error_recovery.py::test_error_recovery_coverage PASSED [  3%]
+tests/integration/test_file_watcher_indexing.py::TestFileWatcherIndexerIntegration::test_file_change_triggers_reindexing PASSED [  3%]
+tests/integration/test_file_watcher_indexing.py::TestFileWatcherIndexerIntegration::test_file_modification_updates_index PASSED [  3%]
+tests/integration/test_file_watcher_indexing.py::TestFileWatcherIndexerIntegration::test_multiple_files_indexed_independently PASSED [  3%]
+tests/integration/test_file_watcher_indexing.py::TestFileWatcherIndexerIntegration::test_debouncing_prevents_redundant_indexing PASSED [  3%]
+tests/integration/test_file_watcher_indexing.py::TestFileWatcherIndexerIntegration::test_directory_indexing_workflow PASSED [  3%]
+tests/integration/test_file_watcher_indexing.py::TestFileWatcherIndexerIntegration::test_recursive_directory_indexing PASSED [  3%]
+tests/integration/test_file_watcher_indexing.py::TestFileWatcherIndexerIntegration::test_file_watcher_ignores_non_matching_extensions PASSED [  3%]
+tests/integration/test_file_watcher_indexing.py::TestFileWatcherIndexerIntegration::test_error_in_one_file_doesnt_stop_others PASSED [  3%]
+tests/integration/test_file_watcher_indexing.py::test_file_watcher_indexer_integration_coverage PASSED [  3%]
+tests/integration/test_hybrid_search_integration.py::TestHybridSearchIntegration::test_server_initialization_with_hybrid PASSED [  3%]
+tests/integration/test_hybrid_search_integration.py::TestHybridSearchIntegration::test_server_initialization_with_hybrid ERROR [  3%]
+
+==================================== ERRORS ====================================
+_ ERROR at teardown of TestHybridSearchIntegration.test_server_initialization_with_hybrid _
+E   AttributeError: 'MemoryRAGServer' object has no attribute 'cleanup'
+---------------------------- Captured stderr setup -----------------------------
+huggingface/tokenizers: The current process just got forked, after parallelism has already been used. Disabling parallelism to avoid deadlocks...
+To disable this warning, you can either:
+	- Avoid using `tokenizers` before the fork if possible
+	- Explicitly set the environment variable TOKENIZERS_PARALLELISM=(true | false)
+=============================== warnings summary ===============================
+tests/integration/test_indexing_integration.py:86
+  /Users/elliotmilco/Documents/GitHub/claude-memory-server/tests/integration/test_indexing_integration.py:86: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.integration
+
+tests/integration/test_indexing_integration.py:151
+  /Users/elliotmilco/Documents/GitHub/claude-memory-server/tests/integration/test_indexing_integration.py:151: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.integration
+
+tests/integration/test_indexing_integration.py:231
+  /Users/elliotmilco/Documents/GitHub/claude-memory-server/tests/integration/test_indexing_integration.py:231: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.integration
+
+tests/integration/test_indexing_integration.py:315
+  /Users/elliotmilco/Documents/GitHub/claude-memory-server/tests/integration/test_indexing_integration.py:315: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.integration
+
+tests/unit/test_parallel_embeddings.py:381
+  /Users/elliotmilco/Documents/GitHub/claude-memory-server/tests/unit/test_parallel_embeddings.py:381: PytestUnknownMarkWarning: Unknown pytest.mark.benchmark - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.benchmark
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+ERROR tests/integration/test_hybrid_search_integration.py::TestHybridSearchIntegration::test_server_initialization_with_hybrid
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
+=================== 56 passed, 5 warnings, 1 error in 49.58s ===================

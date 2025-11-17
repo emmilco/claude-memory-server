@@ -26,6 +26,7 @@ class TestIndexingProgressCallback:
         mock_store.close = AsyncMock()
 
         mock_embeddings = MagicMock()
+        mock_embeddings.initialize = AsyncMock()
         mock_embeddings.batch_generate = AsyncMock(return_value=[[0.1] * 384, [0.2] * 384])
         mock_embeddings.close = AsyncMock()
 
@@ -93,6 +94,7 @@ class TestIndexingProgressCallback:
         mock_store.close = AsyncMock()
 
         mock_embeddings = MagicMock()
+        mock_embeddings.initialize = AsyncMock()
         mock_embeddings.batch_generate = AsyncMock(return_value=[[0.1] * 384])
         mock_embeddings.close = AsyncMock()
 
@@ -145,6 +147,7 @@ class TestIndexingProgressCallback:
         mock_store.close = AsyncMock()
 
         mock_embeddings = MagicMock()
+        mock_embeddings.initialize = AsyncMock()
         mock_embeddings.batch_generate = AsyncMock(return_value=[[0.1] * 384])
         mock_embeddings.close = AsyncMock()
 
@@ -191,6 +194,7 @@ class TestIndexingProgressCallback:
         mock_store.close = AsyncMock()
 
         mock_embeddings = MagicMock()
+        mock_embeddings.initialize = AsyncMock()
         mock_embeddings.close = AsyncMock()
 
         indexer = IncrementalIndexer(
@@ -235,6 +239,7 @@ class TestIndexingProgressCallback:
         mock_store.close = AsyncMock()
 
         mock_embeddings = MagicMock()
+        mock_embeddings.initialize = AsyncMock()
         mock_embeddings.batch_generate = AsyncMock(return_value=[[0.1] * 384])
         mock_embeddings.close = AsyncMock()
 
@@ -272,6 +277,7 @@ class TestIndexingProgressCallback:
         mock_store.close = AsyncMock()
 
         mock_embeddings = MagicMock()
+        mock_embeddings.initialize = AsyncMock()
         mock_embeddings.batch_generate = AsyncMock(return_value=[[0.1] * 384])
         mock_embeddings.close = AsyncMock()
 
@@ -326,6 +332,7 @@ class TestIndexingProgressCallback:
         mock_store.close = AsyncMock()
 
         mock_embeddings = MagicMock()
+        mock_embeddings.initialize = AsyncMock()
         mock_embeddings.batch_generate = AsyncMock(return_value=[[0.1] * 384])
         mock_embeddings.close = AsyncMock()
 
