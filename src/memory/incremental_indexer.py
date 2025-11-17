@@ -77,6 +77,12 @@ except ImportError:
             ".java": "java",
             ".go": "go",
             ".rs": "rust",
+<<<<<<< HEAD
+            ".json": "json",
+            ".yaml": "yaml",
+            ".yml": "yaml",
+            ".toml": "toml",
+=======
             ".c": "c",
             ".cpp": "cpp",
             ".cc": "cpp",
@@ -87,6 +93,7 @@ except ImportError:
             ".hh": "cpp",
             ".cs": "csharp",
             ".sql": "sql",
+>>>>>>> origin/main
         }
         language = language_map.get(ext, "unknown")
 
@@ -216,7 +223,11 @@ class IncrementalIndexer(BaseCodeIndexer):
     """
 
     # Supported file extensions
+<<<<<<< HEAD
+    SUPPORTED_EXTENSIONS = {".py", ".js", ".jsx", ".ts", ".tsx", ".java", ".go", ".rs", ".json", ".yaml", ".yml", ".toml"}
+=======
     SUPPORTED_EXTENSIONS = {".py", ".js", ".jsx", ".ts", ".tsx", ".java", ".go", ".rs", ".c", ".h", ".cpp", ".cc", ".cxx", ".hpp", ".hxx", ".hh", ".cs", ".sql"}
+>>>>>>> origin/main
 
     def __init__(
         self,

@@ -425,6 +425,19 @@ impl CodeParser {
 /// Parse a source file and extract semantic units
 #[pyfunction]
 pub fn parse_source_file(file_path: String, source_code: String) -> PyResult<ParseResult> {
+    // Check if this is a configuration file first
+    let extension = std::path::Path::new(&file_path)
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("");
+
+    // Handle config files with native parsers
+    if matches!(extension, "json" | "yaml" | "yml" | "toml") {
+        return crate::config_parsing::parse_config_file(&file_path, &source_code)
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e));
+    }
+
+    // Handle code files with tree-sitter
     let mut parser = CodeParser::new();
     parser
         .parse_file(&file_path, &source_code)
@@ -439,8 +452,18 @@ pub fn batch_parse_files(files: Vec<(String, String)>) -> PyResult<Vec<ParseResu
     let results: Result<Vec<ParseResult>, String> = files
         .par_iter()
         .map(|(path, content)| {
-            let mut parser = CodeParser::new();
-            parser.parse_file(path, content)
+            // Check if this is a configuration file
+            let extension = std::path::Path::new(path)
+                .extension()
+                .and_then(|e| e.to_str())
+                .unwrap_or("");
+
+            if matches!(extension, "json" | "yaml" | "yml" | "toml") {
+                crate::config_parsing::parse_config_file(path, content)
+            } else {
+                let mut parser = CodeParser::new();
+                parser.parse_file(path, content)
+            }
         })
         .collect();
 

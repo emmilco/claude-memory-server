@@ -1,6 +1,7 @@
 use pyo3::prelude::*;
 
 mod parsing;
+mod config_parsing;
 
 /// Normalize a batch of embeddings to unit length.
 ///
