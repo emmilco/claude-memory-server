@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - 2025-11-17
 
+- **PERF-004 & PERF-005: Smart Batching & Streaming Indexing ✅ COMPLETE** - Adaptive batching and concurrent processing
+  - Enhanced `src/embeddings/parallel_generator.py` - Adaptive batch sizing based on text length
+    - Small texts (<500 chars): batch size = 64 (2x default)
+    - Medium texts (500-2000 chars): batch size = 32 (default)
+    - Large texts (>2000 chars): batch size = 16 (0.5x default)
+    - Prevents OOM on large code files
+    - Better memory utilization across different file sizes
+    - Logged during indexing when show_progress=True
+  - Streaming indexing already implemented via concurrent file processing
+    - Semaphore-based concurrency (max_concurrent=4)
+    - Files processed concurrently, embeddings generated as units extracted
+    - No waiting for all files to parse before starting embeddings
+    - Parallel generator distributes work across workers efficiently
+  - Created planning document: `planning_docs/PERF-004-005-combined.md`
+  - **Impact:** Better resource usage, prevents memory issues, improved perceived performance
+  - **Minimal Code Changes:** Leveraged existing architecture, added adaptive batch sizing
+
 - **PERF-003: Incremental Embeddings ✅ COMPLETE** - Cache-based embedding reuse for 5-10x faster re-indexing
   - Enhanced `src/embeddings/parallel_generator.py` - Added cache support to parallel generator
     - Integrated EmbeddingCache for automatic embedding reuse

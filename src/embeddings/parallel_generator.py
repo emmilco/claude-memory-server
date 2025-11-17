@@ -238,7 +238,20 @@ class ParallelEmbeddingGenerator:
             if not text or not text.strip():
                 raise EmbeddingError(f"Empty text at index {i}")
 
-        batch_size = batch_size or self.batch_size
+        # Adaptive batch sizing based on text length (PERF-004)
+        if batch_size is None:
+            avg_text_length = sum(len(t) for t in texts) / len(texts) if texts else 0
+            if avg_text_length < 500:
+                batch_size = min(64, self.batch_size * 2)  # Small texts: larger batches
+            elif avg_text_length > 2000:
+                batch_size = max(16, self.batch_size // 2)  # Large texts: smaller batches
+            else:
+                batch_size = self.batch_size  # Medium texts: default
+
+            if show_progress and avg_text_length > 0:
+                logger.info(f"Adaptive batch size: {batch_size} (avg text length: {avg_text_length:.0f} chars)")
+        else:
+            batch_size = batch_size
 
         try:
             # Check cache for all texts (if enabled)

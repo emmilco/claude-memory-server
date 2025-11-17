@@ -425,15 +425,20 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Impact:** 5-10x faster re-indexing (98%+ cache hit rate for unchanged files)
   - **Completed:** 2025-11-17
 
-- [ ] **PERF-004**: Smart batching
-  - [ ] Group files by size for optimal batching
-  - [ ] Reduce embedding overhead
-  - **Impact:** More efficient resource usage
+- [x] **PERF-004**: Smart batching ✅ **COMPLETE**
+  - [x] Adaptive batch sizing based on text length
+  - [x] Small texts (<500 chars): batch size = 64
+  - [x] Large texts (>2000 chars): batch size = 16
+  - [x] Prevents OOM on large files
+  - **Impact:** Better memory usage, prevents issues with large files
+  - **Completed:** 2025-11-17
 
-- [ ] **PERF-005**: Streaming indexing
-  - [ ] Don't wait for all files to parse
-  - [ ] Start embedding as units are extracted
-  - **Impact:** Faster perceived performance
+- [x] **PERF-005**: Streaming indexing ✅ **COMPLETE**
+  - [x] Concurrent file processing (already implemented via semaphore)
+  - [x] Start embedding as units are extracted (per-file basis)
+  - [x] Parallel worker distribution for efficiency
+  - **Impact:** Better resource utilization, improved perceived performance
+  - **Completed:** 2025-11-17 (verified existing implementation)
 
 - [ ] **PERF-002**: GPU acceleration
   - [ ] Use CUDA for embedding model
