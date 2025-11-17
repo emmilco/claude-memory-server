@@ -77,6 +77,13 @@ class ServerConfig(BaseSettings):
     git_auto_size_threshold_mb: int = 500
     git_diff_size_limit_kb: int = 10  # Skip diffs larger than this
 
+    # Hybrid search (BM25 + Vector)
+    enable_hybrid_search: bool = True
+    hybrid_search_alpha: float = 0.5  # Weight: 0=keyword only, 1=semantic only
+    hybrid_fusion_method: str = "weighted"  # "weighted", "rrf", or "cascade"
+    bm25_k1: float = 1.5  # Term saturation parameter
+    bm25_b: float = 0.75  # Length normalization parameter
+
     model_config = SettingsConfigDict(
         env_prefix="CLAUDE_RAG_",
         env_file=".env",

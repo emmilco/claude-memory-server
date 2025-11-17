@@ -11,6 +11,7 @@ from src.cli.watch_command import WatchCommand
 from src.cli.health_command import HealthCommand
 from src.cli.status_command import StatusCommand
 from src.cli.prune_command import prune_command
+from src.cli.git_index_command import GitIndexCommand
 
 
 def setup_logging(level: str = "INFO"):
@@ -127,6 +128,48 @@ def create_parser() -> argparse.ArgumentParser:
         help="Show detailed output",
     )
 
+    # Git index command
+    git_index_parser = subparsers.add_parser(
+        "git-index",
+        help="Index git history for semantic search",
+    )
+    git_index_parser.add_argument(
+        "repo_path",
+        type=Path,
+        help="Path to git repository",
+    )
+    git_index_parser.add_argument(
+        "--project-name",
+        "-p",
+        type=str,
+        required=True,
+        help="Project name for organization",
+    )
+    git_index_parser.add_argument(
+        "--commits",
+        "-n",
+        type=int,
+        help="Number of commits to index (default from config)",
+    )
+    git_index_parser.add_argument(
+        "--diffs",
+        action="store_true",
+        dest="diffs",
+        help="Include diff content",
+    )
+    git_index_parser.add_argument(
+        "--no-diffs",
+        action="store_false",
+        dest="diffs",
+        help="Don't include diff content",
+    )
+    git_index_parser.set_defaults(diffs=None)
+    git_index_parser.add_argument(
+        "-v", "--verbose",
+        action="store_true",
+        help="Verbose output",
+    )
+
     return parser
 
 
@@ -155,6 +198,9 @@ async def main_async(args):
             stale_days=args.stale_days,
         )
         sys.exit(exit_code)
+    elif args.command == "git-index":
+        cmd = GitIndexCommand()
+        await cmd.run(args)
     else:
         print("No command specified. Use --help for usage information.")
         sys.exit(1)

@@ -106,6 +106,67 @@ class SQLiteMemoryStore(MemoryStore):
                 "CREATE INDEX IF NOT EXISTS idx_last_used ON memory_usage_tracking(last_used)"
             )
 
+            # Create git commits table
+            self.conn.execute("""
+                CREATE TABLE IF NOT EXISTS git_commits (
+                    commit_hash TEXT PRIMARY KEY,
+                    repository_path TEXT NOT NULL,
+                    author_name TEXT NOT NULL,
+                    author_email TEXT NOT NULL,
+                    author_date TEXT NOT NULL,
+                    committer_name TEXT NOT NULL,
+                    committer_date TEXT NOT NULL,
+                    message TEXT NOT NULL,
+                    message_embedding TEXT NOT NULL,
+                    branch_names TEXT,
+                    tags TEXT,
+                    parent_hashes TEXT,
+                    stats TEXT,
+                    created_at TEXT NOT NULL
+                )
+            """)
+
+            # Create git file changes table
+            self.conn.execute("""
+                CREATE TABLE IF NOT EXISTS git_file_changes (
+                    id TEXT PRIMARY KEY,
+                    commit_hash TEXT NOT NULL,
+                    file_path TEXT NOT NULL,
+                    change_type TEXT NOT NULL,
+                    lines_added INTEGER NOT NULL DEFAULT 0,
+                    lines_deleted INTEGER NOT NULL DEFAULT 0,
+                    diff_content TEXT,
+                    diff_embedding TEXT,
+                    FOREIGN KEY (commit_hash) REFERENCES git_commits(commit_hash) ON DELETE CASCADE
+                )
+            """)
+
+            # Create indices for git tables
+            self.conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_git_repo ON git_commits(repository_path)"
+            )
+            self.conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_git_author ON git_commits(author_email)"
+            )
+            self.conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_git_date ON git_commits(author_date)"
+            )
+            self.conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_git_file_commit ON git_file_changes(commit_hash)"
+            )
+            self.conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_git_file_path ON git_file_changes(file_path)"
+            )
+
+            # Enable FTS for git commit messages
+            self.conn.execute("""
+                CREATE VIRTUAL TABLE IF NOT EXISTS git_commits_fts USING fts5(
+                    commit_hash UNINDEXED,
+                    message,
+                    tokenize = 'porter'
+                )
+            """)
+
             self.conn.commit()
             logger.info("SQLite store initialized successfully")
 
@@ -785,4 +846,294 @@ class SQLiteMemoryStore(MemoryStore):
 
         except Exception as e:
             logger.error(f"Failed to get all memories: {e}")
+            return []
+
+    # Git history methods
+
+    async def store_git_commits(
+        self, commits: List[Dict[str, Any]]
+    ) -> int:
+        """
+        Store git commits in batch.
+
+        Args:
+            commits: List of commit dictionaries
+
+        Returns:
+            Number of commits stored
+        """
+        if not self.conn:
+            raise StorageError("Store not initialized")
+
+        try:
+            stored_count = 0
+            for commit in commits:
+                # Serialize complex fields
+                message_embedding_json = json.dumps(commit["message_embedding"])
+                branch_names_json = json.dumps(commit.get("branch_names", []))
+                tags_json = json.dumps(commit.get("tags", []))
+                parent_hashes_json = json.dumps(commit.get("parent_hashes", []))
+                stats_json = json.dumps(commit.get("stats", {}))
+
+                # Insert into main table
+                self.conn.execute(
+                    """
+                    INSERT OR REPLACE INTO git_commits
+                    (commit_hash, repository_path, author_name, author_email,
+                     author_date, committer_name, committer_date, message,
+                     message_embedding, branch_names, tags, parent_hashes,
+                     stats, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        commit["commit_hash"],
+                        commit["repository_path"],
+                        commit["author_name"],
+                        commit["author_email"],
+                        commit["author_date"].isoformat(),
+                        commit["committer_name"],
+                        commit["committer_date"].isoformat(),
+                        commit["message"],
+                        message_embedding_json,
+                        branch_names_json,
+                        tags_json,
+                        parent_hashes_json,
+                        stats_json,
+                        datetime.now(UTC).isoformat(),
+                    ),
+                )
+
+                # Insert into FTS table
+                self.conn.execute(
+                    """
+                    INSERT OR REPLACE INTO git_commits_fts (commit_hash, message)
+                    VALUES (?, ?)
+                    """,
+                    (commit["commit_hash"], commit["message"]),
+                )
+
+                stored_count += 1
+
+            self.conn.commit()
+            logger.info(f"Stored {stored_count} git commits")
+            return stored_count
+
+        except Exception as e:
+            self.conn.rollback()
+            raise StorageError(f"Failed to store git commits: {e}")
+
+    async def store_git_file_changes(
+        self, file_changes: List[Dict[str, Any]]
+    ) -> int:
+        """
+        Store git file changes in batch.
+
+        Args:
+            file_changes: List of file change dictionaries
+
+        Returns:
+            Number of file changes stored
+        """
+        if not self.conn:
+            raise StorageError("Store not initialized")
+
+        try:
+            stored_count = 0
+            for change in file_changes:
+                # Serialize embedding if present
+                diff_embedding_json = None
+                if change.get("diff_embedding"):
+                    diff_embedding_json = json.dumps(change["diff_embedding"])
+
+                self.conn.execute(
+                    """
+                    INSERT OR REPLACE INTO git_file_changes
+                    (id, commit_hash, file_path, change_type, lines_added,
+                     lines_deleted, diff_content, diff_embedding)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        change["id"],
+                        change["commit_hash"],
+                        change["file_path"],
+                        change["change_type"],
+                        change["lines_added"],
+                        change["lines_deleted"],
+                        change.get("diff_content"),
+                        diff_embedding_json,
+                    ),
+                )
+
+                stored_count += 1
+
+            self.conn.commit()
+            logger.info(f"Stored {stored_count} git file changes")
+            return stored_count
+
+        except Exception as e:
+            self.conn.rollback()
+            raise StorageError(f"Failed to store git file changes: {e}")
+
+    async def search_git_commits(
+        self,
+        query: Optional[str] = None,
+        repository_path: Optional[str] = None,
+        author: Optional[str] = None,
+        since: Optional[datetime] = None,
+        until: Optional[datetime] = None,
+        limit: int = 10,
+    ) -> List[Dict[str, Any]]:
+        """
+        Search git commits with filters.
+
+        Args:
+            query: Text search query (uses FTS)
+            repository_path: Filter by repository
+            author: Filter by author email
+            since: Filter by date (after)
+            until: Filter by date (before)
+            limit: Maximum results
+
+        Returns:
+            List of matching commits
+        """
+        if not self.conn:
+            raise StorageError("Store not initialized")
+
+        try:
+            # Build query
+            if query:
+                # Use FTS for text search
+                sql = """
+                    SELECT c.*
+                    FROM git_commits c
+                    JOIN git_commits_fts f ON c.commit_hash = f.commit_hash
+                    WHERE f.message MATCH ?
+                """
+                params = [query]
+            else:
+                sql = "SELECT * FROM git_commits WHERE 1=1"
+                params = []
+
+            # Add filters
+            if repository_path:
+                sql += " AND repository_path = ?"
+                params.append(repository_path)
+
+            if author:
+                sql += " AND author_email = ?"
+                params.append(author)
+
+            if since:
+                sql += " AND author_date >= ?"
+                params.append(since.isoformat())
+
+            if until:
+                sql += " AND author_date <= ?"
+                params.append(until.isoformat())
+
+            # Order and limit
+            sql += " ORDER BY author_date DESC LIMIT ?"
+            params.append(limit)
+
+            cursor = self.conn.execute(sql, params)
+            commits = []
+
+            for row in cursor.fetchall():
+                commit_dict = dict(row)
+                # Deserialize JSON fields
+                commit_dict["message_embedding"] = json.loads(commit_dict["message_embedding"])
+                commit_dict["branch_names"] = json.loads(commit_dict.get("branch_names", "[]"))
+                commit_dict["tags"] = json.loads(commit_dict.get("tags", "[]"))
+                commit_dict["parent_hashes"] = json.loads(commit_dict.get("parent_hashes", "[]"))
+                commit_dict["stats"] = json.loads(commit_dict.get("stats", "{}"))
+                commits.append(commit_dict)
+
+            return commits
+
+        except Exception as e:
+            logger.error(f"Failed to search git commits: {e}")
+            return []
+
+    async def get_git_commit(self, commit_hash: str) -> Optional[Dict[str, Any]]:
+        """
+        Get a specific git commit by hash.
+
+        Args:
+            commit_hash: Commit hash
+
+        Returns:
+            Commit dictionary or None
+        """
+        if not self.conn:
+            raise StorageError("Store not initialized")
+
+        try:
+            cursor = self.conn.execute(
+                "SELECT * FROM git_commits WHERE commit_hash = ?",
+                (commit_hash,),
+            )
+            row = cursor.fetchone()
+
+            if not row:
+                return None
+
+            commit_dict = dict(row)
+            # Deserialize JSON fields
+            commit_dict["message_embedding"] = json.loads(commit_dict["message_embedding"])
+            commit_dict["branch_names"] = json.loads(commit_dict.get("branch_names", "[]"))
+            commit_dict["tags"] = json.loads(commit_dict.get("tags", "[]"))
+            commit_dict["parent_hashes"] = json.loads(commit_dict.get("parent_hashes", "[]"))
+            commit_dict["stats"] = json.loads(commit_dict.get("stats", "{}"))
+
+            return commit_dict
+
+        except Exception as e:
+            logger.error(f"Failed to get git commit: {e}")
+            return None
+
+    async def get_commits_by_file(
+        self, file_path: str, limit: int = 10
+    ) -> List[Dict[str, Any]]:
+        """
+        Get commits that modified a specific file.
+
+        Args:
+            file_path: File path to search
+            limit: Maximum results
+
+        Returns:
+            List of matching commits with file change info
+        """
+        if not self.conn:
+            raise StorageError("Store not initialized")
+
+        try:
+            cursor = self.conn.execute(
+                """
+                SELECT c.*, fc.change_type, fc.lines_added, fc.lines_deleted
+                FROM git_commits c
+                JOIN git_file_changes fc ON c.commit_hash = fc.commit_hash
+                WHERE fc.file_path = ?
+                ORDER BY c.author_date DESC
+                LIMIT ?
+                """,
+                (file_path, limit),
+            )
+
+            commits = []
+            for row in cursor.fetchall():
+                commit_dict = dict(row)
+                # Deserialize JSON fields
+                commit_dict["message_embedding"] = json.loads(commit_dict["message_embedding"])
+                commit_dict["branch_names"] = json.loads(commit_dict.get("branch_names", "[]"))
+                commit_dict["tags"] = json.loads(commit_dict.get("tags", "[]"))
+                commit_dict["parent_hashes"] = json.loads(commit_dict.get("parent_hashes", "[]"))
+                commit_dict["stats"] = json.loads(commit_dict.get("stats", "{}"))
+                commits.append(commit_dict)
+
+            return commits
+
+        except Exception as e:
+            logger.error(f"Failed to get commits by file: {e}")
             return []
