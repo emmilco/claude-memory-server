@@ -518,19 +518,32 @@ class MemoryRAGServer:
             project_name: Project being searched
 
         Returns:
-            Dict with quality assessment, confidence level, and suggestions
+            Dict with quality assessment, confidence level, suggestions, and keyword matches
         """
+        # Extract query keywords (simple word tokenization)
+        query_keywords = [w.lower() for w in query.split() if len(w) > 2]
+
         if not results:
+            suggestions = [
+                f"Verify that code has been indexed for project '{project_name or 'current'}'"
+            ]
+
+            # Check if we should suggest other projects
+            if project_name:
+                suggestions.append(f"Did you mean to search in a different project?")
+
+            suggestions.extend([
+                "Try a different query with more general terms",
+                "Consider using related keywords or synonyms",
+                "Run: python -m src.cli index ./your-project",
+            ])
+
             return {
                 "quality": "no_results",
                 "confidence": 0.0,
                 "interpretation": "No results found",
-                "suggestions": [
-                    f"Verify that code has been indexed for project '{project_name}'",
-                    "Try a different query with more general terms",
-                    "Check if the project name is correct",
-                    "Run: python -m src.cli index ./your-project",
-                ],
+                "suggestions": suggestions,
+                "matched_keywords": [],
             }
 
         # Analyze score distribution
@@ -575,11 +588,27 @@ class MemoryRAGServer:
                 "Top results are most relevant."
             )
 
+        # Analyze keyword matches in results
+        matched_keywords = []
+        for keyword in query_keywords:
+            for result in results[:3]:  # Check top 3 results
+                content = result.get("code", result.get("content", "")).lower()
+                if keyword in content:
+                    matched_keywords.append(keyword)
+                    break
+
+        # Add keyword match info to interpretation
+        if matched_keywords:
+            keyword_info = f" (matched keywords: {', '.join(matched_keywords)})"
+        else:
+            keyword_info = " (matched semantically)"
+
         return {
             "quality": quality,
             "confidence": confidence,
-            "interpretation": interpretation,
+            "interpretation": interpretation + keyword_info,
             "suggestions": suggestions,
+            "matched_keywords": matched_keywords,
         }
 
     async def search_code(
@@ -675,6 +704,7 @@ class MemoryRAGServer:
                 "confidence": quality_info["confidence"],
                 "suggestions": quality_info["suggestions"],
                 "interpretation": quality_info["interpretation"],
+                "matched_keywords": quality_info["matched_keywords"],
             }
 
         except Exception as e:
