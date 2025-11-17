@@ -158,36 +158,45 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Strategic Priority:** P0 - Early warning system prevents Path B
   - **Completed:** 2025-11-17
 
-- [ ] **FEAT-034**: Memory Provenance & Trust Signals (~2-3 weeks) 🔥🔥🔥🔥
-  - [ ] **Planning doc:** `planning_docs/STRATEGIC-001_long_term_product_evolution.md`
-  - [ ] **Rebuilds user trust through transparency**
-  - [ ] Provenance tracking: source, created_by, last_accessed, access_count, confidence
-  - [ ] Relationship graph: related/supporting/contradicting memories
-  - [ ] Context snapshots: active project, conversation, file context at creation
-  - [ ] Trust signals in results: "Why this result?" explanations
-  - [ ] Interactive verification: periodic "Still accurate?" prompts
-  - [ ] Contradiction detection and alerts
-  - [ ] Memory verification tool: CLI command to review low-confidence memories
+- [x] **FEAT-034**: Memory Provenance & Trust Signals (~2-3 weeks) 🔥🔥🔥🔥 ✅ **COMPLETE**
+  - [x] **Planning doc:** `planning_docs/FEAT-034_memory_provenance_trust.md`
+  - [x] **Rebuilds user trust through transparency**
+  - [x] Provenance tracking: source, created_by, last_accessed, access_count, confidence
+  - [x] Relationship graph: related/supporting/contradicting memories
+  - [x] Context snapshots: active project, conversation, file context at creation
+  - [x] Trust signals in results: "Why this result?" explanations
+  - [x] Interactive verification: periodic "Still accurate?" prompts
+  - [x] Contradiction detection and alerts
+  - [x] Memory verification tool: CLI command to review low-confidence memories
+  - [x] All 7 phases complete: Schema, Provenance Tracking, Relationships, Trust Signals, CLI Verification, Contradiction Alerts, Integration Tests
+  - [x] CLI commands: `verify --auto-verify`, `verify --contradictions`, `verify --category X`
+  - [x] Comprehensive integration tests (9 tests)
   - **Impact:** Transparent black box, enables intelligent curation, prevents contradictions
   - **Complexity:** High (provenance schema, relationship graph, trust algorithms, verification UI)
   - **Runtime Cost:** +30-50MB storage, +5-10ms per result (explanation generation)
   - **Strategic Priority:** P1 - Critical for trust, enables user curation
+  - **Completed:** 2025-11-17
 
-- [ ] **FEAT-035**: Intelligent Memory Consolidation (~2-3 weeks) 🔥🔥🔥
-  - [ ] **Planning doc:** `planning_docs/STRATEGIC-001_long_term_product_evolution.md`
-  - [ ] **Automatic duplicate detection and merging**
-  - [ ] Semantic similarity clustering for duplicate detection
-  - [ ] Auto-merge high confidence (>0.95 similarity)
-  - [ ] Prompt user for medium confidence (0.85-0.95)
-  - [ ] Flag low confidence (0.75-0.85) as "related"
-  - [ ] Contradiction detection: alert on conflicting preferences/facts
-  - [ ] Consolidation algorithms: preference merging, fact dedup, event compression
-  - [ ] Background jobs: daily high-confidence merges, weekly user prompts, monthly full scan
-  - [ ] Undo mechanism for bad merges
+- [x] **FEAT-035**: Intelligent Memory Consolidation (~2-3 weeks) 🔥🔥🔥 ✅ **COMPLETE**
+  - [x] **Planning doc:** `planning_docs/FEAT-035_intelligent_memory_consolidation.md`
+  - [x] **Automatic duplicate detection and merging**
+  - [x] Semantic similarity clustering for duplicate detection
+  - [x] Auto-merge high confidence (>0.95 similarity)
+  - [x] Prompt user for medium confidence (0.85-0.95)
+  - [x] Flag low confidence (0.75-0.85) as "related"
+  - [x] Contradiction detection: alert on conflicting preferences/facts
+  - [x] Consolidation algorithms: preference merging, fact dedup, event compression
+  - [x] Background jobs: daily high-confidence merges, weekly user prompts, monthly full scan
+  - [x] Undo mechanism for bad merges (merge history tracking)
+  - [x] Phases complete: 1-2 (Detection & Merging), 4 (Background Jobs), 5 (CLI Tool), 6 (Integration Tests)
+  - [x] CLI commands: `consolidate --auto`, `consolidate --interactive --execute`, `consolidate --dry-run`
+  - [x] APScheduler integration with 3 scheduled jobs (daily/weekly/monthly)
+  - [x] Comprehensive integration tests (10 tests)
   - **Impact:** 40% noise reduction, maintains consistency, catches preference drift
   - **Complexity:** High (similarity clustering, merge logic, conflict resolution, user prompts)
   - **Runtime Cost:** +50-100MB for similarity index, background CPU for clustering
   - **Strategic Priority:** P1 - Proactive noise prevention
+  - **Completed:** 2025-11-17
 
 - [ ] **FEAT-028**: Proactive Context Suggestions (~3-4 days) 🔥🔥🔥
   - [ ] **Confirm overall feature design with user before proceeding**
