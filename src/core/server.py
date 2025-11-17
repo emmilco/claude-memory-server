@@ -2298,6 +2298,179 @@ class MemoryRAGServer:
         except Exception as e:
             logger.error(f"Auto-prune job failed: {e}", exc_info=True)
 
+    async def export_memories(
+        self,
+        output_path: str,
+        format: str = "json",
+        project_name: Optional[str] = None,
+        category: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Export memories to file (MCP tool).
+
+        Args:
+            output_path: Path to write export file
+            format: Export format (json, markdown, archive)
+            project_name: Filter by project name
+            category: Filter by category
+
+        Returns:
+            Export statistics
+
+        Raises:
+            ValueError: If invalid format or category
+            StorageError: If export fails
+        """
+        from src.backup.exporter import DataExporter
+        from src.core.models import MemoryCategory
+        from pathlib import Path
+
+        # Validate parameters
+        if format not in ["json", "markdown", "archive"]:
+            raise ValueError(f"Invalid format: {format}. Must be json, markdown, or archive")
+
+        category_filter = None
+        if category:
+            try:
+                category_filter = MemoryCategory(category)
+            except ValueError:
+                raise ValueError(f"Invalid category: {category}")
+
+        # Create exporter and export
+        exporter = DataExporter(self.store)
+        output = Path(output_path).expanduser()
+
+        if format == "json":
+            stats = await exporter.export_to_json(
+                output_path=output,
+                project_name=project_name,
+                category=category_filter,
+            )
+        elif format == "markdown":
+            stats = await exporter.export_to_markdown(
+                output_path=output,
+                project_name=project_name,
+                include_metadata=True,
+            )
+        elif format == "archive":
+            stats = await exporter.create_portable_archive(
+                output_path=output,
+                project_name=project_name,
+                include_embeddings=True,
+            )
+
+        logger.info(f"MCP export completed: {stats}")
+        return stats
+
+    async def import_memories(
+        self,
+        input_path: str,
+        conflict_strategy: str = "keep_newer",
+        dry_run: bool = False,
+        selective_project: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Import memories from file (MCP tool).
+
+        Args:
+            input_path: Path to import file
+            conflict_strategy: How to handle conflicts (keep_newer, keep_older, keep_both, skip, merge_metadata)
+            dry_run: If True, analyze but don't actually import
+            selective_project: Only import this project
+
+        Returns:
+            Import statistics
+
+        Raises:
+            ValueError: If invalid strategy or file not found
+            StorageError: If import fails
+        """
+        from src.backup.importer import DataImporter, ConflictStrategy
+        from pathlib import Path
+
+        # Validate parameters
+        try:
+            strategy = ConflictStrategy(conflict_strategy)
+        except ValueError:
+            raise ValueError(f"Invalid conflict strategy: {conflict_strategy}")
+
+        input_file = Path(input_path).expanduser()
+        if not input_file.exists():
+            raise ValueError(f"File not found: {input_path}")
+
+        # Create importer and import
+        importer = DataImporter(self.store)
+
+        is_archive = input_file.suffix == ".gz" or input_file.suffixes == [".tar", ".gz"]
+
+        if is_archive:
+            stats = await importer.import_from_archive(
+                archive_path=input_file,
+                conflict_strategy=strategy,
+                dry_run=dry_run,
+                selective_project=selective_project,
+            )
+        else:
+            stats = await importer.import_from_json(
+                input_path=input_file,
+                conflict_strategy=strategy,
+                dry_run=dry_run,
+                selective_project=selective_project,
+            )
+
+        logger.info(f"MCP import completed: {stats}")
+        return stats
+
+    async def list_backups(self, backup_dir: Optional[str] = None) -> Dict[str, Any]:
+        """
+        List available backup files (MCP tool).
+
+        Args:
+            backup_dir: Backup directory path (default: ~/.claude-rag/backups/)
+
+        Returns:
+            Dictionary with backup list and statistics
+        """
+        from pathlib import Path
+
+        # Determine backup directory
+        if backup_dir:
+            backup_path = Path(backup_dir).expanduser()
+        else:
+            backup_path = self.config.data_dir / "backups"
+
+        if not backup_path.exists():
+            return {
+                "backup_dir": str(backup_path),
+                "backups": [],
+                "count": 0,
+            }
+
+        # Find backup files
+        backups = []
+        for pattern in ["backup_*.tar.gz", "backup_*.json"]:
+            backups.extend(backup_path.glob(pattern))
+
+        backups.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+
+        # Build response
+        backup_list = []
+        for backup_file in backups:
+            stat = backup_file.stat()
+            backup_list.append({
+                "filename": backup_file.name,
+                "full_path": str(backup_file),
+                "created": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                "size_bytes": stat.st_size,
+                "format": "archive" if backup_file.suffix == ".gz" else "json",
+            })
+
+        return {
+            "backup_dir": str(backup_path),
+            "backups": backup_list,
+            "count": len(backup_list),
+        }
+
     async def close(self) -> None:
         """Clean up resources."""
         # Stop conversation tracker
