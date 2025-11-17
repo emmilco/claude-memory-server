@@ -36,6 +36,10 @@ from src.memory.pruner import MemoryPruner
 from src.memory.conversation_tracker import ConversationTracker
 from src.memory.query_expander import QueryExpander
 from src.search.hybrid_search import HybridSearcher, FusionMethod
+from src.memory.repository_registry import RepositoryRegistry
+from src.memory.workspace_manager import WorkspaceManager
+from src.memory.multi_repository_indexer import MultiRepositoryIndexer
+from src.memory.multi_repository_search import MultiRepositorySearch
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +87,12 @@ class MemoryRAGServer:
         self.hybrid_searcher: Optional[HybridSearcher] = None
         self.cross_project_consent: Optional = None  # Cross-project consent manager
         self.scheduler = None  # APScheduler instance
+
+        # Multi-repository components
+        self.repository_registry: Optional = None  # Repository registry
+        self.workspace_manager: Optional = None  # Workspace manager
+        self.multi_repo_indexer: Optional = None  # Multi-repository indexer
+        self.multi_repo_search: Optional = None  # Multi-repository search
 
         # Statistics
         self.stats = {
@@ -210,6 +220,48 @@ class MemoryRAGServer:
             else:
                 self.hybrid_searcher = None
                 logger.info("Hybrid search disabled")
+
+            # Initialize multi-repository components if enabled
+            if self.config.enable_multi_repository:
+                # Initialize repository registry
+                self.repository_registry = RepositoryRegistry(self.config)
+                await self.repository_registry.initialize()
+
+                # Initialize workspace manager
+                self.workspace_manager = WorkspaceManager(
+                    self.repository_registry,
+                    self.config
+                )
+                await self.workspace_manager.initialize()
+
+                # Initialize multi-repository indexer
+                self.multi_repo_indexer = MultiRepositoryIndexer(
+                    repository_registry=self.repository_registry,
+                    workspace_manager=self.workspace_manager,
+                    store=self.store,
+                    embedding_generator=self.embedding_generator,
+                    config=self.config,
+                    max_concurrent_repos=getattr(self.config, 'multi_repo_max_parallel', 3)
+                )
+                await self.multi_repo_indexer.initialize()
+
+                # Initialize multi-repository search
+                self.multi_repo_search = MultiRepositorySearch(
+                    repository_registry=self.repository_registry,
+                    workspace_manager=self.workspace_manager,
+                    store=self.store,
+                    embedding_generator=self.embedding_generator,
+                    config=self.config
+                )
+                await self.multi_repo_search.initialize()
+
+                logger.info("Multi-repository support enabled")
+            else:
+                self.repository_registry = None
+                self.workspace_manager = None
+                self.multi_repo_indexer = None
+                self.multi_repo_search = None
+                logger.info("Multi-repository support disabled")
 
             # Initialize cross-project consent manager if enabled
             if self.config.enable_cross_project_search:
@@ -2298,6 +2350,804 @@ class MemoryRAGServer:
         except Exception as e:
             logger.error(f"Auto-prune job failed: {e}", exc_info=True)
 
+    # ========== Multi-Repository Management Tools ==========
+
+    async def register_repository(
+        self,
+        path: str,
+        name: Optional[str] = None,
+        git_url: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Register a new repository for indexing and search.
+
+        Args:
+            path: Absolute path to repository
+            name: Optional user-friendly name (defaults to directory name)
+            git_url: Optional git repository URL
+            tags: Optional tags for organizing repositories
+
+        Returns:
+            Dict with repository_id and details
+        """
+        if not self.repository_registry:
+            return {
+                "error": "Multi-repository support is disabled",
+                "status": "disabled"
+            }
+
+        try:
+            repo_id = await self.repository_registry.register_repository(
+                path=path,
+                name=name,
+                git_url=git_url,
+                tags=tags or []
+            )
+
+            repository = await self.repository_registry.get_repository(repo_id)
+
+            logger.info(f"Registered repository: {repository.name} ({repo_id})")
+
+            return {
+                "repository_id": repo_id,
+                "name": repository.name,
+                "path": repository.path,
+                "status": repository.status.value,
+                "message": "Repository registered successfully"
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to register repository: {e}")
+            return {
+                "error": str(e),
+                "status": "failed"
+            }
+
+    async def unregister_repository(self, repo_id: str) -> Dict[str, Any]:
+        """
+        Unregister a repository and optionally clean up its indexed data.
+
+        Args:
+            repo_id: Repository ID to unregister
+
+        Returns:
+            Dict with status
+        """
+        if not self.repository_registry:
+            return {
+                "error": "Multi-repository support is disabled",
+                "status": "disabled"
+            }
+
+        try:
+            # Get repository info before unregistering
+            repository = await self.repository_registry.get_repository(repo_id)
+            if not repository:
+                return {
+                    "error": f"Repository '{repo_id}' not found",
+                    "status": "not_found"
+                }
+
+            repo_name = repository.name
+
+            # Unregister the repository
+            success = await self.repository_registry.unregister_repository(repo_id)
+
+            if success:
+                logger.info(f"Unregistered repository: {repo_name} ({repo_id})")
+                return {
+                    "repository_id": repo_id,
+                    "name": repo_name,
+                    "status": "unregistered",
+                    "message": "Repository unregistered successfully"
+                }
+            else:
+                return {
+                    "error": f"Failed to unregister repository '{repo_id}'",
+                    "status": "failed"
+                }
+
+        except Exception as e:
+            logger.error(f"Failed to unregister repository: {e}")
+            return {
+                "error": str(e),
+                "status": "failed"
+            }
+
+    async def list_repositories(
+        self,
+        status: Optional[str] = None,
+        workspace_id: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
+        """
+        List repositories with optional filtering.
+
+        Args:
+            status: Filter by status (INDEXED, INDEXING, STALE, ERROR, NOT_INDEXED)
+            workspace_id: Filter by workspace membership
+            tags: Filter by tags
+
+        Returns:
+            Dict with repositories list
+        """
+        if not self.repository_registry:
+            return {
+                "error": "Multi-repository support is disabled",
+                "repositories": []
+            }
+
+        try:
+            from src.memory.repository_registry import RepositoryStatus
+
+            # Parse status if provided
+            status_filter = None
+            if status:
+                try:
+                    status_filter = RepositoryStatus(status.upper())
+                except ValueError:
+                    return {
+                        "error": f"Invalid status: {status}",
+                        "repositories": []
+                    }
+
+            # Get repositories
+            repositories = await self.repository_registry.list_repositories(
+                status=status_filter,
+                workspace_id=workspace_id,
+                tags=tags
+            )
+
+            # Convert to dict format
+            repos_data = [
+                {
+                    "repository_id": repo.id,
+                    "name": repo.name,
+                    "path": repo.path,
+                    "status": repo.status.value,
+                    "repo_type": repo.repo_type.value,
+                    "file_count": repo.file_count,
+                    "unit_count": repo.unit_count,
+                    "indexed_at": repo.indexed_at.isoformat() if repo.indexed_at else None,
+                    "tags": repo.tags,
+                    "workspace_ids": repo.workspace_ids,
+                }
+                for repo in repositories
+            ]
+
+            return {
+                "repositories": repos_data,
+                "count": len(repos_data),
+                "status": "success"
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to list repositories: {e}")
+            return {
+                "error": str(e),
+                "repositories": []
+            }
+
+    async def get_repository_info(self, repo_id: str) -> Dict[str, Any]:
+        """
+        Get detailed information about a repository.
+
+        Args:
+            repo_id: Repository ID
+
+        Returns:
+            Dict with repository details
+        """
+        if not self.repository_registry:
+            return {
+                "error": "Multi-repository support is disabled",
+                "status": "disabled"
+            }
+
+        try:
+            repository = await self.repository_registry.get_repository(repo_id)
+
+            if not repository:
+                return {
+                    "error": f"Repository '{repo_id}' not found",
+                    "status": "not_found"
+                }
+
+            # Get dependencies
+            dependencies = await self.repository_registry.get_dependencies(repo_id)
+
+            return {
+                "repository_id": repository.id,
+                "name": repository.name,
+                "path": repository.path,
+                "git_url": repository.git_url,
+                "status": repository.status.value,
+                "repo_type": repository.repo_type.value,
+                "file_count": repository.file_count,
+                "unit_count": repository.unit_count,
+                "indexed_at": repository.indexed_at.isoformat() if repository.indexed_at else None,
+                "last_updated": repository.last_updated.isoformat() if repository.last_updated else None,
+                "tags": repository.tags,
+                "workspace_ids": repository.workspace_ids,
+                "dependencies": {
+                    str(depth): deps for depth, deps in dependencies.items()
+                },
+                "dependency_count": sum(len(deps) for deps in dependencies.values()),
+                "status": "success"
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to get repository info: {e}")
+            return {
+                "error": str(e),
+                "status": "failed"
+            }
+
+    # ========== Workspace Management Tools ==========
+
+    async def create_workspace(
+        self,
+        name: str,
+        description: Optional[str] = None,
+        repository_ids: Optional[List[str]] = None,
+        auto_index: bool = True,
+        cross_repo_search_enabled: bool = True,
+    ) -> Dict[str, Any]:
+        """
+        Create a new workspace for organizing repositories.
+
+        Args:
+            name: Workspace name
+            description: Optional description
+            repository_ids: Optional list of repository IDs to add
+            auto_index: Whether to auto-index when repositories are added
+            cross_repo_search_enabled: Whether to enable cross-repo search
+
+        Returns:
+            Dict with workspace_id and details
+        """
+        if not self.workspace_manager:
+            return {
+                "error": "Multi-repository support is disabled",
+                "status": "disabled"
+            }
+
+        try:
+            # Generate workspace ID from name
+            import re
+            workspace_id = re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
+
+            workspace = await self.workspace_manager.create_workspace(
+                workspace_id=workspace_id,
+                name=name,
+                description=description,
+                repository_ids=repository_ids or [],
+                auto_index=auto_index,
+                cross_repo_search_enabled=cross_repo_search_enabled
+            )
+
+            logger.info(f"Created workspace: {name} ({workspace_id})")
+
+            return {
+                "workspace_id": workspace.id,
+                "name": workspace.name,
+                "description": workspace.description,
+                "repository_count": len(workspace.repository_ids),
+                "auto_index": workspace.auto_index,
+                "cross_repo_search_enabled": workspace.cross_repo_search_enabled,
+                "message": "Workspace created successfully"
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to create workspace: {e}")
+            return {
+                "error": str(e),
+                "status": "failed"
+            }
+
+    async def delete_workspace(self, workspace_id: str) -> Dict[str, Any]:
+        """
+        Delete a workspace.
+
+        Args:
+            workspace_id: Workspace ID to delete
+
+        Returns:
+            Dict with status
+        """
+        if not self.workspace_manager:
+            return {
+                "error": "Multi-repository support is disabled",
+                "status": "disabled"
+            }
+
+        try:
+            # Get workspace info before deleting
+            workspace = await self.workspace_manager.get_workspace(workspace_id)
+            if not workspace:
+                return {
+                    "error": f"Workspace '{workspace_id}' not found",
+                    "status": "not_found"
+                }
+
+            workspace_name = workspace.name
+
+            # Delete the workspace
+            success = await self.workspace_manager.delete_workspace(workspace_id)
+
+            if success:
+                logger.info(f"Deleted workspace: {workspace_name} ({workspace_id})")
+                return {
+                    "workspace_id": workspace_id,
+                    "name": workspace_name,
+                    "status": "deleted",
+                    "message": "Workspace deleted successfully"
+                }
+            else:
+                return {
+                    "error": f"Failed to delete workspace '{workspace_id}'",
+                    "status": "failed"
+                }
+
+        except Exception as e:
+            logger.error(f"Failed to delete workspace: {e}")
+            return {
+                "error": str(e),
+                "status": "failed"
+            }
+
+    async def list_workspaces(
+        self,
+        tags: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
+        """
+        List all workspaces with optional filtering.
+
+        Args:
+            tags: Filter by tags
+
+        Returns:
+            Dict with workspaces list
+        """
+        if not self.workspace_manager:
+            return {
+                "error": "Multi-repository support is disabled",
+                "workspaces": []
+            }
+
+        try:
+            workspaces = await self.workspace_manager.list_workspaces(tags=tags)
+
+            workspaces_data = [
+                {
+                    "workspace_id": ws.id,
+                    "name": ws.name,
+                    "description": ws.description,
+                    "repository_count": len(ws.repository_ids),
+                    "auto_index": ws.auto_index,
+                    "cross_repo_search_enabled": ws.cross_repo_search_enabled,
+                    "tags": ws.tags,
+                    "created_at": ws.created_at.isoformat(),
+                    "updated_at": ws.updated_at.isoformat(),
+                }
+                for ws in workspaces
+            ]
+
+            return {
+                "workspaces": workspaces_data,
+                "count": len(workspaces_data),
+                "status": "success"
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to list workspaces: {e}")
+            return {
+                "error": str(e),
+                "workspaces": []
+            }
+
+    async def add_repo_to_workspace(
+        self,
+        workspace_id: str,
+        repo_id: str
+    ) -> Dict[str, Any]:
+        """
+        Add a repository to a workspace.
+
+        Args:
+            workspace_id: Workspace ID
+            repo_id: Repository ID to add
+
+        Returns:
+            Dict with status
+        """
+        if not self.workspace_manager:
+            return {
+                "error": "Multi-repository support is disabled",
+                "status": "disabled"
+            }
+
+        try:
+            await self.workspace_manager.add_repository(workspace_id, repo_id)
+
+            logger.info(f"Added repository {repo_id} to workspace {workspace_id}")
+
+            return {
+                "workspace_id": workspace_id,
+                "repository_id": repo_id,
+                "status": "added",
+                "message": "Repository added to workspace successfully"
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to add repository to workspace: {e}")
+            return {
+                "error": str(e),
+                "status": "failed"
+            }
+
+    async def remove_repo_from_workspace(
+        self,
+        workspace_id: str,
+        repo_id: str
+    ) -> Dict[str, Any]:
+        """
+        Remove a repository from a workspace.
+
+        Args:
+            workspace_id: Workspace ID
+            repo_id: Repository ID to remove
+
+        Returns:
+            Dict with status
+        """
+        if not self.workspace_manager:
+            return {
+                "error": "Multi-repository support is disabled",
+                "status": "disabled"
+            }
+
+        try:
+            await self.workspace_manager.remove_repository(workspace_id, repo_id)
+
+            logger.info(f"Removed repository {repo_id} from workspace {workspace_id}")
+
+            return {
+                "workspace_id": workspace_id,
+                "repository_id": repo_id,
+                "status": "removed",
+                "message": "Repository removed from workspace successfully"
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to remove repository from workspace: {e}")
+            return {
+                "error": str(e),
+                "status": "failed"
+            }
+
+    # ========== Multi-Repository Indexing Tools ==========
+
+    async def index_repository(
+        self,
+        repo_id: str,
+        force: bool = False,
+        recursive: bool = True,
+    ) -> Dict[str, Any]:
+        """
+        Index a single repository.
+
+        Args:
+            repo_id: Repository ID to index
+            force: Force re-indexing even if already indexed
+            recursive: Recursively index subdirectories
+
+        Returns:
+            Dict with indexing results
+        """
+        if not self.multi_repo_indexer:
+            return {
+                "error": "Multi-repository support is disabled",
+                "status": "disabled"
+            }
+
+        try:
+            result = await self.multi_repo_indexer.index_repository(
+                repository_id=repo_id,
+                recursive=recursive,
+                show_progress=True
+            )
+
+            if result.success:
+                logger.info(
+                    f"Indexed repository {repo_id}: "
+                    f"{result.files_indexed} files, {result.units_indexed} units"
+                )
+
+                return {
+                    "repository_id": repo_id,
+                    "success": True,
+                    "files_indexed": result.files_indexed,
+                    "units_indexed": result.units_indexed,
+                    "duration_seconds": result.duration_seconds,
+                    "message": "Repository indexed successfully"
+                }
+            else:
+                return {
+                    "repository_id": repo_id,
+                    "success": False,
+                    "error": result.error_message,
+                    "errors": result.errors,
+                    "status": "failed"
+                }
+
+        except Exception as e:
+            logger.error(f"Failed to index repository: {e}")
+            return {
+                "error": str(e),
+                "status": "failed"
+            }
+
+    async def index_workspace(
+        self,
+        workspace_id: str,
+        force: bool = False,
+        recursive: bool = True,
+    ) -> Dict[str, Any]:
+        """
+        Index all repositories in a workspace.
+
+        Args:
+            workspace_id: Workspace ID
+            force: Force re-indexing
+            recursive: Recursively index subdirectories
+
+        Returns:
+            Dict with batch indexing results
+        """
+        if not self.multi_repo_indexer:
+            return {
+                "error": "Multi-repository support is disabled",
+                "status": "disabled"
+            }
+
+        try:
+            result = await self.multi_repo_indexer.index_workspace(
+                workspace_id=workspace_id,
+                recursive=recursive,
+                show_progress=True
+            )
+
+            logger.info(
+                f"Indexed workspace {workspace_id}: "
+                f"{result.successful}/{result.total_repositories} repositories, "
+                f"{result.total_files} files, {result.total_units} units"
+            )
+
+            return {
+                "workspace_id": workspace_id,
+                "total_repositories": result.total_repositories,
+                "successful": result.successful,
+                "failed": result.failed,
+                "total_files": result.total_files,
+                "total_units": result.total_units,
+                "total_duration": result.total_duration,
+                "repository_results": [
+                    {
+                        "repository_id": r.repository_id,
+                        "success": r.success,
+                        "files_indexed": r.files_indexed,
+                        "units_indexed": r.units_indexed,
+                        "duration_seconds": r.duration_seconds,
+                        "error_message": r.error_message,
+                    }
+                    for r in result.repository_results
+                ],
+                "message": f"Workspace indexed: {result.successful}/{result.total_repositories} successful"
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to index workspace: {e}")
+            return {
+                "error": str(e),
+                "status": "failed"
+            }
+
+    async def refresh_stale_repositories(
+        self,
+        max_age_days: int = 7
+    ) -> Dict[str, Any]:
+        """
+        Re-index repositories that haven't been updated recently.
+
+        Args:
+            max_age_days: Consider repositories stale if not indexed in this many days
+
+        Returns:
+            Dict with batch indexing results
+        """
+        if not self.multi_repo_indexer:
+            return {
+                "error": "Multi-repository support is disabled",
+                "status": "disabled"
+            }
+
+        try:
+            result = await self.multi_repo_indexer.reindex_stale_repositories(
+                max_age_days=max_age_days,
+                show_progress=True
+            )
+
+            logger.info(
+                f"Refreshed stale repositories: "
+                f"{result.successful}/{result.total_repositories} successful"
+            )
+
+            return result.to_dict()
+
+        except Exception as e:
+            logger.error(f"Failed to refresh stale repositories: {e}")
+            return {
+                "error": str(e),
+                "status": "failed"
+            }
+
+    # ========== Multi-Repository Search Tools ==========
+
+    async def search_repositories(
+        self,
+        query: str,
+        repository_ids: List[str],
+        limit_per_repo: int = 10,
+        total_limit: Optional[int] = None,
+        search_mode: str = "semantic",
+    ) -> Dict[str, Any]:
+        """
+        Search across multiple repositories.
+
+        Args:
+            query: Search query
+            repository_ids: List of repository IDs to search
+            limit_per_repo: Maximum results per repository
+            total_limit: Optional total limit across all repositories
+            search_mode: Search mode (semantic, keyword, hybrid)
+
+        Returns:
+            Dict with search results grouped by repository
+        """
+        if not self.multi_repo_search:
+            return {
+                "error": "Multi-repository support is disabled",
+                "results": []
+            }
+
+        try:
+            result = await self.multi_repo_search.search_repositories(
+                query=query,
+                repository_ids=repository_ids,
+                limit_per_repo=limit_per_repo,
+                total_limit=total_limit,
+                search_mode=search_mode
+            )
+
+            logger.info(
+                f"Multi-repository search: '{query}' across {result.total_repositories_searched} repositories, "
+                f"{result.total_results_found} results ({result.query_time_ms:.2f}ms)"
+            )
+
+            return result.to_dict()
+
+        except Exception as e:
+            logger.error(f"Failed to search repositories: {e}")
+            return {
+                "error": str(e),
+                "results": []
+            }
+
+    async def search_workspace(
+        self,
+        query: str,
+        workspace_id: str,
+        limit_per_repo: int = 10,
+        total_limit: Optional[int] = None,
+        search_mode: str = "semantic",
+    ) -> Dict[str, Any]:
+        """
+        Search all repositories in a workspace.
+
+        Args:
+            query: Search query
+            workspace_id: Workspace ID
+            limit_per_repo: Maximum results per repository
+            total_limit: Optional total limit across all repositories
+            search_mode: Search mode (semantic, keyword, hybrid)
+
+        Returns:
+            Dict with search results from workspace
+        """
+        if not self.multi_repo_search:
+            return {
+                "error": "Multi-repository support is disabled",
+                "results": []
+            }
+
+        try:
+            result = await self.multi_repo_search.search_workspace(
+                query=query,
+                workspace_id=workspace_id,
+                limit_per_repo=limit_per_repo,
+                total_limit=total_limit,
+                search_mode=search_mode
+            )
+
+            logger.info(
+                f"Workspace search: '{query}' in {workspace_id}, "
+                f"{result.total_results_found} results ({result.query_time_ms:.2f}ms)"
+            )
+
+            return result.to_dict()
+
+        except Exception as e:
+            logger.error(f"Failed to search workspace: {e}")
+            return {
+                "error": str(e),
+                "results": []
+            }
+
+    async def search_with_dependencies(
+        self,
+        query: str,
+        repository_id: str,
+        max_depth: int = 2,
+        limit_per_repo: int = 10,
+        total_limit: Optional[int] = None,
+        search_mode: str = "semantic",
+    ) -> Dict[str, Any]:
+        """
+        Search a repository and its dependencies.
+
+        Args:
+            query: Search query
+            repository_id: Primary repository ID
+            max_depth: Maximum dependency depth to search
+            limit_per_repo: Maximum results per repository
+            total_limit: Optional total limit
+            search_mode: Search mode (semantic, keyword, hybrid)
+
+        Returns:
+            Dict with search results from repository and dependencies
+        """
+        if not self.multi_repo_search:
+            return {
+                "error": "Multi-repository support is disabled",
+                "results": []
+            }
+
+        try:
+            result = await self.multi_repo_search.search_with_dependencies(
+                query=query,
+                repository_id=repository_id,
+                max_depth=max_depth,
+                limit_per_repo=limit_per_repo,
+                total_limit=total_limit,
+                search_mode=search_mode
+            )
+
+            logger.info(
+                f"Dependency search: '{query}' from {repository_id}, "
+                f"{result.total_results_found} results across {result.total_repositories_searched} repositories"
+            )
+
+            return result.to_dict()
+
+        except Exception as e:
+            logger.error(f"Failed to search with dependencies: {e}")
+            return {
+                "error": str(e),
+                "results": []
+            }
+
     async def close(self) -> None:
         """Clean up resources."""
         # Stop conversation tracker
@@ -2314,6 +3164,15 @@ class MemoryRAGServer:
         if self.scheduler:
             self.scheduler.shutdown(wait=False)
             logger.info("Pruning scheduler stopped")
+
+        # Close multi-repository components
+        if self.multi_repo_search:
+            await self.multi_repo_search.close()
+            logger.info("Multi-repository search closed")
+
+        if self.multi_repo_indexer:
+            await self.multi_repo_indexer.close()
+            logger.info("Multi-repository indexer closed")
 
         if self.store:
             await self.store.close()
