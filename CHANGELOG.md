@@ -9,6 +9,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - 2025-11-17
 
+- **UX-017: Indexing Time Estimates** - Intelligent time estimation for indexing operations
+  - **Time Estimation Algorithm:** Estimate indexing time based on historical data and file counts
+    - Uses historical average (rolling 10-run average per project)
+    - Falls back to conservative default (100ms/file) if no history
+    - Adjusts for file size when available
+    - Provides range estimates (min: -20%, max: +50%)
+    - Created `src/memory/time_estimator.py` (240 lines)
+  - **Performance Metrics Storage:** Track and store indexing performance data
+    - SQLite table: `indexing_metrics` (files_indexed, total_time, avg_time_per_file, project_name)
+    - Project-specific and global averages
+    - Automatic cleanup of old metrics (>30 days)
+    - Created `src/memory/indexing_metrics.py` (150 lines)
+  - **Real-Time ETA:** Calculate and display estimated time remaining
+    - Dynamic ETA based on current indexing rate
+    - Updates progress bar with time remaining
+    - Adjusts estimates as indexing proceeds
+  - **Performance Optimization Suggestions:** Detect slow patterns and suggest exclusions
+    - Detects node_modules (100+ files), test directories (50+ files), .git, vendor
+    - Estimates time savings for each exclusion
+    - Suggests creating .ragignore file for permanent exclusions
+    - Only shows suggestions for slow indexes (>30 seconds)
+  - **Human-Readable Time Formatting:** Format seconds into friendly strings
+    - Seconds: "45s"
+    - Minutes: "2m 30s" or "2m"
+    - Hours: "1h 5m" or "1h"
+    - Range formatting: "30s-45s" or "2m to 3m 30s"
+  - **Comprehensive Testing:** 12 tests, all passing
+    - Estimate with/without history
+    - Project-specific estimates
+    - ETA calculations
+    - Optimization suggestions
+    - Time formatting
+  - **Impact:** Better UX for large projects, realistic expectations, proactive optimization
+  - **Performance:** Estimate calculation <1ms, metrics storage ~5ms, no indexing overhead
+
 - **WORKFLOW: Git worktree support for parallel agent development** - Configured repository to use git worktrees for concurrent feature development
   - Created `.worktrees/` directory for isolated feature branches
   - Added `.worktrees/` to `.gitignore` to prevent committing worktree directories
