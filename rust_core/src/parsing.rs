@@ -46,7 +46,7 @@ impl SupportedLanguage {
             SupportedLanguage::Rust => tree_sitter_rust::LANGUAGE.into(),
             SupportedLanguage::C => tree_sitter_cpp::LANGUAGE.into(),
             SupportedLanguage::Cpp => tree_sitter_cpp::LANGUAGE.into(),
-            SupportedLanguage::CSharp => tree_sitter_c_sharp::language().into(),
+            SupportedLanguage::CSharp => tree_sitter_c_sharp::LANGUAGE.into(),
             SupportedLanguage::Sql => tree_sitter_sequel::LANGUAGE.into(),
         }
     }
