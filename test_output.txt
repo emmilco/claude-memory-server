@@ -1,0 +1,224 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.6, pytest-8.4.2, pluggy-1.6.0
+rootdir: /Users/elliotmilco/Documents/GitHub/claude-memory-server
+plugins: asyncio-1.2.0, anyio-4.10.0, cov-7.0.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 479 items
+
+tests/integration/test_embeddings.py ........                            [  1%]
+tests/integration/test_indexing_integration.py ....                      [  2%]
+tests/integration/test_qdrant_store.py ........                          [  4%]
+tests/security/test_injection_attacks.py ............................... [ 10%]
+........................................................................ [ 25%]
+........................................................................ [ 40%]
+........................................................................ [ 55%]
+....................                                                     [ 59%]
+tests/security/test_readonly_mode.py .................                   [ 63%]
+tests/unit/test_classifier.py ...................                        [ 67%]
+tests/unit/test_cli_commands.py ................                         [ 70%]
+tests/unit/test_config.py ........                                       [ 72%]
+tests/unit/test_file_watcher.py ......                                   [ 73%]
+tests/unit/test_incremental_indexer.py ...........                       [ 75%]
+tests/unit/test_models.py ...................                            [ 79%]
+tests/unit/test_server.py .........                                      [ 81%]
+tests/unit/test_server_extended.py .F.......F............                [ 86%]
+tests/unit/test_specialized_tools.py ...................                 [ 90%]
+tests/unit/test_validation.py .......................................... [ 99%]
+....                                                                     [100%]
+
+=================================== FAILURES ===================================
+_________________ TestCodeSearch.test_search_code_with_filters _________________
+
+self = <tests.unit.test_server_extended.TestCodeSearch object at 0x1250a1310>
+server = <src.core.server.MemoryRAGServer object at 0x12ae69040>
+
+    @pytest.mark.asyncio
+    async def test_search_code_with_filters(self, server):
+        """Test code search with language filter."""
+        test_dir = Path(__file__).parent.parent / "unit"
+    
+        await server.index_codebase(
+            directory_path=str(test_dir),
+            project_name="test-project"
+        )
+    
+        # Search with language filter
+        results = await server.search_code(
+            query="test",
+            project_name="test-project",
+            language="python",
+            limit=10
+        )
+    
+        assert "results" in results
+        for result in results["results"]:
+            if "language" in result:
+>               assert result["language"] == "python"
+E               AssertionError: assert 'Python' == 'python'
+E                 
+E                 - python
+E                 ? ^
+E                 + Python
+E                 ? ^
+
+tests/unit/test_server_extended.py:97: AssertionError
+---------------------------- Captured stderr setup -----------------------------
+huggingface/tokenizers: The current process just got forked, after parallelism has already been used. Disabling parallelism to avoid deadlocks...
+To disable this warning, you can either:
+	- Avoid using `tokenizers` before the fork if possible
+	- Explicitly set the environment variable TOKENIZERS_PARALLELISM=(true | false)
+_____________ TestMemoryOperations.test_delete_nonexistent_memory ______________
+
+self = <tests.unit.test_server_extended.TestMemoryOperations object at 0x117fd99d0>
+server = <src.core.server.MemoryRAGServer object at 0x12ad56360>
+
+    @pytest.mark.asyncio
+    async def test_delete_nonexistent_memory(self, server):
+        """Test deleting a memory that doesn't exist."""
+        result = await server.delete_memory("00000000-0000-0000-0000-000000000000")
+    
+        # Should handle gracefully - either deleted=False or success with no effect
+>       assert "deleted" in result or "error" in result
+E       AssertionError: assert ('deleted' in {'memory_id': '00000000-0000-0000-0000-000000000000', 'status': 'success'} or 'error' in {'memory_id': '00000000-0000-0000-0000-000000000000', 'status': 'success'})
+
+tests/unit/test_server_extended.py:225: AssertionError
+---------------------------- Captured stderr setup -----------------------------
+huggingface/tokenizers: The current process just got forked, after parallelism has already been used. Disabling parallelism to avoid deadlocks...
+To disable this warning, you can either:
+	- Avoid using `tokenizers` before the fork if possible
+	- Explicitly set the environment variable TOKENIZERS_PARALLELISM=(true | false)
+=============================== warnings summary ===============================
+tests/integration/test_indexing_integration.py:86
+  /Users/elliotmilco/Documents/GitHub/claude-memory-server/tests/integration/test_indexing_integration.py:86: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.integration
+
+tests/integration/test_indexing_integration.py:151
+  /Users/elliotmilco/Documents/GitHub/claude-memory-server/tests/integration/test_indexing_integration.py:151: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.integration
+
+tests/integration/test_indexing_integration.py:231
+  /Users/elliotmilco/Documents/GitHub/claude-memory-server/tests/integration/test_indexing_integration.py:231: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.integration
+
+tests/integration/test_indexing_integration.py:315
+  /Users/elliotmilco/Documents/GitHub/claude-memory-server/tests/integration/test_indexing_integration.py:315: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.integration
+
+tests/security/test_readonly_mode.py::TestReadOnlyModeAllowsReads::test_health_check_works
+  /Users/elliotmilco/Documents/GitHub/claude-memory-server/src/store/sqlite_store.py:349: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x12a6edb70>
+    self.conn.execute("SELECT 1")
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/security/test_readonly_mode.py::TestReadOnlyModeAllowsReads::test_health_check_works
+  /Users/elliotmilco/Documents/GitHub/claude-memory-server/src/store/sqlite_store.py:349: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x12a6eeb60>
+    self.conn.execute("SELECT 1")
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/security/test_readonly_mode.py::TestReadOnlyModeAllowsReads::test_health_check_works
+  /Users/elliotmilco/Documents/GitHub/claude-memory-server/src/store/sqlite_store.py:349: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x12a6eda80>
+    self.conn.execute("SELECT 1")
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/security/test_readonly_mode.py::TestReadOnlyModeAllowsReads::test_health_check_works
+  /Users/elliotmilco/Documents/GitHub/claude-memory-server/src/store/sqlite_store.py:349: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x12a6ec9a0>
+    self.conn.execute("SELECT 1")
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/security/test_readonly_mode.py::TestReadOnlyModeAllowsReads::test_health_check_works
+  /Users/elliotmilco/Documents/GitHub/claude-memory-server/src/store/sqlite_store.py:349: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x12aa0ce50>
+    self.conn.execute("SELECT 1")
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/security/test_readonly_mode.py::TestReadOnlyModeAllowsReads::test_health_check_works
+  /Users/elliotmilco/Documents/GitHub/claude-memory-server/src/store/sqlite_store.py:349: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x12aa0d990>
+    self.conn.execute("SELECT 1")
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/security/test_readonly_mode.py::TestReadOnlyModeAllowsReads::test_health_check_works
+  /Users/elliotmilco/Documents/GitHub/claude-memory-server/src/store/sqlite_store.py:349: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x12aa0e3e0>
+    self.conn.execute("SELECT 1")
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/security/test_readonly_mode.py::TestReadOnlyModeAllowsReads::test_health_check_works
+  /Users/elliotmilco/Documents/GitHub/claude-memory-server/src/store/sqlite_store.py:349: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x12aa0ee30>
+    self.conn.execute("SELECT 1")
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/security/test_readonly_mode.py::TestReadOnlyModeAllowsReads::test_health_check_works
+  /Users/elliotmilco/Documents/GitHub/claude-memory-server/src/store/sqlite_store.py:349: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x12aa0cd60>
+    self.conn.execute("SELECT 1")
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/security/test_readonly_mode.py::TestReadOnlyModeAllowsReads::test_health_check_works
+  /Users/elliotmilco/Documents/GitHub/claude-memory-server/src/store/sqlite_store.py:349: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x12aa0f010>
+    self.conn.execute("SELECT 1")
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/unit/test_cli_commands.py::TestIndexCommand::test_index_directory_recursive
+  /Users/elliotmilco/.pyenv/versions/3.13.6/lib/python3.13/unittest/mock.py:2247: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x12a6ec4f0>
+    def __init__(self, name, parent):
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/unit/test_cli_commands.py::TestIndexCommand::test_index_directory_recursive
+  /Users/elliotmilco/.pyenv/versions/3.13.6/lib/python3.13/unittest/mock.py:2247: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x1251c73d0>
+    def __init__(self, name, parent):
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/unit/test_cli_commands.py::TestIndexCommand::test_index_directory_recursive
+  /Users/elliotmilco/.pyenv/versions/3.13.6/lib/python3.13/unittest/mock.py:2247: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x12a69ed40>
+    def __init__(self, name, parent):
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/unit/test_cli_commands.py::TestIndexCommand::test_index_directory_recursive
+  /Users/elliotmilco/.pyenv/versions/3.13.6/lib/python3.13/unittest/mock.py:2247: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x12a69e020>
+    def __init__(self, name, parent):
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================================ tests coverage ================================
+_______________ coverage: platform darwin, python 3.13.6-final-0 _______________
+
+Name                                Stmts   Miss   Cover   Missing
+------------------------------------------------------------------
+src/cli/index_command.py               70      1  98.57%   109
+src/cli/watch_command.py               43      0 100.00%
+src/config.py                          46      0 100.00%
+src/core/allowed_fields.py             63     63   0.00%   3-302
+src/core/exceptions.py                 35      7  80.00%   72-74, 81-82, 89-90
+src/core/models.py                    133      2  98.50%   59, 110
+src/core/security_logger.py            99     99   0.00%   3-377
+src/core/server.py                    186     28  84.95%   58, 102-104, 124-126, 221-222, 314-316, 340-344, 396, 423, 486, 488, 517-519, 543, 557, 631-633
+src/core/tools.py                      48      0 100.00%
+src/core/validation.py                130      4  96.92%   252, 416, 439, 473
+src/embeddings/cache.py               130     45  65.38%   35-36, 52, 83-85, 114, 141-144, 163-166, 178, 197-198, 218-225, 237-257, 267, 292-294, 304, 318-320
+src/embeddings/generator.py            88     10  88.64%   45-46, 54, 112-113, 161, 177-178, 207, 233
+src/embeddings/rust_bridge.py          55     30  45.45%   16-19, 32-35, 48, 62-72, 94-98, 112-121
+src/memory/classifier.py               71      7  90.14%   124, 128, 151, 222-225
+src/memory/file_watcher.py            129     39  69.77%   72, 82-84, 90, 102-108, 112-120, 124-131, 155, 169-171, 224-225, 234, 243-251, 265
+src/memory/incremental_indexer.py     140     18  87.14%   12-14, 58, 64, 185, 202, 221, 301-303, 359, 410-417
+src/memory/indexing_service.py         69     50  27.54%   38-59, 63-68, 72-76, 80-81, 90-107, 115-125, 137-150, 154-156, 160, 164
+src/store/base.py                      37     11  70.27%   36, 59, 75, 94, 117, 133, 149, 166, 176, 186, 193
+src/store/qdrant_setup.py              86     33  61.63%   34-35, 62-63, 76, 81-83, 96, 101-102, 106-107, 137-138, 153, 174-179, 188, 203-217, 228, 233-235
+src/store/qdrant_store.py             171     41  76.02%   38-39, 52-53, 63, 101-102, 112, 139-141, 146-147, 152, 165-166, 174, 214-215, 224, 229, 244-246, 251, 256-266, 271-273, 278, 284, 299-300, 375, 393-394, 399-400
+src/store/readonly_wrapper.py          33      0 100.00%
+src/store/sqlite_store.py             183     76  58.47%   35-36, 95-96, 106, 154-155, 170, 185-186, 188-189, 194-195, 197-198, 217-218, 222-242, 249-253, 267, 276, 280-282, 287, 294-299, 304-306, 310-342, 348, 351-352
+------------------------------------------------------------------
+TOTAL                                2045    564  72.42%
+=========================== short test summary info ============================
+FAILED tests/unit/test_server_extended.py::TestCodeSearch::test_search_code_with_filters
+FAILED tests/unit/test_server_extended.py::TestMemoryOperations::test_delete_nonexistent_memory
+================= 2 failed, 477 passed, 18 warnings in 58.87s ==================

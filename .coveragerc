@@ -1,0 +1,36 @@
+[run]
+source = src
+omit =
+    # Legacy/deprecated files (old architecture)
+    src/database.py
+    src/doc_ingestion.py
+    src/embeddings.py
+    src/memory.py
+    src/router.py
+    src/mcp_server.py
+    # Test files
+    tests/*
+    # Init files
+    */__init__.py
+
+[report]
+exclude_lines =
+    # Standard pragma
+    pragma: no cover
+    # Don't complain about missing debug-only code
+    def __repr__
+    # Don't complain if tests don't hit defensive assertion code
+    raise AssertionError
+    raise NotImplementedError
+    # Don't complain if non-runnable code isn't run
+    if __name__ == .__main__.:
+    # Type checking
+    if TYPE_CHECKING:
+    @overload
+
+precision = 2
+show_missing = True
+skip_covered = False
+
+[html]
+directory = htmlcov

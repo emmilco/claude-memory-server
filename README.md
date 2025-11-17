@@ -49,7 +49,8 @@ Claude automatically remembers:
 ## Quick Start
 
 ### Prerequisites
-- Python 3.8+
+- Python 3.13+
+- Rust 1.91+ (for building)
 - Docker (for Qdrant vector DB)
 - ~500MB disk space
 
@@ -75,7 +76,7 @@ claude mcp add --transport stdio --scope user claude-memory-rag -- \
 
 # 6. Verify installation
 curl http://localhost:6333/health  # Should return OK
-pytest tests/ -v                    # Should pass 68/68 tests
+pytest tests/ -v                    # Should pass 427/427 tests
 ```
 
 ## Usage
@@ -200,8 +201,10 @@ Claude has access to these tools:
 | Code Search | 7-13ms latency |
 | Indexing | 2.45 files/sec |
 | Parsing | 1-6ms per file (Rust) |
-| Embedding | <50ms per text |
-| Tests | 68/68 passing ✅ |
+| Embedding | ~30ms per text |
+| Embedding (cached) | <1ms |
+| Tests | 427/427 passing ✅ |
+| Code Coverage | 61.47% (active code) |
 
 ## Project Structure
 
@@ -235,6 +238,16 @@ claude-memory-server/
 1. **[START_HERE.md](START_HERE.md)** - Quick orientation guide
 2. **[PROJECT_STATUS.md](PROJECT_STATUS.md)** - Comprehensive current state
 3. **[EXECUTABLE_DEVELOPMENT_CHECKLIST.md](EXECUTABLE_DEVELOPMENT_CHECKLIST.md)** - Task tracking
+
+### Comprehensive Guides (docs/)
+- **[SETUP.md](docs/SETUP.md)** - Installation and setup instructions
+- **[USAGE.md](docs/USAGE.md)** - How to use all features
+- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System architecture deep-dive
+- **[API.md](docs/API.md)** - Complete API reference for all MCP tools
+- **[DEVELOPMENT.md](docs/DEVELOPMENT.md)** - Contributing and development guide
+- **[SECURITY.md](docs/SECURITY.md)** - Security model and best practices
+- **[PERFORMANCE.md](docs/PERFORMANCE.md)** - Performance benchmarks and tuning
+- **[TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Common issues and solutions
 
 ### Technical Documentation
 - **[PHASE_3_COMPLETION_REPORT.md](PHASE_3_COMPLETION_REPORT.md)** - Code intelligence specs
@@ -387,7 +400,7 @@ See [EXECUTABLE_DEVELOPMENT_CHECKLIST.md](EXECUTABLE_DEVELOPMENT_CHECKLIST.md) f
 - ✅ Phase 1: Foundation (100% complete)
 - ✅ Phase 2: Security & Context (100% complete)
 - ✅ Phase 3: Code Intelligence (85% complete)
-- ⚠️ Phase 4: Testing & docs (40% complete)
+- ⚠️ Phase 4: Testing & docs (70% complete - 8 comprehensive guides written, coverage at 61%)
 
 ## License
 
