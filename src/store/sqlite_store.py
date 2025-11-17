@@ -8,7 +8,7 @@ from datetime import datetime, UTC
 from pathlib import Path
 
 from src.store.base import MemoryStore
-from src.core.models import MemoryUnit, SearchFilters, MemoryCategory, ContextLevel, MemoryScope
+from src.core.models import MemoryUnit, SearchFilters, MemoryCategory, ContextLevel, MemoryScope, LifecycleState
 from src.core.exceptions import StorageError, MemoryNotFoundError
 from src.config import ServerConfig
 
@@ -402,6 +402,45 @@ class SQLiteMemoryStore(MemoryStore):
 
         except Exception as e:
             raise StorageError(f"Failed to delete memory: {e}")
+
+    async def delete_memory(self, memory_id: str) -> bool:
+        """Alias for delete() for consistency with other methods."""
+        return await self.delete(memory_id)
+
+    async def update_lifecycle_state(
+        self, memory_id: str, new_state: LifecycleState
+    ) -> bool:
+        """
+        Update the lifecycle state of a memory.
+
+        Args:
+            memory_id: ID of the memory to update
+            new_state: New lifecycle state
+
+        Returns:
+            True if updated successfully
+        """
+        if self.conn is None:
+            await self.initialize()
+
+        try:
+            cursor = self.conn.execute(
+                "UPDATE memories SET lifecycle_state = ? WHERE id = ?",
+                (new_state.value, memory_id),
+            )
+            self.conn.commit()
+
+            updated = cursor.rowcount > 0
+            if updated:
+                logger.debug(
+                    f"Updated lifecycle state for {memory_id}: {new_state.value}"
+                )
+            return updated
+
+        except Exception as e:
+            raise StorageError(
+                f"Failed to update lifecycle state for {memory_id}: {e}"
+            )
 
     async def batch_store(
         self,

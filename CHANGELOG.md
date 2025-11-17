@@ -9,6 +9,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - 2025-11-17
 
+- **FEAT-032 Phase 2: Memory Lifecycle Health Dashboard** - Comprehensive health monitoring system for memory lifecycle management
+  - **Health Scoring** (`src/memory/health_scorer.py`, 398 lines):
+    - Overall health score (0-100) with weighted calculation from 4 key metrics
+    - Noise ratio: Percentage of STALE + rarely accessed ARCHIVED memories
+    - Duplicate rate: Exact content matching (placeholder for semantic analysis)
+    - Contradiction rate: Placeholder for semantic contradiction detection
+    - Distribution score: Deviation from ideal lifecycle distribution (60% ACTIVE, 25% RECENT, 10% ARCHIVED, 5% STALE)
+    - Grade system: Excellent (90-100), Good (75-89), Fair (60-74), Poor (<60)
+    - Actionable recommendations based on configurable thresholds (15% noise, 10% duplicates, 5% contradictions)
+  - **Automated Maintenance Jobs** (`src/memory/health_jobs.py`, 364 lines):
+    - Weekly archival job: Automatically transitions old memories (30+ days) to ARCHIVED/STALE states
+    - Monthly cleanup job: Safely deletes STALE memories (180+ days old, <5 use_count, non-USER_PREFERENCE)
+    - Weekly health report job: Generates and logs health metrics with recommendations
+    - Job history tracking with audit trail
+    - Dry-run mode for all destructive operations
+    - Error handling with detailed logging
+  - **CLI Health Dashboard** (`src/cli/health_dashboard_command.py`, 422 lines):
+    - Rich-formatted terminal UI with color-coded metrics and progress bars
+    - Overall health score display with grade and visual health bar
+    - Quality metrics section: noise ratio, duplicate rate, contradiction rate (with target thresholds and ✓/⚠ indicators)
+    - Lifecycle distribution charts with color-coded bars (green ACTIVE, yellow RECENT, orange ARCHIVED, red STALE)
+    - Actionable recommendations based on current health status
+    - Suggested maintenance actions (cleanup preview, consolidation, archival)
+    - JSON export option for automation and scripting
+    - Interactive commands: `lifecycle cleanup --dry-run`, `lifecycle archive-stale`
+  - **Database Extensions**:
+    - Added `update_lifecycle_state()` method to SQLiteMemoryStore for state transitions
+    - Added `delete_memory()` alias for consistency
+    - Added LifecycleState import to sqlite_store.py
+  - **Test Coverage** (33 tests, 1,092 lines):
+    - `test_health_scorer.py`: 10 tests (empty DB, all states, mixed states, noise calculation, ideal distribution, recommendations, grades, serialization, quick stats)
+    - `test_health_jobs.py`: 18 tests (archival dry-run/execution, cleanup with filtering, skip protected memories, error handling, health reports, job history)
+    - `test_health_dashboard_integration.py`: 5 integration tests (basic workflows)
+  - **Benefits**:
+    - Real-time quality monitoring with 0-100 health score and grade
+    - Automated maintenance reduces manual intervention (weekly archival, monthly cleanup)
+    - Proactive quality insights through weekly health reports
+    - Rich CLI provides immediate visibility into memory system health
+    - Safety mechanisms prevent accidental data loss (dry-run mode, user preference protection)
+  - **Usage**:
+    ```bash
+    # View health dashboard
+    python -m src.cli.health_dashboard_command
+
+    # View with detailed metrics
+    python -m src.cli.health_dashboard_command --detailed
+
+    # Export as JSON for automation
+    python -m src.cli.health_dashboard_command --json
+
+    # Preview cleanup (dry run)
+    python -m src.cli.health_dashboard_command lifecycle cleanup --dry-run
+
+    # Execute cleanup
+    python -m src.cli.health_dashboard_command lifecycle cleanup
+
+    # Archive stale memories
+    python -m src.cli.health_dashboard_command lifecycle archive-stale
+    ```
+
 - **WORKFLOW: Git worktree support for parallel agent development** - Configured repository to use git worktrees for concurrent feature development
   - Created `.worktrees/` directory for isolated feature branches
   - Added `.worktrees/` to `.gitignore` to prevent committing worktree directories
