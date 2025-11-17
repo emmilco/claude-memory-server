@@ -9,6 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - 2025-11-17
 
+- **FEAT-028: Proactive Context Suggestions** - Automatic pattern detection and context injection with adaptive learning
+  - **Pattern Detector (`src/memory/pattern_detector.py`)** - Detects 4 types of conversation patterns:
+    - Implementation requests ("I need to add X") - confidence 0.85+
+    - Error debugging ("Why isn't X working?") - confidence 0.90+
+    - Code questions ("How does X work?") - confidence 0.75+
+    - Refactoring/changes ("Change X to Y") - confidence 0.80+
+  - **Feedback Tracker (`src/memory/feedback_tracker.py`)** - Tracks user acceptance of suggestions
+    - SQLite-based persistence for suggestion history
+    - Calculates acceptance rates per pattern type
+    - Adaptive threshold adjustment (target: 70% acceptance rate)
+    - Automatic weekly threshold updates
+  - **Suggestion Engine (`src/memory/suggestion_engine.py`)** - Proactive context suggestion system
+    - Analyzes messages for patterns using PatternDetector
+    - Automatic search and context injection at high confidence (>0.90)
+    - Formats notifications: "💡 I found relevant context..."
+    - Learns from user feedback to adapt threshold over time
+  - **MCP Tools** - Four new tools for suggestion management:
+    - `analyze_conversation(message)` - Analyze message for patterns and suggest context
+    - `get_suggestion_stats()` - View metrics, acceptance rates, and threshold
+    - `provide_suggestion_feedback(suggestion_id, accepted)` - Record feedback for learning
+    - `set_suggestion_mode(enabled, threshold)` - Enable/disable and configure threshold
+  - **Configuration** - Added to `src/config.py`:
+    - `enable_proactive_suggestions` (default: True)
+    - `proactive_suggestions_threshold` (default: 0.90)
+  - **Testing** - Comprehensive test coverage (52 unit tests, 11 integration tests):
+    - 30 tests for pattern detector (all 4 pattern types, entity extraction, confidence scoring)
+    - 22 tests for feedback tracker (recording, acceptance rates, threshold adjustment)
+    - 11 integration tests (end-to-end suggestion workflows, MCP tools)
+  - **Impact:** Reduces cognitive load, surfaces relevant context automatically, learns from user behavior
+  - **Runtime Cost:** +5-10ms pattern detection, +20-50ms when auto-injecting, +10-20MB memory
+
+### Added - 2025-11-17
+
 - **WORKFLOW: Git worktree support for parallel agent development** - Configured repository to use git worktrees for concurrent feature development
   - Created `.worktrees/` directory for isolated feature branches
   - Added `.worktrees/` to `.gitignore` to prevent committing worktree directories

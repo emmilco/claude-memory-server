@@ -100,6 +100,10 @@ class ServerConfig(BaseSettings):
     cross_project_default_mode: str = "current"  # "current" or "all"
     cross_project_opt_in_file: str = "~/.claude-rag/cross_project_consent.json"
 
+    # Proactive context suggestions (FEAT-028)
+    enable_proactive_suggestions: bool = True  # Analyze messages for patterns
+    proactive_suggestions_threshold: float = 0.90  # Confidence threshold for auto-injection
+
     model_config = SettingsConfigDict(
         env_prefix="CLAUDE_RAG_",
         env_file=".env",
