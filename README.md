@@ -25,7 +25,7 @@ This is an MCP server that sits between Claude and your development environment,
                  │
 ┌────────────────▼────────────────────────────────────────┐
 │  Your Development Environment                            │
-│  • Code files (Python, JS, TS, Java, Go, Rust)          │
+│  • Code files (Python, JS, TS, Java, Go, Rust, C/C++)   │
 │  • Documentation (Markdown)                              │
 │  • Git repository                                        │
 └─────────────────────────────────────────────────────────┘
@@ -65,7 +65,7 @@ Claude: [Searches semantically]
 ```
 
 **Supported Languages:**
-- Python, JavaScript, TypeScript, Java, Go, Rust
+- Python, JavaScript, TypeScript, Java, Go, Rust, C, C++
 
 **Performance:**
 - 7-13ms search latency
