@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - 2025-11-17
 
+- **FEAT-017 Phase 1: Repository Registry** - Implemented centralized repository tracking system for multi-repository support
+  - Created `src/memory/repository_registry.py` (600+ lines) - Complete registry implementation
+    - `Repository` dataclass with comprehensive metadata (name, path, git_url, status, timestamps, counts, relationships)
+    - `RepositoryType` enum (MONOREPO, MULTI_REPO, STANDALONE)
+    - `RepositoryStatus` enum (INDEXED, INDEXING, STALE, ERROR, NOT_INDEXED)
+    - `RepositoryRegistry` class with full CRUD operations
+    - Multiple retrieval methods (by ID, path, name) with advanced filtering
+    - Bidirectional dependency tracking with cycle detection
+    - Transitive dependency traversal with depth limits
+    - Tag management (add/remove with idempotence)
+    - Workspace membership tracking
+    - JSON persistence with corruption handling
+    - Statistics and reporting
+  - Created `tests/unit/test_repository_registry.py` - 49 comprehensive tests (100% passing)
+    - Model serialization/deserialization (4 tests)
+    - Basic CRUD operations (6 tests)
+    - Retrieval methods and filtering (13 tests)
+    - Dependency tracking with cycle detection (9 tests)
+    - Tag and workspace management (8 tests)
+    - Persistence and statistics (4 tests)
+  - Created `planning_docs/FEAT-017_multi_repository_support.md` - Complete 8-phase implementation plan (600+ lines)
+  - **Status:** Phase 1 of 8 complete (~15% of FEAT-017)
+  - **Next:** Phase 2 - Workspace Manager implementation
 - **WORKFLOW: Git worktree support for parallel agent development** - Configured repository to use git worktrees for concurrent feature development
   - Created `.worktrees/` directory for isolated feature branches
   - Added `.worktrees/` to `.gitignore` to prevent committing worktree directories
