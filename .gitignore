@@ -33,3 +33,6 @@ Thumbs.db
 
 # Archived documentation
 archived_docs/
+
+# Git worktrees (parallel development)
+.worktrees/

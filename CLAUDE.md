@@ -64,6 +64,84 @@ A Model Context Protocol (MCP) server providing persistent memory, documentation
 
 ## Working Instructions
 
+### Git Worktree Workflow (REQUIRED for All Tasks)
+
+**This project uses git worktrees for parallel development. Each agent must work in their own worktree to avoid conflicts.**
+
+#### When Starting a Task from TODO.md
+
+1. **Identify your task ID** (e.g., FEAT-042, BUG-007, TEST-003)
+
+2. **Create or navigate to worktree:**
+   ```bash
+   # Check if worktree exists
+   git worktree list
+
+   # Create worktree if it doesn't exist (from main repo directory)
+   TASK_ID="FEAT-042"  # Replace with your task ID
+   git worktree add .worktrees/$TASK_ID -b $TASK_ID
+
+   # Navigate to worktree
+   cd .worktrees/$TASK_ID
+   ```
+
+3. **Work in the worktree:**
+   - All file edits happen in `.worktrees/$TASK_ID/`
+   - Run tests from within the worktree
+   - Make commits to the feature branch
+   - The main repository remains untouched
+
+4. **When task is complete:**
+   ```bash
+   # Ensure all changes are committed
+   git status
+
+   # Push feature branch
+   git push -u origin $TASK_ID
+
+   # Create pull request using GitHub CLI
+   gh pr create --title "FEAT-042: Your feature description" \
+                --body "## Summary
+
+   Brief description of changes
+
+   ## Test Plan
+   - [ ] All tests pass
+   - [ ] Coverage maintained
+
+   Closes #issue-number (if applicable)" \
+                --base main
+
+   # Return to main repository
+   cd ../..
+
+   # Clean up worktree and local branch
+   git worktree remove .worktrees/$TASK_ID
+   git branch -d $TASK_ID
+   ```
+
+#### Worktree Management Commands
+
+```bash
+# List all worktrees
+git worktree list
+
+# Remove a worktree
+git worktree remove .worktrees/FEAT-042
+
+# Prune stale worktree references
+git worktree prune
+```
+
+#### Important Notes
+
+- **Never work in the main repository directory** when assigned a TODO task
+- **Always create a worktree** named after the task ID
+- **Branch naming:** Use the exact task ID as the branch name (e.g., `FEAT-042`, not `feature/feat-042`)
+- **One task per worktree:** Don't mix multiple tasks in one worktree
+- **Clean up after PRs are merged:** Remove worktrees and delete local branches
+- **Worktrees are gitignored:** The `.worktrees/` directory won't be committed
+
 ### Before Starting Any Task
 
 1. **Update yourself on recent changes:**
@@ -85,6 +163,8 @@ A Model Context Protocol (MCP) server providing persistent memory, documentation
    # Run tests
    pytest tests/ -v --tb=short
    ```
+
+4. **Set up your worktree** (see Git Worktree Workflow above)
 
 ### When Making Changes
 
@@ -172,14 +252,18 @@ Each planning document should include:
 ### Working Process
 1. **Starting a task**:
    - Find the TODO item and its ID
+   - **Create git worktree** (see Git Worktree Workflow section)
+   - Navigate to `.worktrees/$TASK_ID/`
    - Check `planning_docs/` for existing `{ID}_*.md` file
-   - Create one if it doesn't exist
+   - Create planning doc if it doesn't exist
    - Review any existing notes before starting
 
-2. **During work**:
+2. **During work** (in worktree):
+   - All edits happen in `.worktrees/$TASK_ID/` directory
    - Update the planning doc with progress
    - Add code snippets, test results, decisions
    - Note any blockers or issues discovered
+   - Commit regularly to your feature branch
 
 3. **Completing a task**:
    - Update the planning doc with final state
@@ -187,6 +271,8 @@ Each planning document should include:
    - Mark the TODO item as complete in TODO.md
    - Update CHANGELOG.md if significant
    - Keep the planning doc for historical reference
+   - **Push branch and create PR** (see Git Worktree Workflow section)
+   - **Clean up worktree** after PR is created
    - **IMPORTANT**: Do NOT create separate completion summaries in the root directory
 
 ### Completion Summaries
@@ -428,10 +514,13 @@ python -c "from src.core.server import MemoryRAGServer; print('Import successful
 - Keep this file current
 
 ### Git Workflow
+- **Always use git worktrees** for TODO tasks (see Git Worktree Workflow section)
 - Pre-commit hook checks for CHANGELOG.md updates in staged files
 - All commits should include relevant documentation changes
 - Use `git commit --no-verify` sparingly and only when documentation is verified current
 - The hook ensures CLAUDE.md, CHANGELOG.md, and TODO.md stay synchronized
+- **Branch naming:** Use task IDs directly (FEAT-042, not feature/feat-042)
+- **PR workflow:** Push branch → Create PR → Clean up worktree
 
 ## Self-Update Protocol
 

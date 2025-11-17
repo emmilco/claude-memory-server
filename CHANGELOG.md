@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2025-11-17
+
+- **WORKFLOW: Git worktree support for parallel agent development** - Configured repository to use git worktrees for concurrent feature development
+  - Created `.worktrees/` directory for isolated feature branches
+  - Added `.worktrees/` to `.gitignore` to prevent committing worktree directories
+  - Updated `CLAUDE.md` with comprehensive worktree workflow instructions:
+    - Mandatory worktree usage for all TODO tasks
+    - Automatic worktree creation/navigation based on task IDs
+    - Branch naming convention: use task ID directly (e.g., `FEAT-042`)
+    - Complete PR workflow: push → create PR → cleanup worktree
+  - **Benefit:** Multiple agents can work on different features simultaneously without file conflicts
+  - **Impact:** Enables true parallel development, reduces merge conflicts, improves development velocity
+
 ### Changed - 2025-11-17
 
 - **DOC: Coverage Configuration & Documentation** - Clarified test coverage metrics and excluded impractical-to-test files
