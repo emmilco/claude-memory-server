@@ -130,19 +130,6 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Complexity:** Very Low (~150 lines, mostly reuse)
   - **Runtime Cost:** 30-50ms per query (embed + search)
 
-- [ ] **FEAT-031**: Git-Aware Semantic Search (~1-2 weeks) 🔥🔥🔥
-  - [ ] **Confirm overall feature design with user before proceeding**
-  - [ ] Index git history semantically (commits, diffs, blame)
-  - [ ] Queries: "code changed last week related to auth"
-  - [ ] "Find functions modified by commits fixing bug #123"
-  - [ ] "Show evolution of this function over time"
-  - [ ] Integration: GitPython or libgit2
-  - [ ] Metadata: commit hash, author, date, message
-  - [ ] Configurable: index last N commits (default: 1000)
-  - **Impact:** Code archeology, debugging, team collaboration
-  - **Complexity:** High (~1,500 lines)
-  - **Runtime Cost:** +100-500MB (git history), +10-50% indexing time
-
 - [ ] **FEAT-030**: Cross-Project Learning (~3-5 days) 🔥🔥
   - [ ] **Confirm overall feature design with user before proceeding**
   - [ ] Enable search across all indexed projects
@@ -204,6 +191,19 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Algorithms:** Weighted combination, MMR, custom scoring
   - **Impact:** More relevant top results, personalized ranking
   - **Completed:** 2025-11-17
+
+- [x] **FEAT-031**: Git-Aware Semantic Search ✅ **COMPLETE**
+  - [x] Phase 1: Basic commit indexing (GitIndexer, storage, CLI)
+  - [x] Phase 2: MCP tools (search_git_history, index_git_history)
+  - [x] Phase 3: Code unit linking (show_function_evolution)
+  - [x] Phase 4: Optimizations (git-search CLI command)
+  - [x] Comprehensive testing (57 tests: 30 indexer + 27 storage)
+  - **Implemented:** GitPython integration, FTS5 search, semantic embeddings
+  - **Features:** Date parsing (relative/ISO), multi-filter support (author/date/file)
+  - **CLI:** `git-index` for indexing, `git-search` for searching
+  - **MCP Tools:** search_git_history(), index_git_history(), show_function_evolution()
+  - **Impact:** Semantic search over git commit history, track code evolution
+  - **Completed:** 2025-11-17 (commit 102dc46)
 
 - [ ] **FEAT-013**: Change detection
   - [ ] Smart diffing to re-index only changed functions
