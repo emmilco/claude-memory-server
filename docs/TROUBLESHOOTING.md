@@ -4,6 +4,320 @@
 
 ---
 
+## Quick Validation
+
+**First-time users:** Run the installation validator to check your setup:
+
+```bash
+python -m src.cli validate-install
+```
+
+This will check:
+- System prerequisites (Python, Docker, Rust, Git)
+- Python package dependencies
+- Qdrant connectivity
+- Code parser availability
+- Embedding model loading
+
+The validator provides specific, OS-dependent install instructions for any missing components.
+
+---
+
+## Installation Prerequisites
+
+### Python Version Too Old
+
+**Error:** `Python 3.9+ is required`
+
+**Check version:**
+```bash
+python --version
+# or
+python3 --version
+```
+
+**Solution:**
+
+**macOS:**
+```bash
+brew install python@3.11
+# Add to PATH if needed
+```
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get update
+sudo apt-get install python3.11 python3.11-venv python3.11-dev
+```
+
+**Fedora/RHEL:**
+```bash
+sudo dnf install python3.11
+```
+
+**Windows:**
+- Download from https://www.python.org/downloads/
+- During install, check "Add Python to PATH"
+
+---
+
+### pip Not Installed
+
+**Error:** `pip: command not found`
+
+**Solution:**
+
+**macOS:**
+```bash
+python3 -m ensurepip --upgrade
+# or
+brew install python  # Includes pip
+```
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get install python3-pip
+```
+
+**Fedora/RHEL:**
+```bash
+sudo dnf install python3-pip
+```
+
+**Windows:**
+```bash
+python -m ensurepip --upgrade
+```
+
+---
+
+### Missing Python Packages
+
+**Error:** `ModuleNotFoundError: No module named 'sentence_transformers'`
+
+**Solution:**
+
+1. **Install all dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. **If using virtual environment:**
+   ```bash
+   # Create venv
+   python -m venv venv
+
+   # Activate
+   source venv/bin/activate  # macOS/Linux
+   venv\Scripts\activate     # Windows
+
+   # Install dependencies
+   pip install -r requirements.txt
+   ```
+
+3. **Verify installation:**
+   ```bash
+   python -c "import sentence_transformers; print('OK')"
+   ```
+
+---
+
+### Docker Not Installed
+
+**Error:** `Docker is required but not installed`
+
+**Note:** Docker is only required if you want to use Qdrant for vector search. The system can run with SQLite fallback.
+
+**Solution:**
+
+**macOS:**
+```bash
+# Option 1: Homebrew
+brew install --cask docker
+
+# Option 2: Direct download
+# Visit https://www.docker.com/products/docker-desktop
+# Download Docker Desktop for Mac
+
+# Start Docker Desktop from Applications
+```
+
+**Ubuntu/Debian:**
+```bash
+# Install Docker Engine
+curl -fsSL https://get.docker.com | sh
+
+# Start Docker service
+sudo systemctl enable docker
+sudo systemctl start docker
+
+# Add user to docker group (optional, requires re-login)
+sudo usermod -aG docker $USER
+newgrp docker  # Or log out/in
+
+# Verify
+docker ps
+```
+
+**Fedora/RHEL:**
+```bash
+sudo dnf install docker
+sudo systemctl enable docker
+sudo systemctl start docker
+sudo usermod -aG docker $USER
+```
+
+**Windows:**
+- Download Docker Desktop from https://www.docker.com/products/docker-desktop
+- Run installer
+- Restart Windows
+- Start Docker Desktop from Start menu
+
+**Without Docker (SQLite fallback):**
+```bash
+# Set in .env file:
+CLAUDE_RAG_STORAGE_BACKEND=sqlite
+
+# Or export:
+export CLAUDE_RAG_STORAGE_BACKEND=sqlite
+```
+
+---
+
+### Docker Daemon Not Running
+
+**Error:** `Cannot connect to the Docker daemon`
+
+**Solution:**
+
+**macOS:**
+```bash
+# Start Docker Desktop application
+open -a Docker
+
+# Wait for Docker to start (check menu bar icon)
+```
+
+**Linux:**
+```bash
+# Check status
+sudo systemctl status docker
+
+# Start if not running
+sudo systemctl start docker
+
+# Enable on boot
+sudo systemctl enable docker
+```
+
+**Windows:**
+```bash
+# Start Docker Desktop from Start menu
+# Wait for "Docker Desktop is running" notification
+```
+
+**Verify:**
+```bash
+docker ps
+# Should show empty list or running containers (not error)
+```
+
+---
+
+### Rust Not Installed (Optional)
+
+**Error:** `Failed to build Rust parser`
+
+**Note:** Rust is optional. The system will automatically use Python parser fallback (10-20x slower but functional).
+
+**To install Rust:**
+
+**macOS/Linux:**
+```bash
+# Install Rust via rustup
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# Follow prompts (default installation is fine)
+
+# Activate Rust in current shell
+source $HOME/.cargo/env
+
+# Verify installation
+cargo --version
+rustc --version
+
+# Build the parser
+cd rust_core
+maturin develop
+cd ..
+```
+
+**Windows:**
+```bash
+# Download and run rustup-init.exe from:
+# https://rustup.rs/
+
+# Follow installer prompts
+
+# Open new command prompt and verify:
+cargo --version
+
+# Build the parser
+cd rust_core
+maturin develop
+cd ..
+```
+
+**Verify Rust parser is loaded:**
+```bash
+python -c "import rust_core; print('Rust parser available')"
+```
+
+**Skip Rust (use Python fallback):**
+- Simply don't build the Rust module
+- The system automatically detects and uses Python parser
+- Performance: ~10-20x slower, but fully functional
+- Check status: `python -m src.cli status` (shows parser mode)
+
+---
+
+### Git Not Installed (Recommended)
+
+**Error:** `git: command not found`
+
+**Solution:**
+
+**macOS:**
+```bash
+# Option 1: Xcode Command Line Tools (recommended)
+xcode-select --install
+
+# Option 2: Homebrew
+brew install git
+```
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get install git
+```
+
+**Fedora/RHEL:**
+```bash
+sudo dnf install git
+```
+
+**Windows:**
+- Download from https://git-scm.com/download/win
+- Run installer (use default options)
+- Restart terminal
+
+**Verify:**
+```bash
+git --version
+```
+
+---
+
 ## Common Issues
 
 ### Installation Issues

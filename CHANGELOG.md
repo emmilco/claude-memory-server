@@ -9,6 +9,85 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - 2025-11-17
 
+- **UX-013: Better Installation Error Messages** - OS-specific installation help and comprehensive prerequisite validation
+  - **System Prerequisites Detection** (`src/core/system_check.py`, 359 lines)
+    - Python version check (3.9+ required)
+    - pip availability check
+    - Docker detection (installed + running state)
+    - Rust/cargo detection (optional, for fast parser)
+    - Git detection (recommended)
+    - OS detection: macOS, Linux, Windows
+    - SystemRequirement dataclass: name, installed, version, minimum_version, install_command, priority
+    - SystemChecker class: check_all(), has_critical_failures(), get_summary(), print_report()
+  - **OS-Specific Install Commands**
+    - macOS: brew commands (e.g., `brew install python@3.11`)
+    - Linux: apt-get/dnf/yum commands (e.g., `sudo apt-get install python3.11`)
+    - Windows: direct download links (e.g., python.org)
+    - Context-aware based on `platform.system()`
+  - **Enhanced Error Messages** (`src/core/exceptions.py`, +87 lines)
+    - `DependencyError`: Missing Python packages with OS-specific install commands
+    - `DockerNotRunningError`: Docker unavailable with fallback to SQLite instructions
+    - `RustBuildError`: Rust parser build failures with Python fallback guidance
+    - All exceptions include 💡 Solution and 📖 Docs sections
+    - Inherits from MemoryRAGError base class
+  - **Smart Dependency Checker** (`src/core/dependency_checker.py`, 238 lines)
+    - `safe_import()`: Wrapper for imports with helpful error messages
+    - Context-aware: explains what each dependency is for
+    - Check functions for all major dependencies: sentence-transformers, qdrant-client, tree-sitter, etc.
+    - `check_all_dependencies()`: Returns availability status dict
+  - **Installation Validator Command** (`src/cli/validate_install.py`, 287 lines)
+    - New command: `python -m src.cli validate-install`
+    - Checks system prerequisites (Python, pip, Git, Docker, Rust)
+    - Checks Python package dependencies (required/recommended/optional)
+    - Tests Qdrant connectivity (optional)
+    - Tests Rust parser availability (optional)
+    - Tests embedding model loading
+    - Rich formatted output with color-coded status
+    - Returns exit code 0/1 for automation/CI
+    - Displays OS-specific install instructions for missing components
+  - **Troubleshooting Documentation** (`docs/troubleshooting.md`, +317 lines)
+    - Quick Validation section - directs users to validate-install command
+    - Installation Prerequisites section with OS-specific instructions
+    - Python version issues (macOS/Linux/Windows)
+    - pip installation (all platforms)
+    - Missing Python packages (venv setup)
+    - Docker installation & startup (all platforms)
+    - Docker daemon not running (OS-specific fixes)
+    - Rust installation (optional, with fallback explanation)
+    - Git installation (all platforms)
+    - Each section includes: error message, check commands, OS-specific solutions, verification steps
+  - **Test Coverage:** 40 tests, 522 lines
+    - `tests/unit/test_system_check.py` (17 tests, 293 lines)
+      - SystemRequirement creation
+      - SystemChecker initialization
+      - Python/pip/Docker/Rust/Git detection
+      - OS-specific install command generation (Darwin/Linux/Windows)
+      - Critical failure detection
+      - Summary generation
+      - Report printing
+    - `tests/unit/test_installation_exceptions.py` (23 tests, 229 lines)
+      - DependencyError with OS-specific messages
+      - DockerNotRunningError with fallback guidance
+      - RustBuildError with fallback explanation
+      - Exception inheritance (MemoryRAGError)
+      - Solution and docs URL formatting
+  - **Impact:**
+    - Installation success rate: Clear prerequisite detection before starting
+    - User experience: Actionable error messages with OS-specific commands
+    - Developer experience: Self-service troubleshooting, reduced support burden
+    - CI/CD: Automated validation with exit codes
+  - **Files Created:**
+    - `src/core/system_check.py`
+    - `src/core/dependency_checker.py`
+    - `src/cli/validate_install.py`
+    - `tests/unit/test_system_check.py`
+    - `tests/unit/test_installation_exceptions.py`
+  - **Files Modified:**
+    - `src/core/exceptions.py` (+3 exception classes)
+    - `src/cli/__init__.py` (+validate-install command registration)
+    - `docs/troubleshooting.md` (+Installation Prerequisites section)
+  - **Planning Document:** `planning_docs/UX-013_better_installation_errors.md`
+
 - **WORKFLOW: Git worktree support for parallel agent development** - Configured repository to use git worktrees for concurrent feature development
   - Created `.worktrees/` directory for isolated feature branches
   - Added `.worktrees/` to `.gitignore` to prevent committing worktree directories

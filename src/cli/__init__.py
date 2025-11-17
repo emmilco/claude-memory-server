@@ -18,6 +18,7 @@ from src.cli.session_summary_command import run_session_summary_command
 from src.cli.health_monitor_command import HealthMonitorCommand
 from src.cli.verify_command import verify_command
 from src.cli.consolidate_command import consolidate_command
+from src.cli.validate_install import validate_installation
 
 
 def setup_logging(level: str = "INFO"):
@@ -382,6 +383,12 @@ def create_parser() -> argparse.ArgumentParser:
         help="Filter by category (preference, fact, event, workflow, context)",
     )
 
+    # Validate-install command
+    validate_parser = subparsers.add_parser(
+        "validate-install",
+        help="Validate installation and check prerequisites",
+    )
+
     return parser
 
 
@@ -449,6 +456,9 @@ async def main_async(args):
             dry_run=dry_run,
             category=args.category,
         )
+    elif args.command == "validate-install":
+        result = await validate_installation()
+        sys.exit(0 if result else 1)
     else:
         print("No command specified. Use --help for usage information.")
         sys.exit(1)
