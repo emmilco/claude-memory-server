@@ -77,7 +77,7 @@ async def test_import_from_json(temp_store):
         assert stats["errors"] == 0
 
         # Verify memory was stored
-        memory = await temp_store.retrieve("import-test-1")
+        memory = await temp_store.get_by_id("import-test-1")
         assert memory.content == "Imported memory"
 
 
@@ -86,22 +86,23 @@ async def test_import_conflict_keep_newer(temp_store):
     """Test import conflict resolution: keep newer."""
     # Store an existing memory
     old_time = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
-    existing = MemoryUnit(
-        id="conflict-test",
+    await temp_store.store(
         content="Old content",
-        category=MemoryCategory.PREFERENCE,
-        context_level=ContextLevel.USER_PREFERENCE,
-        scope=MemoryScope.GLOBAL,
-        project_name="test",
-        importance=0.5,
-        embedding_model="test-model",
         embedding=[0.1] * 384,
-        created_at=old_time,
-        updated_at=old_time,
-        last_accessed=old_time,
-        lifecycle_state=LifecycleState.ACTIVE,
+        metadata={
+            "id": "conflict-test",
+            "category": MemoryCategory.PREFERENCE.value,
+            "context_level": ContextLevel.USER_PREFERENCE.value,
+            "scope": MemoryScope.GLOBAL.value,
+            "project_name": "test",
+            "importance": 0.5,
+            "embedding_model": "test-model",
+            "created_at": old_time.isoformat(),
+            "updated_at": old_time.isoformat(),
+            "last_accessed": old_time.isoformat(),
+            "lifecycle_state": LifecycleState.ACTIVE.value,
+        }
     )
-    await temp_store.store(existing)
 
     # Create import data with newer memory
     new_time = datetime.now(UTC)
@@ -150,7 +151,7 @@ async def test_import_conflict_keep_newer(temp_store):
         assert stats["conflict_resolutions"]["kept_newer"] == 1
 
         # Verify new content was kept
-        memory = await temp_store.retrieve("conflict-test")
+        memory = await temp_store.get_by_id("conflict-test")
         assert memory.content == "New content"
 
 
@@ -199,30 +200,32 @@ async def test_import_dry_run(temp_store):
         assert stats["imported"] == 1
 
         # Verify no actual import happened
-        with pytest.raises(Exception):
-            await temp_store.retrieve("dry-run-test")
+        memory = await temp_store.get_by_id("dry-run-test")
+        assert memory is None
 
 
 @pytest.mark.asyncio
 async def test_import_from_archive(temp_store):
     """Test importing from portable archive."""
-    # First create an archive
-    memory = MemoryUnit(
-        id="archive-test",
+    # First create an archive by storing a memory
+    now = datetime.now(UTC)
+    await temp_store.store(
         content="Archive memory",
-        category=MemoryCategory.PREFERENCE,
-        context_level=ContextLevel.USER_PREFERENCE,
-        scope=MemoryScope.GLOBAL,
-        project_name="archive-project",
-        importance=0.7,
-        embedding_model="test-model",
         embedding=[0.4] * 384,
-        created_at=datetime.now(UTC),
-        updated_at=datetime.now(UTC),
-        last_accessed=datetime.now(UTC),
-        lifecycle_state=LifecycleState.ACTIVE,
+        metadata={
+            "id": "archive-test",
+            "category": MemoryCategory.PREFERENCE.value,
+            "context_level": ContextLevel.USER_PREFERENCE.value,
+            "scope": MemoryScope.GLOBAL.value,
+            "project_name": "archive-project",
+            "importance": 0.7,
+            "embedding_model": "test-model",
+            "created_at": now.isoformat(),
+            "updated_at": now.isoformat(),
+            "last_accessed": now.isoformat(),
+            "lifecycle_state": LifecycleState.ACTIVE.value,
+        }
     )
-    await temp_store.store(memory)
 
     with tempfile.TemporaryDirectory() as tmpdir:
         # Export to archive
@@ -231,7 +234,7 @@ async def test_import_from_archive(temp_store):
         await exporter.create_portable_archive(archive_path)
 
         # Clear the store
-        await temp_store.delete(memory.id)
+        await temp_store.delete("archive-test")
 
         # Import from archive
         importer = DataImporter(temp_store)
@@ -242,5 +245,5 @@ async def test_import_from_archive(temp_store):
         assert stats["imported"] == 1
 
         # Verify memory was restored
-        restored = await temp_store.retrieve("archive-test")
+        restored = await temp_store.get_by_id("archive-test")
         assert restored.content == "Archive memory"

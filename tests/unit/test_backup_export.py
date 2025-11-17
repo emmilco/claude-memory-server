@@ -34,7 +34,6 @@ async def temp_store():
                 project_name="test-project",
                 importance=0.8,
                 embedding_model="test-model",
-                embedding=[0.1] * 384,
                 created_at=datetime.now(UTC),
                 updated_at=datetime.now(UTC),
                 last_accessed=datetime.now(UTC),
@@ -49,7 +48,6 @@ async def temp_store():
                 project_name="test-project",
                 importance=0.6,
                 embedding_model="test-model",
-                embedding=[0.2] * 384,
                 created_at=datetime.now(UTC),
                 updated_at=datetime.now(UTC),
                 last_accessed=datetime.now(UTC),
@@ -57,8 +55,27 @@ async def temp_store():
             ),
         ]
 
-        for memory in memories:
-            await store.store(memory)
+        # Embeddings stored separately
+        embeddings = [[0.1] * 384, [0.2] * 384]
+
+        for memory, embedding in zip(memories, embeddings):
+            await store.store(
+                content=memory.content,
+                embedding=embedding,
+                metadata={
+                    "id": memory.id,
+                    "category": memory.category.value,
+                    "context_level": memory.context_level.value,
+                    "scope": memory.scope.value,
+                    "project_name": memory.project_name,
+                    "importance": memory.importance,
+                    "embedding_model": memory.embedding_model,
+                    "created_at": memory.created_at.isoformat(),
+                    "updated_at": memory.updated_at.isoformat(),
+                    "last_accessed": memory.last_accessed.isoformat(),
+                    "lifecycle_state": memory.lifecycle_state.value,
+                }
+            )
 
         yield store
 

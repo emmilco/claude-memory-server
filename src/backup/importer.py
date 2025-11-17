@@ -75,8 +75,8 @@ class DataImporter:
 
             self._validate_import_data(data)
 
-            # Extract memories
-            imported_memories = []
+            # Extract memories with embeddings
+            imported_memory_embeddings = []
             for mem_dict in data.get("memories", []):
                 # Apply selective filters
                 if selective_project and mem_dict.get("project_name") != selective_project:
@@ -84,14 +84,14 @@ class DataImporter:
                 if selective_category and mem_dict.get("category") != selective_category.value:
                     continue
 
-                memory = self._dict_to_memory(mem_dict)
-                imported_memories.append(memory)
+                memory, embedding = self._dict_to_memory(mem_dict)
+                imported_memory_embeddings.append((memory, embedding))
 
-            logger.info(f"Loaded {len(imported_memories)} memories from file")
+            logger.info(f"Loaded {len(imported_memory_embeddings)} memories from file")
 
             # Process imports with conflict resolution
             stats = await self._process_imports(
-                memories=imported_memories,
+                memory_embeddings=imported_memory_embeddings,
                 conflict_strategy=conflict_strategy,
                 dry_run=dry_run,
             )
@@ -167,8 +167,8 @@ class DataImporter:
                         if i < len(embeddings_array):
                             embeddings_dict[mem_dict["id"]] = embeddings_array[i].tolist()
 
-                # Extract memories
-                imported_memories = []
+                # Extract memories with embeddings
+                imported_memory_embeddings = []
                 for mem_dict in memories_data.get("memories", []):
                     # Apply selective filters
                     if selective_project and mem_dict.get("project_name") != selective_project:
@@ -178,14 +178,14 @@ class DataImporter:
                     if mem_dict["id"] in embeddings_dict:
                         mem_dict["embedding"] = embeddings_dict[mem_dict["id"]]
 
-                    memory = self._dict_to_memory(mem_dict)
-                    imported_memories.append(memory)
+                    memory, embedding = self._dict_to_memory(mem_dict)
+                    imported_memory_embeddings.append((memory, embedding))
 
-                logger.info(f"Loaded {len(imported_memories)} memories from archive")
+                logger.info(f"Loaded {len(imported_memory_embeddings)} memories from archive")
 
                 # Process imports with conflict resolution
                 stats = await self._process_imports(
-                    memories=imported_memories,
+                    memory_embeddings=imported_memory_embeddings,
                     conflict_strategy=conflict_strategy,
                     dry_run=dry_run,
                 )
@@ -205,7 +205,7 @@ class DataImporter:
 
     async def _process_imports(
         self,
-        memories: List[MemoryUnit],
+        memory_embeddings: List[Tuple[MemoryUnit, List[float]]],
         conflict_strategy: ConflictStrategy,
         dry_run: bool,
     ) -> Dict[str, Any]:
@@ -213,7 +213,7 @@ class DataImporter:
         Process memory imports with conflict resolution.
 
         Args:
-            memories: List of memories to import
+            memory_embeddings: List of (MemoryUnit, embedding) tuples to import
             conflict_strategy: How to handle conflicts
             dry_run: If True, don't actually import
 
@@ -221,7 +221,7 @@ class DataImporter:
             Statistics dictionary
         """
         stats = {
-            "total_memories": len(memories),
+            "total_memories": len(memory_embeddings),
             "imported": 0,
             "skipped": 0,
             "conflicts": 0,
@@ -235,7 +235,7 @@ class DataImporter:
             }
         }
 
-        for memory in memories:
+        for memory, embedding in memory_embeddings:
             try:
                 # Check if memory already exists
                 existing = await self._find_existing_memory(memory)
@@ -246,6 +246,7 @@ class DataImporter:
                     # Resolve conflict
                     resolution = await self._resolve_conflict(
                         imported=memory,
+                        imported_embedding=embedding,
                         existing=existing,
                         strategy=conflict_strategy,
                         dry_run=dry_run,
@@ -259,7 +260,7 @@ class DataImporter:
 
                 # Import memory
                 if not dry_run:
-                    await self._store_memory(memory)
+                    await self._store_memory(memory, embedding)
 
                 stats["imported"] += 1
 
@@ -288,6 +289,7 @@ class DataImporter:
     async def _resolve_conflict(
         self,
         imported: MemoryUnit,
+        imported_embedding: List[float],
         existing: MemoryUnit,
         strategy: ConflictStrategy,
         dry_run: bool,
@@ -297,6 +299,7 @@ class DataImporter:
 
         Args:
             imported: Memory being imported
+            imported_embedding: Embedding vector for imported memory
             existing: Existing memory in database
             strategy: Conflict resolution strategy
             dry_run: If True, don't actually modify data
@@ -308,7 +311,7 @@ class DataImporter:
             if imported.updated_at > existing.updated_at:
                 # Imported is newer, replace
                 if not dry_run:
-                    await self._update_memory(imported)
+                    await self._update_memory(imported, imported_embedding)
                 logger.debug(f"Conflict resolved: keeping newer (imported) for {imported.id}")
                 return "kept_newer"
             else:
@@ -326,7 +329,7 @@ class DataImporter:
             if not dry_run:
                 imported.id = f"{imported.id}_imported"
                 imported.content = f"{imported.content}\n\n(Imported copy)"
-                await self._store_memory(imported)
+                await self._store_memory(imported, imported_embedding)
             logger.debug(f"Conflict resolved: keeping both for {imported.id}")
             return "kept_both"
 
@@ -342,7 +345,8 @@ class DataImporter:
                 existing.metadata = {**(existing.metadata or {}), **(imported.metadata or {})}
                 existing.tags = list(set((existing.tags or []) + (imported.tags or [])))
                 existing.updated_at = datetime.now(UTC)
-                await self._update_memory(existing)
+                # Note: We don't update embedding when merging metadata
+                await self._update_memory(existing, imported_embedding)
             logger.debug(f"Conflict resolved: merged metadata for {imported.id}")
             return "merged"
 
@@ -372,16 +376,19 @@ class DataImporter:
 
         logger.info(f"Import data validated: version {version}, {len(data['memories'])} memories")
 
-    def _dict_to_memory(self, data: Dict[str, Any]) -> MemoryUnit:
+    def _dict_to_memory(self, data: Dict[str, Any]) -> Tuple[MemoryUnit, List[float]]:
         """
-        Convert dictionary to MemoryUnit object.
+        Convert dictionary to MemoryUnit object and embedding.
 
         Args:
             data: Dictionary representation
 
         Returns:
-            MemoryUnit object
+            Tuple of (MemoryUnit object, embedding vector)
         """
+        # Extract embedding separately (not part of MemoryUnit model)
+        embedding = data.get("embedding", [0.0] * 384)
+
         # Parse provenance if available
         provenance = None
         if "provenance" in data and data["provenance"]:
@@ -397,7 +404,7 @@ class DataImporter:
                 notes=prov_data.get("notes"),
             )
 
-        # Create MemoryUnit
+        # Create MemoryUnit (without embedding field)
         memory = MemoryUnit(
             id=data["id"],
             content=data["content"],
@@ -407,7 +414,6 @@ class DataImporter:
             project_name=data.get("project_name"),
             importance=data["importance"],
             embedding_model=data["embedding_model"],
-            embedding=data["embedding"],
             created_at=datetime.fromisoformat(data["created_at"]),
             updated_at=datetime.fromisoformat(data["updated_at"]),
             last_accessed=datetime.fromisoformat(data["last_accessed"]),
@@ -417,7 +423,7 @@ class DataImporter:
             provenance=provenance if provenance else MemoryProvenance(),
         )
 
-        return memory
+        return memory, embedding
 
     def _verify_checksums(self, extract_dir: Path) -> None:
         """
@@ -473,11 +479,11 @@ class DataImporter:
                 sha256.update(chunk)
         return sha256.hexdigest()
 
-    async def _store_memory(self, memory: MemoryUnit) -> None:
+    async def _store_memory(self, memory: MemoryUnit, embedding: List[float]) -> None:
         """Store a memory using the store's API."""
         await self.store.store(
             content=memory.content,
-            embedding=memory.embedding,
+            embedding=embedding,
             metadata={
                 "id": memory.id,
                 "category": memory.category.value,
@@ -496,35 +502,12 @@ class DataImporter:
             }
         )
 
-    async def _update_memory(self, memory: MemoryUnit) -> None:
+    async def _update_memory(self, memory: MemoryUnit, embedding: List[float]) -> None:
         """Update a memory using the store's API."""
-        # For update, we need to use the store's update method if it exists
-        # Otherwise, we delete and re-store
+        # For update, we need to delete and re-store since embeddings need to be updated
         try:
-            if hasattr(self.store, 'update'):
-                await self.store.update(
-                    memory_id=memory.id,
-                    content=memory.content,
-                    metadata={
-                        "category": memory.category.value,
-                        "context_level": memory.context_level.value,
-                        "scope": memory.scope.value,
-                        "project_name": memory.project_name,
-                        "importance": memory.importance,
-                        "embedding_model": memory.embedding_model,
-                        "created_at": memory.created_at.isoformat(),
-                        "updated_at": memory.updated_at.isoformat(),
-                        "last_accessed": memory.last_accessed.isoformat(),
-                        "lifecycle_state": memory.lifecycle_state.value,
-                        "tags": memory.tags,
-                        "metadata": memory.metadata,
-                        "provenance": memory.provenance.model_dump() if memory.provenance else None,
-                    }
-                )
-            else:
-                # Fallback: delete and re-store
-                await self.store.delete(memory.id)
-                await self._store_memory(memory)
+            await self.store.delete(memory.id)
+            await self._store_memory(memory, embedding)
         except Exception as e:
             logger.error(f"Failed to update memory {memory.id}: {e}")
             raise

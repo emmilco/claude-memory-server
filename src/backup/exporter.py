@@ -58,7 +58,7 @@ class DataExporter:
             logger.info(f"Starting JSON export to {output_path}")
 
             # Retrieve all memories matching filters
-            memories = await self._get_filtered_memories(
+            memory_embeddings = await self._get_filtered_memories(
                 project_name=project_name,
                 category=category,
                 context_level=context_level,
@@ -79,8 +79,8 @@ class DataExporter:
                     "since_date": since_date.isoformat() if since_date else None,
                     "until_date": until_date.isoformat() if until_date else None,
                 },
-                "memory_count": len(memories),
-                "memories": [self._memory_to_dict(m) for m in memories],
+                "memory_count": len(memory_embeddings),
+                "memories": [self._memory_to_dict(m, emb) for m, emb in memory_embeddings],
             }
 
             # Write to file
@@ -91,11 +91,11 @@ class DataExporter:
             stats = {
                 "format": "json",
                 "output_path": str(output_path),
-                "memory_count": len(memories),
+                "memory_count": len(memory_embeddings),
                 "file_size_bytes": output_path.stat().st_size,
             }
 
-            logger.info(f"JSON export complete: {len(memories)} memories exported")
+            logger.info(f"JSON export complete: {len(memory_embeddings)} memories exported")
             return stats
 
         except Exception as e:
@@ -130,15 +130,15 @@ class DataExporter:
             with tempfile.TemporaryDirectory() as temp_dir:
                 temp_path = Path(temp_dir)
 
-                # Export memories
-                memories = await self._get_filtered_memories(project_name=project_name)
+                # Export memories with embeddings
+                memory_embeddings = await self._get_filtered_memories(project_name=project_name)
 
                 memories_data = {
                     "version": "1.0.0",
                     "schema_version": "3.0.0",
                     "export_date": datetime.now(UTC).isoformat(),
-                    "memory_count": len(memories),
-                    "memories": [self._memory_to_dict(m) for m in memories],
+                    "memory_count": len(memory_embeddings),
+                    "memories": [self._memory_to_dict(m, emb) for m, emb in memory_embeddings],
                 }
 
                 memories_file = temp_path / "memories.json"
@@ -147,13 +147,13 @@ class DataExporter:
 
                 # Export embeddings if requested
                 embeddings_file = None
-                if include_embeddings and memories:
-                    embeddings = np.array([m.embedding for m in memories])
+                if include_embeddings and memory_embeddings:
+                    embeddings = np.array([emb for m, emb in memory_embeddings])
                     embeddings_file = temp_path / "embeddings.npz"
                     np.savez_compressed(embeddings_file, embeddings=embeddings)
 
                 # Create manifest
-                manifest = self._create_manifest(memories, include_embeddings)
+                manifest = self._create_manifest([m for m, emb in memory_embeddings], include_embeddings)
                 manifest_file = temp_path / "manifest.json"
                 with open(manifest_file, 'w', encoding='utf-8') as f:
                     json.dump(manifest, f, indent=2)
@@ -181,7 +181,7 @@ class DataExporter:
             stats = {
                 "format": "archive",
                 "output_path": str(output_path),
-                "memory_count": len(memories),
+                "memory_count": len(memory_embeddings),
                 "file_size_bytes": output_path.stat().st_size,
                 "includes_embeddings": include_embeddings,
             }
@@ -305,7 +305,7 @@ class DataExporter:
         context_level: Optional[ContextLevel] = None,
         since_date: Optional[datetime] = None,
         until_date: Optional[datetime] = None,
-    ) -> List[MemoryUnit]:
+    ) -> List[Tuple[MemoryUnit, List[float]]]:
         """
         Retrieve memories with filters applied.
 
@@ -317,7 +317,7 @@ class DataExporter:
             until_date: Filter by creation date (before)
 
         Returns:
-            List of matching memories
+            List of tuples (MemoryUnit, embedding vector)
         """
         # Get all memories (store-specific implementation)
         # For now, use search with empty query to get all
@@ -330,29 +330,79 @@ class DataExporter:
         )
 
         # Retrieve all memories via search (with high limit)
-        results = await self.store.search(
-            query_vector=[0.0] * 384,  # Dummy vector
+        results = await self.store.search_with_filters(
+            query_embedding=[0.0] * 384,  # Dummy vector
             limit=100000,  # High limit to get all
             filters=filters
         )
 
-        # Extract memories from results
-        memories = [r.memory for r in results]
+        # Extract memories from results (Tuple[MemoryUnit, float])
+        # We need to retrieve embeddings separately
+        memory_embeddings = []
+        for memory, score in results:
+            # Apply date filters
+            if since_date and memory.created_at < since_date:
+                continue
+            if until_date and memory.created_at > until_date:
+                continue
 
-        # Apply date filters
-        if since_date:
-            memories = [m for m in memories if m.created_at >= since_date]
-        if until_date:
-            memories = [m for m in memories if m.created_at <= until_date]
+            # Retrieve embedding for this memory
+            embedding = await self._get_embedding(memory.id)
+            memory_embeddings.append((memory, embedding))
 
-        return memories
+        return memory_embeddings
 
-    def _memory_to_dict(self, memory: MemoryUnit) -> Dict[str, Any]:
+    async def _get_embedding(self, memory_id: str) -> List[float]:
+        """
+        Retrieve embedding vector for a memory.
+
+        Args:
+            memory_id: ID of the memory
+
+        Returns:
+            Embedding vector
+
+        Raises:
+            StorageError: If embedding cannot be retrieved
+        """
+        from src.store.qdrant_store import QdrantMemoryStore
+        from src.store.sqlite_store import SQLiteMemoryStore
+
+        try:
+            if isinstance(self.store, QdrantMemoryStore):
+                # Qdrant: use retrieve with with_vectors=True
+                result = self.store.client.retrieve(
+                    collection_name=self.store.collection_name,
+                    ids=[memory_id],
+                    with_vectors=True,
+                )
+                if result and len(result) > 0:
+                    return result[0].vector
+                raise StorageError(f"Embedding not found for memory {memory_id}")
+
+            elif isinstance(self.store, SQLiteMemoryStore):
+                # SQLite: query embedding column directly
+                import pickle
+                cursor = self.store.conn.cursor()
+                cursor.execute("SELECT embedding FROM memories WHERE id = ?", (memory_id,))
+                row = cursor.fetchone()
+                if row and row[0]:
+                    return pickle.loads(row[0])
+                raise StorageError(f"Embedding not found for memory {memory_id}")
+
+            else:
+                raise StorageError(f"Unsupported store type: {type(self.store)}")
+
+        except Exception as e:
+            raise StorageError(f"Failed to retrieve embedding for {memory_id}: {e}")
+
+    def _memory_to_dict(self, memory: MemoryUnit, embedding: List[float]) -> Dict[str, Any]:
         """
         Convert MemoryUnit to JSON-serializable dictionary.
 
         Args:
             memory: Memory unit to convert
+            embedding: Embedding vector for the memory
 
         Returns:
             Dictionary representation
@@ -366,7 +416,7 @@ class DataExporter:
             "project_name": memory.project_name,
             "importance": memory.importance,
             "embedding_model": memory.embedding_model,
-            "embedding": memory.embedding,
+            "embedding": embedding,
             "created_at": memory.created_at.isoformat(),
             "updated_at": memory.updated_at.isoformat(),
             "last_accessed": memory.last_accessed.isoformat(),
