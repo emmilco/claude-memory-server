@@ -348,6 +348,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Files Created:** `src/core/degradation_warnings.py` (150 lines)
   - **Files Modified:** `src/store/__init__.py` (96 lines), `src/memory/incremental_indexer.py` (+10 lines), `src/cli/status_command.py` (+24 lines), `src/config.py` (+3 fields)
   - **Planning Document:** `planning_docs/UX-012_graceful_degradation.md`
+- **LANG: SQL language support for code parsing (UX-021)** - Added comprehensive SQL parsing capabilities via tree-sitter-sequel
+  - **Rust module:** Added SQL language support to `rust_core/src/parsing.rs`
+    - `SupportedLanguage::Sql` enum variant with `.sql` file extension mapping
+    - Integrated tree-sitter-sequel parser (compatible with tree-sitter 0.24)
+    - CREATE TABLE and CREATE VIEW extraction as "class" semantic units
+    - CREATE FUNCTION extraction as "function" semantic units (best-effort, dialect-dependent)
+  - **Dependencies:**
+    - Added `tree-sitter-sequel = "0.3"` to Cargo.toml
+    - Added `tree-sitter-sql>=0.3.0` to requirements.txt
+  - **Python integration:** Updated `src/memory/incremental_indexer.py`
+    - Added `.sql` to `SUPPORTED_EXTENSIONS`
+    - Added SQL language mapping for file classification
+  - **Testing:** Created comprehensive test suite with 18 tests (all passing ✅)
+    - `tests/unit/test_sql_parsing.py` - Tests for tables, views, functions, edge cases
+    - Covers CREATE TABLE, CREATE VIEW extraction
+    - Tests for unicode, mixed case, empty files, malformed SQL
+    - Performance validation (<100ms for small files)
+  - **Impact:** Enables semantic search over SQL schema definitions, making database structure discoverable
+  - **Limitations:** Function/procedure extraction is best-effort as tree-sitter-sequel primarily focuses on standard SQL DDL (tables, views). Dialect-specific constructs may not be fully captured.
+  - **Files changed:**
+    - Created: `tests/unit/test_sql_parsing.py`
+    - Modified: `rust_core/Cargo.toml`, `requirements.txt`, `rust_core/src/parsing.rs`, `src/memory/incremental_indexer.py`
 
 - **WORKFLOW: Git worktree support for parallel agent development** - Configured repository to use git worktrees for concurrent feature development
   - Created `.worktrees/` directory for isolated feature branches

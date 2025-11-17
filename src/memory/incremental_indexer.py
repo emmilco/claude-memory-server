@@ -85,6 +85,7 @@ except ImportError:
             ".hpp": "cpp",
             ".hxx": "cpp",
             ".hh": "cpp",
+            ".sql": "sql",
         }
         language = language_map.get(ext, "unknown")
 
@@ -215,6 +216,7 @@ class IncrementalIndexer(BaseCodeIndexer):
 
     # Supported file extensions
     SUPPORTED_EXTENSIONS = {".py", ".js", ".jsx", ".ts", ".tsx", ".java", ".go", ".rs", ".c", ".h", ".cpp", ".cc", ".cxx", ".hpp", ".hxx", ".hh"}
+    SUPPORTED_EXTENSIONS = {".py", ".js", ".jsx", ".ts", ".tsx", ".java", ".go", ".rs", ".sql"}
 
     def __init__(
         self,

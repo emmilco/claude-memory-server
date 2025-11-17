@@ -15,6 +15,7 @@ pub enum SupportedLanguage {
     Rust,
     C,
     Cpp,
+    Sql,
 }
 
 impl SupportedLanguage {
@@ -28,6 +29,7 @@ impl SupportedLanguage {
             "rs" => Some(SupportedLanguage::Rust),
             "c" | "h" => Some(SupportedLanguage::C),
             "cpp" | "cc" | "cxx" | "hpp" | "hxx" | "hh" => Some(SupportedLanguage::Cpp),
+            "sql" => Some(SupportedLanguage::Sql),
             _ => None,
         }
     }
@@ -42,6 +44,7 @@ impl SupportedLanguage {
             SupportedLanguage::Rust => tree_sitter_rust::LANGUAGE.into(),
             SupportedLanguage::C => tree_sitter_cpp::LANGUAGE.into(),
             SupportedLanguage::Cpp => tree_sitter_cpp::LANGUAGE.into(),
+            SupportedLanguage::Sql => tree_sitter_sequel::LANGUAGE.into(),
         }
     }
 
@@ -102,6 +105,10 @@ impl SupportedLanguage {
                   declarator: (function_declarator
                     declarator: (_) @name)
                   body: (compound_statement) @body) @function
+            SupportedLanguage::Sql => {
+                // SQL functions and procedures
+                r#"
+                (create_function) @function
                 "#
             }
         }
@@ -167,6 +174,13 @@ impl SupportedLanguage {
                 (class_specifier
                   name: (type_identifier) @name
                   body: (field_declaration_list) @body) @class
+            SupportedLanguage::Sql => {
+                // SQL tables and views as "class" equivalents
+                r#"
+                [
+                  (create_table) @class
+                  (create_view) @class
+                ]
                 "#
             }
         }
@@ -253,6 +267,7 @@ impl CodeParser {
             SupportedLanguage::Rust,
             SupportedLanguage::C,
             SupportedLanguage::Cpp,
+            SupportedLanguage::Sql,
         ] {
             let mut parser = Parser::new();
             parser

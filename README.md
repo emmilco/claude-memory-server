@@ -66,6 +66,7 @@ Claude: [Searches semantically]
 
 **Supported Languages:**
 - Python, JavaScript, TypeScript, Java, Go, Rust, C, C++
+- Python, JavaScript, TypeScript, Java, Go, Rust, SQL
 
 **Performance:**
 - 7-13ms search latency
@@ -514,6 +515,7 @@ Code search currently supports:
 - Java (.java)
 - Go (.go)
 - Rust (.rs)
+- SQL (.sql) - Tables, views, functions
 
 More languages can be added via tree-sitter grammars.
 
