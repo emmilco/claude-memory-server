@@ -35,6 +35,7 @@ from src.memory.usage_tracker import UsageTracker
 from src.memory.pruner import MemoryPruner
 from src.memory.conversation_tracker import ConversationTracker
 from src.memory.query_expander import QueryExpander
+from src.memory.suggestion_engine import SuggestionEngine
 from src.search.hybrid_search import HybridSearcher, FusionMethod
 
 logger = logging.getLogger(__name__)
@@ -82,6 +83,7 @@ class MemoryRAGServer:
         self.query_expander: Optional[QueryExpander] = None
         self.hybrid_searcher: Optional[HybridSearcher] = None
         self.cross_project_consent: Optional = None  # Cross-project consent manager
+        self.suggestion_engine: Optional[SuggestionEngine] = None  # Proactive suggestions
         self.scheduler = None  # APScheduler instance
 
         # Statistics
@@ -225,6 +227,21 @@ class MemoryRAGServer:
             else:
                 self.cross_project_consent = None
                 logger.info("Cross-project search disabled")
+
+            # Initialize suggestion engine for proactive context
+            # Only enabled if store is initialized (needed for searches)
+            if self.config.enable_proactive_suggestions:
+                self.suggestion_engine = SuggestionEngine(
+                    config=self.config,
+                    store=self.store,
+                )
+                logger.info(
+                    f"Proactive suggestions enabled "
+                    f"(threshold: {self.suggestion_engine.high_confidence_threshold:.2f})"
+                )
+            else:
+                self.suggestion_engine = None
+                logger.info("Proactive suggestions disabled")
 
             logger.info("Server initialized successfully")
 
@@ -2470,6 +2487,202 @@ class MemoryRAGServer:
             "backups": backup_list,
             "count": len(backup_list),
         }
+    async def analyze_conversation(
+        self,
+        message: str,
+        session_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Analyze a conversation message for proactive context suggestions.
+
+        This tool detects patterns in user messages (implementation requests,
+        error debugging, code questions, refactoring) and automatically suggests
+        relevant code or memories.
+
+        Args:
+            message: The user's message to analyze
+            session_id: Optional conversation session ID
+
+        Returns:
+            Dict with patterns detected and suggestions
+
+        Example:
+            User: "I need to add user authentication"
+            Returns: Suggestions for authentication implementations
+        """
+        if not self.suggestion_engine:
+            return {
+                "enabled": False,
+                "message": "Proactive suggestions are disabled",
+            }
+
+        try:
+            result = await self.suggestion_engine.analyze_message(
+                message=message,
+                session_id=session_id,
+                project_name=self.project_name,
+            )
+
+            return {
+                "enabled": True,
+                **result.to_dict(),
+            }
+
+        except Exception as e:
+            logger.error(f"Error analyzing conversation: {e}")
+            raise RetrievalError(
+                f"Failed to analyze conversation: {str(e)}",
+                solution="Check the message format and try again",
+            )
+
+    async def get_suggestion_stats(self) -> Dict[str, Any]:
+        """
+        Get statistics about proactive suggestions.
+
+        Returns:
+            Dict with suggestion metrics, acceptance rates, and threshold info
+
+        Example response:
+            {
+                "enabled": true,
+                "messages_analyzed": 150,
+                "suggestions_made": 45,
+                "auto_injections": 23,
+                "high_confidence_threshold": 0.90,
+                "feedback": {
+                    "overall_acceptance_rate": 0.72,
+                    "per_pattern": {...}
+                }
+            }
+        """
+        if not self.suggestion_engine:
+            return {
+                "enabled": False,
+                "message": "Proactive suggestions are disabled",
+            }
+
+        try:
+            return self.suggestion_engine.get_stats()
+        except Exception as e:
+            logger.error(f"Error getting suggestion stats: {e}")
+            raise RetrievalError(f"Failed to get suggestion stats: {str(e)}")
+
+    async def provide_suggestion_feedback(
+        self,
+        suggestion_id: str,
+        accepted: bool,
+        implicit: bool = True,
+    ) -> Dict[str, Any]:
+        """
+        Provide feedback on a proactive suggestion.
+
+        This helps the system learn and adapt its confidence threshold over time.
+
+        Args:
+            suggestion_id: ID of the suggestion (from analyze_conversation)
+            accepted: True if the suggestion was helpful
+            implicit: True if inferred from behavior (default), False for explicit
+
+        Returns:
+            Dict with feedback status
+
+        Example:
+            provide_suggestion_feedback(
+                suggestion_id="abc-123",
+                accepted=True,
+                implicit=False  # User explicitly marked as helpful
+            )
+        """
+        if not self.suggestion_engine:
+            return {
+                "enabled": False,
+                "message": "Proactive suggestions are disabled",
+            }
+
+        try:
+            success = self.suggestion_engine.record_feedback(
+                suggestion_id=suggestion_id,
+                accepted=accepted,
+                implicit=implicit,
+            )
+
+            if success:
+                # Check if threshold should be updated
+                new_threshold, explanation = self.suggestion_engine.update_threshold()
+
+                return {
+                    "success": True,
+                    "suggestion_id": suggestion_id,
+                    "accepted": accepted,
+                    "threshold_updated": new_threshold != self.suggestion_engine.high_confidence_threshold,
+                    "current_threshold": new_threshold,
+                    "explanation": explanation,
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": "Suggestion ID not found",
+                    "suggestion_id": suggestion_id,
+                }
+
+        except Exception as e:
+            logger.error(f"Error recording feedback: {e}")
+            raise ValidationError(f"Failed to record feedback: {str(e)}")
+
+    async def set_suggestion_mode(
+        self,
+        enabled: bool,
+        threshold: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        """
+        Enable or disable proactive suggestions, and optionally set threshold.
+
+        Args:
+            enabled: True to enable, False to disable
+            threshold: Optional confidence threshold (0-1) for auto-injection
+
+        Returns:
+            Dict with current configuration
+
+        Example:
+            # Disable suggestions
+            set_suggestion_mode(enabled=False)
+
+            # Enable with custom threshold
+            set_suggestion_mode(enabled=True, threshold=0.85)
+        """
+        if not self.suggestion_engine:
+            return {
+                "error": "Suggestion engine not initialized",
+                "message": "Set enable_proactive_suggestions=True in config",
+            }
+
+        try:
+            # Update enabled state
+            if enabled:
+                self.suggestion_engine.enable()
+            else:
+                self.suggestion_engine.disable()
+
+            # Update threshold if provided
+            if threshold is not None:
+                if not 0.0 <= threshold <= 1.0:
+                    raise ValidationError(
+                        "Threshold must be between 0.0 and 1.0",
+                        solution=f"Use a value between 0.0 and 1.0 (got {threshold})",
+                    )
+                self.suggestion_engine.set_threshold(threshold)
+
+            return {
+                "success": True,
+                "enabled": self.suggestion_engine.enabled,
+                "high_confidence_threshold": self.suggestion_engine.high_confidence_threshold,
+                "medium_confidence_threshold": self.suggestion_engine.medium_confidence_threshold,
+            }
+
+        except Exception as e:
+            logger.error(f"Error setting suggestion mode: {e}")
+            raise ValidationError(f"Failed to set suggestion mode: {str(e)}")
 
     async def close(self) -> None:
         """Clean up resources."""
