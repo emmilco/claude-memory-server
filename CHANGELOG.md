@@ -134,7 +134,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
       - Result serialization for JSON responses
     - Updated `close()` method to clean up multi-repository components
   - **Status:** Phase 5 of 8 complete (~70% of FEAT-017)
-  - **Next:** Phase 6 - CLI Commands implementation (add 12+ new tools)
+  - **Next:** Phase 6 - CLI Commands implementation
+- **FEAT-017 Phase 6: CLI Commands** - Added comprehensive CLI interface for repository and workspace management
+  - Created `src/cli/repository_command.py` (~570 lines) - Complete repository CLI
+    - 6 subcommands: list, register, unregister, info, add-dep, remove-dep
+    - Rich console formatting with colored tables
+    - Plain text fallback for environments without rich
+    - Comprehensive error handling and user feedback
+    - Filtering by status, workspace, tags
+    - Dependency visualization
+  - Created `src/cli/workspace_command.py` (~530 lines) - Complete workspace CLI
+    - 7 subcommands: list, create, delete, info, add-repo, remove-repo, repos
+    - Rich console formatting with colored tables
+    - Plain text fallback
+    - Comprehensive error handling and user feedback
+    - Workspace settings management (auto-index, cross-repo search)
+    - Repository listing within workspaces
+  - Modified `src/cli/__init__.py` - Integrated new commands
+    - Added repository and workspace command imports
+    - Added parsers to main CLI with aliases (repo, ws)
+    - Integrated command handlers into main_async()
+  - **Commands Available:**
+    - `python -m src.cli repository list [--status] [--workspace] [--tags]`
+    - `python -m src.cli repository register PATH [--name] [--git-url] [--tags]`
+    - `python -m src.cli repository unregister REPO_ID`
+    - `python -m src.cli repository info REPO_ID`
+    - `python -m src.cli repository add-dep REPO_ID DEPENDS_ON`
+    - `python -m src.cli repository remove-dep REPO_ID DEPENDS_ON`
+    - `python -m src.cli workspace list [--tags]`
+    - `python -m src.cli workspace create NAME [--description] [--repos]`
+    - `python -m src.cli workspace delete WORKSPACE_ID`
+    - `python -m src.cli workspace info WORKSPACE_ID`
+    - `python -m src.cli workspace add-repo WORKSPACE_ID REPO_ID`
+    - `python -m src.cli workspace remove-repo WORKSPACE_ID REPO_ID`
+    - `python -m src.cli workspace repos WORKSPACE_ID`
+  - **Status:** Phase 6 of 8 complete (~85% of FEAT-017)
+  - **Next:** Phase 7 - Integration Tests (15-20 tests)
 - **WORKFLOW: Git worktree support for parallel agent development** - Configured repository to use git worktrees for concurrent feature development
   - Created `.worktrees/` directory for isolated feature branches
   - Added `.worktrees/` to `.gitignore` to prevent committing worktree directories
