@@ -932,6 +932,93 @@ async def call_tool(name: str, arguments: Any) -> List[TextContent]:
 
             return [TextContent(type="text", text=output)]
 
+        elif name == "search_all_projects":
+            result = await memory_rag_server.search_all_projects(
+                query=arguments["query"],
+                limit=arguments.get("limit", 10),
+                file_pattern=arguments.get("file_pattern"),
+                language=arguments.get("language"),
+                search_mode=arguments.get("search_mode", "semantic")
+            )
+
+            if not result["results"]:
+                output = f"No results found.\n\n"
+                output += f"{result['interpretation']}\n\n"
+                output += "Suggestions:\n"
+                for suggestion in result["suggestions"]:
+                    output += f"  - {suggestion}\n"
+                return [TextContent(type="text", text=output)]
+
+            output = f"✅ Cross-Project Search Results ({result['total_found']} found)\n\n"
+            output += f"Query: '{result['query']}'\n"
+            output += f"Projects searched: {', '.join(result['projects_searched'])}\n"
+            output += f"Search time: {result['query_time_ms']:.2f}ms\n\n"
+            output += f"{result['interpretation']}\n\n"
+
+            for i, code in enumerate(result["results"], 1):
+                output += f"## {i}. {code['unit_name']} ({code['unit_type']})\n\n"
+                output += f"**Project:** {code['source_project']}\n"
+                output += f"**File:** `{code['file_path']}`:{code['start_line']}-{code['end_line']}\n"
+                output += f"**Language:** {code['language']}\n"
+                output += f"**Relevance:** {code['relevance_score']:.2%}\n\n"
+                if code['signature']:
+                    output += f"**Signature:**\n```{code['language']}\n{code['signature']}\n```\n\n"
+                output += f"**Code:**\n```{code['language']}\n{code['code']}\n```\n\n"
+                output += "---\n\n"
+
+            if result["suggestions"]:
+                output += "\nSuggestions:\n"
+                for suggestion in result["suggestions"]:
+                    output += f"  - {suggestion}\n"
+
+            return [TextContent(type="text", text=output)]
+
+        elif name == "opt_in_cross_project":
+            result = await memory_rag_server.opt_in_cross_project(
+                project_name=arguments["project_name"]
+            )
+
+            if result["status"] == "success":
+                output = f"✅ {result['message']}\n\n"
+                output += f"Opted-in projects ({len(result['opted_in_projects'])}):\n"
+                for project in sorted(result['opted_in_projects']):
+                    output += f"  - {project}\n"
+            else:
+                output = f"⚠️ {result['message']}"
+
+            return [TextContent(type="text", text=output)]
+
+        elif name == "opt_out_cross_project":
+            result = await memory_rag_server.opt_out_cross_project(
+                project_name=arguments["project_name"]
+            )
+
+            if result["status"] == "success":
+                output = f"✅ {result['message']}\n\n"
+                output += f"Opted-in projects ({len(result['opted_in_projects'])}):\n"
+                for project in sorted(result['opted_in_projects']):
+                    output += f"  - {project}\n"
+            else:
+                output = f"⚠️ {result['message']}"
+
+            return [TextContent(type="text", text=output)]
+
+        elif name == "list_opted_in_projects":
+            result = await memory_rag_server.list_opted_in_projects()
+
+            if result["status"] == "success":
+                output = f"✅ Opted-in Projects ({result['count']})\n\n"
+                if result["opted_in_projects"]:
+                    for project in sorted(result["opted_in_projects"]):
+                        output += f"  - {project}\n"
+                else:
+                    output += "No projects are currently opted in for cross-project search.\n"
+                    output += "Use opt_in_cross_project to enable cross-project search for your projects."
+            else:
+                output = f"⚠️ {result['message']}"
+
+            return [TextContent(type="text", text=output)]
+
         else:
             return [TextContent(type="text", text=f"Unknown tool: {name}")]
 

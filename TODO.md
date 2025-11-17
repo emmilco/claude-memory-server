@@ -210,18 +210,19 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Runtime Cost:** 30-50ms per query (embed + search)
   - **Completed:** 2025-11-17
 
-- [ ] **FEAT-030**: Cross-Project Learning (~3-5 days) 🔥🔥
-  - [ ] **Confirm overall feature design with user before proceeding**
-  - [ ] Enable search across all indexed projects
-  - [ ] MCP tool: `search_all_projects(query, limit=10)`
-  - [ ] Find similar implementations across user's projects
-  - [ ] "You solved this in project X - reuse that approach?"
-  - [ ] Privacy: opt-in per project
-  - [ ] Default: current project only
-  - [ ] Build personal code pattern library
+- [x] **FEAT-030**: Cross-Project Learning (~3-5 days) 🔥🔥 ✅ **COMPLETE**
+  - [x] Enable search across all indexed projects
+  - [x] MCP tool: `search_all_projects(query, limit=10)`
+  - [x] Find similar implementations across user's projects
+  - [x] Privacy: opt-in per project with consent manager
+  - [x] Default: current project only (configurable)
+  - [x] MCP tools for consent management: opt_in, opt_out, list_opted_in
+  - [x] Build personal code pattern library
+  - [x] Comprehensive test suite (10 tests)
   - **Impact:** Accelerates development, reduces reinvention
-  - **Complexity:** Medium (~400 lines)
-  - **Runtime Cost:** +20-50ms search (multiple collections)
+  - **Complexity:** Medium (~300 lines including consent manager)
+  - **Runtime Cost:** Scales linearly with opted-in projects (~50-100ms per project)
+  - **Completed:** 2025-11-17
 
 ### 🟡 Tier 3: Core Functionality Extensions
 

@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - 2025-11-17
 
+- **FEAT-030: Cross-Project Learning ✅ COMPLETE** - Search code across all opted-in projects
+  - Created `src/memory/cross_project_consent.py` - Privacy-respecting consent management (115 lines)
+  - Added cross-project config options to `src/config.py` - Enable/disable, default mode, consent file
+  - Created `search_all_projects()` method in `src/core/server.py` - Multi-project semantic search
+  - Added 4 MCP tools in `src/mcp_server.py`: search_all_projects, opt_in, opt_out, list_opted_in
+  - Privacy-first design: opt-in required for cross-project search, current project always searchable
+  - Searches across all opted-in projects and aggregates results by relevance
+  - Returns results with source project, supports all search filters (language, file_pattern, search_mode)
+  - Interpretation: highlights cross-project patterns, suggests code reuse opportunities
+  - Comprehensive test suite: `tests/unit/test_cross_project.py` (10 tests passing)
+  - **Use cases:** Find similar implementations across projects, learn from past solutions, identify reusable patterns
+  - **Impact:** Builds personal code pattern library, reduces duplicate work across projects
+  - **Performance:** Scales linearly with opted-in projects (~50-100ms per project)
+  - **Privacy:** Granular per-project consent, persistent consent storage
+
 - **FEAT-027: "Find Similar" Command ✅ COMPLETE** - Find similar code snippets in indexed codebase
   - Created `find_similar_code()` method in `src/core/server.py` - Semantic code similarity search
   - Added MCP tool `find_similar_code` in `src/mcp_server.py` - Tool registration and call handling

@@ -1729,6 +1729,60 @@ class MemoryRAGServer:
                 "error": str(e),
             }
 
+    async def get_token_analytics(
+        self,
+        period_days: int = 30,
+        session_id: Optional[str] = None,
+        project_name: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Get token usage analytics and cost savings.
+
+        Returns analytics on token usage including tokens saved, cost savings,
+        efficiency ratios, and search quality metrics.
+
+        Args:
+            period_days: Number of days to analyze (default 30)
+            session_id: Filter by specific session ID (optional)
+            project_name: Filter by specific project (optional)
+
+        Returns:
+            Dict with token analytics including:
+            - total_tokens_used: Actual tokens consumed
+            - total_tokens_saved: Tokens saved vs manual approach
+            - cost_savings_usd: Estimated cost savings in USD
+            - efficiency_ratio: Ratio of saved to total tokens
+            - avg_relevance: Average search result quality
+            - total_searches: Number of searches performed
+            - total_files_indexed: Number of files indexed
+        """
+        try:
+            from src.analytics.token_tracker import TokenTracker
+
+            tracker = TokenTracker()
+            analytics = tracker.get_analytics(
+                period_days=period_days,
+                session_id=session_id,
+                project_name=project_name,
+            )
+
+            return {
+                "total_tokens_used": analytics.total_tokens_used,
+                "total_tokens_saved": analytics.total_tokens_saved,
+                "cost_savings_usd": round(analytics.cost_savings_usd, 2),
+                "efficiency_ratio": round(analytics.efficiency_ratio * 100, 1),
+                "avg_relevance": round(analytics.avg_relevance, 2),
+                "total_searches": analytics.total_searches,
+                "total_files_indexed": analytics.total_files_indexed,
+                "period_days": period_days,
+                "session_id": session_id,
+                "project_name": project_name,
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to get token analytics: {e}")
+            raise RetrievalError(f"Failed to get token analytics: {e}")
+
     async def search_git_history(
         self,
         query: str,
