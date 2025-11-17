@@ -5,7 +5,7 @@ import tarfile
 import hashlib
 import logging
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime, UTC
 import numpy as np
 
@@ -216,8 +216,11 @@ class DataExporter:
         try:
             logger.info(f"Starting Markdown export to {output_path}")
 
-            # Retrieve memories
-            memories = await self._get_filtered_memories(project_name=project_name)
+            # Retrieve memories with embeddings
+            memory_embeddings = await self._get_filtered_memories(project_name=project_name)
+
+            # Extract just memories for markdown (embeddings not needed)
+            memories = [m for m, emb in memory_embeddings]
 
             # Group by project and category
             grouped = self._group_memories(memories)
@@ -381,13 +384,12 @@ class DataExporter:
                 raise StorageError(f"Embedding not found for memory {memory_id}")
 
             elif isinstance(self.store, SQLiteMemoryStore):
-                # SQLite: query embedding column directly
-                import pickle
+                # SQLite: query embedding column directly (stored as JSON text)
                 cursor = self.store.conn.cursor()
                 cursor.execute("SELECT embedding FROM memories WHERE id = ?", (memory_id,))
                 row = cursor.fetchone()
                 if row and row[0]:
-                    return pickle.loads(row[0])
+                    return json.loads(row[0])
                 raise StorageError(f"Embedding not found for memory {memory_id}")
 
             else:

@@ -281,7 +281,7 @@ class DataImporter:
             Existing memory if found, None otherwise
         """
         try:
-            existing = await self.store.retrieve(memory.id)
+            existing = await self.store.get_by_id(memory.id)
             return existing
         except:
             return None
