@@ -1,6 +1,7 @@
 """Tests for usage tracking functionality."""
 
 import pytest
+import pytest_asyncio
 import asyncio
 from datetime import datetime, UTC, timedelta
 from unittest.mock import AsyncMock, MagicMock, Mock
@@ -47,7 +48,7 @@ def mock_store():
     return MockStore()
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def usage_tracker(config, mock_store):
     """Create usage tracker."""
     tracker = UsageTracker(config, mock_store)

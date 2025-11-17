@@ -84,7 +84,7 @@ async def test_end_to_end_provenance_tracking(test_store, tracker, embedding_gen
             "context_level": ContextLevel.USER_PREFERENCE.value,
             "scope": MemoryScope.GLOBAL.value,
             "project_name": None,
-            "importance": 8,
+            "importance": 0.8,
             "tags": ["frontend", "react"],
             "metadata": {},
             "provenance": provenance.model_dump(),
@@ -123,7 +123,7 @@ async def test_contradiction_detection_workflow(test_store, detector, embedding_
             "context_level": ContextLevel.USER_PREFERENCE.value,
             "scope": MemoryScope.GLOBAL.value,
             "project_name": None,
-            "importance": 7,
+            "importance": 0.7,
             "tags": ["frontend"],
             "metadata": {},
             "created_at": datetime.now(UTC) - timedelta(days=90),  # 90 days ago
@@ -143,7 +143,7 @@ async def test_contradiction_detection_workflow(test_store, detector, embedding_
             "context_level": ContextLevel.USER_PREFERENCE.value,
             "scope": MemoryScope.GLOBAL.value,
             "project_name": None,
-            "importance": 8,
+            "importance": 0.8,
             "tags": ["frontend"],
             "metadata": {},
             "created_at": datetime.now(UTC),  # Today
@@ -181,7 +181,7 @@ async def test_duplicate_detection_workflow(test_store, detector, embedding_gen)
             "context_level": ContextLevel.USER_PREFERENCE.value,
             "scope": MemoryScope.GLOBAL.value,
             "project_name": None,
-            "importance": 7,
+            "importance": 0.7,
             "tags": ["javascript"],
             "metadata": {},
             "provenance": MemoryProvenance(
@@ -201,7 +201,7 @@ async def test_duplicate_detection_workflow(test_store, detector, embedding_gen)
             "context_level": ContextLevel.USER_PREFERENCE.value,
             "scope": MemoryScope.GLOBAL.value,
             "project_name": None,
-            "importance": 7,
+            "importance": 0.7,
             "tags": ["javascript"],
             "metadata": {},
             "provenance": MemoryProvenance(
@@ -242,7 +242,7 @@ async def test_trust_signals_generation(test_store, trust_gen, embedding_gen):
             "context_level": ContextLevel.USER_PREFERENCE.value,
             "scope": MemoryScope.GLOBAL.value,
             "project_name": "my-app",
-            "importance": 8,
+            "importance": 0.8,
             "tags": ["typescript"],
             "metadata": {"access_count": 15},
             "provenance": provenance.model_dump(),
@@ -283,7 +283,7 @@ async def test_relationship_storage_and_retrieval(test_store, detector, embeddin
             "context_level": ContextLevel.USER_PREFERENCE.value,
             "scope": MemoryScope.GLOBAL.value,
             "project_name": None,
-            "importance": 7,
+            "importance": 0.7,
             "tags": ["react"],
             "metadata": {},
             "provenance": MemoryProvenance(
@@ -301,7 +301,7 @@ async def test_relationship_storage_and_retrieval(test_store, detector, embeddin
             "context_level": ContextLevel.USER_PREFERENCE.value,
             "scope": MemoryScope.GLOBAL.value,
             "project_name": None,
-            "importance": 7,
+            "importance": 0.7,
             "tags": ["react"],
             "metadata": {},
             "provenance": MemoryProvenance(
@@ -344,7 +344,7 @@ async def test_confidence_calculation_factors(test_store, tracker, embedding_gen
             "context_level": ContextLevel.USER_PREFERENCE.value,
             "scope": MemoryScope.GLOBAL.value,
             "project_name": None,
-            "importance": 7,
+            "importance": 0.7,
             "tags": ["typescript"],
             "metadata": {"access_count": 12},  # Frequent access bonus
             "created_at": datetime.now(UTC) - timedelta(days=30),  # Age factor
@@ -381,7 +381,7 @@ async def test_low_confidence_memory_detection(test_store, tracker, embedding_ge
             "context_level": ContextLevel.USER_PREFERENCE.value,
             "scope": MemoryScope.GLOBAL.value,
             "project_name": None,
-            "importance": 5,
+            "importance": 0.5,
             "tags": [],
             "metadata": {},
             "created_at": datetime.now(UTC) - timedelta(days=100),  # Old

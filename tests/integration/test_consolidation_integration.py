@@ -64,7 +64,7 @@ async def test_end_to_end_duplicate_detection_and_merge(test_store, detector, en
             "context_level": ContextLevel.USER_PREFERENCE.value,
             "scope": MemoryScope.GLOBAL.value,
             "project_name": None,
-            "importance": 7,
+            "importance": 0.7,
             "tags": ["javascript"],
             "metadata": {},
             "created_at": datetime.now(UTC) - timedelta(days=10),
@@ -85,7 +85,7 @@ async def test_end_to_end_duplicate_detection_and_merge(test_store, detector, en
             "context_level": ContextLevel.USER_PREFERENCE.value,
             "scope": MemoryScope.GLOBAL.value,
             "project_name": None,
-            "importance": 7,
+            "importance": 0.7,
             "tags": ["javascript"],
             "metadata": {},
             "created_at": datetime.now(UTC),
@@ -140,7 +140,7 @@ async def test_auto_merge_candidates_detection(test_store, detector, embedding_g
             "context_level": ContextLevel.USER_PREFERENCE.value,
             "scope": MemoryScope.GLOBAL.value,
             "project_name": None,
-            "importance": 8,
+            "importance": 0.8,
             "tags": ["typescript"],
             "metadata": {},
             "provenance": MemoryProvenance(
@@ -160,7 +160,7 @@ async def test_auto_merge_candidates_detection(test_store, detector, embedding_g
             "context_level": ContextLevel.USER_PREFERENCE.value,
             "scope": MemoryScope.GLOBAL.value,
             "project_name": None,
-            "importance": 8,
+            "importance": 0.8,
             "tags": ["typescript"],
             "metadata": {},
             "provenance": MemoryProvenance(
@@ -190,7 +190,7 @@ async def test_user_review_candidates_detection(test_store, detector, embedding_
             "context_level": ContextLevel.USER_PREFERENCE.value,
             "scope": MemoryScope.GLOBAL.value,
             "project_name": None,
-            "importance": 7,
+            "importance": 0.7,
             "tags": ["react"],
             "metadata": {},
             "provenance": MemoryProvenance(
@@ -209,7 +209,7 @@ async def test_user_review_candidates_detection(test_store, detector, embedding_
             "context_level": ContextLevel.USER_PREFERENCE.value,
             "scope": MemoryScope.GLOBAL.value,
             "project_name": None,
-            "importance": 7,
+            "importance": 0.7,
             "tags": ["react"],
             "metadata": {},
             "provenance": MemoryProvenance(
@@ -240,7 +240,7 @@ async def test_merge_strategy_keep_most_recent(test_store, engine, embedding_gen
             "context_level": ContextLevel.USER_PREFERENCE.value,
             "scope": MemoryScope.GLOBAL.value,
             "project_name": None,
-            "importance": 6,
+            "importance": 0.6,
             "tags": ["testing"],
             "metadata": {},
             "created_at": datetime.now(UTC) - timedelta(days=30),
@@ -261,7 +261,7 @@ async def test_merge_strategy_keep_most_recent(test_store, engine, embedding_gen
             "context_level": ContextLevel.USER_PREFERENCE.value,
             "scope": MemoryScope.GLOBAL.value,
             "project_name": None,
-            "importance": 7,
+            "importance": 0.7,
             "tags": ["testing"],
             "metadata": {},
             "created_at": datetime.now(UTC),
@@ -297,7 +297,7 @@ async def test_merge_strategy_keep_highest_importance(test_store, engine, embedd
             "context_level": ContextLevel.USER_PREFERENCE.value,
             "scope": MemoryScope.GLOBAL.value,
             "project_name": None,
-            "importance": 4,
+            "importance": 0.4,
             "tags": [],
             "metadata": {},
             "provenance": MemoryProvenance(
@@ -317,7 +317,7 @@ async def test_merge_strategy_keep_highest_importance(test_store, engine, embedd
             "context_level": ContextLevel.USER_PREFERENCE.value,
             "scope": MemoryScope.GLOBAL.value,
             "project_name": None,
-            "importance": 9,
+            "importance": 0.9,
             "tags": [],
             "metadata": {},
             "provenance": MemoryProvenance(
@@ -335,7 +335,7 @@ async def test_merge_strategy_keep_highest_importance(test_store, engine, embedd
     )
 
     assert merged is not None
-    assert merged.importance == 9
+    assert merged.importance == 0.9
 
 
 @pytest.mark.asyncio
@@ -352,7 +352,7 @@ async def test_dry_run_mode(test_store, engine, embedding_gen):
             "context_level": ContextLevel.USER_PREFERENCE.value,
             "scope": MemoryScope.GLOBAL.value,
             "project_name": None,
-            "importance": 5,
+            "importance": 0.5,
             "tags": [],
             "metadata": {},
             "provenance": MemoryProvenance(
@@ -371,7 +371,7 @@ async def test_dry_run_mode(test_store, engine, embedding_gen):
             "context_level": ContextLevel.USER_PREFERENCE.value,
             "scope": MemoryScope.GLOBAL.value,
             "project_name": None,
-            "importance": 5,
+            "importance": 0.5,
             "tags": [],
             "metadata": {},
             "provenance": MemoryProvenance(
@@ -412,7 +412,7 @@ async def test_consolidation_suggestions(test_store, engine, detector, embedding
             "context_level": ContextLevel.USER_PREFERENCE.value,
             "scope": MemoryScope.GLOBAL.value,
             "project_name": None,
-            "importance": 7,
+            "importance": 0.7,
             "tags": ["linting"],
             "metadata": {},
             "provenance": MemoryProvenance(
@@ -431,7 +431,7 @@ async def test_consolidation_suggestions(test_store, engine, detector, embedding
             "context_level": ContextLevel.USER_PREFERENCE.value,
             "scope": MemoryScope.GLOBAL.value,
             "project_name": None,
-            "importance": 7,
+            "importance": 0.7,
             "tags": ["linting"],
             "metadata": {},
             "provenance": MemoryProvenance(
@@ -464,7 +464,7 @@ async def test_category_filtering_in_detection(test_store, detector, embedding_g
             "context_level": ContextLevel.USER_PREFERENCE.value,
             "scope": MemoryScope.GLOBAL.value,
             "project_name": None,
-            "importance": 5,
+            "importance": 0.5,
             "tags": [],
             "metadata": {},
             "provenance": MemoryProvenance(
@@ -481,10 +481,10 @@ async def test_category_filtering_in_detection(test_store, detector, embedding_g
         embedding=embedding2,
         metadata={
             "category": MemoryCategory.FACT.value,
-            "context_level": ContextLevel.WORLD_KNOWLEDGE.value,
+            "context_level": ContextLevel.PROJECT_CONTEXT.value,
             "scope": MemoryScope.GLOBAL.value,
             "project_name": None,
-            "importance": 5,
+            "importance": 0.5,
             "tags": [],
             "metadata": {},
             "provenance": MemoryProvenance(

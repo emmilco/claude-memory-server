@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2025-11-17
+
+- **BUG: Fixed deadlock in UsageTracker batch flush** - Fixed critical deadlock in `src/memory/usage_tracker.py:140` where `_flush()` was called while already holding lock, causing tests to hang. Now using `asyncio.create_task()` to schedule flush asynchronously.
+- **TEST: Fixed async fixture decorator in test_usage_tracker.py** - Changed `@pytest.fixture` to `@pytest_asyncio.fixture` to resolve fixture resolution issues.
+- **TEST: All 1379 passing tests now complete successfully** - Resolved hanging test issue that prevented full test suite completion.
+
 ### Added - 2025-11-17
 
 - **UX-011: Actionable Error Messages ✅ COMPLETE** - Context-aware diagnostics with solutions

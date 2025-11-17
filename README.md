@@ -49,7 +49,7 @@ This is an MCP server that sits between Claude and your development environment,
 - **Git Awareness:** Search commit history semantically, track how code evolved
 - **Hybrid Search:** Combines semantic understanding with keyword precision
 
-**Status:** Production ready • 712 tests passing • 85% coverage • 7-13ms search latency
+**Status:** Production ready • 1379/1414 tests passing • 67% coverage • 7-13ms search latency
 
 ## Features
 
