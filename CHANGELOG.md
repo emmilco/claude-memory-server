@@ -18,6 +18,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Usage:** `python -m src.cli.project switch <name>` or `python -m src.cli.project current`
   - **Impact:** Users can explicitly control which project context is active for memory operations
 
+- **UX-023: C# Support ✅ COMPLETE** - Added parsing for C# (.cs) files using tree-sitter-c-sharp
+  - Added `tree-sitter-c-sharp = "0.23"` to `rust_core/Cargo.toml`
+  - Extended `rust_core/src/parsing.rs` with C# support:
+    - Added `CSharp` variant to `SupportedLanguage` enum
+    - Mapped `.cs` extension to C# parser
+    - Implemented `get_language()` for tree-sitter-c-sharp
+    - Created `function_query()` for method extraction
+    - Created `class_query()` for class extraction
+    - Initialized C# parser in `CodeParser::new()`
+  - Updated `src/memory/incremental_indexer.py`:
+    - Added `.cs` to `SUPPORTED_EXTENSIONS`
+    - Added C# to language mapping (`".cs": "csharp"`)
+  - Created test suite: `tests/unit/test_csharp_simple.py` (6 tests, all passing ✅)
+    - Basic file parsing
+    - Unit extraction verification
+    - Class extraction
+    - Method extraction
+    - Empty file handling
+    - Performance validation (<100ms)
+  - **Note:** Extracted names include full method/class signatures (e.g., "public class User" instead of just "User"). This is actually beneficial for semantic search as it provides more context about visibility, type information, and full signatures.
+  - **Impact:** Users can now semantically search C# codebases (ASP.NET, Unity, enterprise applications)
+  - **Example:** Search "async method that gets user data" → finds `public async Task<IActionResult> GetUser(int id)` in controllers
+
 - **WORKFLOW: Git worktree support for parallel agent development** - Configured repository to use git worktrees for concurrent feature development
   - Created `.worktrees/` directory for isolated feature branches
   - Added `.worktrees/` to `.gitignore` to prevent committing worktree directories

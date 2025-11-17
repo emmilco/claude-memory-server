@@ -472,6 +472,31 @@ class StatusCommand:
                 print(f"    Functions: {project.get('num_functions', 0)}")
                 print(f"    Classes: {project.get('num_classes', 0)}")
 
+    def print_degradation_warnings(self):
+        """Print system degradation warnings if any."""
+        from src.core.degradation_warnings import get_degradation_tracker
+
+        tracker = get_degradation_tracker()
+
+        if not tracker.has_degradations():
+            # No degradations - show success message
+            if self.console:
+                self.console.print("✓ [green]All components running at full performance[/green]\n")
+            return
+
+        if not self.console:
+            print("\n" + tracker.get_summary())
+            return
+
+        # Rich formatting
+        self.console.print()
+        self.console.print(Panel(
+            tracker.get_summary(),
+            title="⚠️  System Degradation Warnings",
+            border_style="yellow",
+            padding=(1, 2),
+        ))
+
     def print_quick_commands(self):
         """Print quick reference commands."""
         if self.console:
@@ -489,6 +514,9 @@ class StatusCommand:
     async def run(self, args):
         """Run status command."""
         self.print_header()
+
+        # Show degradation warnings first (if any)
+        self.print_degradation_warnings()
 
         # Gather all stats
         storage_stats = await self.get_storage_stats()
