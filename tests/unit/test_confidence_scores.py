@@ -53,12 +53,15 @@ async def mock_server():
     # Mock all dependencies directly without calling initialize()
     server.store = AsyncMock()
     server.embedding_generator = AsyncMock()
-    server.embedding_cache = Mock()
+    server.embedding_cache = AsyncMock()
     server.usage_tracker = AsyncMock()
     server.pruner = AsyncMock()
     server.conversation_tracker = AsyncMock()
     server.query_expander = AsyncMock()
     server.hybrid_searcher = None
+
+    # Mock cache to return None (cache miss)
+    server.embedding_cache.get = AsyncMock(return_value=None)
 
     # Set initialized flag
     server._initialized = True
