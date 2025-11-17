@@ -100,6 +100,11 @@ class ServerConfig(BaseSettings):
     cross_project_default_mode: str = "current"  # "current" or "all"
     cross_project_opt_in_file: str = "~/.claude-rag/cross_project_consent.json"
 
+    # GPU acceleration (PERF-002)
+    enable_gpu: bool = True  # Auto-use GPU if available
+    force_cpu: bool = False  # Override GPU detection, use CPU only
+    gpu_memory_fraction: float = 0.8  # Max GPU memory to use (0.0-1.0)
+
     model_config = SettingsConfigDict(
         env_prefix="CLAUDE_RAG_",
         env_file=".env",
@@ -204,6 +209,10 @@ class ServerConfig(BaseSettings):
 
         if self.git_diff_size_limit_kb < 1:
             raise ValueError("git_diff_size_limit_kb must be at least 1")
+
+        # Validate GPU settings
+        if not 0.0 <= self.gpu_memory_fraction <= 1.0:
+            raise ValueError("gpu_memory_fraction must be between 0.0 and 1.0")
 
         return self
 

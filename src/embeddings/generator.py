@@ -12,6 +12,7 @@ from src.config import ServerConfig
 from src.core.exceptions import EmbeddingError
 from src.embeddings.rust_bridge import RustBridge
 from src.embeddings.cache import EmbeddingCache
+from src.embeddings.gpu_utils import detect_cuda, get_gpu_info, get_optimal_device
 
 logger = logging.getLogger(__name__)
 
@@ -60,13 +61,49 @@ class EmbeddingGenerator:
         self.embedding_dim = self.MODELS[self.model_name]
         self.model: Optional[SentenceTransformer] = None
         self.executor = ThreadPoolExecutor(max_workers=2)
-        
+
         # Initialize cache (if enabled)
         self.cache = EmbeddingCache(config) if config.embedding_cache_enabled else None
 
+        # GPU configuration
+        self.device = self._determine_device()
+
         logger.info(f"Embedding generator initialized with model: {self.model_name}")
+        logger.info(f"Device: {self.device}")
         if self.cache and self.cache.enabled:
             logger.info("Embedding cache enabled")
+
+    def _determine_device(self) -> str:
+        """
+        Determine which device to use for embeddings.
+
+        Returns:
+            str: "cuda" if GPU available and enabled, otherwise "cpu"
+        """
+        # Check if user forced CPU
+        if self.config.force_cpu:
+            logger.info("GPU disabled via force_cpu config")
+            return "cpu"
+
+        # Check if GPU is disabled
+        if not self.config.enable_gpu:
+            logger.info("GPU disabled via enable_gpu config")
+            return "cpu"
+
+        # Auto-detect optimal device
+        device = get_optimal_device()
+
+        # Log GPU info if available
+        if device == "cuda":
+            gpu_info = get_gpu_info()
+            if gpu_info:
+                logger.info(
+                    f"GPU detected: {gpu_info['device_name']} "
+                    f"({gpu_info['total_memory_gb']} GB, "
+                    f"CUDA {gpu_info['cuda_version']})"
+                )
+
+        return device
 
     async def initialize(self) -> None:
         """
@@ -97,8 +134,27 @@ class EmbeddingGenerator:
 
             self.model = SentenceTransformer(self.model_name)
 
-            # Set to CPU only for consistency (no CUDA randomness)
-            self.model.to("cpu")
+            # Move model to the determined device (GPU or CPU)
+            try:
+                self.model.to(self.device)
+                logger.info(f"Model moved to {self.device}")
+
+                # Set GPU memory fraction if using CUDA
+                if self.device == "cuda" and self.config.gpu_memory_fraction < 1.0:
+                    import torch
+                    torch.cuda.set_per_process_memory_fraction(
+                        self.config.gpu_memory_fraction, 0
+                    )
+                    logger.info(
+                        f"GPU memory fraction set to {self.config.gpu_memory_fraction}"
+                    )
+
+            except Exception as e:
+                logger.warning(
+                    f"Failed to move model to {self.device}, falling back to CPU: {e}"
+                )
+                self.device = "cpu"
+                self.model.to("cpu")
 
             load_time = time.time() - start_time
             logger.info(f"Model loaded in {load_time:.2f}s")
@@ -328,6 +384,7 @@ class EmbeddingGenerator:
 
         return {
             "model": self.model_name,
+            "device": self.device,
             "num_texts": num_texts,
             "single_embedding_ms": single_time * 1000,
             "batch_total_s": batch_time,
