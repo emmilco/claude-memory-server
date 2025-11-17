@@ -1,14 +1,55 @@
 # Claude Memory + RAG Server
 
-**Persistent memory, documentation search, and semantic code search for Claude**
+**A semantic memory and code understanding layer for Claude**
 
-> 🚀 **NEW:** Semantic code search with sub-10ms latency!
+This is an MCP server that sits between Claude and your development environment, maintaining a persistent understanding of your codebase, preferences, and context. Think of it as giving Claude a long-term memory and the ability to semantically search your code.
 
-An MCP (Model Context Protocol) server that gives Claude:
-- 🧠 **Persistent Memory** - Remembers preferences, workflows, and project facts
-- 📚 **Documentation RAG** - Semantic search across project documentation
-- 🔍 **Code Search** - Find code by meaning, not keywords (6 languages)
-- 🏢 **Project Awareness** - Separates global from project-specific knowledge
+### The System
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  Claude Code                                             │
+│  "Find the authentication logic"                         │
+│  "Remember I prefer Python"                              │
+└────────────────┬────────────────────────────────────────┘
+                 │ MCP Protocol
+┌────────────────▼────────────────────────────────────────┐
+│  Memory RAG Server                                       │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
+│  │   Memories   │  │     Code     │  │   Git Hist   │  │
+│  │ (preferences,│  │   (indexed   │  │  (commits &  │  │
+│  │  workflows)  │  │  functions)  │  │   changes)   │  │
+│  └──────────────┘  └──────────────┘  └──────────────┘  │
+│         Semantic Vector Search (7ms)                     │
+└─────────────────────────────────────────────────────────┘
+                 │
+┌────────────────▼────────────────────────────────────────┐
+│  Your Development Environment                            │
+│  • Code files (Python, JS, TS, Java, Go, Rust)          │
+│  • Documentation (Markdown)                              │
+│  • Git repository                                        │
+└─────────────────────────────────────────────────────────┘
+```
+
+### How It Works
+
+**1. Indexing:** The server parses your code (using Rust for speed), extracts semantic units (functions, classes), and stores them in a vector database with embeddings.
+
+**2. Memory Storage:** As you work with Claude, the server automatically stores preferences, project context, and decisions. These are classified and embedded for semantic retrieval.
+
+**3. Semantic Search:** When Claude needs information, it queries the server using natural language. The server returns relevant code, memories, or git history based on *meaning*, not keywords.
+
+**4. Context Maintenance:** Across sessions, Claude retains understanding of your codebase structure, your preferences, and project-specific knowledge.
+
+### What This Enables
+
+- **Code Understanding:** Ask "where's the auth logic?" instead of grepping for function names
+- **Persistent Preferences:** Claude remembers you prefer Python, use async/await, etc.
+- **Project Memory:** Claude knows this project uses FastAPI, PostgreSQL, and follows specific patterns
+- **Git Awareness:** Search commit history semantically, track how code evolved
+- **Hybrid Search:** Combines semantic understanding with keyword precision
+
+**Status:** Production ready • 712 tests passing • 85% coverage • 7-13ms search latency
 
 ## Features
 
@@ -390,6 +431,7 @@ cd ..
 - Python: PEP 8, type hints, docstrings
 - Rust: cargo fmt, clippy
 - All tests must pass before merge
+- **Pre-commit hook:** Enforces CHANGELOG.md updates (bypass with `--no-verify` if needed)
 
 ## Privacy & Security
 

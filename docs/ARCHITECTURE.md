@@ -1,7 +1,7 @@
 # Architecture Documentation
 
-**Last Updated:** November 16, 2025
-**Version:** 3.0 (Security & Context Enabled)
+**Last Updated:** November 17, 2025
+**Version:** 3.1 (Hybrid Search & Advanced Features)
 
 ---
 
@@ -23,7 +23,11 @@ The Claude Memory RAG Server is a Model Context Protocol (MCP) server that provi
 ### Key Capabilities
 
 - **Persistent Memory:** Store and retrieve user preferences, project context, and session state
-- **Semantic Code Search:** Search codebases by meaning, not just keywords
+- **Hybrid Code Search:** Combines semantic (vector) and keyword (BM25) search
+- **Git History Indexing:** Search commit history semantically
+- **Dependency Tracking:** Import/dependency analysis across all supported languages
+- **Conversation-Aware Retrieval:** Query expansion and deduplication for sessions
+- **Smart Context Ranking:** Usage-based ranking with automatic pruning
 - **Context Stratification:** Auto-classify memories into three levels
 - **Security:** Comprehensive input validation and injection prevention
 - **Real-time Indexing:** Auto-reindex code files on changes
@@ -83,8 +87,9 @@ The Claude Memory RAG Server is a Model Context Protocol (MCP) server that provi
 - Indexes code files incrementally with change detection
 - Parse → Extract → Embed → Store → Track hash
 - Supports 6 languages: Python, JS, TS, Java, Go, Rust
+- Real-time progress callbacks with rich UI
 
-**file_watcher.py** (129 lines, 70% coverage)
+**file_watcher.py** (129 lines, 99% coverage)
 - Watches directories for changes with watchdog
 - Debounces rapid changes (1000ms default)
 - Async operation in background
@@ -93,20 +98,61 @@ The Claude Memory RAG Server is a Model Context Protocol (MCP) server that provi
 - Auto-classifies memories into context levels
 - Pattern matching on content
 
+**import_extractor.py** (NEW)
+- Extracts imports from all supported languages
+- Handles absolute, relative, wildcard, and aliased imports
+- Language-specific import patterns
+
+**dependency_graph.py** (NEW)
+- Builds and queries file dependency graphs
+- Transitive dependency resolution
+- Circular dependency detection
+
+**git_indexer.py** (NEW)
+- Indexes git commit history semantically
+- Extracts commit metadata (author, date, message, stats)
+- Configurable commit count and branch filtering
+- Auto-detects large repos to disable diffs
+
+**usage_tracker.py** (NEW)
+- Tracks memory access patterns
+- Batched updates for efficiency
+- Composite scoring (60% similarity + 20% recency + 20% usage)
+
+**pruner.py** (NEW)
+- Auto-expires stale SESSION_STATE memories (48h)
+- Background cleanup via APScheduler (daily at 2 AM)
+- Safety checks and dry-run support
+
+**conversation_tracker.py** (NEW)
+- Explicit session management
+- Rolling query history (last 5 queries)
+- Session timeout (30 minutes idle)
+- Background session cleanup
+
+**query_expander.py** (NEW)
+- Semantic query expansion using cosine similarity
+- Deduplication of previously shown context
+- Fetch multiplier for unique results (3x)
+
 ### 3. Vector Storage (src/store/)
 
 **base.py** (37 lines, 70% coverage)
 - Abstract interface for storage backends
 
-**qdrant_store.py** (171 lines, 74% coverage)
+**qdrant_store.py** (171 lines, 87% coverage)
 - Production vector DB implementation
 - HNSW indexing (m=16, ef_construct=200)
 - 7-13ms search latency
 - Batch operations (5x faster)
+- Project statistics methods (get_all_projects, get_project_stats)
 
 **sqlite_store.py** (183 lines, 58% coverage)
 - Fallback/development storage
 - No external dependencies
+- Git storage tables (git_commits, git_file_changes)
+- Full-text search (FTS5) for commit messages
+- Project statistics support
 
 **readonly_wrapper.py** (33 lines, 100% coverage)
 - Blocks writes in production mode
@@ -117,7 +163,7 @@ The Claude Memory RAG Server is a Model Context Protocol (MCP) server that provi
 - Model: all-MiniLM-L6-v2 (384 dimensions)
 - Async batch processing
 
-**cache.py** (130 lines, 65% coverage)
+**cache.py** (130 lines, 90% coverage)
 - SQLite-based caching
 - ~90% cache hit rate
 - <1ms cache retrieval
@@ -128,6 +174,49 @@ The Claude Memory RAG Server is a Model Context Protocol (MCP) server that provi
 - Tree-sitter AST parsing
 - 1-6ms per file (50-100x faster than Python)
 - Extracts functions, classes, methods with metadata
+- Separate queries for JavaScript and TypeScript
+- Improved error recovery
+
+### 6. Search Components (src/search/)
+
+**bm25.py** (NEW)
+- BM25+ ranking algorithm implementation
+- Token-based keyword matching
+- Configurable parameters (k1=1.5, b=0.75, delta=1.0)
+- Better handling of long documents
+
+**hybrid_search.py** (NEW)
+- Three fusion strategies:
+  - **Weighted**: Alpha-based combination (default alpha=0.5)
+  - **RRF**: Reciprocal Rank Fusion (k=60)
+  - **Cascade**: BM25-first with semantic re-ranking
+- Configurable via environment variables
+- Score normalization and combining
+
+### 7. CLI Commands (src/cli/)
+
+**index_command.py** (94% coverage)
+- Code indexing with progress indicators
+- Real-time progress bar via Rich library
+- Error tracking and visual indicators
+
+**watch_command.py** (100% coverage)
+- File watching with auto-reindexing
+
+**status_command.py** (87% coverage)
+- Project statistics display
+- File watcher status visibility
+- Professional Rich formatting
+
+**health_command.py** (88% coverage)
+- Comprehensive system health checks
+- Color-coded output
+- Actionable recommendations
+
+**git_index_command.py** (NEW)
+- Git history indexing
+- Configurable commit count
+- Branch and tag filtering
 
 ---
 
@@ -360,5 +449,5 @@ python -m src.mcp_server --read-only
 
 ---
 
-**Document Version:** 1.0
-**Last Updated:** November 16, 2025
+**Document Version:** 1.1
+**Last Updated:** November 17, 2025

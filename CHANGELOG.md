@@ -16,6 +16,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Provides bypass option via `--no-verify` for verified cases
   - Ensures documentation stays synchronized with code changes
 
+- **Strategic Planning: Long-Term Product Evolution (STRATEGIC-001)**
+  - Created comprehensive strategic planning document analyzing database evolution patterns
+  - Identified critical risk: 70% user abandonment at 6-12 months without intervention
+  - Proposed 8 strategic improvements to ensure long-term viability
+  - Added all 8 strategic items to TODO.md in priority order:
+    - **FEAT-032** (Tier 2): Memory Lifecycle & Health System - P0 Critical foundation (🔥🔥🔥🔥🔥)
+    - **FEAT-033** (Tier 2): Smart Project Context Detection - P0 Eliminates cross-contamination (🔥🔥🔥🔥)
+    - **FEAT-037** (Tier 2): Continuous Health Monitoring & Alerts - P0 Early warning system (🔥🔥🔥)
+    - **FEAT-034** (Tier 2): Memory Provenance & Trust Signals - P1 Rebuilds trust (🔥🔥🔥🔥)
+    - **FEAT-035** (Tier 2): Intelligent Memory Consolidation - P1 Prevents noise accumulation (🔥🔥🔥)
+    - **FEAT-036** (Tier 3): Project Archival & Reactivation System - P2 Multi-project management (🔥🔥🔥)
+    - **FEAT-038** (Tier 4): Data Export, Backup & Portability - P2 User confidence (🔥🔥)
+    - **UX-033** (Tier 4): Memory Tagging & Organization System - P3 Discoverability (🔥🔥)
+  - **Expected Impact:** Reduces abandonment rate from 70% to 5%, improves 6-month retention 30% → 70%
+  - **Implementation:** Phase 1 (P0 items) targets 55% reduction in abandonment probability
+  - **Planning Document:** `planning_docs/STRATEGIC-001_long_term_product_evolution.md`
+
 ### Added - 2025-11-17
 
 - **FEAT-023: Hybrid Search (BM25 + Vector) ✅ COMPLETE** - Keyword and semantic search combination

@@ -1,7 +1,7 @@
 # API Reference
 
-**Last Updated:** November 16, 2025
-**Version:** 3.0
+**Last Updated:** November 17, 2025
+**Version:** 3.1
 
 ---
 
@@ -21,8 +21,15 @@ The Claude Memory RAG Server exposes tools through the Model Context Protocol (M
 | `delete_memory` | Delete a memory by ID | Memory Management |
 | `get_memory_stats` | Get statistics | System |
 | `show_current_context` | Debug context (dev only) | System |
-| `search_code` | Semantic code search | Code Intelligence |
+| `search_code` | Semantic code search with hybrid mode | Code Intelligence |
 | `index_codebase` | Index code files | Code Intelligence |
+| `get_file_dependencies` | Get file imports/dependencies | Code Intelligence |
+| `get_file_dependents` | Get files that import this file | Code Intelligence |
+| `find_dependency_path` | Find import path between files | Code Intelligence |
+| `get_dependency_stats` | Get dependency statistics | Code Intelligence |
+| `start_conversation_session` | Start a conversation session | Session Management |
+| `end_conversation_session` | End a conversation session | Session Management |
+| `list_conversation_sessions` | List active sessions | Session Management |
 
 ---
 
@@ -230,7 +237,7 @@ Delete a memory by its ID.
 
 ### search_code
 
-Semantic search across indexed code.
+Semantic search across indexed code with hybrid search support (BM25 + vector).
 
 **Input Schema:**
 ```json
@@ -239,9 +246,15 @@ Semantic search across indexed code.
   "project_name": "string (optional, defaults to current project)",
   "limit": "integer 1-50 (default: 10)",
   "file_pattern": "string (optional, e.g., '*/auth/*')",
-  "language": "python|javascript|typescript|java|go|rust (optional)"
+  "language": "python|javascript|typescript|java|go|rust (optional)",
+  "search_mode": "semantic|keyword|hybrid (default: semantic)"
 }
 ```
+
+**Search Modes:**
+- **semantic**: Vector similarity search only (best for concept matching)
+- **keyword**: BM25 keyword search only (best for exact terms)
+- **hybrid**: Combines both with configurable fusion (best for mixed queries)
 
 **Example Request:**
 ```json
@@ -266,6 +279,7 @@ Semantic search across indexed code.
       "signature": "async def login(request: Request) -> Response",
       "language": "python",
       "score": 0.89,
+      "matched_keywords": ["login", "authentication"],
       "content": "async def login(request: Request) -> Response:\n    ..."
     },
     {
@@ -277,13 +291,23 @@ Semantic search across indexed code.
       "signature": "def authenticate_user(token: str) -> User",
       "language": "python",
       "score": 0.85,
+      "matched_keywords": ["authenticate", "user"],
       "content": "def authenticate_user(token: str) -> User:\n    ..."
     }
   ],
   "count": 2,
-  "search_time_ms": 12
+  "search_time_ms": 12,
+  "interpretation": "Excellent match - results highly relevant to query"
 }
 ```
+
+**Quality Indicators:**
+- `matched_keywords`: Keywords from query found in results (helps explain why results matched)
+- `interpretation`: Human-readable quality assessment based on scores
+  - "Excellent match" (avg score >0.8)
+  - "Good match" (avg score 0.6-0.8)
+  - "Weak match" (avg score <0.6)
+  - Custom suggestions for zero results
 
 **Supported Languages:**
 - Python (.py)
@@ -337,6 +361,249 @@ Index code files for semantic search.
 6. Stores in vector database
 
 **Performance:** ~2.45 files/second
+
+---
+
+### get_file_dependencies
+
+Get imports and dependencies for a file.
+
+**Input Schema:**
+```json
+{
+  "file_path": "string (required, relative path)",
+  "project_name": "string (optional)",
+  "transitive": "boolean (default: false)"
+}
+```
+
+**Example Request:**
+```json
+{
+  "file_path": "src/auth/handlers.py",
+  "transitive": false
+}
+```
+
+**Response:**
+```json
+{
+  "file_path": "src/auth/handlers.py",
+  "direct_dependencies": [
+    "src/auth/models.py",
+    "src/database/connection.py",
+    "fastapi"
+  ],
+  "transitive_dependencies": [],
+  "import_count": 3
+}
+```
+
+**With transitive=true:**
+```json
+{
+  "file_path": "src/auth/handlers.py",
+  "direct_dependencies": ["src/auth/models.py", "..."],
+  "transitive_dependencies": [
+    "src/database/connection.py",
+    "src/config.py"
+  ],
+  "import_count": 5
+}
+```
+
+---
+
+### get_file_dependents
+
+Get files that import/depend on this file (reverse dependencies).
+
+**Input Schema:**
+```json
+{
+  "file_path": "string (required, relative path)",
+  "project_name": "string (optional)",
+  "transitive": "boolean (default: false)"
+}
+```
+
+**Example Request:**
+```json
+{
+  "file_path": "src/auth/models.py"
+}
+```
+
+**Response:**
+```json
+{
+  "file_path": "src/auth/models.py",
+  "direct_dependents": [
+    "src/auth/handlers.py",
+    "src/auth/middleware.py",
+    "src/api/routes.py"
+  ],
+  "transitive_dependents": [],
+  "dependent_count": 3
+}
+```
+
+---
+
+### find_dependency_path
+
+Find the import path between two files.
+
+**Input Schema:**
+```json
+{
+  "source_file": "string (required)",
+  "target_file": "string (required)",
+  "project_name": "string (optional)"
+}
+```
+
+**Example Request:**
+```json
+{
+  "source_file": "src/api/routes.py",
+  "target_file": "src/database/connection.py"
+}
+```
+
+**Response:**
+```json
+{
+  "path_found": true,
+  "path": [
+    "src/api/routes.py",
+    "src/auth/handlers.py",
+    "src/database/connection.py"
+  ],
+  "path_length": 3
+}
+```
+
+**No Path:**
+```json
+{
+  "path_found": false,
+  "message": "No dependency path exists between these files"
+}
+```
+
+---
+
+### get_dependency_stats
+
+Get dependency statistics and detect circular dependencies.
+
+**Input Schema:**
+```json
+{
+  "project_name": "string (optional)"
+}
+```
+
+**Response:**
+```json
+{
+  "total_files": 45,
+  "files_with_dependencies": 38,
+  "total_dependencies": 127,
+  "average_dependencies_per_file": 3.35,
+  "circular_dependencies": [
+    ["src/module_a.py", "src/module_b.py", "src/module_a.py"]
+  ],
+  "most_imported_files": [
+    {"file": "src/config.py", "import_count": 15},
+    {"file": "src/database/connection.py", "import_count": 12}
+  ],
+  "most_dependent_files": [
+    {"file": "src/utils/helpers.py", "dependency_count": 8}
+  ]
+}
+```
+
+---
+
+## Session Management Tools
+
+### start_conversation_session
+
+Start a conversation session for context-aware retrieval.
+
+**Input Schema:**
+```json
+{
+  "session_name": "string (optional, auto-generated if not provided)"
+}
+```
+
+**Response:**
+```json
+{
+  "session_id": "550e8400-e29b-41d4-a716-446655440000",
+  "session_name": "my-session",
+  "created_at": "2025-11-17T12:00:00Z",
+  "status": "active"
+}
+```
+
+**Purpose:** Sessions enable conversation-aware retrieval with:
+- Query expansion based on conversation history
+- Deduplication of previously shown results
+- Automatic timeout after 30 minutes of inactivity
+
+---
+
+### end_conversation_session
+
+End an active conversation session.
+
+**Input Schema:**
+```json
+{
+  "session_id": "string (required, UUID)"
+}
+```
+
+**Response:**
+```json
+{
+  "session_id": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "ended",
+  "duration_minutes": 45,
+  "queries_processed": 12
+}
+```
+
+---
+
+### list_conversation_sessions
+
+List all active conversation sessions.
+
+**Input Schema:**
+```json
+{}
+```
+
+**Response:**
+```json
+{
+  "active_sessions": [
+    {
+      "session_id": "550e8400-...",
+      "session_name": "my-session",
+      "created_at": "2025-11-17T12:00:00Z",
+      "last_activity": "2025-11-17T12:15:00Z",
+      "queries_processed": 5
+    }
+  ],
+  "count": 1
+}
+```
 
 ---
 
@@ -520,5 +787,5 @@ asyncio.run(main())
 
 ---
 
-**Document Version:** 1.0
-**Last Updated:** November 16, 2025
+**Document Version:** 1.1
+**Last Updated:** November 17, 2025

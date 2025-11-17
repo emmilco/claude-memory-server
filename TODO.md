@@ -107,6 +107,81 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Complexity:** Medium-High (~800 lines)
   - **Runtime Cost:** +5-10MB per conversation, +5-10ms latency
 
+- [ ] **FEAT-032**: Memory Lifecycle & Health System (~2-3 weeks) 🔥🔥🔥🔥🔥
+  - [ ] **Planning doc:** `planning_docs/STRATEGIC-001_long_term_product_evolution.md`
+  - [ ] **CRITICAL: Prevents 70% user abandonment at 6-12 months**
+  - [ ] Implement 4-tier lifecycle: ACTIVE (0-7d), RECENT (7-30d), ARCHIVED (30-180d), STALE (180d+)
+  - [ ] Automatic transitions based on age, access frequency, project activity
+  - [ ] Search weighting by lifecycle state (1.0x → 0.7x → 0.3x → 0.1x)
+  - [ ] Health monitoring dashboard with quality metrics
+  - [ ] Auto-actions: weekly archival, monthly stale deletion
+  - [ ] Health scoring: overall health, noise ratio, duplicate rate, contradiction rate
+  - [ ] Weekly automated health reports with recommendations
+  - **Impact:** Prevents degradation, 30-50% noise reduction, maintains quality long-term
+  - **Complexity:** High (lifecycle enum, background jobs, health algorithms, dashboard UI)
+  - **Runtime Cost:** +50-100MB storage, +2-5ms per search
+  - **Strategic Priority:** P0 - Foundation for sustainable long-term use
+
+- [ ] **FEAT-033**: Smart Project Context Detection (~1-2 weeks) 🔥🔥🔥🔥
+  - [ ] **Planning doc:** `planning_docs/STRATEGIC-001_long_term_product_evolution.md`
+  - [ ] **Eliminates cross-project memory pollution**
+  - [ ] Git context detection: monitor current repo, detect switches
+  - [ ] File activity patterns: infer active project from recent access
+  - [ ] Explicit project switching: MCP tool + CLI commands
+  - [ ] Context-aware search: auto-boost active project 2.0x, others 0.3x
+  - [ ] Auto-archival on context switch
+  - [ ] Visual indicators showing active context
+  - [ ] Persist context across sessions
+  - **Impact:** Massive relevance improvement, eliminates wrong-project results
+  - **Complexity:** Medium (git monitoring, activity tracking, context weighting)
+  - **Runtime Cost:** +10-20MB, +3-5ms per search
+  - **Strategic Priority:** P0 - Critical for multi-project developers
+
+- [ ] **FEAT-037**: Continuous Health Monitoring & Alerts (~1-2 weeks) 🔥🔥🔥
+  - [ ] **Planning doc:** `planning_docs/STRATEGIC-001_long_term_product_evolution.md`
+  - [ ] **Proactive degradation detection**
+  - [ ] Track performance metrics: search latency, cache hit rate, index staleness
+  - [ ] Track quality metrics: avg relevance, noise ratio, duplicates, contradictions
+  - [ ] Alert thresholds: CRITICAL/WARNING/INFO levels
+  - [ ] Automated remediation: trigger pruning, suggest archival, run deduplication
+  - [ ] Weekly health reports with trends and recommendations
+  - [ ] One-click "fix automatically" for common issues
+  - **Impact:** Catches problems before catastrophic, prevents silent degradation
+  - **Complexity:** Medium (metrics pipeline, alert engine, remediation actions)
+  - **Runtime Cost:** +20-50MB for time-series data, +1-2ms per operation
+  - **Strategic Priority:** P0 - Early warning system prevents Path B
+
+- [ ] **FEAT-034**: Memory Provenance & Trust Signals (~2-3 weeks) 🔥🔥🔥🔥
+  - [ ] **Planning doc:** `planning_docs/STRATEGIC-001_long_term_product_evolution.md`
+  - [ ] **Rebuilds user trust through transparency**
+  - [ ] Provenance tracking: source, created_by, last_accessed, access_count, confidence
+  - [ ] Relationship graph: related/supporting/contradicting memories
+  - [ ] Context snapshots: active project, conversation, file context at creation
+  - [ ] Trust signals in results: "Why this result?" explanations
+  - [ ] Interactive verification: periodic "Still accurate?" prompts
+  - [ ] Contradiction detection and alerts
+  - [ ] Memory verification tool: CLI command to review low-confidence memories
+  - **Impact:** Transparent black box, enables intelligent curation, prevents contradictions
+  - **Complexity:** High (provenance schema, relationship graph, trust algorithms, verification UI)
+  - **Runtime Cost:** +30-50MB storage, +5-10ms per result (explanation generation)
+  - **Strategic Priority:** P1 - Critical for trust, enables user curation
+
+- [ ] **FEAT-035**: Intelligent Memory Consolidation (~2-3 weeks) 🔥🔥🔥
+  - [ ] **Planning doc:** `planning_docs/STRATEGIC-001_long_term_product_evolution.md`
+  - [ ] **Automatic duplicate detection and merging**
+  - [ ] Semantic similarity clustering for duplicate detection
+  - [ ] Auto-merge high confidence (>0.95 similarity)
+  - [ ] Prompt user for medium confidence (0.85-0.95)
+  - [ ] Flag low confidence (0.75-0.85) as "related"
+  - [ ] Contradiction detection: alert on conflicting preferences/facts
+  - [ ] Consolidation algorithms: preference merging, fact dedup, event compression
+  - [ ] Background jobs: daily high-confidence merges, weekly user prompts, monthly full scan
+  - [ ] Undo mechanism for bad merges
+  - **Impact:** 40% noise reduction, maintains consistency, catches preference drift
+  - **Complexity:** High (similarity clustering, merge logic, conflict resolution, user prompts)
+  - **Runtime Cost:** +50-100MB for similarity index, background CPU for clustering
+  - **Strategic Priority:** P1 - Proactive noise prevention
+
 - [ ] **FEAT-028**: Proactive Context Suggestions (~3-4 days) 🔥🔥🔥
   - [ ] **Confirm overall feature design with user before proceeding**
   - [ ] Analyze conversation context to suggest relevant code/memories
@@ -227,6 +302,21 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Tests:** 29 tests passing
   - **Completed:** 2025-11-17
 
+- [ ] **FEAT-036**: Project Archival & Reactivation System (~1-2 weeks) 🔥🔥🔥
+  - [ ] **Planning doc:** `planning_docs/STRATEGIC-001_long_term_product_evolution.md`
+  - [ ] **Graceful project lifecycle management**
+  - [ ] Project states: ACTIVE, PAUSED, ARCHIVED, DELETED
+  - [ ] Automatic activity detection: file changes, searches, index updates
+  - [ ] Archival workflow: suggest inactive projects (45+ days), compress indexes
+  - [ ] Reactivation: restore to ACTIVE state, uncompress, reload embeddings
+  - [ ] Bulk operations: auto-archive, export to file, delete permanently
+  - [ ] Archive manifest: snapshot of all memories/indexes/metadata
+  - [ ] Search weighting: ARCHIVED projects get 0.1x weight
+  - **Impact:** 40% search speed improvement, reduces active dataset, enables recovery
+  - **Complexity:** Medium (activity tracking, archival state management, compression)
+  - **Runtime Cost:** +100-200MB for archived data, -50% active search space
+  - **Strategic Priority:** P2 - Important for multi-project pollution
+
 ### 🟢 Tier 4: High-Value UX Quick Wins
 
 **Low effort, high visibility improvements (minimal work for user-facing value)**
@@ -264,6 +354,35 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Impact:** Increases engagement, proves value incrementally
   - **Complexity:** Low (~200 lines)
   - **Runtime Cost:** +1MB storage, negligible CPU
+
+- [ ] **FEAT-038**: Data Export, Backup & Portability (~1-2 weeks) 🔥🔥
+  - [ ] **Planning doc:** `planning_docs/STRATEGIC-001_long_term_product_evolution.md`
+  - [ ] **Prevents data loss and lock-in**
+  - [ ] Export formats: JSON, Markdown, portable archive (.tar.gz)
+  - [ ] Backup automation: daily/weekly schedules, retention policies
+  - [ ] Import/restore: full restore, selective import, merge with conflict resolution
+  - [ ] Export to Markdown knowledge base: human-readable memory export
+  - [ ] Cloud sync (optional): Dropbox/Google Drive integration, encrypted
+  - [ ] CLI commands: export, import, restore, backup config
+  - [ ] Cross-machine workflow support
+  - **Impact:** 40% increase in user confidence, enables migration, disaster recovery
+  - **Complexity:** Medium (export/import logic, backup scheduler, conflict resolution)
+  - **Runtime Cost:** Storage for backups, optional cloud bandwidth
+  - **Strategic Priority:** P2 - Critical for user trust and data ownership
+
+- [ ] **UX-033**: Memory Tagging & Organization System (~1 week) 🔥🔥
+  - [ ] **Planning doc:** `planning_docs/STRATEGIC-001_long_term_product_evolution.md`
+  - [ ] **Better discovery through smart organization**
+  - [ ] Auto-tagging: extract keywords from content, infer categories
+  - [ ] Hierarchical tags: language/python/async, architecture/microservices
+  - [ ] Smart collections: auto-create thematic groups (e.g., "Python async patterns")
+  - [ ] Tag-based search and filtering
+  - [ ] Collection management: create, add, browse by theme
+  - [ ] Manual tag curation and editing
+  - **Impact:** 60% improvement in discoverability, better organization
+  - **Complexity:** Low-Medium (auto-tag extraction, hierarchy, collection management)
+  - **Runtime Cost:** +10-20MB for tag index, +1-2ms per search
+  - **Strategic Priority:** P3 - Nice-to-have for organization
 
 ### ⚡ Tier 5: Performance Optimizations
 

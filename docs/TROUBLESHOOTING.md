@@ -1,6 +1,6 @@
 # Troubleshooting Guide
 
-**Last Updated:** November 16, 2025
+**Last Updated:** November 17, 2025
 
 ---
 
@@ -57,30 +57,38 @@ ERROR: Command 'maturin develop' failed
 
 **Solutions:**
 
-1. **Ensure Rust is installed**
+1. **Use Python parser fallback** (recommended for quick start)
    ```bash
-   rustc --version
-   # Should show: rustc 1.91+ 
+   # Skip Rust build entirely - Python parser works automatically
+   # Performance: 10-20x slower but fully functional
+   # Just run: python -m src.cli health
+   # It will detect and use Python parser
    ```
 
-2. **Update Rust**
+2. **Ensure Rust is installed**
+   ```bash
+   rustc --version
+   # Should show: rustc 1.91+
+   ```
+
+3. **Update Rust**
    ```bash
    rustup update
    ```
 
-3. **Add Rust to PATH**
+4. **Add Rust to PATH**
    ```bash
    source $HOME/.cargo/env
    ```
 
-4. **Clean and rebuild**
+5. **Clean and rebuild**
    ```bash
    cd rust_core
    cargo clean
    maturin develop
    ```
 
-5. **Install build dependencies (Linux)**
+6. **Install build dependencies (Linux)**
    ```bash
    sudo apt install build-essential
    ```
@@ -289,25 +297,52 @@ FAILED tests/security/test_injection_attacks.py
 
 **Solutions:**
 
-1. **Verify indexing completed**
+1. **Check status first**
+   ```bash
+   python -m src.cli status
+   # Verify project is indexed with files
+   ```
+
+2. **Verify indexing completed**
    ```bash
    # Re-index with verbose output
    python -m src.cli index ./src
    ```
 
-2. **Check collection exists**
+3. **Check collection exists**
    ```bash
    curl http://localhost:6333/collections/memory
    # Should show points_count > 0
    ```
 
-3. **Try broader query**
+4. **Try different search modes**
+   ```python
+   # Try semantic search
+   results = await server.search_code(
+       query="authentication",
+       search_mode="semantic"
+   )
+
+   # Try keyword search
+   results = await server.search_code(
+       query="authenticate",
+       search_mode="keyword"
+   )
+
+   # Try hybrid search
+   results = await server.search_code(
+       query="authenticate user",
+       search_mode="hybrid"
+   )
+   ```
+
+5. **Try broader query**
    ```python
    # Instead of: "JWT token validation function"
    # Try: "token validation"
    ```
 
-4. **Remove filters temporarily**
+6. **Remove filters temporarily**
    ```python
    # Remove project_name, language filters to test
    results = await server.search_code(query="auth")
@@ -431,6 +466,20 @@ StorageError: Failed to connect to Qdrant
 
 ## Debugging Tips
 
+### Run Health Check
+
+```bash
+python -m src.cli health
+# Shows comprehensive system status
+```
+
+### Check Status
+
+```bash
+python -m src.cli status
+# Shows indexed projects, storage, file watcher, cache
+```
+
 ### Enable Debug Logging
 
 ```python
@@ -462,16 +511,17 @@ curl http://localhost:6333/collections/memory
 curl http://localhost:6333/collections/memory | jq '.result.points_count'
 ```
 
-### Verify Rust Module
+### Verify Parser
 
 ```python
 # Test Rust import
 try:
     import mcp_performance_core
-    print("✓ Rust module available")
+    print("✓ Rust module available (fast parsing)")
     print(f"Functions: {dir(mcp_performance_core)}")
 except ImportError as e:
-    print(f"✗ Rust module not available: {e}")
+    print(f"⚠ Using Python parser fallback (slower but works)")
+    print(f"Error: {e}")
 ```
 
 ### Test Embedding Generation
@@ -482,6 +532,18 @@ from src.embeddings.generator import EmbeddingGenerator
 gen = EmbeddingGenerator()
 emb = await gen.generate("test text")
 print(f"Embedding dimensions: {len(emb)}")  # Should be 384
+```
+
+### Test Search Modes
+
+```python
+# Test all search modes
+for mode in ["semantic", "keyword", "hybrid"]:
+    results = await server.search_code(
+        query="authenticate",
+        search_mode=mode
+    )
+    print(f"{mode}: {len(results['results'])} results")
 ```
 
 ---

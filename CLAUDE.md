@@ -55,6 +55,7 @@ A Model Context Protocol (MCP) server providing persistent memory, documentation
 - `.env` - Environment variables (create if needed)
 - `docker-compose.yml` - Qdrant setup
 - `requirements.txt` - Python dependencies
+- `.git/hooks/pre-commit` - Git hook enforcing documentation updates
 
 ## Working Instructions
 
@@ -86,6 +87,7 @@ A Model Context Protocol (MCP) server providing persistent memory, documentation
    - Add entry to `CHANGELOG.md` under "Unreleased" section
    - Update relevant items in `TODO.md` (mark completed, add new discoveries)
    - Update this file if you discover important patterns or files
+   - **NOTE:** A pre-commit hook enforces CHANGELOG.md updates (use `--no-verify` to bypass if needed)
 
 2. **Follow existing patterns:**
    - Use type hints for all function parameters and returns
@@ -357,6 +359,10 @@ pytest tests/ --cov=src --cov-report=html
 
 # Start Qdrant
 docker-compose up -d
+
+# Git commits (pre-commit hook enforces CHANGELOG updates)
+git commit -m "message"  # Requires CHANGELOG.md to be staged
+git commit --no-verify -m "message"  # Bypass hook if verified
 ```
 
 ### Testing Specific Modules
@@ -401,9 +407,15 @@ python -c "from src.core.server import MemoryRAGServer; print('Import successful
 - Test both success and failure paths
 
 ### Documentation
-- Update CHANGELOG.md with all changes
+- Update CHANGELOG.md with all changes (enforced by pre-commit hook)
 - Mark TODO.md items as complete
 - Keep this file current
+
+### Git Workflow
+- Pre-commit hook checks for CHANGELOG.md updates in staged files
+- All commits should include relevant documentation changes
+- Use `git commit --no-verify` sparingly and only when documentation is verified current
+- The hook ensures CLAUDE.md, CHANGELOG.md, and TODO.md stay synchronized
 
 ## Self-Update Protocol
 

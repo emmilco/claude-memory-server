@@ -1,6 +1,6 @@
 # Usage Guide
 
-**Last Updated:** November 16, 2025
+**Last Updated:** November 17, 2025
 
 ---
 
@@ -56,11 +56,23 @@ python -m src.cli watch ./my-project
 "Find the authentication logic in my codebase"
 # Claude will use search_code
 
-# Programmatically
+# Programmatically - Semantic search (default)
 results = await server.search_code(
     query="authentication logic",
     project_name="my-app",
     language="python"
+)
+
+# Hybrid search (BM25 + vector)
+results = await server.search_code(
+    query="JWT token validation",
+    search_mode="hybrid"  # Combines keyword + semantic
+)
+
+# Keyword-only search (BM25)
+results = await server.search_code(
+    query="def authenticate",
+    search_mode="keyword"  # Exact term matching
 )
 ```
 
@@ -182,6 +194,107 @@ await server.search_code(
 )
 ```
 
+**Hybrid Search (Best of Both Worlds):**
+```python
+# Use hybrid mode for queries with specific terms
+await server.search_code(
+    query="JWT authentication validate_token",
+    search_mode="hybrid"  # Finds both exact matches + similar concepts
+)
+```
+
+---
+
+## Dependency Tracking
+
+### Finding Dependencies
+
+**Get File Imports:**
+```python
+# Direct dependencies
+deps = await server.get_file_dependencies(
+    file_path="src/auth/handlers.py"
+)
+print(deps['direct_dependencies'])
+# ['src/auth/models.py', 'src/database/connection.py', ...]
+
+# Include transitive dependencies
+deps = await server.get_file_dependencies(
+    file_path="src/auth/handlers.py",
+    transitive=True
+)
+print(deps['transitive_dependencies'])
+# All files this file depends on, recursively
+```
+
+**Get Reverse Dependencies:**
+```python
+# Find what imports this file
+dependents = await server.get_file_dependents(
+    file_path="src/auth/models.py"
+)
+print(dependents['direct_dependents'])
+# ['src/auth/handlers.py', 'src/api/routes.py', ...]
+```
+
+**Find Import Path:**
+```python
+# Find how two files are connected
+path = await server.find_dependency_path(
+    source_file="src/api/routes.py",
+    target_file="src/database/connection.py"
+)
+if path['path_found']:
+    print(" -> ".join(path['path']))
+    # src/api/routes.py -> src/auth/handlers.py -> src/database/connection.py
+```
+
+**Get Dependency Statistics:**
+```python
+# Project-wide dependency analysis
+stats = await server.get_dependency_stats(
+    project_name="my-app"
+)
+print(f"Total files: {stats['total_files']}")
+print(f"Circular dependencies: {len(stats['circular_dependencies'])}")
+print(f"Most imported: {stats['most_imported_files'][0]['file']}")
+```
+
+---
+
+## Conversation Sessions
+
+### Managing Sessions
+
+**Start a Session:**
+```python
+session = await server.start_conversation_session(
+    session_name="debugging-auth"
+)
+print(f"Session ID: {session['session_id']}")
+
+# Sessions enable:
+# - Query expansion based on conversation history
+# - Deduplication of previously shown results
+# - Automatic timeout after 30 minutes
+```
+
+**End a Session:**
+```python
+result = await server.end_conversation_session(
+    session_id=session['session_id']
+)
+print(f"Duration: {result['duration_minutes']} minutes")
+print(f"Queries: {result['queries_processed']}")
+```
+
+**List Active Sessions:**
+```python
+sessions = await server.list_conversation_sessions()
+for s in sessions['active_sessions']:
+    print(f"{s['session_name']}: {s['queries_processed']} queries")
+```
+
 ---
 
 ## Advanced Usage
@@ -266,6 +379,22 @@ python -m src.cli index ./src \
 python -m src.cli index ./src --no-recursive
 ```
 
+### Git Index Command
+
+```bash
+# Index git history
+python -m src.cli git-index <repo-path> --project-name my-app
+
+# Index specific number of commits
+python -m src.cli git-index ./my-repo \
+  --project-name my-app \
+  --commit-count 500
+
+# Index all branches (default: current branch only)
+python -m src.cli git-index ./my-repo \
+  --all-branches
+```
+
 ### Watch Command
 
 ```bash
@@ -274,6 +403,32 @@ python -m src.cli watch ./src
 
 # With project name
 python -m src.cli watch ./src --project-name my-app
+```
+
+### Status Command
+
+```bash
+# View indexed projects and statistics
+python -m src.cli status
+
+# Shows:
+# - Indexed projects with file/function/class counts
+# - Storage backend status
+# - File watcher configuration
+# - Cache statistics
+```
+
+### Health Check Command
+
+```bash
+# Check system health
+python -m src.cli health
+
+# Checks:
+# - Storage connection (Qdrant/SQLite)
+# - Parser availability (Rust/Python)
+# - Embedding model
+# - Disk space and memory
 ```
 
 ---
@@ -307,6 +462,11 @@ python -m src.cli watch ./src --project-name my-app
 2. **Filter by Language:** Narrow results to specific languages
 3. **Use File Patterns:** Search specific directories
 4. **Review Scores:** Scores >0.8 are exact matches
+5. **Choose Search Mode:**
+   - `semantic`: Best for concepts and meaning
+   - `keyword`: Best for exact terms (variable names, function names)
+   - `hybrid`: Best for mixed queries with specific terms
+6. **Check Quality Indicators:** Review `matched_keywords` and `interpretation` fields
 
 ---
 

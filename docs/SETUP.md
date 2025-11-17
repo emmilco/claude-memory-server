@@ -1,21 +1,54 @@
 # Setup Guide
 
-**Last Updated:** November 16, 2025
+**Last Updated:** November 17, 2025
 
 ---
 
 ## Prerequisites
 
+### Required
 - **Python:** 3.13 or higher
-- **Rust:** 1.91 or higher (for building)
-- **Docker:** For Qdrant vector database
-- **Git:** For cloning the repository
 - **Disk Space:** 1GB minimum (10GB recommended for large codebases)
 - **RAM:** 2GB minimum (4GB recommended)
 
+### Optional (Recommended for Production)
+- **Rust:** 1.91 or higher (for optimized parsing, 50-100x faster)
+- **Docker:** For Qdrant vector database (better performance than SQLite)
+- **Git:** For cloning the repository
+
 ---
 
-## Quick Start
+## Quick Start (Recommended)
+
+### Interactive Setup Wizard
+
+The easiest way to get started is with the interactive setup wizard:
+
+```bash
+# Clone repository
+git clone https://github.com/yourorg/claude-memory-server.git
+cd claude-memory-server
+
+# Run setup wizard
+python setup.py
+
+# Follow prompts to choose:
+# - minimal: SQLite + Python parser (no dependencies, ~3 min)
+# - standard: SQLite + Rust parser (faster, ~5 min)
+# - full: Qdrant + Rust parser (production, ~10 min)
+```
+
+The wizard will:
+1. Check prerequisites
+2. Install Python dependencies
+3. Set up storage backend (SQLite or Qdrant)
+4. Build Rust module (optional)
+5. Verify installation with sample project
+6. Run health checks
+
+### Manual Setup (Alternative)
+
+If you prefer manual setup:
 
 ### 1. Clone the Repository
 
@@ -30,9 +63,10 @@ cd claude-memory-server
 pip install -r requirements.txt
 ```
 
-### 3. Start Qdrant (Vector Database)
+### 3. Start Qdrant (Optional - for production)
 
 ```bash
+# Only needed if using Qdrant instead of SQLite
 docker-compose up -d
 ```
 
@@ -42,19 +76,24 @@ curl http://localhost:6333/health
 # Should return: OK
 ```
 
-### 4. Build Rust Module
+**Note:** SQLite works out-of-the-box with no Docker required!
+
+### 4. Build Rust Module (Optional - for performance)
 
 ```bash
+# Only needed for 50-100x faster parsing
 cd rust_core
 maturin develop
 cd ..
 ```
 
-### 5. Run Tests
+**Note:** Pure Python parser works automatically if Rust is not available!
+
+### 5. Run Health Check
 
 ```bash
-pytest tests/ -v
-# Should see: 427 passed
+python -m src.cli health
+# Checks storage, parser, embedding model, resources
 ```
 
 ### 6. Index Your First Codebase
@@ -63,10 +102,11 @@ pytest tests/ -v
 python -m src.cli index ./src --project-name claude-memory
 ```
 
-### 7. Test Code Search
+### 7. View Status
 
 ```bash
-python test_code_search.py
+python -m src.cli status
+# Shows indexed projects, statistics, configuration
 ```
 
 ---

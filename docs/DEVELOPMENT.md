@@ -1,6 +1,6 @@
 # Developer Guide
 
-**Last Updated:** November 16, 2025
+**Last Updated:** November 17, 2025
 
 ---
 
@@ -22,9 +22,11 @@ docker-compose up -d
 # Install development dependencies
 pip install pytest pytest-cov pytest-asyncio black mypy pylint
 
-# Install pre-commit hooks (optional)
-pip install pre-commit
-pre-commit install
+# Git hooks are installed in .git/hooks/
+# - pre-commit: Enforces CHANGELOG.md updates before commits
+#   - Validates CHANGELOG.md is in staged files
+#   - Prompts review of CLAUDE.md, TODO.md
+#   - Use --no-verify to bypass (sparingly)
 ```
 
 ### 3. Run Tests
@@ -54,17 +56,33 @@ claude-memory-server/
 │   │   ├── models.py       # Pydantic models
 │   │   ├── validation.py   # Input validation
 │   │   └── exceptions.py   # Custom exceptions
-│   ├── memory/              # Code indexing
-│   │   ├── incremental_indexer.py
-│   │   ├── file_watcher.py
-│   │   └── classifier.py
+│   ├── memory/              # Code indexing & tracking
+│   │   ├── incremental_indexer.py    # Code indexing
+│   │   ├── file_watcher.py           # File watching
+│   │   ├── classifier.py             # Context classification
+│   │   ├── import_extractor.py       # Import extraction (NEW)
+│   │   ├── dependency_graph.py       # Dependency analysis (NEW)
+│   │   ├── git_indexer.py            # Git history indexing (NEW)
+│   │   ├── usage_tracker.py          # Memory usage tracking (NEW)
+│   │   ├── pruner.py                 # Auto-expiration (NEW)
+│   │   ├── conversation_tracker.py   # Session management (NEW)
+│   │   ├── query_expander.py         # Query expansion (NEW)
+│   │   └── python_parser.py          # Python fallback parser (NEW)
 │   ├── store/               # Storage backends
 │   │   ├── qdrant_store.py
 │   │   └── sqlite_store.py
 │   ├── embeddings/          # Embedding generation
 │   │   ├── generator.py
 │   │   └── cache.py
+│   ├── search/              # Search algorithms (NEW)
+│   │   ├── bm25.py         # BM25 keyword search
+│   │   └── hybrid_search.py # Hybrid fusion strategies
 │   └── cli/                 # CLI commands
+│       ├── index_command.py
+│       ├── watch_command.py
+│       ├── status_command.py         # (NEW)
+│       ├── health_command.py         # (NEW)
+│       └── git_index_command.py      # (NEW)
 ├── rust_core/               # Rust parsing module
 │   ├── src/
 │   │   ├── lib.rs
@@ -122,10 +140,38 @@ claude-memory-server/
    mypy src/
    ```
 
-8. **Commit**
+8. **Update Documentation**
+   ```bash
+   # REQUIRED: Update CHANGELOG.md with your changes
+   # - Add entry under "Unreleased" section
+   # - Describe what changed and why
+   # - Include file paths and function names
+
+   # Optional but recommended:
+   # - Update TODO.md if completing a task
+   # - Update CLAUDE.md if discovering important patterns
+   # - Update relevant docs/ files
+   ```
+
+9. **Commit** (Pre-commit Hook Enforced)
    ```bash
    git add .
    git commit -m "feat: add my feature"
+
+   # Pre-commit hook automatically:
+   # - Checks CHANGELOG.md is in staged files
+   # - Prompts review of CLAUDE.md, TODO.md
+   # - Blocks commit if CHANGELOG not updated
+
+   # To bypass (use sparingly):
+   git commit -m "feat: add my feature" --no-verify
+
+   # Commit message format (recommended):
+   # - feat: new feature
+   # - fix: bug fix
+   # - docs: documentation update
+   # - test: add tests
+   # - refactor: code refactoring
    ```
 
 ---
@@ -315,6 +361,40 @@ match language {
     "mylang" => parse_mylang(source),
     // ...
 }
+```
+
+**Step 4:** Add to import extractor (`src/memory/import_extractor.py`)
+```python
+def extract_mylang_imports(source: str) -> List[str]:
+    # Extract imports specific to this language
+    pass
+```
+
+### 4. New Search Mode or Fusion Strategy
+
+**Step 1:** Add to `src/search/hybrid_search.py`
+```python
+def my_fusion_strategy(
+    bm25_results: List[dict],
+    vector_results: List[dict],
+    alpha: float = 0.5
+) -> List[dict]:
+    # Implement fusion logic
+    pass
+```
+
+**Step 2:** Register in config
+```python
+# src/config.py
+HYBRID_FUSION_METHOD = "my_fusion"  # weighted|rrf|cascade|my_fusion
+```
+
+**Step 3:** Add tests
+```python
+# tests/unit/test_hybrid_search.py
+def test_my_fusion_strategy():
+    results = my_fusion_strategy(bm25_results, vector_results)
+    assert len(results) > 0
 ```
 
 ---
