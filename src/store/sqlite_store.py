@@ -358,6 +358,11 @@ class SQLiteMemoryStore(MemoryStore):
                 if filters.min_importance > 0.0:
                     query += " AND m.importance >= ?"
                     params.append(filters.min_importance)
+                if filters.tags:
+                    # Filter by tags (AND operation - memory must have all tags)
+                    for tag in filters.tags:
+                        query += " AND json_extract(m.tags, '$') LIKE ?"
+                        params.append(f'%"{tag}"%')
 
             query += " ORDER BY m.created_at DESC LIMIT ?"
             params.append(limit)
@@ -1440,136 +1445,250 @@ class SQLiteMemoryStore(MemoryStore):
         except Exception as e:
             raise StorageError(f"Failed to dismiss relationship: {e}")
 
-    async def delete_project(self, project_name: str) -> int:
+    async def migrate_memory_scope(self, memory_id: str, new_project_name: Optional[str]) -> bool:
         """
-        Delete all memories and related data for a specific project.
+        Migrate a memory to a different scope (change project_name).
 
         Args:
-            project_name: Name of the project to delete
+            memory_id: ID of the memory to migrate
+            new_project_name: New project name (None for global scope)
 
         Returns:
-            Number of memories deleted
+            True if migrated successfully
 
         Raises:
-            StorageError: If deletion fails
+            StorageError: If migration fails
         """
         if not self.conn:
             raise StorageError("Store not initialized")
 
         try:
-            # Get count of memories to delete
+            # Check if memory exists
             cursor = self.conn.cursor()
-            cursor.execute("""
-                SELECT COUNT(*) FROM memories WHERE project_name = ?
-            """, (project_name,))
-            count = cursor.fetchone()[0]
+            cursor.execute("SELECT id FROM memories WHERE id = ?", (memory_id,))
+            if not cursor.fetchone():
+                raise StorageError(f"Memory not found: {memory_id}")
 
-            if count == 0:
-                logger.info(f"No memories found for project: {project_name}")
-                return 0
-
-            # Delete memories for this project
-            self.conn.execute("""
-                DELETE FROM memories WHERE project_name = ?
-            """, (project_name,))
-
-            # Delete related usage tracking
-            self.conn.execute("""
-                DELETE FROM memory_usage_tracking
-                WHERE memory_id IN (
-                    SELECT id FROM memories WHERE project_name = ?
-                )
-            """, (project_name,))
-
-            # Delete related git commits
-            self.conn.execute("""
-                DELETE FROM git_commits WHERE project_name = ?
-            """, (project_name,))
-
-            # Delete related git file changes
-            self.conn.execute("""
-                DELETE FROM git_file_changes
-                WHERE commit_hash IN (
-                    SELECT commit_hash FROM git_commits WHERE project_name = ?
-                )
-            """, (project_name,))
-
-            # Delete related relationships
-            self.conn.execute("""
-                DELETE FROM memory_relationships
-                WHERE source_id IN (
-                    SELECT id FROM memories WHERE project_name = ?
-                ) OR target_id IN (
-                    SELECT id FROM memories WHERE project_name = ?
-                )
-            """, (project_name, project_name))
-
+            # Update project_name
+            self.conn.execute(
+                "UPDATE memories SET project_name = ? WHERE id = ?",
+                (new_project_name, memory_id)
+            )
             self.conn.commit()
 
-            logger.info(f"Deleted {count} memories for project: {project_name}")
-            return count
-
-        except Exception as e:
-            logger.error(f"Error deleting project {project_name}: {e}")
-            self.conn.rollback()
-            raise StorageError(f"Failed to delete project: {e}")
-
-    async def rename_project(self, old_name: str, new_name: str) -> int:
-        """
-        Rename a project by updating all associated memories.
-
-        Args:
-            old_name: Current project name
-            new_name: New project name
-
-        Returns:
-            Number of memories updated
-
-        Raises:
-            StorageError: If rename fails
-        """
-        if not self.conn:
-            raise StorageError("Store not initialized")
-
-        try:
-            # Check if old project exists
-            cursor = self.conn.cursor()
-            cursor.execute("""
-                SELECT COUNT(*) FROM memories WHERE project_name = ?
-            """, (old_name,))
-            count = cursor.fetchone()[0]
-
-            if count == 0:
-                raise StorageError(f"Project not found: {old_name}")
-
-            # Check if new name already exists
-            cursor.execute("""
-                SELECT COUNT(*) FROM memories WHERE project_name = ?
-            """, (new_name,))
-            existing = cursor.fetchone()[0]
-
-            if existing > 0:
-                raise StorageError(f"Project already exists: {new_name}")
-
-            # Update memories
-            self.conn.execute("""
-                UPDATE memories SET project_name = ? WHERE project_name = ?
-            """, (new_name, old_name))
-
-            # Update git commits
-            self.conn.execute("""
-                UPDATE git_commits SET project_name = ? WHERE project_name = ?
-            """, (new_name, old_name))
-
-            self.conn.commit()
-
-            logger.info(f"Renamed project {old_name} to {new_name} ({count} memories updated)")
-            return count
+            scope = new_project_name if new_project_name else "global"
+            logger.info(f"Migrated memory {memory_id} to scope: {scope}")
+            return True
 
         except StorageError:
             self.conn.rollback()
             raise
         except Exception as e:
-            logger.error(f"Error renaming project {old_name} to {new_name}: {e}")
+            logger.error(f"Error migrating memory {memory_id}: {e}")
             self.conn.rollback()
-            raise StorageError(f"Failed to rename project: {e}")
+            raise StorageError(f"Failed to migrate memory scope: {e}")
+
+    async def bulk_update_context_level(
+        self,
+        new_context_level: str,
+        project_name: Optional[str] = None,
+        current_context_level: Optional[str] = None,
+        category: Optional[str] = None,
+    ) -> int:
+        """
+        Bulk update context level for memories matching criteria.
+
+        Args:
+            new_context_level: New context level to set
+            project_name: Filter by project name (optional)
+            current_context_level: Filter by current context level (optional)
+            category: Filter by category (optional)
+
+        Returns:
+            Number of memories updated
+
+        Raises:
+            StorageError: If update fails
+        """
+        if not self.conn:
+            raise StorageError("Store not initialized")
+
+        try:
+            # Build WHERE clause
+            conditions = []
+            params = []
+
+            if project_name is not None:
+                conditions.append("project_name = ?")
+                params.append(project_name)
+
+            if current_context_level is not None:
+                conditions.append("context_level = ?")
+                params.append(current_context_level)
+
+            if category is not None:
+                conditions.append("category = ?")
+                params.append(category)
+
+            where_clause = " AND ".join(conditions) if conditions else "1=1"
+
+            # Update memories
+            params.append(new_context_level)
+            cursor = self.conn.execute(
+                f"UPDATE memories SET context_level = ? WHERE {where_clause}",
+                (new_context_level, *params[:-1]) if params else (new_context_level,)
+            )
+            self.conn.commit()
+
+            count = cursor.rowcount
+            logger.info(f"Updated context level for {count} memories to {new_context_level}")
+            return count
+
+        except Exception as e:
+            logger.error(f"Error bulk updating context level: {e}")
+            self.conn.rollback()
+            raise StorageError(f"Failed to bulk update context level: {e}")
+
+    async def find_duplicate_memories(
+        self,
+        project_name: Optional[str] = None,
+        similarity_threshold: float = 0.95,
+    ) -> List[List[str]]:
+        """
+        Find potential duplicate memories based on content similarity.
+
+        Note: This method uses simple text comparison. For embedding-based
+        similarity, use the search functionality in the main store interface.
+
+        Args:
+            project_name: Filter by project name (optional)
+            similarity_threshold: Similarity threshold (0.0-1.0)
+
+        Returns:
+            List of memory ID groups (each group is potential duplicates)
+
+        Raises:
+            StorageError: If search fails
+        """
+        if not self.conn:
+            raise StorageError("Store not initialized")
+
+        try:
+            # Get all memories matching criteria
+            cursor = self.conn.cursor()
+            if project_name:
+                cursor.execute(
+                    "SELECT id, content FROM memories WHERE project_name = ?",
+                    (project_name,)
+                )
+            else:
+                cursor.execute("SELECT id, content FROM memories")
+
+            memories = cursor.fetchall()
+
+            # Simple content-based duplicate detection
+            # (For embedding-based similarity, use vector search)
+            duplicates = []
+            seen = set()
+
+            for i, (id1, content1) in enumerate(memories):
+                if id1 in seen:
+                    continue
+
+                group = [id1]
+                for j, (id2, content2) in enumerate(memories[i+1:], start=i+1):
+                    if id2 in seen:
+                        continue
+
+                    # Simple similarity: exact match or very similar length
+                    if content1 == content2:
+                        group.append(id2)
+                        seen.add(id2)
+
+                if len(group) > 1:
+                    duplicates.append(group)
+                    seen.add(id1)
+
+            logger.info(f"Found {len(duplicates)} potential duplicate groups")
+            return duplicates
+
+        except Exception as e:
+            logger.error(f"Error finding duplicate memories: {e}")
+            raise StorageError(f"Failed to find duplicates: {e}")
+
+    async def merge_memories(
+        self,
+        memory_ids: List[str],
+        keep_id: Optional[str] = None,
+    ) -> str:
+        """
+        Merge multiple memories into one.
+
+        Args:
+            memory_ids: List of memory IDs to merge
+            keep_id: ID of memory to keep (uses first if not specified)
+
+        Returns:
+            ID of the merged memory
+
+        Raises:
+            StorageError: If merge fails
+        """
+        if not self.conn:
+            raise StorageError("Store not initialized")
+
+        if len(memory_ids) < 2:
+            raise StorageError("Need at least 2 memories to merge")
+
+        try:
+            # Determine which memory to keep
+            target_id = keep_id if keep_id and keep_id in memory_ids else memory_ids[0]
+            other_ids = [mid for mid in memory_ids if mid != target_id]
+
+            # Get all memories
+            cursor = self.conn.cursor()
+            placeholders = ",".join("?" * len(memory_ids))
+            cursor.execute(
+                f"SELECT id, content, metadata FROM memories WHERE id IN ({placeholders})",
+                memory_ids
+            )
+            memories = cursor.fetchall()
+
+            if len(memories) != len(memory_ids):
+                raise StorageError("Some memories not found")
+
+            # Combine content (concatenate unique parts)
+            target_memory = next((m for m in memories if m[0] == target_id), None)
+            if not target_memory:
+                raise StorageError(f"Target memory not found: {target_id}")
+
+            combined_content = target_memory[1]
+            for mem_id, content, _ in memories:
+                if mem_id != target_id and content not in combined_content:
+                    combined_content += f"\n\n---\n\n{content}"
+
+            # Update target memory with combined content
+            self.conn.execute(
+                "UPDATE memories SET content = ?, updated_at = ? WHERE id = ?",
+                (combined_content, datetime.now(UTC).isoformat(), target_id)
+            )
+
+            # Delete other memories
+            placeholders = ",".join("?" * len(other_ids))
+            self.conn.execute(
+                f"DELETE FROM memories WHERE id IN ({placeholders})",
+                other_ids
+            )
+
+            self.conn.commit()
+
+            logger.info(f"Merged {len(memory_ids)} memories into {target_id}")
+            return target_id
+
+        except StorageError:
+            self.conn.rollback()
+            raise
+        except Exception as e:
+            logger.error(f"Error merging memories: {e}")
+            self.conn.rollback()
+            raise StorageError(f"Failed to merge memories: {e}")
