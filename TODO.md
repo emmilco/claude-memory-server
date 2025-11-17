@@ -170,7 +170,7 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - [x] Memory verification tool: CLI command to review low-confidence memories
   - [x] All 7 phases complete: Schema, Provenance Tracking, Relationships, Trust Signals, CLI Verification, Contradiction Alerts, Integration Tests
   - [x] CLI commands: `verify --auto-verify`, `verify --contradictions`, `verify --category X`
-  - [x] Comprehensive integration tests (9 tests)
+  - [x] Comprehensive integration tests (7 tests, all passing)
   - **Impact:** Transparent black box, enables intelligent curation, prevents contradictions
   - **Complexity:** High (provenance schema, relationship graph, trust algorithms, verification UI)
   - **Runtime Cost:** +30-50MB storage, +5-10ms per result (explanation generation)
@@ -189,9 +189,10 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - [x] Background jobs: daily high-confidence merges, weekly user prompts, monthly full scan
   - [x] Undo mechanism for bad merges (merge history tracking)
   - [x] Phases complete: 1-2 (Detection & Merging), 4 (Background Jobs), 5 (CLI Tool), 6 (Integration Tests)
+  - [x] Phase 3 (Contradiction Detection) deferred - implemented in FEAT-034 instead
   - [x] CLI commands: `consolidate --auto`, `consolidate --interactive --execute`, `consolidate --dry-run`
   - [x] APScheduler integration with 3 scheduled jobs (daily/weekly/monthly)
-  - [x] Comprehensive integration tests (10 tests)
+  - [x] Comprehensive integration tests (8 tests, all passing)
   - **Impact:** 40% noise reduction, maintains consistency, catches preference drift
   - **Complexity:** High (similarity clustering, merge logic, conflict resolution, user prompts)
   - **Runtime Cost:** +50-100MB for similarity index, background CPU for clustering
