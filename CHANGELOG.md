@@ -48,6 +48,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Performance:** Auto-tagging ~5-10ms per memory, tag search +1-2ms overhead (within estimates)
   - **Storage:** +15MB for tag index (within estimate)
 
+- **UX-020: C/C++ Language Support** - Added comprehensive support for C and C++ code parsing and indexing
+  - Added `tree-sitter-cpp` v0.23 to Rust dependencies in `Cargo.toml`
+  - Added `tree-sitter-cpp>=0.20.0` to Python requirements in `requirements.txt`
+  - Extended Rust parser (`rust_core/src/parsing.rs`) with C and Cpp language variants
+    - Added `SupportedLanguage::C` and `SupportedLanguage::Cpp` enum variants
+    - Mapped file extensions: `.c`, `.h` → C; `.cpp`, `.cc`, `.cxx`, `.hpp`, `.hxx`, `.hh` → C++
+    - Implemented function queries for C/C++ using `function_definition` node type
+    - Implemented class/struct queries: `struct_specifier` for C, `class_specifier` for C++
+    - Initialized parsers for both C and C++ in `CodeParser::new()`
+  - Updated Python indexer (`src/memory/incremental_indexer.py`)
+    - Extended `SUPPORTED_EXTENSIONS` to include all C/C++ file extensions
+    - Added C/C++ language mappings to fallback parser language detection
+  - Created comprehensive test suite (`tests/unit/test_cpp_parsing.py`) with 19 tests:
+    - C code parsing (functions, structs, headers)
+    - C++ code parsing (classes, methods, namespaces, templates)
+    - File extension validation for all C/C++ variants
+    - Semantic unit extraction verification
+  - **Impact:** Systems engineers can now index and search C/C++ codebases with full semantic understanding
+  - **Test Results:** All 19 C/C++ parsing tests passing ✅
+
 - **WORKFLOW: Git worktree support for parallel agent development** - Configured repository to use git worktrees for concurrent feature development
   - Created `.worktrees/` directory for isolated feature branches
   - Added `.worktrees/` to `.gitignore` to prevent committing worktree directories

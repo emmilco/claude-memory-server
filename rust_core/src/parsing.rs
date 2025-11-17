@@ -13,6 +13,8 @@ pub enum SupportedLanguage {
     Java,
     Go,
     Rust,
+    C,
+    Cpp,
 }
 
 impl SupportedLanguage {
@@ -24,6 +26,8 @@ impl SupportedLanguage {
             "java" => Some(SupportedLanguage::Java),
             "go" => Some(SupportedLanguage::Go),
             "rs" => Some(SupportedLanguage::Rust),
+            "c" | "h" => Some(SupportedLanguage::C),
+            "cpp" | "cc" | "cxx" | "hpp" | "hxx" | "hh" => Some(SupportedLanguage::Cpp),
             _ => None,
         }
     }
@@ -36,6 +40,8 @@ impl SupportedLanguage {
             SupportedLanguage::Java => tree_sitter_java::LANGUAGE.into(),
             SupportedLanguage::Go => tree_sitter_go::LANGUAGE.into(),
             SupportedLanguage::Rust => tree_sitter_rust::LANGUAGE.into(),
+            SupportedLanguage::C => tree_sitter_cpp::LANGUAGE.into(),
+            SupportedLanguage::Cpp => tree_sitter_cpp::LANGUAGE.into(),
         }
     }
 
@@ -90,6 +96,14 @@ impl SupportedLanguage {
                   body: (block) @body) @function
                 "#
             }
+            SupportedLanguage::C | SupportedLanguage::Cpp => {
+                r#"
+                (function_definition
+                  declarator: (function_declarator
+                    declarator: (_) @name)
+                  body: (compound_statement) @body) @function
+                "#
+            }
         }
     }
 
@@ -135,6 +149,22 @@ impl SupportedLanguage {
             SupportedLanguage::Rust => {
                 r#"
                 (struct_item
+                  name: (type_identifier) @name
+                  body: (field_declaration_list) @body) @class
+                "#
+            }
+            SupportedLanguage::C => {
+                // C only has structs, not classes
+                r#"
+                (struct_specifier
+                  name: (type_identifier) @name
+                  body: (field_declaration_list) @body) @class
+                "#
+            }
+            SupportedLanguage::Cpp => {
+                // C++ has both classes and structs - query for classes
+                r#"
+                (class_specifier
                   name: (type_identifier) @name
                   body: (field_declaration_list) @body) @class
                 "#
@@ -221,6 +251,8 @@ impl CodeParser {
             SupportedLanguage::Java,
             SupportedLanguage::Go,
             SupportedLanguage::Rust,
+            SupportedLanguage::C,
+            SupportedLanguage::Cpp,
         ] {
             let mut parser = Parser::new();
             parser
