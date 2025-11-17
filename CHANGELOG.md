@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - 2025-11-17
 
+- **UX-011: Actionable Error Messages ✅ COMPLETE** - Context-aware diagnostics with solutions
+  - Enhanced `src/core/exceptions.py` - Added actionable guidance to all exceptions
+    - Base `MemoryRAGError` now accepts `solution` and `docs_url` parameters
+    - Automatically formats errors with "💡 Solution:" and "📖 Docs:" sections
+    - Enhanced `QdrantConnectionError` with 3 fallback options (start Qdrant, use SQLite, check health)
+    - Enhanced `CollectionNotFoundError` with auto-creation info and manual command
+    - Enhanced `EmbeddingError` with troubleshooting checklist (dependencies, model, memory, text)
+    - All errors maintain backward compatibility (solution/docs optional)
+  - Created comprehensive test suite: `tests/unit/test_actionable_errors.py` (6 tests passing)
+    - Tests for error message formatting with solutions
+    - Tests for specific error types (Qdrant, Collection, Embedding)
+    - Tests for attribute accessibility and backward compatibility
+  - **Impact:** Better debugging experience, faster problem resolution, reduced support burden
+  - **Example Error:**
+    ```
+    QdrantConnectionError: Cannot connect to Qdrant at http://localhost:6333
+
+    💡 Solution: Options:
+    1. Start Qdrant: docker-compose up -d
+    2. Use SQLite instead: Set CLAUDE_RAG_STORAGE_BACKEND=sqlite in .env
+    3. Check Qdrant is running: curl http://localhost:6333/health
+
+    📖 Docs: https://github.com/anthropics/claude-code/blob/main/docs/setup.md
+    ```
+
 - **PERF-004 & PERF-005: Smart Batching & Streaming Indexing ✅ COMPLETE** - Adaptive batching and concurrent processing
   - Enhanced `src/embeddings/parallel_generator.py` - Adaptive batch sizing based on text length
     - Small texts (<500 chars): batch size = 64 (2x default)

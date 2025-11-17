@@ -449,12 +449,18 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
 
 **Complete error UX group**
 
-- [ ] **UX-011**: Actionable error messages (~2-3 days)
-  - [ ] Redesign error response format with solutions
-  - [ ] Context-aware diagnostics
-  - [ ] Links to relevant docs
-  - [ ] Automatic fallback suggestions
-  - [ ] Example: "Qdrant failed → Try SQLite? [Y/n]"
+- [x] **UX-011**: Actionable error messages ✅ **COMPLETE**
+  - [x] Redesigned error response format with solutions
+  - [x] Context-aware diagnostics and troubleshooting checklists
+  - [x] Links to relevant docs (docs_url parameter)
+  - [x] Automatic fallback suggestions (Qdrant → SQLite, etc.)
+  - [x] Enhanced base MemoryRAGError with solution and docs_url
+  - [x] QdrantConnectionError provides 3 fallback options
+  - [x] CollectionNotFoundError explains auto-creation
+  - [x] EmbeddingError provides troubleshooting checklist
+  - [x] Comprehensive tests (6 tests passing)
+  - **Impact:** Better UX, faster debugging, reduced support burden
+  - **Completed:** 2025-11-17
 
 - [ ] **UX-012**: Graceful degradation (~2 days)
   - [ ] Auto-fallback: Qdrant unavailable → SQLite
