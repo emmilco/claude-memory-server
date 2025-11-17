@@ -130,6 +130,42 @@ filtered_files = manager.apply_patterns(all_files)
 
 **Impact**: Provides actionable optimization suggestions helping users improve indexing performance by 1.5-3x through intelligent exclusion of non-essential files
 
+- **UX-015: Project Management Commands ✅ COMPLETE** - Comprehensive project lifecycle management
+  - Created `src/cli/project_command.py` (303 lines) - CLI commands for project management
+    - `project list` - Rich-formatted table showing all indexed projects
+    - `project stats <name>` - Detailed statistics with memory/file/function breakdowns
+    - `project delete <name>` - Safe deletion with confirmation (requires typing project name)
+    - `project rename <old> <new>` - Atomic rename operation
+  - Enhanced storage backends with project management methods:
+    - `delete_project()` - Cascading deletion of memories, usage tracking, git commits, relationships
+    - `rename_project()` - Atomic rename with validation and conflict checking
+    - Both SQLite and Qdrant stores updated
+  - Added 4 MCP tools to `src/core/server.py`:
+    - `list_projects()` - List all indexed projects with basic statistics
+    - `get_project_details(project_name)` - Get detailed project statistics
+    - `delete_project(project_name)` - Delete project with validation
+    - `rename_project(old_name, new_name)` - Rename project atomically
+  - Safety features: delete confirmation, force flag, validation, atomic operations, comprehensive error handling
+  - **Impact:** Enables users to manage multi-project setups, clean up old projects, reorganize workspace
+  - **Usage:** `python -m src.cli.project list|stats|delete|rename`
+
+- **UX-014: Explicit Project Switching ✅ COMPLETE** - Project context management and switching
+  - Created `src/cli/project_command.py` with project switching commands
+    - `project switch <name>` - Switch active project context
+    - `project current` - Display currently active project
+  - Added MCP tools for project switching:
+    - `switch_project(project_name)` - Change active project for context-aware search
+    - `get_active_project()` - Query current active project
+  - Integration with FEAT-033 (Smart Project Context Detection) for auto-boost
+  - Auto-detect git context changes when switching directories
+  - Cross-project search option with active project prioritization
+  - **Impact:** Prevents cross-project pollution, improves search relevance for multi-project workflows
+  - **Usage:** `python -m src.cli.project switch my-project`
+
+- **UX-022: Configuration File Support ✅ COMPLETE** - Enhanced project context with config file parsing (merged above)
+
+- **UX-025: Memory Lifecycle Management ✅ COMPLETE** - Storage optimization and lifecycle management (merged above)
+
 - **WORKFLOW: Git worktree support for parallel agent development** - Configured repository to use git worktrees for concurrent feature development
   - Created `.worktrees/` directory for isolated feature branches
   - Added `.worktrees/` to `.gitignore` to prevent committing worktree directories

@@ -499,17 +499,19 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Complexity:** Low (~300 lines)
   - **Runtime Cost:** +5MB metrics history
 
-- [ ] **UX-014**: Explicit project switching (~2 days)
-  - [ ] MCP tool: `switch_project(project_name)`
-  - [ ] Show current project in Claude status
-  - [ ] Auto-detect git context changes
-  - [ ] Cross-project search option
+- [x] **UX-014**: Explicit project switching (~2 days) ✅ **COMPLETE**
+  - [x] MCP tool: `switch_project(project_name)`
+  - [x] Show current project in Claude status
+  - [x] Auto-detect git context changes
+  - [x] Cross-project search option
+  - **Completed:** 2025-11-17 (PR #7)
 
-- [ ] **UX-015**: Project management commands (~2 days)
-  - [ ] `list_projects` - show all indexed projects
-  - [ ] `project_stats(project)` - detailed project info
-  - [ ] `delete_project(project)` - remove project index
-  - [ ] `rename_project(old, new)` - rename project
+- [x] **UX-015**: Project management commands (~2 days) ✅ **COMPLETE**
+  - [x] `list_projects` - show all indexed projects
+  - [x] `project_stats(project)` - detailed project info
+  - [x] `delete_project(project)` - remove project index
+  - [x] `rename_project(old, new)` - rename project
+  - **Completed:** 2025-11-17 (PR #8)
 
 - [ ] **UX-016**: Memory migration tools (~1-2 days)
   - [ ] Move memory between scopes (global ↔ project)
@@ -529,17 +531,21 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - [ ] Notification when complete
   - [ ] Resume interrupted indexing
 
-- [ ] **UX-019**: Optimization suggestions (~2 days)
-  - [ ] Detect large binary files, suggest exclusion
-  - [ ] Identify redundant directories (node_modules, .git)
-  - [ ] Suggest .ragignore patterns
-  - [ ] Performance impact estimates
+- [x] **UX-019**: Optimization suggestions (~2 days) ✅ **COMPLETE**
+  - [x] Detect large binary files, suggest exclusion
+  - [x] Identify redundant directories (node_modules, .git)
+  - [x] Suggest .ragignore patterns
+  - [x] Performance impact estimates
+  - **Completed:** 2025-11-17 (PR #15)
+  - **See:** CHANGELOG.md lines 67-131 for implementation details
 
-- [ ] **UX-025**: Memory lifecycle management (~2-3 days)
-  - [ ] Auto-expire SESSION_STATE memories
-  - [ ] Importance decay over time
-  - [ ] Archive old project contexts
-  - [ ] Storage optimization suggestions
+- [x] **UX-025**: Memory lifecycle management (~2-3 days) ✅ **COMPLETE**
+  - [x] Auto-expire SESSION_STATE memories
+  - [x] Importance decay over time
+  - [x] Archive old project contexts
+  - [x] Storage optimization suggestions
+  - **Completed:** 2025-11-17 (PR #19)
+  - **See:** CHANGELOG.md lines 12-43 for implementation details
 
 ### 🌐 Tier 7: Language Support Extensions
 
@@ -553,14 +559,18 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - [ ] Query, view, procedure extraction
   - [ ] Critical for backend developers
 
-- [ ] **UX-022**: Add configuration file support (~2 days)
-  - [ ] YAML, JSON, TOML parsing
-  - [ ] Extract logical sections
-  - [ ] Docker, CI/CD config understanding
+- [x] **UX-022**: Add configuration file support (~2 days) ✅ **COMPLETE**
+  - [x] YAML, JSON, TOML parsing
+  - [x] Extract logical sections
+  - [x] Docker, CI/CD config understanding
+  - **Completed:** 2025-11-17 (PR #17)
+  - **See:** CHANGELOG.md lines 45-66 for implementation details
 
-- [ ] **UX-023**: Add C# support (~3 days)
-  - [ ] tree-sitter-c-sharp integration
-  - [ ] Important for enterprise developers
+- [x] **UX-023**: Add C# support (~3 days) ✅ **COMPLETE**
+  - [x] tree-sitter-c-sharp integration
+  - [x] Important for enterprise developers
+  - **Completed:** 2025-11-17 (PR #20)
+  - **See:** CHANGELOG.md lines 898-903 (tree-sitter API compatibility fixes)
 
 - [ ] **FEAT-005**: Add support for C++
 - [ ] **FEAT-006**: Add support for C#
