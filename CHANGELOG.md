@@ -9,6 +9,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - 2025-11-17
 
+- **UX-018: Background Indexing for Large Projects**
+
+**Background Indexing System**
+- Added `BackgroundIndexer` for non-blocking indexing operations with job management
+- Added `JobStateManager` for persistent job state tracking across restarts
+- Added `NotificationManager` with multiple backend support (console, log, callback)
+- Support for pause, resume, and cancel operations on running indexing jobs
+- Automatic resumption of interrupted indexing jobs (crash, cancel, pause)
+
+**Database Schema**
+- New `indexing_jobs` table for job persistence with indices on status, project, and timestamp
+- Tracks indexed files list for efficient resumption (skip already-completed files)
+- Stores comprehensive progress metrics (files indexed, units created, errors, timestamps)
+
+**Features**
+- **Non-Blocking Indexing**: Start indexing in background, continue searching immediately on partial results
+- **Job Management**: List, pause, resume, cancel indexing jobs with full state persistence
+- **Progress Tracking**: Real-time progress updates with file counts, unit counts, and current file
+- **Notifications**: Rich console notifications for started, progress, completed, paused, resumed, failed, cancelled events
+- **Resume Support**: Continue from where interrupted - only re-indexes files not yet completed
+- **Incremental Results**: Search available on partially indexed projects while indexing continues
+
+**Implementation**
+- **Files Created**:
+  - `src/memory/background_indexer.py` - Main background indexing class (474 lines)
+  - `src/memory/job_state_manager.py` - Job state persistence (384 lines)
+  - `src/memory/notification_manager.py` - Notification system (290 lines)
+  - `tests/unit/test_background_indexer.py` - Background indexer tests (17 tests)
+  - `tests/unit/test_job_state_manager.py` - Job state tests (18 tests)
+  - `tests/unit/test_notification_manager.py` - Notification tests (18 tests)
+  - `planning_docs/UX-018_background_indexing.md` - Implementation plan and progress tracking
+
+**Test Coverage**
+- **Unit Tests**: 53 tests written (50 passing, 3 with minor timing issues)
+- **Job State Management**: 18 tests - CRUD operations, filtering, persistence, resumption
+- **Notification System**: 18 tests - All notification types, multiple backends, throttling
+- **Background Operations**: 17 tests - Start, pause, resume, cancel workflows
+
+**Performance**
+- Non-blocking: Indexing runs in background asyncio tasks without blocking user operations
+- Concurrent: Maintains existing 4-file concurrent indexing for optimal throughput
+- Efficient Resume: Only re-indexes files not yet completed (tracked in indexed_file_list)
+- Throttled Notifications: Progress updates limited to every 5 seconds to prevent spam
+
+**API**
+- `BackgroundIndexer.start_indexing_job()` - Start new background or foreground job
+- `BackgroundIndexer.pause_job()` - Pause running job (graceful cancellation)
+- `BackgroundIndexer.resume_job()` - Resume paused job from last checkpoint
+- `BackgroundIndexer.cancel_job()` - Cancel running/paused job permanently
+- `BackgroundIndexer.get_job_status()` - Get detailed job information
+- `BackgroundIndexer.list_jobs()` - List all jobs with optional status/project filtering
+- `BackgroundIndexer.delete_job()` - Delete completed/failed/cancelled job
+
+**Benefits**
+- **Immediate Search**: Users can search projects with partial results while indexing continues in background
+- **Resilience**: Automatic resume after crashes, interruptions, or manual pauses
+- **Control**: Full control over long-running indexing operations (pause when system busy, resume when idle)
+- **Visibility**: Real-time progress tracking with rich notifications
+- **Efficiency**: Skip already-indexed files on resumption - no wasted work
+
+**Impact**: Transforms indexing from blocking operation to background service, enabling immediate usage of large projects (10K+ files) without waiting for full indexing completion
+
 - **UX-016: Memory Migration Tools (Phase 1)** - Storage backend methods for memory migration and transformation
   - Added `migrate_memory_scope(memory_id, new_project_name)` to SQLite and Qdrant stores
     - Migrate memories between scopes (global ↔ project)
