@@ -15,6 +15,7 @@ from src.cli.git_index_command import GitIndexCommand
 from src.cli.git_search_command import GitSearchCommand
 from src.cli.analytics_command import run_analytics_command
 from src.cli.session_summary_command import run_session_summary_command
+from src.cli.health_monitor_command import HealthMonitorCommand
 
 
 def setup_logging(level: str = "INFO"):
@@ -258,6 +259,65 @@ def create_parser() -> argparse.ArgumentParser:
         help="Specific session ID to summarize",
     )
 
+    # Health monitor command
+    health_monitor_parser = subparsers.add_parser(
+        "health-monitor",
+        help="Continuous health monitoring and alerts",
+    )
+    health_monitor_subparsers = health_monitor_parser.add_subparsers(
+        dest="subcommand",
+        help="Health monitoring subcommands",
+    )
+
+    # Health monitor status
+    status_sub = health_monitor_subparsers.add_parser(
+        "status",
+        help="Show current health status (default)",
+    )
+
+    # Health monitor report
+    report_sub = health_monitor_subparsers.add_parser(
+        "report",
+        help="Generate detailed health report",
+    )
+    report_sub.add_argument(
+        "--period-days",
+        "-d",
+        type=int,
+        default=7,
+        help="Report period in days (default: 7)",
+    )
+
+    # Health monitor fix
+    fix_sub = health_monitor_subparsers.add_parser(
+        "fix",
+        help="Apply automated remediation",
+    )
+    fix_sub.add_argument(
+        "--auto",
+        "-a",
+        action="store_true",
+        help="Automatically apply all fixes without prompts",
+    )
+    fix_sub.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would be fixed without applying",
+    )
+
+    # Health monitor history
+    history_sub = health_monitor_subparsers.add_parser(
+        "history",
+        help="View historical health metrics",
+    )
+    history_sub.add_argument(
+        "--days",
+        "-d",
+        type=int,
+        default=30,
+        help="Number of days of history (default: 30)",
+    )
+
     return parser
 
 
@@ -303,6 +363,9 @@ async def main_async(args):
         run_session_summary_command(
             session_id=args.session_id,
         )
+    elif args.command == "health-monitor":
+        cmd = HealthMonitorCommand()
+        await cmd.run(args)
     else:
         print("No command specified. Use --help for usage information.")
         sys.exit(1)

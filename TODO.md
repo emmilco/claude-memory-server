@@ -141,19 +141,22 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Strategic Priority:** P0 - Critical for multi-project developers
   - **Status:** Complete - Core infrastructure ready, MCP tool integration pending
 
-- [ ] **FEAT-037**: Continuous Health Monitoring & Alerts (~1-2 weeks) 🔥🔥🔥
-  - [ ] **Planning doc:** `planning_docs/STRATEGIC-001_long_term_product_evolution.md`
-  - [ ] **Proactive degradation detection**
-  - [ ] Track performance metrics: search latency, cache hit rate, index staleness
-  - [ ] Track quality metrics: avg relevance, noise ratio, duplicates, contradictions
-  - [ ] Alert thresholds: CRITICAL/WARNING/INFO levels
-  - [ ] Automated remediation: trigger pruning, suggest archival, run deduplication
-  - [ ] Weekly health reports with trends and recommendations
-  - [ ] One-click "fix automatically" for common issues
+- [x] **FEAT-037**: Continuous Health Monitoring & Alerts (~1-2 weeks) 🔥🔥🔥 ✅ **COMPLETE**
+  - [x] **Planning doc:** `planning_docs/FEAT-037_health_monitoring.md`
+  - [x] **Proactive degradation detection**
+  - [x] Track performance metrics: search latency, cache hit rate, index staleness
+  - [x] Track quality metrics: avg relevance, noise ratio, duplicates, contradictions
+  - [x] Alert thresholds: CRITICAL/WARNING/INFO levels
+  - [x] Automated remediation: trigger pruning, suggest archival, run deduplication
+  - [x] Weekly health reports with trends and recommendations
+  - [x] One-click "fix automatically" for common issues
+  - [x] Comprehensive test suite (43 tests passing)
+  - [x] CLI commands: health-monitor status/report/fix/history
   - **Impact:** Catches problems before catastrophic, prevents silent degradation
   - **Complexity:** Medium (metrics pipeline, alert engine, remediation actions)
   - **Runtime Cost:** +20-50MB for time-series data, +1-2ms per operation
   - **Strategic Priority:** P0 - Early warning system prevents Path B
+  - **Completed:** 2025-11-17
 
 - [ ] **FEAT-034**: Memory Provenance & Trust Signals (~2-3 weeks) 🔥🔥🔥🔥
   - [ ] **Planning doc:** `planning_docs/STRATEGIC-001_long_term_product_evolution.md`
