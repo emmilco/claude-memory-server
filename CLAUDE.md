@@ -34,14 +34,20 @@ A Model Context Protocol (MCP) server providing persistent memory, documentation
 
 ### Core Implementation
 - `src/core/server.py` - Main MCP server with all tools
-- `src/memory/incremental_indexer.py` - Code indexing logic
-- `src/store/qdrant_store.py` - Vector database operations
+- `src/memory/incremental_indexer.py` - Code indexing logic with progress callbacks
+- `src/store/qdrant_store.py` - Vector database operations (with project stats methods)
+- `src/store/sqlite_store.py` - SQLite storage backend (with project stats methods)
 - `src/embeddings/generator.py` - Embedding generation
 - `src/config.py` - Configuration management
+- `src/cli/status_command.py` - Status reporting with project statistics
+- `src/cli/index_command.py` - Indexing CLI with progress indicators
 - `rust_core/src/parsing.rs` - Fast code parsing
 
 ### Testing
 - `tests/unit/` - Unit tests for all modules
+  - `test_store_project_stats.py` - Project statistics functionality (15 tests)
+  - `test_indexing_progress.py` - Progress callback system (11 tests)
+  - `test_status_command.py` - Status command with file watcher info (38 tests)
 - `tests/integration/` - End-to-end workflow tests
 - `tests/security/` - Security validation tests
 
@@ -310,7 +316,12 @@ python -m src.mcp_server
 - **Performance:** 7-13ms search, 2.45 files/sec indexing
 
 ### Active Development
-- ✅ **COMPLETED:** Test coverage reached 85% (21.3% improvement)
+- ✅ **COMPLETED (Nov 16):** Test coverage reached 85% (21.3% improvement)
+- ✅ **COMPLETED (Nov 17):** UX improvements (UX-006, UX-007, UX-010)
+  - Enhanced status command with real project statistics
+  - Real-time indexing progress indicators with rich UI
+  - File watcher status visibility in status command
+- **IN PROGRESS:** Additional UX improvements (UX-008, UX-009)
 - Phase 3.5: Adaptive Retrieval Gate (optional)
 - Additional language support planning
 

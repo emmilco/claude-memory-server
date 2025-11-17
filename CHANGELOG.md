@@ -21,6 +21,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `test_health_command.py` - 35 tests (88.48% coverage)
     - `test_status_command.py` - 38 tests (87.50% coverage)
 
+- **UX-006: Enhanced Status Command** - Real project statistics and metrics
+  - Added `get_all_projects()` and `get_project_stats()` methods to both Qdrant and SQLite stores
+  - Status command now displays actual indexed projects with full statistics
+  - Project stats: total memories, files, functions, classes, categories, last indexed
+  - Professional rich-formatted tables with comprehensive data display
+  - Dual backend support (Qdrant with pagination, SQLite with SQL queries)
+  - Test coverage: 15 new tests in `test_store_project_stats.py`
+
+- **UX-007: Real-Time Indexing Progress Indicators** - Live feedback during indexing
+  - Added progress callback system to `IncrementalIndexer.index_directory()`
+  - Real-time progress bar showing file count, current file, completion percentage
+  - Error tracking with visual indicators (yellow count display for errors)
+  - Estimated time remaining (via rich TimeRemainingColumn)
+  - Thread-safe concurrent file processing with progress synchronization
+  - Graceful fallback to logging when rich library unavailable
+  - Test coverage: 11 new tests in `test_indexing_progress.py`
+  - index_command.py coverage improved to 94.89%
+
+- **UX-010: File Watcher Status Visibility** - Configuration and capability display
+  - Status command now shows file watcher information and capabilities
+  - Displays enabled/disabled status with visual indicators (✓/✗)
+  - Shows configuration: debounce timing, supported file extensions
+  - Provides usage instructions for starting file watcher
+  - Clear guidance when disabled (how to enable via config)
+  - Test coverage: 6 new tests in `test_status_command.py`
+  - status_command.py coverage improved to 86.81%
+
 ### Fixed - 2025-11-17
 - Fixed tree-sitter API compatibility in `python_parser.py`
   - Updated Parser initialization to use correct API (Language object in constructor)

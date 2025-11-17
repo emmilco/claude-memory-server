@@ -4,7 +4,501 @@
 Each item has a unique ID for tracking and association with planning documents in `planning_docs/`.
 Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
 
+## Priority System
+
+**Prioritization Rules:**
+1. Complete partially finished initiatives before starting new ones
+2. Prioritize core functionality improvements over UX and dev tools improvements
+3. Prioritize items that have greater impact over items that have less impact
+
 ## Current Sprint
+
+### 🔴 Tier 1: Complete Partially-Finished Initiatives + Critical Bugs
+
+#### Phase 3.5: Adaptive Retrieval Gate (Complete This Initiative)
+
+**Status:** Fully defined, not started - partially finished initiative
+**Impact:** 30-40% query optimization, token savings
+
+- [ ] **FEAT-001**: Create retrieval predictor (src/router/retrieval_predictor.py)
+  - [ ] Class: RetrievalPredictor
+  - [ ] Method: predict_utility(query: str) -> float (0-1 probability)
+  - [ ] Implement heuristic rules (not ML initially)
+  - [ ] Analyze query: type, length, keywords
+  - [ ] Expected: 30-40% of queries can be skipped
+
+- [ ] **FEAT-002**: Implement retrieval gate (src/router/retrieval_gate.py)
+  - [ ] Class: RetrievalGate
+  - [ ] Configurable threshold (default 80%)
+  - [ ] Skip Qdrant search if utility < threshold
+  - [ ] Log gating decisions
+
+- [ ] **FEAT-003**: Integrate gate into memory.find() handler
+  - [ ] Run prediction before Qdrant search
+  - [ ] Track metrics (queries gated, skipped, etc.)
+  - [ ] Report estimated token savings
+
+- [ ] **FEAT-004**: Add metrics collection
+  - [ ] Counter: queries processed/gated
+  - [ ] Timer: prediction time
+  - [ ] Timer: retrieval time comparison
+  - [ ] Report: estimated token savings
+
+- [ ] **TEST-009**: Create tests/integration/test_retrieval_gate.py
+  - [ ] Test: Coding questions not gated
+  - [ ] Test: Small talk gated
+  - [ ] Test: Threshold enforcement
+  - [ ] Test: Metrics collection
+
+#### Complete Visibility & Observability Initiative
+
+- [ ] **UX-008**: Memory browser TUI (~3-5 days)
+  - [ ] Interactive terminal UI using Rich/Textual
+  - [ ] Browse, search, edit, delete memories
+  - [ ] Filter by context level, project, category
+  - [ ] Bulk operations (delete all SESSION_STATE)
+  - [ ] Export/import functionality
+  - **Note:** UX-006, UX-007, UX-010 already complete
+
+- [ ] **UX-009**: Search result quality indicators (~1-2 days)
+  - [ ] Explain why results matched (highlighted terms)
+  - [ ] Confidence scores with interpretation (>0.8 = excellent, etc.)
+  - [ ] Suggest query refinements for 0 results
+  - [ ] "Did you mean to search in project X?"
+  - **Note:** May be partially addressed by UX-030 (confidence scores)
+
+#### Critical Bug Fixes
+
+- [ ] **BUG-001**: TypeScript parser occasionally fails on complex files
+  - Need to update tree-sitter-typescript
+  - Add better error recovery
+  - **Impact:** Blocks TypeScript indexing on some projects
+
+- [ ] **BUG-002**: Metadata display shows "unknown" in some cases
+  - Low priority, cosmetic issue
+  - Fix display logic in search results
+
+### 🔥 Tier 2: High-Impact Core Functionality Improvements
+
+**These are the highest-impact features that directly enhance search, retrieval, and core capabilities**
+
+- [ ] **FEAT-026**: Smart Context Ranking & Pruning (~3-5 days) 🔥🔥🔥
+  - [ ] **Confirm overall feature design with user before proceeding**
+  - [ ] Track which memories/code were actually referenced by Claude
+  - [ ] Rank results by: recency + relevance + usage frequency
+  - [ ] Auto-expire unused SESSION_STATE memories (24h default)
+  - [ ] Decay algorithm for importance scores
+  - [ ] Background cleanup job (runs daily)
+  - [ ] New table: memory_usage_tracking (memory_id, last_used, use_count)
+  - **Impact:** 30-50% noise reduction, better search quality
+  - **Complexity:** Medium (~500 lines, new DB schema)
+  - **Runtime Cost:** +50MB storage, +1-2ms per search
+
+- [ ] **FEAT-029**: Conversation-Aware Retrieval (~5-7 days) 🔥🔥🔥
+  - [ ] **Confirm overall feature design with user before proceeding**
+  - [ ] Track last N messages in conversation
+  - [ ] Deduplication: don't return context already shown
+  - [ ] Contextual query expansion using conversation history
+  - [ ] "auth middleware" in debugging context → prioritize error handling
+  - [ ] Requires MCP conversation access (check API availability)
+  - [ ] Cache recent conversation (rolling window)
+  - **Impact:** 30-50% additional token savings, better relevance
+  - **Complexity:** Medium-High (~800 lines)
+  - **Runtime Cost:** +5-10MB per conversation, +5-10ms latency
+
+- [ ] **FEAT-028**: Proactive Context Suggestions (~3-4 days) 🔥🔥🔥
+  - [ ] **Confirm overall feature design with user before proceeding**
+  - [ ] Analyze conversation context to suggest relevant code/memories
+  - [ ] Pattern matching: "I need to add X" → suggest similar implementations
+  - [ ] Automatic context injection (high confidence only)
+  - [ ] User sees: "I found similar registration logic - use that pattern?"
+  - [ ] MCP tool auto-invocation based on conversation
+  - [ ] Configurable threshold (default: 0.9 confidence)
+  - **Impact:** Reduces cognitive load, surfaces hidden gems
+  - **Complexity:** Medium (~600 lines)
+  - **Runtime Cost:** +10-20ms per message, potential extra tool calls
+
+- [ ] **FEAT-027**: "Find Similar" Command (~1 day) 🔥🔥
+  - [ ] **Confirm overall feature design with user before proceeding**
+  - [ ] MCP tool: `find_similar_code(code_snippet, limit=10)`
+  - [ ] Generate embedding for input code
+  - [ ] Search against existing code index
+  - [ ] Great for finding duplicates, patterns, examples
+  - [ ] Reuses existing search infrastructure
+  - **Impact:** Enables code reuse and pattern discovery
+  - **Complexity:** Very Low (~150 lines, mostly reuse)
+  - **Runtime Cost:** 30-50ms per query (embed + search)
+
+- [ ] **FEAT-031**: Git-Aware Semantic Search (~1-2 weeks) 🔥🔥🔥
+  - [ ] **Confirm overall feature design with user before proceeding**
+  - [ ] Index git history semantically (commits, diffs, blame)
+  - [ ] Queries: "code changed last week related to auth"
+  - [ ] "Find functions modified by commits fixing bug #123"
+  - [ ] "Show evolution of this function over time"
+  - [ ] Integration: GitPython or libgit2
+  - [ ] Metadata: commit hash, author, date, message
+  - [ ] Configurable: index last N commits (default: 1000)
+  - **Impact:** Code archeology, debugging, team collaboration
+  - **Complexity:** High (~1,500 lines)
+  - **Runtime Cost:** +100-500MB (git history), +10-50% indexing time
+
+- [ ] **FEAT-030**: Cross-Project Learning (~3-5 days) 🔥🔥
+  - [ ] **Confirm overall feature design with user before proceeding**
+  - [ ] Enable search across all indexed projects
+  - [ ] MCP tool: `search_all_projects(query, limit=10)`
+  - [ ] Find similar implementations across user's projects
+  - [ ] "You solved this in project X - reuse that approach?"
+  - [ ] Privacy: opt-in per project
+  - [ ] Default: current project only
+  - [ ] Build personal code pattern library
+  - **Impact:** Accelerates development, reduces reinvention
+  - **Complexity:** Medium (~400 lines)
+  - **Runtime Cost:** +20-50ms search (multiple collections)
+
+### 🟡 Tier 3: Core Functionality Extensions
+
+**These extend core capabilities with new features**
+
+- [ ] **FEAT-011**: Import/dependency tracking
+  - [ ] Extract import statements
+  - [ ] Build dependency graph
+  - [ ] Track usage relationships
+  - **Impact:** Enables multi-hop queries, architectural understanding
+
+- [ ] **FEAT-023**: Hybrid search (BM25 + vector)
+  - [ ] Combine keyword and semantic search
+  - [ ] Better recall for specific terms
+  - **Impact:** Improved search accuracy for technical terms
+
+- [ ] **FEAT-024**: Query expansion
+  - [ ] Expand queries with synonyms
+  - [ ] Use code context for better results
+  - **Impact:** Better search recall
+
+- [ ] **FEAT-025**: Result reranking
+  - [ ] ML-based relevance scoring
+  - [ ] Personalized ranking based on usage
+  - **Impact:** More relevant top results
+
+- [ ] **FEAT-013**: Change detection
+  - [ ] Smart diffing to re-index only changed functions
+  - [ ] Track function-level changes
+  - **Impact:** Faster incremental indexing
+
+- [ ] **FEAT-012**: Docstring extraction
+  - [ ] Separate indexing for documentation
+  - [ ] Link docs to code units
+  - **Impact:** Better code understanding
+
+### 🟢 Tier 4: High-Value UX Quick Wins
+
+**Low effort, high visibility improvements (minimal work for user-facing value)**
+
+- [ ] **UX-030**: Inline Context Confidence Scores (~1 day) 🔥🔥
+  - [ ] **Confirm overall feature design with user before proceeding**
+  - [ ] Display similarity scores with search results
+  - [ ] Format: "auth/login.py:45 (confidence: 95%)"
+  - [ ] Thresholds: >0.8 = excellent, 0.6-0.8 = good, <0.6 = weak
+  - [ ] Help users and Claude assess result quality
+  - [ ] Add to search_code tool response
+  - **Impact:** Improves decision-making and trust
+  - **Complexity:** Very Low (~100 lines)
+  - **Runtime Cost:** None (scores already calculated)
+
+- [ ] **UX-029**: Token Usage Analytics Dashboard (~1-2 days) 🔥🔥🔥
+  - [ ] **Confirm overall feature design with user before proceeding**
+  - [ ] Track tokens saved per session (manual paste vs semantic search)
+  - [ ] Display API cost savings over time ($X saved this month)
+  - [ ] Context efficiency ratio (relevant tokens / total tokens)
+  - [ ] CLI command: `python -m src.cli analytics`
+  - [ ] MCP tool: `get_token_analytics()` for Claude to query
+  - [ ] Storage: Simple SQLite table for metrics
+  - **Impact:** Makes invisible value visible, drives adoption
+  - **Complexity:** Low (~300 lines)
+  - **Runtime Cost:** +10MB storage, negligible CPU/latency
+
+- [ ] **UX-031**: Session Summaries (~1-2 days) 🔥🔥
+  - [ ] **Confirm overall feature design with user before proceeding**
+  - [ ] Track: searches performed, files indexed, tokens saved
+  - [ ] Display at session end or via CLI command
+  - [ ] Example: "Session Summary: 23 searches, ~12,400 tokens saved (~$0.04)"
+  - [ ] Show most useful results (by reference count)
+  - [ ] CLI command: `python -m src.cli session-summary`
+  - **Impact:** Increases engagement, proves value incrementally
+  - **Complexity:** Low (~200 lines)
+  - **Runtime Cost:** +1MB storage, negligible CPU
+
+### ⚡ Tier 5: Performance Optimizations
+
+**Core performance improvements**
+
+- [ ] **PERF-001**: Parallel indexing
+  - [ ] Multi-process embedding generation
+  - [ ] Target: 10-20 files/sec
+  - **Impact:** 5-10x faster indexing
+
+- [ ] **PERF-003**: Incremental embeddings
+  - [ ] Cache embeddings for unchanged code
+  - [ ] Skip re-embedding on minor changes
+  - **Impact:** Significant speedup for re-indexing
+
+- [ ] **PERF-004**: Smart batching
+  - [ ] Group files by size for optimal batching
+  - [ ] Reduce embedding overhead
+  - **Impact:** More efficient resource usage
+
+- [ ] **PERF-005**: Streaming indexing
+  - [ ] Don't wait for all files to parse
+  - [ ] Start embedding as units are extracted
+  - **Impact:** Faster perceived performance
+
+- [ ] **PERF-002**: GPU acceleration
+  - [ ] Use CUDA for embedding model
+  - [ ] Potential 50-100x speedup
+  - **Impact:** Massive speedup (requires GPU hardware)
+
+### 🔧 Tier 6: UX Improvements (Lower Priority per User Preferences)
+
+**Complete error UX group**
+
+- [ ] **UX-011**: Actionable error messages (~2-3 days)
+  - [ ] Redesign error response format with solutions
+  - [ ] Context-aware diagnostics
+  - [ ] Links to relevant docs
+  - [ ] Automatic fallback suggestions
+  - [ ] Example: "Qdrant failed → Try SQLite? [Y/n]"
+
+- [ ] **UX-012**: Graceful degradation (~2 days)
+  - [ ] Auto-fallback: Qdrant unavailable → SQLite
+  - [ ] Auto-fallback: Rust unavailable → Python parser
+  - [ ] Warn user about performance implications
+  - [ ] Option to upgrade later
+
+- [ ] **UX-013**: Better installation error messages (~1 day)
+  - [ ] Detect missing prerequisites with install instructions
+  - [ ] OS-specific help (apt-get vs brew vs chocolatey)
+  - [ ] Common error patterns with solutions
+  - [ ] Link to troubleshooting guide
+
+**Other UX enhancements**
+
+- [ ] **UX-032**: Health Check Improvements (~2 days) 🔥🔥
+  - [ ] **Confirm overall feature design with user before proceeding**
+  - [ ] Extend existing UX-004 health check
+  - [ ] Add: Qdrant latency monitoring (warn if >20ms)
+  - [ ] Add: Cache hit rate display (warn if <70%)
+  - [ ] Add: Token savings this week
+  - [ ] Add: Stale project detection (not indexed in 30+ days)
+  - [ ] Proactive recommendations: "Consider upgrading to Qdrant"
+  - [ ] Show indexed projects count and size
+  - **Impact:** Proactive issue detection, optimization guidance
+  - **Complexity:** Low (~300 lines)
+  - **Runtime Cost:** +5MB metrics history
+
+- [ ] **UX-014**: Explicit project switching (~2 days)
+  - [ ] MCP tool: `switch_project(project_name)`
+  - [ ] Show current project in Claude status
+  - [ ] Auto-detect git context changes
+  - [ ] Cross-project search option
+
+- [ ] **UX-015**: Project management commands (~2 days)
+  - [ ] `list_projects` - show all indexed projects
+  - [ ] `project_stats(project)` - detailed project info
+  - [ ] `delete_project(project)` - remove project index
+  - [ ] `rename_project(old, new)` - rename project
+
+- [ ] **UX-016**: Memory migration tools (~1-2 days)
+  - [ ] Move memory between scopes (global ↔ project)
+  - [ ] Bulk reclassification (change context level)
+  - [ ] Memory merging (combine duplicate memories)
+  - [ ] Memory export/import with project context
+
+- [ ] **UX-017**: Indexing time estimates (~1 day)
+  - [ ] Estimate time based on file count and historical data
+  - [ ] Show estimate before starting large indexes
+  - [ ] Progress updates with time remaining
+  - [ ] Performance tips (exclude tests, node_modules)
+
+- [ ] **UX-018**: Background indexing for large projects (~3 days)
+  - [ ] Start indexing in background
+  - [ ] Search available on incremental results
+  - [ ] Notification when complete
+  - [ ] Resume interrupted indexing
+
+- [ ] **UX-019**: Optimization suggestions (~2 days)
+  - [ ] Detect large binary files, suggest exclusion
+  - [ ] Identify redundant directories (node_modules, .git)
+  - [ ] Suggest .ragignore patterns
+  - [ ] Performance impact estimates
+
+- [ ] **UX-025**: Memory lifecycle management (~2-3 days)
+  - [ ] Auto-expire SESSION_STATE memories
+  - [ ] Importance decay over time
+  - [ ] Archive old project contexts
+  - [ ] Storage optimization suggestions
+
+### 🌐 Tier 7: Language Support Extensions
+
+- [ ] **UX-020**: Add C/C++ support (~3 days)
+  - [ ] tree-sitter-cpp integration
+  - [ ] Function, class, struct extraction
+  - [ ] High priority for systems engineers
+
+- [ ] **UX-021**: Add SQL support (~2 days)
+  - [ ] tree-sitter-sql integration
+  - [ ] Query, view, procedure extraction
+  - [ ] Critical for backend developers
+
+- [ ] **UX-022**: Add configuration file support (~2 days)
+  - [ ] YAML, JSON, TOML parsing
+  - [ ] Extract logical sections
+  - [ ] Docker, CI/CD config understanding
+
+- [ ] **UX-023**: Add C# support (~3 days)
+  - [ ] tree-sitter-c-sharp integration
+  - [ ] Important for enterprise developers
+
+- [ ] **FEAT-005**: Add support for C++
+- [ ] **FEAT-006**: Add support for C#
+- [ ] **FEAT-007**: Add support for Ruby
+- [ ] **FEAT-008**: Add support for PHP
+- [ ] **FEAT-009**: Add support for Swift
+- [ ] **FEAT-010**: Add support for Kotlin
+
+### 🚀 Tier 8: Advanced/Future Features
+
+- [ ] **FEAT-016**: Auto-indexing
+  - [ ] Automatically index on project open
+  - [ ] Background indexing for large projects
+
+- [ ] **FEAT-017**: Multi-repository support
+  - [ ] Index across multiple repositories
+  - [ ] Cross-repo code search
+
+- [ ] **FEAT-018**: Query DSL
+  - [ ] Advanced filters (by file pattern, date, author, etc.)
+  - [ ] Complex query expressions
+
+- [ ] **FEAT-014**: Semantic refactoring
+  - [ ] Find all usages semantically
+  - [ ] Suggest refactoring opportunities
+
+- [ ] **FEAT-015**: Code review features
+  - [ ] LLM-powered suggestions based on patterns
+  - [ ] Identify code smells
+
+- [ ] **UX-024**: Usage feedback mechanisms (~2-3 days)
+  - [ ] "Was this helpful?" for search results
+  - [ ] Learning from user behavior
+  - [ ] Query refinement suggestions
+  - [ ] Result quality metrics
+
+- [ ] **UX-026**: Web dashboard (~1-2 weeks)
+  - [ ] Optional web UI for visibility
+  - [ ] Visual project explorer
+  - [ ] Memory graph/relationships
+  - [ ] Usage analytics
+
+- [ ] **UX-027**: VS Code extension (~2-3 weeks)
+  - [ ] Inline code search results
+  - [ ] Memory panel
+  - [ ] Quick indexing actions
+  - [ ] Status bar integration
+
+- [ ] **UX-028**: Telemetry & analytics (opt-in) (~1 week)
+  - [ ] Usage patterns (opt-in, privacy-preserving)
+  - [ ] Error frequency tracking
+  - [ ] Performance metrics
+  - [ ] Feature adoption rates
+  - [ ] Helps identify UX issues in the wild
+
+### 🔨 Tier 9: Refactoring & Tech Debt
+
+- [ ] **REF-007**: Consolidate two server implementations
+  - Merge old mcp_server.py with new src/core/
+  - Unified architecture
+
+- [ ] **REF-008**: Remove deprecated API usage
+  - Update to latest Qdrant APIs
+  - Update to latest MCP SDK
+
+- [ ] **REF-001**: Fix Async/Await Patterns (~1 hour)
+  - Requires profiling first
+  - Optimize async patterns for better performance
+
+- [ ] **REF-002**: Add Structured Logging (~1.5 hours)
+  - Requires logging format decision
+  - Implement consistent logging across modules
+
+- [ ] **REF-003**: Split Validation Module (~2 hours)
+  - Requires careful refactoring for circular imports
+  - Separate validation concerns
+
+- [ ] **REF-004**: Update datetime.utcnow() to datetime.now(UTC)
+  - Low priority, cosmetic fix for deprecation warnings
+
+- [ ] **REF-005**: Update to Pydantic v2 ConfigDict style
+  - Low priority, modernize configuration
+
+- [ ] **REF-006**: Update Qdrant search() to query_points()
+  - Low priority, will be required in future Qdrant versions
+
+### 📚 Tier 10: Documentation & Monitoring
+
+- [ ] **PERF-006**: Performance Regression Detection (~3-5 days)
+  - [ ] **Confirm overall feature design with user before proceeding**
+  - [ ] Time-series metrics: search latency, index time, cache hit rate
+  - [ ] Baseline establishment (rolling 30-day average)
+  - [ ] Anomaly detection (alert if >40% degradation)
+  - [ ] Alert examples: "Search latency increased 40% this week"
+  - [ ] Recommendations: "Enable quantization" or "Collection too large"
+  - [ ] CLI command: `python -m src.cli perf-report`
+  - [ ] Internal development tool initially
+  - **Impact:** Maintain quality at scale, early warning system
+  - **Complexity:** Medium (~500 lines)
+  - **Runtime Cost:** +20-50MB time-series data, +5ms per operation
+
+- [ ] **DOC-004**: Update README with code search examples
+- [ ] **DOC-005**: Add performance tuning guide for large codebases
+- [ ] **DOC-006**: Create troubleshooting guide for common parser issues
+- [ ] **DOC-007**: Document best practices for project organization
+
+- [ ] **DOC-001**: Interactive documentation
+  - [ ] Live examples in docs
+  - [ ] Playground for testing queries
+
+- [ ] **DOC-002**: Migration guides
+  - [ ] From other code search tools
+  - [ ] Database migration utilities
+
+- [ ] **DOC-003**: Video tutorials
+  - [ ] Setup walkthrough
+  - [ ] Feature demonstrations
+  - [ ] Best practices guide
+
+- [ ] **FEAT-019**: IDE Integration
+  - [ ] VS Code extension for instant code search
+  - [ ] IntelliJ plugin
+  - [ ] Vim/Neovim integration
+
+- [ ] **FEAT-020**: Usage patterns tracking
+  - [ ] Track most searched queries
+  - [ ] Identify frequently accessed code
+  - [ ] User behavior analytics
+
+- [ ] **FEAT-021**: Memory lifecycle management
+  - [ ] Auto-expire old memories
+  - [ ] Memory importance decay
+  - [ ] Storage optimization
+
+- [ ] **FEAT-022**: Performance monitoring dashboard
+  - [ ] Real-time metrics visualization
+  - [ ] Alerting for performance degradation
+  - [ ] Capacity planning tools
+
+---
+
+## ✅ Completed Items
 
 ### Testing Coverage ✅ COMPLETED - 85% TARGET ACHIEVED!
 
@@ -45,36 +539,7 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
 - [x] **TEST-008**: indexing_service.py (service wrapper) ✅
   - **Result:** 27% → 100% coverage (19 comprehensive tests)
 
-### Code Quality
-
-**Deferred from Refactoring Sprint**
-
-- [ ] **REF-001**: Fix Async/Await Patterns (~1 hour)
-  - Requires profiling first
-  - Optimize async patterns for better performance
-
-- [ ] **REF-002**: Add Structured Logging (~1.5 hours)
-  - Requires logging format decision
-  - Implement consistent logging across modules
-
-- [ ] **REF-003**: Split Validation Module (~2 hours)
-  - Requires careful refactoring for circular imports
-  - Separate validation concerns
-
-### Minor Issues (Non-Blocking)
-
-- [ ] **REF-004**: Update datetime.utcnow() to datetime.now(UTC)
-  - Low priority, cosmetic fix for deprecation warnings
-
-- [ ] **REF-005**: Update to Pydantic v2 ConfigDict style
-  - Low priority, modernize configuration
-
-- [ ] **REF-006**: Update Qdrant search() to query_points()
-  - Low priority, will be required in future Qdrant versions
-
-## User Experience Improvements
-
-### 🔴 Critical - Setup & Onboarding (Highest Impact) ✅ COMPLETED
+### Setup & Onboarding ✅ COMPLETED
 
 - [x] **UX-001**: One-command installation script ✅ **COMPLETE**
   - [x] Automated setup wizard that checks prerequisites
@@ -112,346 +577,39 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - [x] Success message with next steps
   - **Result:** Automated verification, 85%+ coverage on all new modules
 
-### 🟡 High Priority - Visibility & Observability
-
-- [ ] **UX-006**: Status/stats command (~2 days)
-  - [ ] `python -m src.cli status` showing indexed projects
-  - [ ] Number of files, functions, classes per project
-  - [ ] Storage used, cache hit rates
-  - [ ] Recent indexing activity
-  - [ ] Memory stats by category/context level
-
-- [ ] **UX-007**: Indexing progress indicators (~1 day)
-  - [ ] Real-time progress bar during indexing
-  - [ ] File count, estimated time remaining
-  - [ ] Current file being processed
-  - [ ] Errors encountered (with continue option)
-
-- [ ] **UX-008**: Memory browser TUI (~3-5 days)
-  - [ ] Interactive terminal UI using Rich/Textual
-  - [ ] Browse, search, edit, delete memories
-  - [ ] Filter by context level, project, category
-  - [ ] Bulk operations (delete all SESSION_STATE)
-  - [ ] Export/import functionality
-
-- [ ] **UX-009**: Search result quality indicators (~1-2 days)
-  - [ ] Explain why results matched (highlighted terms)
-  - [ ] Confidence scores with interpretation (>0.8 = excellent, etc.)
-  - [ ] Suggest query refinements for 0 results
-  - [ ] "Did you mean to search in project X?"
-
-- [ ] **UX-010**: File watcher status visibility (~1 day)
-  - [ ] Show active watchers in status command
-  - [ ] MCP tool to start/stop file watcher
-  - [ ] Notifications when reindexing occurs
-  - [ ] Watch statistics (files changed, reindex count)
-
-### 🟡 High Priority - Error UX & Recovery
-
-- [ ] **UX-011**: Actionable error messages (~2-3 days)
-  - [ ] Redesign error response format with solutions
-  - [ ] Context-aware diagnostics
-  - [ ] Links to relevant docs
-  - [ ] Automatic fallback suggestions
-  - [ ] Example: "Qdrant failed → Try SQLite? [Y/n]"
-
-- [ ] **UX-012**: Graceful degradation (~2 days)
-  - [ ] Auto-fallback: Qdrant unavailable → SQLite
-  - [ ] Auto-fallback: Rust unavailable → Python parser
-  - [ ] Warn user about performance implications
-  - [ ] Option to upgrade later
-
-- [ ] **UX-013**: Better installation error messages (~1 day)
-  - [ ] Detect missing prerequisites with install instructions
-  - [ ] OS-specific help (apt-get vs brew vs chocolatey)
-  - [ ] Common error patterns with solutions
-  - [ ] Link to troubleshooting guide
-
-### 🟢 Medium Priority - Project & Context Management
-
-- [ ] **UX-014**: Explicit project switching (~2 days)
-  - [ ] MCP tool: `switch_project(project_name)`
-  - [ ] Show current project in Claude status
-  - [ ] Auto-detect git context changes
-  - [ ] Cross-project search option
-
-- [ ] **UX-015**: Project management commands (~2 days)
-  - [ ] `list_projects` - show all indexed projects
-  - [ ] `project_stats(project)` - detailed project info
-  - [ ] `delete_project(project)` - remove project index
-  - [ ] `rename_project(old, new)` - rename project
-
-- [ ] **UX-016**: Memory migration tools (~1-2 days)
-  - [ ] Move memory between scopes (global ↔ project)
-  - [ ] Bulk reclassification (change context level)
-  - [ ] Memory merging (combine duplicate memories)
-  - [ ] Memory export/import with project context
-
-### 🟢 Medium Priority - Performance Visibility
-
-- [ ] **UX-017**: Indexing time estimates (~1 day)
-  - [ ] Estimate time based on file count and historical data
-  - [ ] Show estimate before starting large indexes
-  - [ ] Progress updates with time remaining
-  - [ ] Performance tips (exclude tests, node_modules)
-
-- [ ] **UX-018**: Background indexing for large projects (~3 days)
-  - [ ] Start indexing in background
-  - [ ] Search available on incremental results
-  - [ ] Notification when complete
-  - [ ] Resume interrupted indexing
-
-- [ ] **UX-019**: Optimization suggestions (~2 days)
-  - [ ] Detect large binary files, suggest exclusion
-  - [ ] Identify redundant directories (node_modules, .git)
-  - [ ] Suggest .ragignore patterns
-  - [ ] Performance impact estimates
-
-### 🟢 Medium Priority - Language Support Gaps
-
-- [ ] **UX-020**: Add C/C++ support (~3 days)
-  - [ ] tree-sitter-cpp integration
-  - [ ] Function, class, struct extraction
-  - [ ] High priority for systems engineers
-
-- [ ] **UX-021**: Add SQL support (~2 days)
-  - [ ] tree-sitter-sql integration
-  - [ ] Query, view, procedure extraction
-  - [ ] Critical for backend developers
-
-- [ ] **UX-022**: Add configuration file support (~2 days)
-  - [ ] YAML, JSON, TOML parsing
-  - [ ] Extract logical sections
-  - [ ] Docker, CI/CD config understanding
-
-- [ ] **UX-023**: Add C# support (~3 days)
-  - [ ] tree-sitter-c-sharp integration
-  - [ ] Important for enterprise developers
-
-### ⚪ Low Priority - Advanced Features
-
-- [ ] **UX-024**: Usage feedback mechanisms (~2-3 days)
-  - [ ] "Was this helpful?" for search results
-  - [ ] Learning from user behavior
-  - [ ] Query refinement suggestions
-  - [ ] Result quality metrics
-
-- [ ] **UX-025**: Memory lifecycle management (~2-3 days)
-  - [ ] Auto-expire SESSION_STATE memories
-  - [ ] Importance decay over time
-  - [ ] Archive old project contexts
-  - [ ] Storage optimization suggestions
-
-- [ ] **UX-026**: Web dashboard (~1-2 weeks)
-  - [ ] Optional web UI for visibility
-  - [ ] Visual project explorer
-  - [ ] Memory graph/relationships
-  - [ ] Usage analytics
-
-- [ ] **UX-027**: VS Code extension (~2-3 weeks)
-  - [ ] Inline code search results
-  - [ ] Memory panel
-  - [ ] Quick indexing actions
-  - [ ] Status bar integration
-
-- [ ] **UX-028**: Telemetry & analytics (opt-in) (~1 week)
-  - [ ] Usage patterns (opt-in, privacy-preserving)
-  - [ ] Error frequency tracking
-  - [ ] Performance metrics
-  - [ ] Feature adoption rates
-  - [ ] Helps identify UX issues in the wild
-
-## Phase 3.5: Adaptive Retrieval Gate (Optional Optimization)
-
-### Intelligent Retrieval Skipping
-
-- [ ] **FEAT-001**: Create retrieval predictor (src/router/retrieval_predictor.py)
-  - [ ] Class: RetrievalPredictor
-  - [ ] Method: predict_utility(query: str) -> float (0-1 probability)
-  - [ ] Implement heuristic rules (not ML initially)
-  - [ ] Analyze query: type, length, keywords
-  - [ ] Expected: 30-40% of queries can be skipped
-
-- [ ] **FEAT-002**: Implement retrieval gate (src/router/retrieval_gate.py)
-  - [ ] Class: RetrievalGate
-  - [ ] Configurable threshold (default 80%)
-  - [ ] Skip Qdrant search if utility < threshold
-  - [ ] Log gating decisions
-
-- [ ] **FEAT-003**: Integrate gate into memory.find() handler
-  - [ ] Run prediction before Qdrant search
-  - [ ] Track metrics (queries gated, skipped, etc.)
-  - [ ] Report estimated token savings
-
-- [ ] **FEAT-004**: Add metrics collection
-  - [ ] Counter: queries processed/gated
-  - [ ] Timer: prediction time
-  - [ ] Timer: retrieval time comparison
-  - [ ] Report: estimated token savings
-
-- [ ] **TEST-009**: Create tests/integration/test_retrieval_gate.py
-  - [ ] Test: Coding questions not gated
-  - [ ] Test: Small talk gated
-  - [ ] Test: Threshold enforcement
-  - [ ] Test: Metrics collection
-
-## Future Enhancements
-
-### Language Support
-
-- [ ] **FEAT-005**: Add support for C++
-- [ ] **FEAT-006**: Add support for C#
-- [ ] **FEAT-007**: Add support for Ruby
-- [ ] **FEAT-008**: Add support for PHP
-- [ ] **FEAT-009**: Add support for Swift
-- [ ] **FEAT-010**: Add support for Kotlin
-
-### Code Intelligence
-
-- [ ] **FEAT-011**: Import/dependency tracking
-  - [ ] Extract import statements
-  - [ ] Build dependency graph
-  - [ ] Track usage relationships
-
-- [ ] **FEAT-012**: Docstring extraction
-  - [ ] Separate indexing for documentation
-  - [ ] Link docs to code units
-
-- [ ] **FEAT-013**: Change detection
-  - [ ] Smart diffing to re-index only changed functions
-  - [ ] Track function-level changes
-
-- [ ] **FEAT-014**: Semantic refactoring
-  - [ ] Find all usages semantically
-  - [ ] Suggest refactoring opportunities
-
-- [ ] **FEAT-015**: Code review features
-  - [ ] LLM-powered suggestions based on patterns
-  - [ ] Identify code smells
-
-### Performance Optimizations
-
-- [ ] **PERF-001**: Parallel indexing
-  - [ ] Multi-process embedding generation
-  - [ ] Target: 10-20 files/sec
-
-- [ ] **PERF-002**: GPU acceleration
-  - [ ] Use CUDA for embedding model
-  - [ ] Potential 50-100x speedup
-
-- [ ] **PERF-003**: Incremental embeddings
-  - [ ] Cache embeddings for unchanged code
-  - [ ] Skip re-embedding on minor changes
-
-- [ ] **PERF-004**: Smart batching
-  - [ ] Group files by size for optimal batching
-  - [ ] Reduce embedding overhead
-
-- [ ] **PERF-005**: Streaming indexing
-  - [ ] Don't wait for all files to parse
-  - [ ] Start embedding as units are extracted
-
-### Deployment & Operations
-
-- [ ] **FEAT-016**: Auto-indexing
-  - [ ] Automatically index on project open
-  - [ ] Background indexing for large projects
-
-- [ ] **FEAT-017**: Multi-repository support
-  - [ ] Index across multiple repositories
-  - [ ] Cross-repo code search
-
-- [ ] **FEAT-018**: Query DSL
-  - [ ] Advanced filters (by file pattern, date, author, etc.)
-  - [ ] Complex query expressions
-
-- [ ] **FEAT-019**: IDE Integration
-  - [ ] VS Code extension for instant code search
-  - [ ] IntelliJ plugin
-  - [ ] Vim/Neovim integration
-
-### Analytics & Monitoring
-
-- [ ] **FEAT-020**: Usage patterns tracking
-  - [ ] Track most searched queries
-  - [ ] Identify frequently accessed code
-  - [ ] User behavior analytics
-
-- [ ] **FEAT-021**: Memory lifecycle management
-  - [ ] Auto-expire old memories
-  - [ ] Memory importance decay
-  - [ ] Storage optimization
-
-- [ ] **FEAT-022**: Performance monitoring dashboard
-  - [ ] Real-time metrics visualization
-  - [ ] Alerting for performance degradation
-  - [ ] Capacity planning tools
-
-### Advanced Retrieval
-
-- [ ] **FEAT-023**: Hybrid search (BM25 + vector)
-  - [ ] Combine keyword and semantic search
-  - [ ] Better recall for specific terms
-
-- [ ] **FEAT-024**: Query expansion
-  - [ ] Expand queries with synonyms
-  - [ ] Use code context for better results
-
-- [ ] **FEAT-025**: Result reranking
-  - [ ] ML-based relevance scoring
-  - [ ] Personalized ranking based on usage
-
-### Documentation & User Experience
-
-- [ ] **DOC-001**: Interactive documentation
-  - [ ] Live examples in docs
-  - [ ] Playground for testing queries
-
-- [ ] **DOC-002**: Migration guides
-  - [ ] From other code search tools
-  - [ ] Database migration utilities
-
-- [ ] **DOC-003**: Video tutorials
-  - [ ] Setup walkthrough
-  - [ ] Feature demonstrations
-  - [ ] Best practices guide
-
-## Bug Fixes & Maintenance
-
-### Known Issues
-
-- [ ] **BUG-001**: TypeScript parser occasionally fails on complex files
-  - Need to update tree-sitter-typescript
-  - Add better error recovery
-
-- [ ] **BUG-002**: Metadata display shows "unknown" in some cases
-  - Low priority, cosmetic issue
-  - Fix display logic in search results
-
-### Tech Debt
-
-- [ ] **REF-007**: Consolidate two server implementations
-  - Merge old mcp_server.py with new src/core/
-  - Unified architecture
-
-- [ ] **REF-008**: Remove deprecated API usage
-  - Update to latest Qdrant APIs
-  - Update to latest MCP SDK
-
-## Documentation Updates
-
-- [ ] **DOC-004**: Update README with code search examples
-- [ ] **DOC-005**: Add performance tuning guide for large codebases
-- [ ] **DOC-006**: Create troubleshooting guide for common parser issues
-- [ ] **DOC-007**: Document best practices for project organization
+### Visibility & Observability (Partial) ✅
+
+- [x] **UX-006**: Status/stats command (~2 days) ✅ **COMPLETE**
+  - [x] `python -m src.cli status` showing indexed projects
+  - [x] Number of files, functions, classes per project
+  - [x] Storage used, cache hit rates
+  - [x] Recent indexing activity
+  - [x] Memory stats by category/context level
+  - **Result:** Full project statistics with Qdrant & SQLite support
+
+- [x] **UX-007**: Indexing progress indicators (~1 day) ✅ **COMPLETE**
+  - [x] Real-time progress bar during indexing
+  - [x] File count, estimated time remaining
+  - [x] Current file being processed
+  - [x] Errors encountered (with continue option)
+  - **Result:** Rich progress bar with concurrent file tracking, 94.89% coverage
+
+- [x] **UX-010**: File watcher status visibility (~1 day) ✅ **COMPLETE**
+  - [x] Show active watchers in status command
+  - [x] File watcher configuration and capabilities display
+  - [x] Usage instructions and guidance
+  - [x] Supported extensions and debounce settings
+  - **Result:** Professional status display with rich formatting
+
+---
 
 ## Notes
 
 **Priority Legend:**
-- 🔴 Critical - Blocks production use
-- 🟡 High - Significantly improves functionality
-- 🟢 Medium - Nice to have
-- ⚪ Low - Future consideration
+- 🔴 Tier 1 - Complete partially-finished initiatives + critical bugs first
+- 🔥 Tier 2 - High-impact core functionality improvements
+- 🟡 Tier 3 - Core functionality extensions
+- 🟢 Tier 4+ - UX improvements, language support, future features (lower priority per user preferences)
 
 **Time Estimates:**
 - Items marked with time estimates have been scoped
