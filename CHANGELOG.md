@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - 2025-11-17
 
+- **UX-016: Memory Migration Tools (Phase 1)** - Storage backend methods for memory migration and transformation
+  - Added `migrate_memory_scope(memory_id, new_project_name)` to SQLite and Qdrant stores
+    - Migrate memories between scopes (global ↔ project)
+    - Update project_name for individual memories
+  - Added `bulk_update_context_level(new_level, filters...)` to both stores
+    - Bulk update context levels (CRITICAL/CORE/DETAIL/ARCHIVE)
+    - Support filtering by project, current level, category
+  - Added `find_duplicate_memories(project_name, threshold)` to both stores
+    - SQLite: Content-based exact matching
+    - Qdrant: Embedding similarity with cosine distance
+  - Added `merge_memories(memory_ids, keep_id)` to both stores
+    - Combine multiple memories into one
+    - Concatenate unique content parts
+    - Delete duplicate memories after merge
+  - **Impact:** Foundation for memory lifecycle management and cleanup operations
+  - **Note:** MCP tools and CLI commands deferred for future implementation
+
 - **WORKFLOW: Git worktree support for parallel agent development** - Configured repository to use git worktrees for concurrent feature development
   - Created `.worktrees/` directory for isolated feature branches
   - Added `.worktrees/` to `.gitignore` to prevent committing worktree directories
