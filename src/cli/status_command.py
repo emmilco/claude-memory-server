@@ -164,6 +164,42 @@ class StatusCommand:
             logger.error(f"Error getting indexed projects: {e}")
             return []
 
+    async def get_active_project(self) -> Optional[Dict[str, Any]]:
+        """Get active project information."""
+        from src.config import get_config
+        from src.core.server import MemoryRAGServer
+
+        config = get_config()
+        server = MemoryRAGServer(config)
+
+        try:
+            await server.initialize()
+
+            # Get active project via server method
+            result = await server.get_active_project()
+
+            if result.get("status") == "success":
+                return {
+                    "name": result.get("project_name"),
+                    "path": result.get("project_path"),
+                    "git_repo": result.get("git_repo"),
+                    "git_branch": result.get("git_branch"),
+                    "last_activity": result.get("last_activity"),
+                    "file_activity_count": result.get("file_activity_count", 0),
+                }
+            else:
+                return None
+
+        except Exception as e:
+            logger.error(f"Error getting active project: {e}")
+            return None
+
+        finally:
+            try:
+                await server.close()
+            except:
+                pass
+
     async def get_parser_info(self) -> Dict[str, Any]:
         """Get parser information."""
         from src.memory.incremental_indexer import PARSER_MODE, RUST_AVAILABLE
@@ -351,6 +387,45 @@ class StatusCommand:
                 print(f"  Extensions: {', '.join(info.get('supported_extensions', []))}")
                 print("  Start: python -m src.cli watch ./path")
 
+    def print_active_project(self, project_info: Optional[Dict[str, Any]]):
+        """Print active project information."""
+        if self.console:
+            self.console.print("[bold cyan]Active Project[/bold cyan]")
+
+            if project_info:
+                self.console.print(f"  Name: [green]{project_info['name']}[/green]")
+
+                if project_info.get("path"):
+                    self.console.print(f"  Path: {project_info['path']}")
+
+                if project_info.get("git_branch"):
+                    self.console.print(f"  Branch: [blue]{project_info['git_branch']}[/blue]")
+
+                if project_info.get("last_activity"):
+                    from datetime import datetime
+                    try:
+                        last_activity = datetime.fromisoformat(project_info["last_activity"])
+                        activity_str = self._format_relative_time(last_activity)
+                        self.console.print(f"  Last Activity: {activity_str}")
+                    except:
+                        pass
+
+                file_count = project_info.get("file_activity_count", 0)
+                self.console.print(f"  File Activity: {file_count} files accessed")
+            else:
+                self.console.print("  [dim]No active project set[/dim]")
+                self.console.print("  [dim]Switch with: python -m src.cli.project switch <name>[/dim]")
+
+            self.console.print()
+        else:
+            print("\nActive Project")
+            if project_info:
+                print(f"  Name: {project_info['name']}")
+                if project_info.get("path"):
+                    print(f"  Path: {project_info['path']}")
+                if project_info.get("git_branch"):
+                    print(f"  Branch: {project_info['git_branch']}")
+
     def print_projects_table(self, projects: List[Dict[str, Any]]):
         """Print indexed projects table."""
         if not projects:
@@ -397,6 +472,31 @@ class StatusCommand:
                 print(f"    Functions: {project.get('num_functions', 0)}")
                 print(f"    Classes: {project.get('num_classes', 0)}")
 
+    def print_degradation_warnings(self):
+        """Print system degradation warnings if any."""
+        from src.core.degradation_warnings import get_degradation_tracker
+
+        tracker = get_degradation_tracker()
+
+        if not tracker.has_degradations():
+            # No degradations - show success message
+            if self.console:
+                self.console.print("✓ [green]All components running at full performance[/green]\n")
+            return
+
+        if not self.console:
+            print("\n" + tracker.get_summary())
+            return
+
+        # Rich formatting
+        self.console.print()
+        self.console.print(Panel(
+            tracker.get_summary(),
+            title="⚠️  System Degradation Warnings",
+            border_style="yellow",
+            padding=(1, 2),
+        ))
+
     def print_quick_commands(self):
         """Print quick reference commands."""
         if self.console:
@@ -415,12 +515,16 @@ class StatusCommand:
         """Run status command."""
         self.print_header()
 
+        # Show degradation warnings first (if any)
+        self.print_degradation_warnings()
+
         # Gather all stats
         storage_stats = await self.get_storage_stats()
         cache_stats = await self.get_cache_stats()
         parser_info = await self.get_parser_info()
         embedding_info = await self.get_embedding_model_info()
         file_watcher_info = await self.get_file_watcher_info()
+        active_project = await self.get_active_project()
         projects = await self.get_indexed_projects()
 
         # Print sections
@@ -429,5 +533,6 @@ class StatusCommand:
         self.print_parser_info(parser_info)
         self.print_embedding_info(embedding_info)
         self.print_file_watcher_info(file_watcher_info)
+        self.print_active_project(active_project)
         self.print_projects_table(projects)
         self.print_quick_commands()

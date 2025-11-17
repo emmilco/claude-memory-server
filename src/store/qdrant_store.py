@@ -1180,3 +1180,332 @@ class QdrantMemoryStore(MemoryStore):
         except Exception as e:
             logger.error(f"Failed to get all memories: {e}")
             return []
+
+    async def migrate_memory_scope(self, memory_id: str, new_project_name: Optional[str]) -> bool:
+        """
+        Migrate a memory to a different scope (change project_name).
+
+        Args:
+            memory_id: ID of the memory to migrate
+            new_project_name: New project name (None for global scope)
+
+        Returns:
+            True if migrated successfully
+
+        Raises:
+            StorageError: If migration fails
+        """
+        if not self.client:
+            raise StorageError("Store not initialized")
+
+        try:
+            # Get the memory
+            points = self.client.retrieve(
+                collection_name=self.collection_name,
+                ids=[memory_id],
+                with_payload=True,
+                with_vectors=True,
+            )
+
+            if not points:
+                raise StorageError(f"Memory not found: {memory_id}")
+
+            point = points[0]
+            payload = dict(point.payload)
+
+            # Update project_name
+            payload["project_name"] = new_project_name
+
+            # Upsert with updated payload
+            self.client.upsert(
+                collection_name=self.collection_name,
+                points=[
+                    PointStruct(
+                        id=point.id,
+                        vector=point.vector,
+                        payload=payload,
+                    )
+                ],
+            )
+
+            scope = new_project_name if new_project_name else "global"
+            logger.info(f"Migrated memory {memory_id} to scope: {scope}")
+            return True
+
+        except StorageError:
+            raise
+        except Exception as e:
+            logger.error(f"Error migrating memory {memory_id}: {e}")
+            raise StorageError(f"Failed to migrate memory scope: {e}")
+
+    async def bulk_update_context_level(
+        self,
+        new_context_level: str,
+        project_name: Optional[str] = None,
+        current_context_level: Optional[str] = None,
+        category: Optional[str] = None,
+    ) -> int:
+        """
+        Bulk update context level for memories matching criteria.
+
+        Args:
+            new_context_level: New context level to set
+            project_name: Filter by project name (optional)
+            current_context_level: Filter by current context level (optional)
+            category: Filter by category (optional)
+
+        Returns:
+            Number of memories updated
+
+        Raises:
+            StorageError: If update fails
+        """
+        if not self.client:
+            raise StorageError("Store not initialized")
+
+        try:
+            # Build filter
+            conditions = []
+            if project_name is not None:
+                conditions.append(
+                    FieldCondition(
+                        key="project_name",
+                        match=MatchValue(value=project_name),
+                    )
+                )
+            if current_context_level is not None:
+                conditions.append(
+                    FieldCondition(
+                        key="context_level",
+                        match=MatchValue(value=current_context_level),
+                    )
+                )
+            if category is not None:
+                conditions.append(
+                    FieldCondition(
+                        key="category",
+                        match=MatchValue(value=category),
+                    )
+                )
+
+            filter_obj = Filter(must=conditions) if conditions else None
+
+            # Get all matching memories and update them
+            offset = None
+            count = 0
+
+            while True:
+                results, offset = self.client.scroll(
+                    collection_name=self.collection_name,
+                    scroll_filter=filter_obj,
+                    limit=100,
+                    offset=offset,
+                    with_payload=True,
+                    with_vectors=True,
+                )
+
+                if not results:
+                    break
+
+                # Update context_level in payloads
+                points_to_update = []
+                for point in results:
+                    payload = dict(point.payload)
+                    payload["context_level"] = new_context_level
+                    points_to_update.append(
+                        PointStruct(
+                            id=point.id,
+                            vector=point.vector,
+                            payload=payload,
+                        )
+                    )
+                    count += 1
+
+                # Upsert updated points
+                self.client.upsert(
+                    collection_name=self.collection_name,
+                    points=points_to_update,
+                )
+
+                if offset is None:
+                    break
+
+            logger.info(f"Updated context level for {count} memories to {new_context_level}")
+            return count
+
+        except Exception as e:
+            logger.error(f"Error bulk updating context level: {e}")
+            raise StorageError(f"Failed to bulk update context level: {e}")
+
+    async def find_duplicate_memories(
+        self,
+        project_name: Optional[str] = None,
+        similarity_threshold: float = 0.95,
+    ) -> List[List[str]]:
+        """
+        Find potential duplicate memories using embedding similarity.
+
+        Args:
+            project_name: Filter by project name (optional)
+            similarity_threshold: Similarity threshold (0.0-1.0)
+
+        Returns:
+            List of memory ID groups (each group is potential duplicates)
+
+        Raises:
+            StorageError: If search fails
+        """
+        if not self.client:
+            raise StorageError("Store not initialized")
+
+        try:
+            # Get all memories matching criteria
+            filter_obj = None
+            if project_name:
+                filter_obj = Filter(
+                    must=[
+                        FieldCondition(
+                            key="project_name",
+                            match=MatchValue(value=project_name),
+                        )
+                    ]
+                )
+
+            offset = None
+            memories = []
+
+            while True:
+                results, offset = self.client.scroll(
+                    collection_name=self.collection_name,
+                    scroll_filter=filter_obj,
+                    limit=100,
+                    offset=offset,
+                    with_payload=True,
+                    with_vectors=True,
+                )
+
+                if not results:
+                    break
+
+                for point in results:
+                    memories.append((point.id, point.vector, point.payload.get("content", "")))
+
+                if offset is None:
+                    break
+
+            # Find duplicates using embedding similarity
+            duplicates = []
+            seen = set()
+
+            for i, (id1, vec1, content1) in enumerate(memories):
+                if id1 in seen:
+                    continue
+
+                group = [id1]
+                for j, (id2, vec2, content2) in enumerate(memories[i+1:], start=i+1):
+                    if id2 in seen:
+                        continue
+
+                    # Calculate cosine similarity
+                    import numpy as np
+                    similarity = np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
+
+                    if similarity >= similarity_threshold:
+                        group.append(id2)
+                        seen.add(id2)
+
+                if len(group) > 1:
+                    duplicates.append(group)
+                    seen.add(id1)
+
+            logger.info(f"Found {len(duplicates)} potential duplicate groups")
+            return duplicates
+
+        except Exception as e:
+            logger.error(f"Error finding duplicate memories: {e}")
+            raise StorageError(f"Failed to find duplicates: {e}")
+
+    async def merge_memories(
+        self,
+        memory_ids: List[str],
+        keep_id: Optional[str] = None,
+    ) -> str:
+        """
+        Merge multiple memories into one.
+
+        Args:
+            memory_ids: List of memory IDs to merge
+            keep_id: ID of memory to keep (uses first if not specified)
+
+        Returns:
+            ID of the merged memory
+
+        Raises:
+            StorageError: If merge fails
+        """
+        if not self.client:
+            raise StorageError("Store not initialized")
+
+        if len(memory_ids) < 2:
+            raise StorageError("Need at least 2 memories to merge")
+
+        try:
+            # Determine which memory to keep
+            target_id = keep_id if keep_id and keep_id in memory_ids else memory_ids[0]
+            other_ids = [mid for mid in memory_ids if mid != target_id]
+
+            # Get all memories
+            points = self.client.retrieve(
+                collection_name=self.collection_name,
+                ids=memory_ids,
+                with_payload=True,
+                with_vectors=True,
+            )
+
+            if len(points) != len(memory_ids):
+                raise StorageError("Some memories not found")
+
+            # Find target memory
+            target_point = next((p for p in points if p.id == target_id), None)
+            if not target_point:
+                raise StorageError(f"Target memory not found: {target_id}")
+
+            # Combine content
+            target_payload = dict(target_point.payload)
+            combined_content = target_payload.get("content", "")
+
+            for point in points:
+                if point.id != target_id:
+                    content = point.payload.get("content", "")
+                    if content and content not in combined_content:
+                        combined_content += f"\n\n---\n\n{content}"
+
+            # Update target memory with combined content
+            target_payload["content"] = combined_content
+            target_payload["updated_at"] = datetime.now(UTC).isoformat()
+
+            self.client.upsert(
+                collection_name=self.collection_name,
+                points=[
+                    PointStruct(
+                        id=target_point.id,
+                        vector=target_point.vector,
+                        payload=target_payload,
+                    )
+                ],
+            )
+
+            # Delete other memories
+            self.client.delete(
+                collection_name=self.collection_name,
+                points_selector=PointIdsList(points=other_ids),
+            )
+
+            logger.info(f"Merged {len(memory_ids)} memories into {target_id}")
+            return target_id
+
+        except StorageError:
+            raise
+        except Exception as e:
+            logger.error(f"Error merging memories: {e}")
+            raise StorageError(f"Failed to merge memories: {e}")

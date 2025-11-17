@@ -45,6 +45,11 @@ class ServerConfig(BaseSettings):
     enable_file_watcher: bool = True
     watch_debounce_ms: int = 1000
 
+    # Graceful degradation (UX-012)
+    allow_qdrant_fallback: bool = True  # Fall back to SQLite if Qdrant unavailable
+    allow_rust_fallback: bool = True  # Fall back to Python parser if Rust unavailable
+    warn_on_degradation: bool = True  # Show warnings when running in degraded mode
+
     # Adaptive retrieval
     enable_retrieval_gate: bool = True
     retrieval_gate_threshold: float = 0.8
@@ -99,6 +104,12 @@ class ServerConfig(BaseSettings):
     enable_cross_project_search: bool = True  # Allow searching across projects
     cross_project_default_mode: str = "current"  # "current" or "all"
     cross_project_opt_in_file: str = "~/.claude-rag/cross_project_consent.json"
+
+    # Multi-repository support (FEAT-017)
+    enable_multi_repository: bool = True  # Enable multi-repository features
+    multi_repo_max_parallel: int = 3  # Max concurrent repository operations
+    repository_storage_path: str = "~/.claude-rag/repositories.json"
+    workspace_storage_path: str = "~/.claude-rag/workspaces.json"
 
     model_config = SettingsConfigDict(
         env_prefix="CLAUDE_RAG_",

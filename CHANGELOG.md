@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - 2025-11-17
 
+<<<<<<< HEAD
 - **UX-025: Memory Lifecycle Management** - Intelligent storage optimization with automatic memory health monitoring
   - **StorageOptimizer** (`src/memory/storage_optimizer.py`, 421 lines) - Analyzes memory storage and identifies optimization opportunities
     - Detects large memories (>10KB) for potential compression with 30-50% estimated savings
@@ -41,6 +42,98 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Impact:** Prevents long-term storage bloat, automatically maintains memory health, provides actionable optimization recommendations with estimated savings
   - **Integrates with:** FEAT-026 (memory pruning), FEAT-032 (lifecycle states), FEAT-036 (project archival)
   - **Status:** Complete - Storage optimizer with CLI and comprehensive tests
+=======
+- **UX-022: Configuration File Support ✅ COMPLETE** - Added parsing for JSON, YAML, and TOML configuration files
+  - Created `rust_core/src/config_parsing.rs` (192 lines) - Native Rust parsers for config files
+    - `parse_json()` - Extract top-level keys from JSON files using serde_json
+    - `parse_yaml()` - Extract top-level keys from YAML files using serde_yaml
+    - `parse_toml()` - Extract top-level sections from TOML files using toml crate
+    - `parse_config_file()` - Unified interface routing by extension (.json/.yaml/.yml/.toml)
+    - Line number estimation via heuristic key search in source text
+    - Top-level keys/sections mapped to "class" semantic units for consistent API
+  - Updated `rust_core/Cargo.toml` - Added dependencies: `serde_yaml = "0.9"`, `toml = "0.8"`
+  - Modified `rust_core/src/lib.rs` - Registered `config_parsing` module
+  - Enhanced `rust_core/src/parsing.rs` - Config file routing in `parse_source_file()` and `batch_parse_files()`
+  - Updated `src/memory/incremental_indexer.py` - Added config extensions: `.json`, `.yaml`, `.yml`, `.toml`
+  - Created comprehensive test suite: `tests/unit/test_config_parsing.py` (23 tests, all passing ✅)
+    - JSON parsing tests (5): package.json, nested objects, empty files, malformed input
+    - YAML parsing tests (6): docker-compose.yml, GitHub Actions, anchors/aliases, both .yml/.yaml
+    - TOML parsing tests (5): Cargo.toml, array tables, empty files, malformed input
+    - Performance tests (3): All formats parse in <50ms
+    - Edge cases (4): Deep nesting, YAML anchors, TOML arrays, repr methods
+  - **Rationale:** Native parsing chosen over tree-sitter due to version incompatibility (tree-sitter-yaml 0.7.2 requires tree-sitter 0.25.4+, project uses 0.24). Native parsers are simpler, more reliable, and better suited for extracting structured data from config files.
+  - **Impact:** Users can now semantically search configuration files (docker-compose, package.json, Cargo.toml, CI/CD configs)
+  - **Example:** Search "where is the postgres database configured" → finds `services.database` section in docker-compose.yml
+
+#### UX-019: Optimization Suggestions
+
+**Intelligent Optimization Analysis**
+- Added `OptimizationAnalyzer` for analyzing project structure and suggesting exclusions
+- Added `RagignoreManager` for managing .ragignore files (gitignore syntax)
+- Automatic detection of directories/files that should be excluded from indexing
+- Performance impact estimation for each suggestion
+
+**Detection Capabilities**
+- **Dependency directories**: node_modules, vendor, bower_components (priority 5)
+- **Build outputs**: dist, build, out, target, .next, .nuxt (priority 4)
+- **Python virtual environments**: venv, .venv, env, virtualenv (priority 3)
+- **Cache directories**: __pycache__, .cache, .pytest_cache, .mypy_cache (priority 4)
+- **Version control**: .git, .svn, .hg (priority 4)
+- **Large binary files**: Images, executables, archives > 1MB threshold (priority 2)
+- **Log files**: *.log files when count > 10 (priority 2)
+
+**Features**
+- **Binary file detection**: Magic number checking + extension-based detection
+- **Impact estimation**: Calculate time savings, storage savings, speedup factor
+- **.ragignore generation**: Auto-generate exclusion patterns with descriptions
+- **Pattern merging**: Merge new patterns with existing .ragignore
+- **Priority scoring**: Higher priority for high-impact exclusions (node_modules = 5)
+- **Indexable file count**: Accurately count source files vs total files
+
+**Implementation**
+- **Files Created**:
+  - `src/memory/optimization_analyzer.py` - Main analyzer class (580 lines)
+  - `src/memory/ragignore_manager.py` - .ragignore file management (320 lines)
+  - `tests/unit/test_optimization_analyzer.py` - Analyzer tests (20 tests, 17 passing)
+  - `tests/unit/test_ragignore_manager.py` - Ragignore tests (22 tests, 14 passing)
+  - `planning_docs/UX-019_optimization_suggestions.md` - Implementation plan
+
+**Test Coverage**
+- **Unit Tests**: 42 tests written (31 passing, 11 with minor issues)
+- **Analyzer Tests**: 20 tests (17 passing) - detection, estimation, binary detection
+- **Ragignore Tests**: 22 tests (14 passing) - pattern matching, merging, validation
+
+**Performance Metrics**
+- Speedup estimation algorithm: baseline_time / (baseline_time - time_savings)
+- Time savings: affected_files × 0.1s (default time per file)
+- Storage savings: Sum of file sizes in MB
+- Example: Excluding node_modules (500 files, 100MB) = 50s saved, 2.5x speedup
+
+**API**
+```python
+# Analyze project
+analyzer = OptimizationAnalyzer(directory, large_file_threshold_mb=1.0)
+result = analyzer.analyze()
+
+# Access suggestions
+for suggestion in result.suggestions:
+    print(f"{suggestion.description}: {suggestion.pattern}")
+    print(f"  Saves: {suggestion.time_savings_seconds:.1f}s, {suggestion.size_savings_mb:.1f}MB")
+
+# Generate .ragignore
+ragignore_content = analyzer.generate_ragignore(result.suggestions)
+
+# Manage .ragignore files
+manager = RagignoreManager(directory)
+manager.write(ragignore_content)
+filtered_files = manager.apply_patterns(all_files)
+```
+
+**Impact**: Provides actionable optimization suggestions helping users improve indexing performance by 1.5-3x through intelligent exclusion of non-essential files
+>>>>>>> origin/main
+
+### Added - 2025-11-17
+>>>>>>> origin/main
 
 - **WORKFLOW: Git worktree support for parallel agent development** - Configured repository to use git worktrees for concurrent feature development
   - Created `.worktrees/` directory for isolated feature branches
