@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - 2025-11-17
 
+- **UX-031: Session Summaries ✅ COMPLETE** - Display session-specific usage statistics
+  - Created `src/cli/session_summary_command.py` - CLI command for session summaries (140+ lines)
+  - Added `session-summary` CLI command: `python -m src.cli session-summary [--session-id ID]`
+  - Displays: searches performed, files indexed, tokens used/saved, cost savings, efficiency, avg relevance
+  - Two display modes: specific session detail or top sessions leaderboard
+  - Rich formatted output with summary panel and statistics table
+  - Color-coded relevance scores (green/yellow/red) for quick assessment
+  - Example: "Session Summary: 23 searches, ~12,400 tokens saved (~$0.04)"
+  - Leverages existing TokenTracker infrastructure from UX-029
+  - Comprehensive test suite: `tests/unit/test_session_summary.py` (3 tests passing)
+  - **Impact:** Proves value incrementally, increases engagement, enables session tracking
+  - **Usage:** Perfect for post-session review and ROI demonstration
+  - **Runtime Cost:** +1MB storage (minimal), negligible CPU
+
 - **UX-029: Token Usage Analytics Dashboard ✅ COMPLETE** - Track and visualize token savings
   - Created `src/analytics/token_tracker.py` - Token usage tracking with SQLite backend (350+ lines)
   - Created `src/analytics/__init__.py` - Analytics package exports

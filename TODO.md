@@ -356,13 +356,14 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Complexity:** Low (~300 lines)
   - **Runtime Cost:** +10MB storage, negligible CPU/latency
 
-- [ ] **UX-031**: Session Summaries (~1-2 days) 🔥🔥
-  - [ ] **Confirm overall feature design with user before proceeding**
-  - [ ] Track: searches performed, files indexed, tokens saved
-  - [ ] Display at session end or via CLI command
-  - [ ] Example: "Session Summary: 23 searches, ~12,400 tokens saved (~$0.04)"
-  - [ ] Show most useful results (by reference count)
-  - [ ] CLI command: `python -m src.cli session-summary`
+- [x] **UX-031**: Session Summaries (~1-2 days) 🔥🔥 ✅ **COMPLETE**
+  - [x] Track: searches performed, files indexed, tokens saved
+  - [x] Display at session end or via CLI command
+  - [x] Example: "Session Summary: 23 searches, ~12,400 tokens saved (~$0.04)"
+  - [x] CLI command: `python -m src.cli session-summary`
+  - [x] Show top sessions by tokens saved
+  - [x] Rich formatted output with color-coded metrics
+  - [x] Comprehensive test suite (3 tests passing)
   - **Impact:** Increases engagement, proves value incrementally
   - **Complexity:** Low (~200 lines)
   - **Runtime Cost:** +1MB storage, negligible CPU

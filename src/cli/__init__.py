@@ -14,6 +14,7 @@ from src.cli.prune_command import prune_command
 from src.cli.git_index_command import GitIndexCommand
 from src.cli.git_search_command import GitSearchCommand
 from src.cli.analytics_command import run_analytics_command
+from src.cli.session_summary_command import run_session_summary_command
 
 
 def setup_logging(level: str = "INFO"):
@@ -245,6 +246,18 @@ def create_parser() -> argparse.ArgumentParser:
         help="Show top sessions by tokens saved",
     )
 
+    # Session summary command
+    session_summary_parser = subparsers.add_parser(
+        "session-summary",
+        help="View summary of current or recent sessions",
+    )
+    session_summary_parser.add_argument(
+        "--session-id",
+        "-s",
+        type=str,
+        help="Specific session ID to summarize",
+    )
+
     return parser
 
 
@@ -285,6 +298,10 @@ async def main_async(args):
             session_id=args.session_id,
             project_name=args.project_name,
             show_top_sessions=args.top_sessions,
+        )
+    elif args.command == "session-summary":
+        run_session_summary_command(
+            session_id=args.session_id,
         )
     else:
         print("No command specified. Use --help for usage information.")
