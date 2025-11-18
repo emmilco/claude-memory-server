@@ -485,6 +485,28 @@ pytest tests/integration/ -v
 pytest tests/security/ -v
 ```
 
+### Fast Parallel Testing (Recommended)
+```bash
+# Run tests in parallel with pytest-xdist (2.55x faster!)
+pytest tests/ -n auto -v
+
+# Parallel with coverage
+pytest tests/ -n auto --cov=src --cov-report=html
+
+# Parallel for specific modules
+pytest tests/unit/ -n auto -v
+
+# Note: -n auto automatically detects CPU cores (e.g., 8 workers)
+# Performance: ~84s with parallel vs ~215s sequential (PERF-006)
+```
+
+**Why use pytest-xdist:**
+- ✅ **2.55x speedup** with zero code changes (8 workers on typical systems)
+- ✅ Better test isolation (tests run in separate processes)
+- ✅ Automatic CPU core detection
+- ✅ Compatible with all optimizations (mock_embeddings, small_test_project)
+- ✅ Full test suite: ~1:24 with parallel vs ~3:34 sequential
+
 ### Debugging
 ```bash
 # Check Qdrant health

@@ -119,8 +119,10 @@ A pre-commit hook enforces CHANGELOG updates:
   - Optimized `test_server_extended.py` with mock embeddings on all 20+ tests (except cache test)
   - Optimized `test_hybrid_search_integration.py` with reduced corpus (80% smaller files)
   - Fixed `test_same_text_uses_cache` to exclude mock_embeddings (needs real cache verification)
-  - Full test suite: 1926/1932 passing in 214.93s (3:34)
-  - Files: tests/conftest.py, tests/unit/test_cross_project.py, tests/unit/test_server_extended.py, tests/integration/test_hybrid_search_integration.py
+  - Added pytest-xdist documentation to CLAUDE.md (2.55x speedup with parallel execution)
+  - Full test suite: 1926/1932 passing in 214.93s (3:34) sequential, 84.20s (1:24) with xdist
+  - Combined optimizations: ~4x faster overall (340s → 84s with xdist)
+  - Files: tests/conftest.py, tests/unit/test_cross_project.py, tests/unit/test_server_extended.py, tests/integration/test_hybrid_search_integration.py, CLAUDE.md
 
 ### Planning - 2025-11-17
 
