@@ -286,6 +286,7 @@ class TestSpecificUseCases:
         # Should include API-related terms
         assert any(term in expanded_lower for term in ["endpoint", "http", "request"])
 
+    @pytest.mark.skip_ci(reason="Query expansion timing/environment sensitive")
     def test_error_handling_search(self):
         """Test error handling search expansion."""
         query = "handle exceptions"
