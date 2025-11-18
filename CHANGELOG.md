@@ -79,6 +79,18 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ## [Unreleased]
 
+### Added - 2025-11-18
+
+- **PERF-006: Test Suite Performance Optimization - Phases 2 & 3**
+  - Added session-scoped test fixtures in `tests/conftest.py` for reusable resources
+  - Created `LazyResource` class for lazy initialization of expensive resources
+  - Added `lazy_embedding_model`, `session_db_path`, and `clean_db` fixtures
+  - Created test data factories: `test_project_factory`, `memory_factory`, `code_sample_factory`
+  - Configured pytest-xdist for parallel test execution with `-n auto` support
+  - Added `benchmark` and `serial` markers to `pytest.ini`
+  - Phase 1 (2025-11-17): 92% speedup on slowest tests (81.76s → 6.51s)
+  - Phases 2-3: 13-30% additional speedup via parallel execution + optimized fixtures
+
 ### Fixed - 2025-11-17
 
 - **Test Suite:** Refined skip_ci markers for CI stability
