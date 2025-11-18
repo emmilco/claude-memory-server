@@ -66,53 +66,29 @@ async def server_without_hybrid_search():
 
 
 @pytest_asyncio.fixture
-async def indexed_code_server(server_with_hybrid_search):
-    """Server with sample code already indexed."""
+async def indexed_code_server(server_with_hybrid_search, mock_embeddings):
+    """Server with sample code already indexed (optimized with small corpus)."""
     server = server_with_hybrid_search
 
-    # Create sample Python files
+    # Create sample Python files - reduced from 3 large files to 3 small files
     temp_code_dir = tempfile.mkdtemp()
 
     try:
-        # Create sample code files
+        # Create minimal sample code files for faster indexing
         auth_file = Path(temp_code_dir) / "auth.py"
-        auth_file.write_text("""
-def authenticate_user(username, password):
-    '''Authenticate a user with credentials.'''
+        auth_file.write_text("""def authenticate_user(username, password):
     return check_credentials(username, password)
-
-def validate_token(token):
-    '''Validate authentication token.'''
-    return token and verify_jwt(token)
-
-class UserAuthenticator:
-    '''Handle user authentication.'''
-    def login(self, user):
-        return authenticate_user(user.username, user.password)
 """)
 
         db_file = Path(temp_code_dir) / "database.py"
-        db_file.write_text("""
-def connect_database(host, port):
-    '''Connect to database server.'''
+        db_file.write_text("""def connect_database(host, port):
     return create_connection(host, port)
-
-class DatabasePool:
-    '''Manage database connection pool.'''
-    def get_connection(self):
-        return self.pool.acquire()
 """)
 
         config_file = Path(temp_code_dir) / "config.py"
-        config_file.write_text("""
-def parse_config(file_path):
-    '''Parse configuration file.'''
+        config_file.write_text("""def parse_config(file_path):
     with open(file_path) as f:
         return json.load(f)
-
-def load_environment():
-    '''Load environment variables.'''
-    return os.environ
 """)
 
         # Index the codebase
