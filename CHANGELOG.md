@@ -81,6 +81,16 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-18
 
+- **FEAT-036: Project Archival Phase 2.3 - Automatic Scheduler**
+  - Created `src/memory/archival_scheduler.py` with ArchivalScheduler for automatic periodic archival
+  - Implemented APScheduler integration with configurable schedules (daily, weekly, monthly)
+  - Added ArchivalScheduleConfig for scheduler configuration (enabled, schedule, threshold, dry-run, max projects)
+  - Supports manual trigger for immediate archival runs
+  - Status monitoring with last run info and next scheduled run
+  - Configuration updates with automatic restart
+  - Notification callback support for archival completion
+  - Files: `src/memory/archival_scheduler.py`, `tests/unit/test_archival_scheduler.py` (23 tests, 100% passing)
+
 - **FEAT-036: Project Archival Phase 2.2 - Bulk Operations**
   - Created `src/memory/bulk_archival.py` with BulkArchivalManager for multi-project archival operations
   - Implemented bulk_archive_projects() and bulk_reactivate_projects() with dry-run mode and progress tracking
