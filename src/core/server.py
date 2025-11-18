@@ -652,6 +652,131 @@ class MemoryRAGServer:
             logger.error(f"Failed to delete memory: {e}")
             raise StorageError(f"Failed to delete memory: {e}")
 
+    async def list_memories(
+        self,
+        category: Optional[str] = None,
+        context_level: Optional[str] = None,
+        scope: Optional[str] = None,
+        project_name: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        min_importance: float = 0.0,
+        max_importance: float = 1.0,
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
+        sort_by: str = "created_at",
+        sort_order: str = "desc",
+        limit: int = 20,
+        offset: int = 0
+    ) -> Dict[str, Any]:
+        """
+        List memories with filtering, sorting, and pagination.
+
+        Args:
+            category: Filter by category (optional)
+            context_level: Filter by context level (optional)
+            scope: Filter by scope (global/project) (optional)
+            project_name: Filter by project (optional)
+            tags: Filter by tags - matches ANY tag (optional)
+            min_importance: Minimum importance (default 0.0)
+            max_importance: Maximum importance (default 1.0)
+            date_from: Filter by created_at >= date (ISO format) (optional)
+            date_to: Filter by created_at <= date (ISO format) (optional)
+            sort_by: Sort field (created_at, updated_at, importance)
+            sort_order: Sort order (asc, desc)
+            limit: Max results to return (1-100, default 20)
+            offset: Number of results to skip (default 0)
+
+        Returns:
+            {
+                "memories": List[memory dict],
+                "total_count": int,
+                "returned_count": int,
+                "offset": int,
+                "limit": int,
+                "has_more": bool
+            }
+
+        Raises:
+            ValidationError: If parameters are invalid
+            StorageError: If listing fails
+        """
+        try:
+            # Validate parameters
+            if not (1 <= limit <= 100):
+                raise ValidationError("limit must be 1-100")
+            if offset < 0:
+                raise ValidationError("offset must be >= 0")
+            if sort_by not in ["created_at", "updated_at", "importance"]:
+                raise ValidationError("Invalid sort_by field")
+            if sort_order not in ["asc", "desc"]:
+                raise ValidationError("sort_order must be 'asc' or 'desc'")
+
+            # Build filters dict
+            filters = {}
+
+            if category:
+                filters["category"] = MemoryCategory(category)
+            if context_level:
+                filters["context_level"] = ContextLevel(context_level)
+            if scope:
+                filters["scope"] = MemoryScope(scope)
+            if project_name:
+                filters["project_name"] = project_name
+            if tags:
+                filters["tags"] = tags
+
+            filters["min_importance"] = min_importance
+            filters["max_importance"] = max_importance
+
+            if date_from:
+                filters["date_from"] = datetime.fromisoformat(date_from)
+            if date_to:
+                filters["date_to"] = datetime.fromisoformat(date_to)
+
+            # Query store
+            memories, total_count = await self.store.list_memories(
+                filters=filters,
+                sort_by=sort_by,
+                sort_order=sort_order,
+                limit=limit,
+                offset=offset
+            )
+
+            # Convert to dicts
+            memory_dicts = [
+                {
+                    "memory_id": m.id,
+                    "content": m.content,
+                    "category": m.category.value,
+                    "context_level": m.context_level.value,
+                    "importance": m.importance,
+                    "tags": m.tags,
+                    "metadata": m.metadata,
+                    "scope": m.scope.value,
+                    "project_name": m.project_name,
+                    "created_at": m.created_at.isoformat(),
+                    "updated_at": m.updated_at.isoformat(),
+                }
+                for m in memories
+            ]
+
+            logger.info(f"Listed {len(memory_dicts)} memories (total {total_count})")
+
+            return {
+                "memories": memory_dicts,
+                "total_count": total_count,
+                "returned_count": len(memory_dicts),
+                "offset": offset,
+                "limit": limit,
+                "has_more": (offset + len(memory_dicts)) < total_count
+            }
+
+        except ValidationError:
+            raise
+        except Exception as e:
+            logger.error(f"Failed to list memories: {e}")
+            raise StorageError(f"Failed to list memories: {e}")
+
     async def retrieve_preferences(
         self,
         query: str,

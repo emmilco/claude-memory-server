@@ -557,6 +557,80 @@ async def list_tools() -> List[Tool]:
             }
         ),
         Tool(
+            name="list_memories",
+            description="List and browse memories with filtering, sorting, and pagination. Useful for seeing what memories exist without searching.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "category": {
+                        "type": "string",
+                        "enum": ["preference", "fact", "event", "workflow", "context"],
+                        "description": "Filter by category (optional)"
+                    },
+                    "context_level": {
+                        "type": "string",
+                        "enum": ["USER_PREFERENCE", "PROJECT_CONTEXT", "SESSION_STATE"],
+                        "description": "Filter by context level (optional)"
+                    },
+                    "scope": {
+                        "type": "string",
+                        "enum": ["global", "project"],
+                        "description": "Filter by scope (optional)"
+                    },
+                    "project_name": {
+                        "type": "string",
+                        "description": "Filter by project name (optional)"
+                    },
+                    "tags": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Filter by tags - matches ANY tag (optional)"
+                    },
+                    "min_importance": {
+                        "type": "number",
+                        "minimum": 0.0,
+                        "maximum": 1.0,
+                        "description": "Minimum importance (default: 0.0)"
+                    },
+                    "max_importance": {
+                        "type": "number",
+                        "minimum": 0.0,
+                        "maximum": 1.0,
+                        "description": "Maximum importance (default: 1.0)"
+                    },
+                    "date_from": {
+                        "type": "string",
+                        "description": "Filter created_at >= date (ISO format, e.g., '2025-01-01T00:00:00') (optional)"
+                    },
+                    "date_to": {
+                        "type": "string",
+                        "description": "Filter created_at <= date (ISO format) (optional)"
+                    },
+                    "sort_by": {
+                        "type": "string",
+                        "enum": ["created_at", "updated_at", "importance"],
+                        "description": "Sort field (default: created_at)"
+                    },
+                    "sort_order": {
+                        "type": "string",
+                        "enum": ["asc", "desc"],
+                        "description": "Sort order (default: desc)"
+                    },
+                    "limit": {
+                        "type": "number",
+                        "minimum": 1,
+                        "maximum": 100,
+                        "description": "Max results to return (default: 20)"
+                    },
+                    "offset": {
+                        "type": "number",
+                        "minimum": 0,
+                        "description": "Results to skip for pagination (default: 0)"
+                    }
+                }
+            }
+        ),
+        Tool(
             name="get_stats",
             description="Get statistics about stored memories and documentation.",
             inputSchema={
@@ -805,6 +879,47 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
             else:
                 return [TextContent(type="text", text=f" {result['message']}")]
 
+
+        elif name == "list_memories":
+            result = await memory_rag_server.list_memories(
+                category=arguments.get("category"),
+                context_level=arguments.get("context_level"),
+                scope=arguments.get("scope"),
+                project_name=arguments.get("project_name"),
+                tags=arguments.get("tags"),
+                min_importance=arguments.get("min_importance", 0.0),
+                max_importance=arguments.get("max_importance", 1.0),
+                date_from=arguments.get("date_from"),
+                date_to=arguments.get("date_to"),
+                sort_by=arguments.get("sort_by", "created_at"),
+                sort_order=arguments.get("sort_order", "desc"),
+                limit=arguments.get("limit", 20),
+                offset=arguments.get("offset", 0)
+            )
+
+            memories = result["memories"]
+            total = result["total_count"]
+            returned = result["returned_count"]
+            has_more = result["has_more"]
+
+            if returned == 0:
+                output = "No memories found matching the criteria.\n"
+            else:
+                output = f"Found {total} total memories (showing {returned})\n\n"
+
+                for i, mem in enumerate(memories, 1):
+                    output += f"{i}. [{mem['category']}] {mem['content'][:100]}...\n"
+                    output += f"   ID: {mem['memory_id']} | Importance: {mem['importance']:.2f}\n"
+                    output += f"   Created: {mem['created_at']}\n"
+                    if mem.get('tags'):
+                        output += f"   Tags: {', '.join(mem['tags'])}\n"
+                    output += "\n"
+
+                if has_more:
+                    next_offset = result["offset"] + returned
+                    output += f"More results available. Use offset={next_offset} to see next page.\n"
+
+            return [TextContent(type="text", text=output)]
         elif name == "get_stats":
             stats = await memory_rag_server.get_stats()
 

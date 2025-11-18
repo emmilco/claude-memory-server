@@ -166,6 +166,35 @@ class ReadOnlyStoreWrapper(MemoryStore):
         """
         return await self.wrapped_store.health_check()
 
+    async def list_memories(
+        self,
+        filters: Optional[Dict[str, Any]] = None,
+        sort_by: str = "created_at",
+        sort_order: str = "desc",
+        limit: int = 20,
+        offset: int = 0
+    ) -> Tuple[List[MemoryUnit], int]:
+        """
+        List memories (read operation allowed).
+
+        Args:
+            filters: Optional filters
+            sort_by: Sort field
+            sort_order: Sort order
+            limit: Max results
+            offset: Results to skip
+
+        Returns:
+            Tuple of (memories list, total count)
+        """
+        return await self.wrapped_store.list_memories(
+            filters=filters,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            limit=limit,
+            offset=offset
+        )
+
     async def close(self) -> None:
         """Close the wrapped store."""
         await self.wrapped_store.close()

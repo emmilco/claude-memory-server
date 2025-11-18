@@ -191,3 +191,30 @@ class MemoryStore(ABC):
         Close connections and clean up resources.
         """
         pass
+
+    @abstractmethod
+    async def list_memories(
+        self,
+        filters: Optional[Dict[str, Any]] = None,
+        sort_by: str = "created_at",
+        sort_order: str = "desc",
+        limit: int = 20,
+        offset: int = 0
+    ) -> Tuple[List[MemoryUnit], int]:
+        """
+        List memories with filtering, sorting, and pagination.
+
+        Args:
+            filters: Optional filters to apply (category, context_level, tags, etc.).
+            sort_by: Field to sort by (created_at, updated_at, importance).
+            sort_order: Sort order (asc, desc).
+            limit: Maximum number of results to return.
+            offset: Number of results to skip for pagination.
+
+        Returns:
+            Tuple of (list of memories, total count before pagination).
+
+        Raises:
+            StorageError: If listing operation fails.
+        """
+        pass

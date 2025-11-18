@@ -81,6 +81,15 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-18
 
+- **FEAT-041: Memory Listing and Browsing**
+  - Added `list_memories()` MCP tool for browsing memories without semantic search
+  - Implemented filtering by category, context_level, scope, project_name, tags, importance, and date range
+  - Added sorting by created_at, updated_at, or importance (ascending/descending)
+  - Implemented pagination with offset/limit (1-100 memories per page)
+  - Created `list_memories()` method in both Qdrant and SQLite stores
+  - Added comprehensive test suite with 16 tests covering all filtering, sorting, and pagination scenarios
+  - Files: `src/store/base.py`, `src/store/qdrant_store.py`, `src/store/sqlite_store.py`, `src/core/server.py`, `src/mcp_server.py`, `tests/unit/test_list_memories.py`
+
 - **PERF-006: Test Suite Performance Optimization - Phases 2 & 3**
   - Added session-scoped test fixtures in `tests/conftest.py` for reusable resources
   - Created `LazyResource` class for lazy initialization of expensive resources
