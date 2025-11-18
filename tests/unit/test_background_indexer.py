@@ -114,7 +114,6 @@ async def test_start_indexing_job(mock_indexer_class, indexer, test_files):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip_ci
 @patch('src.memory.background_indexer.IncrementalIndexer')
 async def test_start_background_job(mock_indexer_class, indexer, test_files):
     """Test starting job in background."""
@@ -330,7 +329,6 @@ async def test_resume_running_job(mock_indexer_class, indexer, test_files):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip_ci
 @patch('src.memory.background_indexer.IncrementalIndexer')
 async def test_cancel_job(mock_indexer_class, indexer, test_files):
     """Test cancelling a running job."""
@@ -473,7 +471,6 @@ async def test_delete_completed_job(mock_indexer_class, indexer, test_files):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip_ci
 @patch('src.memory.background_indexer.IncrementalIndexer')
 async def test_cannot_delete_running_job(mock_indexer_class, indexer, test_files):
     """Test that running jobs cannot be deleted."""

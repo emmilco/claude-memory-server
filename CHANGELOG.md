@@ -81,6 +81,13 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Fixed - 2025-11-17
 
+- **Test Suite:** Removed skip_ci markers from 8 now-stable tests
+  - Re-enabled 3 background_indexer tests (race conditions and KeyErrors fixed)
+  - Re-enabled 4 optimization_analyzer tests (temp directory structure issues resolved)
+  - Re-enabled 1 file_watcher test (file system timing stable)
+  - Kept skip_ci only on test_performance_improvement (inherently flaky performance benchmark)
+  - Files: `tests/unit/test_background_indexer.py`, `tests/unit/test_file_watcher.py`, `tests/unit/test_optimization_analyzer.py`
+
 - **Build:** Rust compiler warnings for unused `file_path` parameters
   - Prefixed unused parameters with underscores in `rust_core/src/config_parsing.rs`
   - Functions: `parse_json`, `parse_yaml`, `parse_toml`

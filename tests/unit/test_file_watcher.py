@@ -86,7 +86,6 @@ async def test_file_watcher_debouncing(temp_watch_dir, changed_files):
     assert changed_files[0] == test_file
 
 
-@pytest.mark.skip_ci
 def test_file_hash_detection(temp_watch_dir):
     """Test that file hash correctly detects content changes."""
 
