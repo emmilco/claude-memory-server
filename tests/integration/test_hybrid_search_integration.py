@@ -75,20 +75,32 @@ async def indexed_code_server(server_with_hybrid_search, mock_embeddings):
 
     try:
         # Create minimal sample code files for faster indexing
+        # Kept minimal but with enough content for test assertions
         auth_file = Path(temp_code_dir) / "auth.py"
         auth_file.write_text("""def authenticate_user(username, password):
+    '''Authenticate user with credentials.'''
     return check_credentials(username, password)
+
+def validate_token(token):
+    return verify_jwt(token)
 """)
 
         db_file = Path(temp_code_dir) / "database.py"
         db_file.write_text("""def connect_database(host, port):
     return create_connection(host, port)
+
+class DatabasePool:
+    def get_connection(self):
+        return self.pool.acquire()
 """)
 
         config_file = Path(temp_code_dir) / "config.py"
         config_file.write_text("""def parse_config(file_path):
     with open(file_path) as f:
         return json.load(f)
+
+def load_environment():
+    return os.environ
 """)
 
         # Index the codebase
