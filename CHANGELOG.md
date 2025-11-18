@@ -92,7 +92,7 @@ A pre-commit hook enforces CHANGELOG updates:
   - Fixed Rust module build to use `maturin build` with platform-specific wheel selection
   - Added workflow permissions for check runs and PR comments
   - Fixed test results publishing to only run when test-results.xml exists
-  - Enhanced Qdrant healthcheck with verbose debugging output
+  - Fixed Qdrant healthcheck endpoint from `/health` to `/` (root path)
 
 ### Planning - 2025-11-17
 

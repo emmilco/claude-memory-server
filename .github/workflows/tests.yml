@@ -68,25 +68,18 @@ jobs:
     - name: Wait for Qdrant
       run: |
         echo "Waiting for Qdrant to be ready..."
-        echo "Testing connection to localhost:6333..."
 
-        # Try a few times with detailed output
-        for i in {1..10}; do
-          echo "Attempt $i:"
-          curl -v http://localhost:6333/health 2>&1 || true
-
-          if curl -f http://localhost:6333/health > /dev/null 2>&1; then
+        for i in {1..20}; do
+          if curl -f http://localhost:6333/ > /dev/null 2>&1; then
             echo "✓ Qdrant is ready!"
+            curl http://localhost:6333/
             exit 0
           fi
-
-          echo "Not ready yet, waiting 3 seconds..."
-          sleep 3
+          echo "Attempt $i: Qdrant not ready, waiting..."
+          sleep 2
         done
 
-        echo "❌ Qdrant failed to start in time"
-        echo "Checking if service is running:"
-        docker ps -a
+        echo "❌ Qdrant failed to start"
         exit 1
 
     - name: Run tests
