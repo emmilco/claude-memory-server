@@ -437,3 +437,57 @@ class UpdateMemoryResponse(BaseModel):
     )
 
     model_config = ConfigDict(use_enum_values=False)
+
+
+class RelevanceFactors(BaseModel):
+    """Breakdown of relevance scoring factors."""
+
+    semantic_similarity: float = Field(ge=0.0, le=1.0)
+    recency: float = Field(ge=0.0, le=1.0)
+    importance: float = Field(ge=0.0, le=1.0)
+    context_match: float = Field(ge=0.0, le=1.0)
+
+    model_config = ConfigDict(use_enum_values=False)
+
+
+class Suggestion(BaseModel):
+    """A single proactive suggestion."""
+
+    memory_id: str = Field(..., description="ID of suggested memory/code")
+    content: str = Field(..., description="Memory/code content")
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Overall confidence score")
+    reason: str = Field(..., description="Explanation of why this was suggested")
+    source_type: str = Field(..., description="Type: 'memory' or 'code'")
+    relevance_factors: RelevanceFactors = Field(..., description="Scoring breakdown")
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional metadata (file_path, tags, etc.)"
+    )
+
+    model_config = ConfigDict(use_enum_values=False)
+
+
+class DetectedIntentInfo(BaseModel):
+    """Information about detected user intent."""
+
+    intent_type: str = Field(..., description="Type of intent detected")
+    keywords: List[str] = Field(default_factory=list, description="Extracted keywords")
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Intent detection confidence")
+    search_query: str = Field(..., description="Synthesized search query")
+
+    model_config = ConfigDict(use_enum_values=False)
+
+
+class SuggestionResponse(BaseModel):
+    """Response from proactive suggestion request."""
+
+    suggestions: List[Suggestion] = Field(
+        default_factory=list,
+        description="List of suggestions ordered by confidence"
+    )
+    detected_intent: DetectedIntentInfo = Field(..., description="Detected intent information")
+    confidence_threshold: float = Field(..., ge=0.0, le=1.0, description="Minimum confidence threshold used")
+    total_suggestions: int = Field(..., description="Number of suggestions returned")
+    session_id: str = Field(..., description="Conversation session ID")
+
+    model_config = ConfigDict(use_enum_values=False)

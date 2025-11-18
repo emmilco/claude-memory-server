@@ -37,6 +37,7 @@ from src.memory.usage_tracker import UsageTracker
 from src.memory.pruner import MemoryPruner
 from src.memory.conversation_tracker import ConversationTracker
 from src.memory.query_expander import QueryExpander
+from src.memory.proactive_suggester import ProactiveSuggester
 from src.search.hybrid_search import HybridSearcher, FusionMethod
 from src.memory.repository_registry import RepositoryRegistry
 from src.memory.workspace_manager import WorkspaceManager
@@ -86,6 +87,7 @@ class MemoryRAGServer:
         self.pruner: Optional[MemoryPruner] = None
         self.conversation_tracker: Optional[ConversationTracker] = None
         self.query_expander: Optional[QueryExpander] = None
+        self.proactive_suggester: Optional[ProactiveSuggester] = None
         self.hybrid_searcher: Optional[HybridSearcher] = None
         self.cross_project_consent: Optional = None  # Cross-project consent manager
         self.project_context_detector: Optional = None  # Project context detector
@@ -194,9 +196,20 @@ class MemoryRAGServer:
                 # Initialize query expander (requires embedding generator)
                 self.query_expander = QueryExpander(self.config, self.embedding_generator)
                 logger.info("Query expansion enabled")
+
+                # Initialize proactive suggester (requires conversation tracker and embedding generator)
+                self.proactive_suggester = ProactiveSuggester(
+                    store=self.store,
+                    embedding_generator=self.embedding_generator,
+                    conversation_tracker=self.conversation_tracker,
+                    confidence_threshold=0.85,
+                    max_suggestions=5,
+                )
+                logger.info("Proactive suggester initialized")
             else:
                 self.conversation_tracker = None
                 self.query_expander = None
+                self.proactive_suggester = None
                 logger.info("Conversation tracking disabled")
 
             # Initialize hybrid searcher if enabled
@@ -625,6 +638,86 @@ class MemoryRAGServer:
         except Exception as e:
             logger.error(f"Failed to retrieve memories: {e}")
             raise RetrievalError(f"Failed to retrieve memories: {e}")
+
+    async def suggest_memories(
+        self,
+        session_id: str,
+        max_suggestions: Optional[int] = None,
+        confidence_threshold: Optional[float] = None,
+        include_code: bool = True,
+        project_name: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Proactively suggest relevant memories based on conversation context.
+
+        Analyzes recent queries in the conversation session to detect user intent
+        and suggests relevant memories and code without requiring explicit queries.
+
+        Args:
+            session_id: Conversation session ID for context analysis
+            max_suggestions: Maximum suggestions to return (default: 5)
+            confidence_threshold: Minimum confidence score 0-1 (default: 0.85)
+            include_code: Include code search results (default: True)
+            project_name: Filter suggestions by project name (optional)
+
+        Returns:
+            Dict with suggestions, detected intent, and metadata
+
+        Raises:
+            ValidationError: If session_id is missing or proactive suggester disabled
+            RetrievalError: If suggestion generation fails
+        """
+        if not self.proactive_suggester:
+            raise ValidationError(
+                "Proactive suggestions are disabled. "
+                "Enable conversation tracking to use this feature."
+            )
+
+        try:
+            # Generate suggestions
+            response = await self.proactive_suggester.suggest_memories(
+                session_id=session_id,
+                max_suggestions=max_suggestions,
+                confidence_threshold=confidence_threshold,
+                include_code=include_code,
+                project_name=project_name or self.project_name,
+            )
+
+            # Convert to dict for MCP response
+            return {
+                "suggestions": [
+                    {
+                        "memory_id": s.memory_id,
+                        "content": s.content,
+                        "confidence": s.confidence,
+                        "reason": s.reason,
+                        "source_type": s.source_type,
+                        "relevance_factors": {
+                            "semantic_similarity": s.relevance_factors.semantic_similarity,
+                            "recency": s.relevance_factors.recency,
+                            "importance": s.relevance_factors.importance,
+                            "context_match": s.relevance_factors.context_match,
+                        },
+                        "metadata": s.metadata,
+                    }
+                    for s in response.suggestions
+                ],
+                "detected_intent": {
+                    "intent_type": response.detected_intent.intent_type,
+                    "keywords": response.detected_intent.keywords,
+                    "confidence": response.detected_intent.confidence,
+                    "search_query": response.detected_intent.search_query,
+                },
+                "confidence_threshold": response.confidence_threshold,
+                "total_suggestions": response.total_suggestions,
+                "session_id": response.session_id,
+            }
+
+        except ValidationError:
+            raise
+        except Exception as e:
+            logger.error(f"Failed to generate suggestions: {e}")
+            raise RetrievalError(f"Failed to generate suggestions: {e}")
 
     async def delete_memory(self, memory_id: str) -> Dict[str, Any]:
         """

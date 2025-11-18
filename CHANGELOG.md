@@ -81,6 +81,14 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-18
 
+- **FEAT-047: Proactive Memory Suggestions**
+  - Created `src/memory/intent_detector.py` for conversation intent detection (implementation, debugging, learning, exploration)
+  - Created `src/memory/proactive_suggester.py` for context-aware memory and code suggestions
+  - Added `Suggestion`, `SuggestionResponse`, `DetectedIntentInfo`, and `RelevanceFactors` models to `src/core/models.py`
+  - Added `suggest_memories()` MCP tool to `src/core/server.py` with confidence scoring and ranking
+  - Comprehensive test suite: 24 intent detector tests + 17 suggester tests (100% passing)
+  - Features: pattern-based intent detection, keyword extraction, confidence scoring (semantic + recency + importance + context), deduplication, configurable thresholds
+
 - **FEAT-040: Memory Update/Edit Operations**
   - Added `UpdateMemoryRequest` and `UpdateMemoryResponse` models to `src/core/models.py`
   - Enhanced `update()` method in `src/store/qdrant_store.py` and `src/store/sqlite_store.py` to support embedding regeneration

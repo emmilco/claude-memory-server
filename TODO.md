@@ -163,18 +163,16 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Use case:** "What files are indexed in this project?" or "Show all Python functions indexed"
   - **Enhances:** `get_status` (which only shows counts)
 
-- [ ] **FEAT-047**: Proactive Memory Suggestions (~4-5 days) 🔥🔥🔥🔥
-  - [ ] Implement `suggest_memories` MCP tool
-  - [ ] Analyze conversation context for relevant memories
-  - [ ] Pattern matching: detect user intent ("I need to add X" → suggest similar code)
-  - [ ] Confidence scoring (only suggest above threshold, default 0.85)
-  - [ ] Integration with conversation tracker
-  - [ ] Background suggestion generation
-  - [ ] Tests: context analysis, pattern matching, confidence scoring
+- [x] ~~**FEAT-047**: Proactive Memory Suggestions (~4-5 days)~~ ✅ **COMPLETE** (2025-11-18)
+  - [x] Implement `suggest_memories` MCP tool
+  - [x] Analyze conversation context for relevant memories
+  - [x] Pattern matching: detect user intent ("I need to add X" → suggest similar code)
+  - [x] Confidence scoring (only suggest above threshold, default 0.85)
+  - [x] Integration with conversation tracker
+  - [x] Tests: context analysis (24 tests), pattern matching, confidence scoring (17 tests)
+  - **Completed:** Intent detection, proactive suggester, MCP tool integration, comprehensive tests (41 passing)
   - **Impact:** Proactive intelligence - surfaces relevant memories without explicit query
-  - **Use case:** Claude detects user asking about authentication → suggests relevant memories/code
   - **Related to:** FEAT-028 (broader proactive context suggestions)
-  - **Priority:** HIGH - major UX improvement
 
 - [ ] **FEAT-048**: Dependency Graph Visualization (~2-3 days) 🔥
   - [ ] Implement `get_dependency_graph` MCP tool
