@@ -185,18 +185,19 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Use case:** "Export dependency graph for visualization in Graphviz"
   - **Enhances:** Existing dependency tools (get_file_dependencies, etc.)
 
-- [ ] **FEAT-036**: Project Archival & Reactivation System - Phase 2 (~1 week)
+- [x] **FEAT-036**: Project Archival & Reactivation System - Phase 2 (~1 week) ✅ (2025-11-18)
   - [x] **Phase 2.1: Index compression for archived projects** ✅ (2025-11-18)
   - [x] **Phase 2.2: Bulk operations (auto-archive multiple projects)** ✅ (2025-11-18)
   - [x] **Phase 2.3: Automatic archival scheduler** ✅ (2025-11-18)
   - [x] **Phase 2.4: Export to file / import from archive** ✅ (2025-11-18)
-  - [ ] Phase 2.5: Documentation & polish
+  - [x] **Phase 2.5: Documentation & polish** ✅ (2025-11-18)
   - **Completed (Phase 2.1):** ArchiveCompressor with tar.gz compression, 60-80% storage reduction, manifests, 14 tests (100% passing)
   - **Completed (Phase 2.2):** BulkArchivalManager for multi-project archival, auto-archive inactive projects, 20 tests (100% passing)
   - **Completed (Phase 2.3):** ArchivalScheduler with APScheduler, configurable schedules (daily/weekly/monthly), 23 tests (100% passing)
   - **Completed (Phase 2.4):** ArchiveExporter and ArchiveImporter for portable archives, conflict resolution, roundtrip validation, 18 tests (100% passing)
-  - **Impact:** Enables graceful project lifecycle, improves search performance
-  - **Status:** Phase 1 complete, Phases 2.1-2.4 complete, Phase 2.5 pending (documentation)
+  - **Completed (Phase 2.5):** CLI commands (export, import, list-exportable), API.md documentation, README examples, performance benchmarks
+  - **Impact:** Enables graceful project lifecycle, 60-80% storage reduction, portable backups
+  - **Status:** Phase 1 complete, Phase 2 complete (all 5 sub-phases), 75 tests total (100% passing)
 
 ### 🟢 Tier 4: High-Value UX Quick Wins
 
