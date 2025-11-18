@@ -37,6 +37,7 @@ from src.memory.pruner import MemoryPruner
 from src.memory.conversation_tracker import ConversationTracker
 from src.memory.query_expander import QueryExpander
 from src.memory.proactive_suggester import ProactiveSuggester
+from src.memory.bulk_operations import BulkDeleteManager
 from src.search.hybrid_search import HybridSearcher, FusionMethod
 from src.memory.repository_registry import RepositoryRegistry
 from src.memory.workspace_manager import WorkspaceManager
@@ -87,6 +88,7 @@ class MemoryRAGServer:
         self.conversation_tracker: Optional[ConversationTracker] = None
         self.query_expander: Optional[QueryExpander] = None
         self.proactive_suggester: Optional[ProactiveSuggester] = None
+        self.bulk_delete_manager: Optional[BulkDeleteManager] = None
         self.hybrid_searcher: Optional[HybridSearcher] = None
         self.cross_project_consent: Optional = None  # Cross-project consent manager
         self.project_context_detector: Optional = None  # Project context detector
@@ -205,7 +207,16 @@ class MemoryRAGServer:
                     max_suggestions=5,
                 )
                 logger.info("Proactive suggester initialized")
-            else:
+
+            # Initialize bulk operations manager (always available, not tied to conversation tracking)
+            self.bulk_delete_manager = BulkDeleteManager(
+                store=self.store,
+                max_batch_size=100,
+                max_total_operations=1000,
+            )
+            logger.info("Bulk operations manager initialized")
+
+            if not self.config.enable_conversation_tracking:
                 self.conversation_tracker = None
                 self.query_expander = None
                 self.proactive_suggester = None
@@ -870,6 +881,210 @@ class MemoryRAGServer:
         except Exception as e:
             logger.error(f"Failed to list memories: {e}")
             raise StorageError(f"Failed to list memories: {e}")
+
+    async def bulk_delete_memories(
+        self,
+        dry_run: bool = False,
+        category: Optional[str] = None,
+        context_level: Optional[str] = None,
+        scope: Optional[str] = None,
+        project_name: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        min_importance: float = 0.0,
+        max_importance: float = 1.0,
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
+        lifecycle_state: Optional[str] = None,
+        max_count: int = 1000,
+        enable_rollback: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        Bulk delete memories matching filter criteria with safety checks.
+
+        Args:
+            dry_run: If True, preview deletion without executing (default: False)
+            category: Filter by category (optional)
+            context_level: Filter by context level (optional)
+            scope: Filter by scope (global/project) (optional)
+            project_name: Filter by project (optional)
+            tags: Filter by tags - matches ANY tag (optional)
+            min_importance: Minimum importance (default 0.0)
+            max_importance: Maximum importance (default 1.0)
+            date_from: Delete memories created after this date (ISO format) (optional)
+            date_to: Delete memories created before this date (ISO format) (optional)
+            lifecycle_state: Filter by lifecycle state (optional)
+            max_count: Maximum memories to delete (hard limit: 1000, default: 1000)
+            enable_rollback: Enable rollback support (soft delete) (default: False)
+
+        Returns:
+            If dry_run=True:
+                {
+                    "dry_run": true,
+                    "total_matches": int,
+                    "sample_memories": List[memory dict],
+                    "breakdown": {
+                        "by_category": {"category": count},
+                        "by_lifecycle": {"state": count},
+                        "by_project": {"project": count}
+                    },
+                    "estimated_storage_freed_mb": float,
+                    "warnings": List[str],
+                    "requires_confirmation": bool
+                }
+            If dry_run=False:
+                {
+                    "success": bool,
+                    "dry_run": false,
+                    "total_deleted": int,
+                    "failed_deletions": List[memory_id],
+                    "rollback_id": Optional[str],
+                    "execution_time": float,
+                    "storage_freed_mb": float,
+                    "errors": List[str]
+                }
+
+        Raises:
+            ValidationError: If parameters are invalid
+            ReadOnlyError: If in read-only mode (for actual deletion)
+            StorageError: If bulk deletion fails
+        """
+        if self.config.read_only_mode and not dry_run:
+            raise ReadOnlyError(
+                "Cannot delete memories in read-only mode. "
+                "Either use dry_run=True to preview, or restart server without --read-only flag."
+            )
+
+        if not self.bulk_delete_manager:
+            raise ValidationError("Bulk operations are not initialized")
+
+        try:
+            # Validate max_count
+            if not (1 <= max_count <= 1000):
+                raise ValidationError("max_count must be between 1 and 1000")
+
+            # Build BulkDeleteFilters from parameters
+            from src.memory.bulk_operations import BulkDeleteFilters
+
+            filters = BulkDeleteFilters(
+                category=category,
+                context_level=context_level,
+                scope=scope,
+                project_name=project_name,
+                tags=tags,
+                min_importance=min_importance,
+                max_importance=max_importance,
+                date_from=date_from,
+                date_to=date_to,
+                lifecycle_state=lifecycle_state,
+                max_count=max_count,
+            )
+
+            # Fetch matching memories using list_memories logic
+            # We fetch up to max_count to respect the limit
+            list_filters = {}
+
+            if category:
+                list_filters["category"] = MemoryCategory(category)
+            if context_level:
+                list_filters["context_level"] = ContextLevel(context_level)
+            if scope:
+                list_filters["scope"] = MemoryScope(scope)
+            if project_name:
+                list_filters["project_name"] = project_name
+            if tags:
+                list_filters["tags"] = tags
+            if lifecycle_state:
+                from src.core.models import LifecycleState
+                list_filters["lifecycle_state"] = LifecycleState(lifecycle_state)
+
+            list_filters["min_importance"] = min_importance
+            list_filters["max_importance"] = max_importance
+
+            if date_from:
+                list_filters["date_from"] = datetime.fromisoformat(date_from)
+            if date_to:
+                list_filters["date_to"] = datetime.fromisoformat(date_to)
+
+            # Fetch all matching memories (up to max_count)
+            matching_memories, _ = await self.store.list_memories(
+                filters=list_filters,
+                sort_by="created_at",
+                sort_order="desc",
+                limit=max_count,
+                offset=0,
+            )
+
+            logger.info(
+                f"Bulk delete: found {len(matching_memories)} matching memories (dry_run={dry_run})"
+            )
+
+            # Execute bulk delete operation
+            result = await self.bulk_delete_manager.bulk_delete(
+                memories=matching_memories,
+                filters=filters,
+                dry_run=dry_run,
+                enable_rollback=enable_rollback,
+            )
+
+            # Convert result to dict for MCP response
+            if dry_run:
+                # Preview mode
+                preview = result  # BulkDeletePreview
+                return {
+                    "dry_run": True,
+                    "total_matches": preview.total_matches,
+                    "sample_memories": [
+                        {
+                            "memory_id": m.id,
+                            "content": m.content[:100] + "..." if len(m.content) > 100 else m.content,
+                            "category": m.category.value,
+                            "importance": m.importance,
+                            "created_at": m.created_at.isoformat() if m.created_at else None,
+                            "project_name": m.project_name,
+                        }
+                        for m in preview.sample_memories
+                    ],
+                    "breakdown": {
+                        "by_category": preview.breakdown_by_category,
+                        "by_lifecycle": preview.breakdown_by_lifecycle,
+                        "by_project": preview.breakdown_by_project,
+                    },
+                    "estimated_storage_freed_mb": preview.estimated_storage_freed_mb,
+                    "warnings": preview.warnings,
+                    "requires_confirmation": preview.requires_confirmation,
+                }
+            else:
+                # Actual deletion
+                delete_result = result  # BulkDeleteResult
+
+                # Update stats
+                self.stats["memories_deleted"] += delete_result.total_deleted
+
+                logger.info(
+                    f"Bulk delete completed: {delete_result.total_deleted} deleted, "
+                    f"{len(delete_result.failed_deletions)} failed"
+                )
+
+                return {
+                    "success": delete_result.success,
+                    "dry_run": False,
+                    "total_deleted": delete_result.total_deleted,
+                    "failed_deletions": delete_result.failed_deletions,
+                    "rollback_id": delete_result.rollback_id,
+                    "execution_time": delete_result.execution_time,
+                    "storage_freed_mb": delete_result.storage_freed_mb,
+                    "errors": delete_result.errors,
+                }
+
+        except ValidationError:
+            self.stats["validation_errors"] += 1
+            raise
+        except ReadOnlyError:
+            raise
+        except Exception as e:
+            logger.error(f"Bulk delete failed: {e}")
+            self.stats["storage_errors"] += 1
+            raise StorageError(f"Bulk delete failed: {e}")
 
     async def export_memories(
         self,
