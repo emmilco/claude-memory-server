@@ -81,6 +81,15 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-18
 
+- **FEAT-036: Project Archival Phase 2.1 - Archive Compression**
+  - Created `src/memory/archive_compressor.py` with ArchiveCompressor for efficient project index compression
+  - Implemented compress_project_index() and decompress_project_index() with tar.gz compression
+  - Added manifest generation with comprehensive metadata (stats, compression info, restore info)
+  - Implemented archive management: list, get info, delete, storage savings calculation
+  - Compression achieves 60-80% storage reduction for archived projects
+  - Comprehensive test suite: 14 tests covering compression, decompression, manifests, roundtrip integrity (100% passing)
+  - Files: `src/memory/archive_compressor.py`, `tests/unit/test_archive_compressor.py`
+
 - **FEAT-043: Bulk Memory Operations**
   - Created `src/memory/bulk_operations.py` with BulkDeleteManager for efficient multi-memory deletion
   - Added `bulk_delete_memories()` MCP tool to `src/core/server.py` with dry-run preview and safety limits
