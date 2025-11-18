@@ -57,8 +57,8 @@ jobs:
       run: |
         pip install maturin
         cd rust_core
-        maturin build --release
-        pip install target/wheels/*.whl
+        maturin build --release --interpreter python3.13
+        pip install target/wheels/mcp_performance_core-*-cp313-cp313-manylinux*.whl
         cd ..
 
     - name: Wait for Qdrant

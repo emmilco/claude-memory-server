@@ -124,10 +124,10 @@ class RagignoreManager:
             Merged pattern list
         """
         if not existing:
-            return new
+            return [p.strip() for p in new]
 
-        # Use set for deduplication
-        pattern_set: Set[str] = set(existing) if preserve_existing else set()
+        # Use set for deduplication - normalize existing patterns
+        pattern_set: Set[str] = {p.strip() for p in existing} if preserve_existing else set()
 
         for pattern in new:
             # Normalize pattern
@@ -340,7 +340,10 @@ Thumbs.db
         for file_path in file_paths:
             # Convert to relative path from directory
             try:
-                rel_path = file_path.relative_to(self.directory)
+                # Resolve both paths to handle symlinks (e.g., /var -> /private/var on macOS)
+                resolved_file = file_path.resolve()
+                resolved_dir = self.directory.resolve()
+                rel_path = resolved_file.relative_to(resolved_dir)
                 path_str = str(rel_path)
 
                 # Check if any pattern matches
