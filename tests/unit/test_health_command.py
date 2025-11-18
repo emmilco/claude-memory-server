@@ -480,6 +480,94 @@ class TestRunCommand:
         assert exc_info.value.code == 1
 
 
+class TestPerformanceChecks:
+    """Test performance metric checks."""
+
+    @pytest.mark.asyncio
+    async def test_check_cache_hit_rate_success(self):
+        """Test cache hit rate check with good hit rate."""
+        cmd = HealthCommand()
+
+        with patch('src.embeddings.cache.EmbeddingCache') as mock_cache_cls:
+            mock_cache = MagicMock()
+            mock_cache.get_stats.return_value = {
+                "total_queries": 100,
+                "cache_hits": 85
+            }
+            mock_cache_cls.return_value = mock_cache
+
+            with patch('src.config.get_config') as mock_config:
+                config = MagicMock()
+                mock_config.return_value = config
+
+                success, message, hit_rate = await cmd.check_cache_hit_rate()
+
+                assert success is True
+                assert hit_rate == 85.0
+                assert "85.0%" in message
+                # Verify EmbeddingCache was initialized with config object
+                mock_cache_cls.assert_called_once_with(config)
+
+    @pytest.mark.asyncio
+    async def test_check_cache_hit_rate_low(self):
+        """Test cache hit rate check with low hit rate."""
+        cmd = HealthCommand()
+
+        with patch('src.embeddings.cache.EmbeddingCache') as mock_cache_cls:
+            mock_cache = MagicMock()
+            mock_cache.get_stats.return_value = {
+                "total_queries": 100,
+                "cache_hits": 50
+            }
+            mock_cache_cls.return_value = mock_cache
+
+            with patch('src.config.get_config') as mock_config:
+                config = MagicMock()
+                mock_config.return_value = config
+
+                success, message, hit_rate = await cmd.check_cache_hit_rate()
+
+                assert success is False
+                assert hit_rate == 50.0
+                assert "50.0%" in message
+                assert "low" in message.lower()
+
+    @pytest.mark.asyncio
+    async def test_check_cache_hit_rate_no_queries(self):
+        """Test cache hit rate check with no queries yet."""
+        cmd = HealthCommand()
+
+        with patch('src.embeddings.cache.EmbeddingCache') as mock_cache_cls:
+            mock_cache = MagicMock()
+            mock_cache.get_stats.return_value = {
+                "total_queries": 0,
+                "cache_hits": 0
+            }
+            mock_cache_cls.return_value = mock_cache
+
+            with patch('src.config.get_config') as mock_config:
+                config = MagicMock()
+                mock_config.return_value = config
+
+                success, message, hit_rate = await cmd.check_cache_hit_rate()
+
+                assert success is True
+                assert hit_rate is None
+                assert "No queries yet" in message
+
+    @pytest.mark.asyncio
+    async def test_check_cache_hit_rate_error(self):
+        """Test cache hit rate check with error."""
+        cmd = HealthCommand()
+
+        with patch('src.embeddings.cache.EmbeddingCache', side_effect=Exception("Cache error")):
+            success, message, hit_rate = await cmd.check_cache_hit_rate()
+
+            assert success is False
+            assert hit_rate is None
+            assert "Could not check" in message
+
+
 class TestEdgeCases:
     """Test edge cases and error handling."""
 
