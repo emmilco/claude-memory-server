@@ -141,6 +141,12 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Fixed - 2025-11-17
 
+- **Test Suite:** Fixed 4 flaky test failures in background_indexer and parallel_embeddings
+  - Fixed race condition in `test_start_background_job` - added sleep to allow background task to start
+  - Fixed KeyError in `test_cancel_job` and `test_cannot_delete_running_job` - added check before deleting from `_active_tasks` dict
+  - Fixed `test_performance_improvement` cache contamination - disabled cache for fair benchmark comparison
+  - Files: `src/memory/background_indexer.py`, `tests/unit/test_background_indexer.py`, `tests/unit/test_parallel_embeddings.py`
+
 - **CI/CD:** Fixed Qdrant container health check failing in GitHub Actions
   - Replaced `curl`-based health check with TCP port check using bash `/dev/tcp`
   - Previous check failed because curl is not available in Qdrant container

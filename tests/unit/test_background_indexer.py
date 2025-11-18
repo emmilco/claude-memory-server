@@ -139,6 +139,9 @@ async def test_start_background_job(mock_indexer_class, indexer, test_files):
 
     assert job_id is not None
 
+    # Give background task a chance to start
+    await asyncio.sleep(0.1)
+
     # Job should be running or completed
     job = await indexer.get_job_status(job_id)
     assert job.status in (JobStatus.RUNNING, JobStatus.COMPLETED)
