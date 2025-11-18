@@ -80,7 +80,35 @@ jobs:
         QDRANT_URL: http://localhost:6333
         QDRANT_API_KEY: development
       run: |
-        pytest tests/ -v --tb=short --cov=src --cov-report=term-missing --cov-report=xml
+        pytest tests/ -v --tb=short --cov=src --cov-report=term-missing --cov-report=xml --junitxml=test-results.xml | tee pytest-output.txt
+        echo "PYTEST_EXIT_CODE=${PIPESTATUS[0]}" >> $GITHUB_ENV
+
+    - name: Generate test summary
+      if: always()
+      run: |
+        echo "## Test Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        # Extract test counts from pytest output
+        if [ -f pytest-output.txt ]; then
+          SUMMARY_LINE=$(grep -E "^=+ .* (passed|failed|error)" pytest-output.txt | tail -1)
+          if [ -n "$SUMMARY_LINE" ]; then
+            echo "**Result:** $SUMMARY_LINE" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Extract coverage percentage
+          COV_LINE=$(grep "^TOTAL" pytest-output.txt | tail -1)
+          if [ -n "$COV_LINE" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Coverage:**" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "$COV_LINE" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+        fi
+
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "📊 See [full test logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for detailed output" >> $GITHUB_STEP_SUMMARY
 
     - name: Upload coverage reports
       uses: codecov/codecov-action@v4
@@ -91,8 +119,10 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
       continue-on-error: true
 
-    - name: Test summary
+    - name: Publish test results
+      uses: EnricoMi/publish-unit-test-result-action@v2
       if: always()
-      run: |
-        echo "## Test Results" >> $GITHUB_STEP_SUMMARY
-        echo "See job logs for detailed test output" >> $GITHUB_STEP_SUMMARY
+      with:
+        files: test-results.xml
+        check_name: Test Results
+      continue-on-error: true

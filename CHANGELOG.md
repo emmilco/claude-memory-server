@@ -88,6 +88,7 @@ A pre-commit hook enforces CHANGELOG updates:
   - Caches pip and cargo dependencies for faster builds
   - Optional Codecov integration for coverage tracking
   - Fixed Qdrant service healthcheck (removed incompatible curl check, added manual wait loop)
+  - Enhanced test summary with pass/fail counts, coverage percentage, and PR annotations
 
 ### Planning - 2025-11-17
 
