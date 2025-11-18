@@ -90,6 +90,17 @@ A pre-commit hook enforces CHANGELOG updates:
   - Added comprehensive test suite with 16 tests covering all filtering, sorting, and pagination scenarios
   - Files: `src/store/base.py`, `src/store/qdrant_store.py`, `src/store/sqlite_store.py`, `src/core/server.py`, `src/mcp_server.py`, `tests/unit/test_list_memories.py`
 
+- **FEAT-044: Memory Export/Import Tools**
+  - Added `export_memories()` MCP tool for exporting memories to JSON or Markdown format
+  - Added `import_memories()` MCP tool for importing memories from JSON files
+  - Export supports all list_memories filters (category, scope, tags, importance, dates)
+  - Export to file or return content as string (JSON or Markdown formats)
+  - Import with three conflict resolution modes: skip, overwrite, merge
+  - Preserves all metadata: IDs, timestamps, provenance, tags, importance
+  - Auto-detects format from file extension (.json)
+  - Comprehensive test suite with 19 tests covering export/import workflows, conflict resolution, error handling
+  - Files: `src/core/server.py`, `src/mcp_server.py`, `tests/unit/test_export_import.py`
+
 ### Documentation - 2025-11-18
 
 - **CLAUDE.md: Merge Conflict Prevention**

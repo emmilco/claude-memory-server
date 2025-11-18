@@ -631,6 +631,92 @@ async def list_tools() -> List[Tool]:
             }
         ),
         Tool(
+            name="export_memories",
+            description="Export memories to JSON or Markdown format with optional filtering. Supports file output or returns content.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "output_path": {
+                        "type": "string",
+                        "description": "File path to write export (optional, if omitted returns content as string)"
+                    },
+                    "format": {
+                        "type": "string",
+                        "enum": ["json", "markdown"],
+                        "description": "Export format (default: json)"
+                    },
+                    "category": {
+                        "type": "string",
+                        "enum": ["preference", "fact", "event", "workflow", "context"],
+                        "description": "Filter by category (optional)"
+                    },
+                    "context_level": {
+                        "type": "string",
+                        "enum": ["USER_PREFERENCE", "PROJECT_CONTEXT", "SESSION_STATE"],
+                        "description": "Filter by context level (optional)"
+                    },
+                    "scope": {
+                        "type": "string",
+                        "enum": ["global", "project"],
+                        "description": "Filter by scope (optional)"
+                    },
+                    "project_name": {
+                        "type": "string",
+                        "description": "Filter by project name (optional)"
+                    },
+                    "tags": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Filter by tags (optional)"
+                    },
+                    "min_importance": {
+                        "type": "number",
+                        "minimum": 0.0,
+                        "maximum": 1.0,
+                        "description": "Minimum importance (default: 0.0)"
+                    },
+                    "max_importance": {
+                        "type": "number",
+                        "minimum": 0.0,
+                        "maximum": 1.0,
+                        "description": "Maximum importance (default: 1.0)"
+                    },
+                    "date_from": {
+                        "type": "string",
+                        "description": "Filter created_at >= date (ISO format) (optional)"
+                    },
+                    "date_to": {
+                        "type": "string",
+                        "description": "Filter created_at <= date (ISO format) (optional)"
+                    }
+                }
+            }
+        ),
+        Tool(
+            name="import_memories",
+            description="Import memories from JSON file with conflict resolution (skip, overwrite, or merge existing memories).",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "file_path": {
+                        "type": "string",
+                        "description": "Path to JSON file to import"
+                    },
+                    "conflict_mode": {
+                        "type": "string",
+                        "enum": ["skip", "overwrite", "merge"],
+                        "description": "How to handle existing memories: skip (keep existing), overwrite (replace), merge (update non-null fields) (default: skip)"
+                    },
+                    "format": {
+                        "type": "string",
+                        "enum": ["json"],
+                        "description": "File format (auto-detected from extension if not provided)"
+                    }
+                },
+                "required": ["file_path"]
+            }
+        ),
+        Tool(
             name="get_stats",
             description="Get statistics about stored memories and documentation.",
             inputSchema={
@@ -991,6 +1077,57 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
                     output += f"More results available. Use offset={next_offset} to see next page.\n"
 
             return [TextContent(type="text", text=output)]
+
+        elif name == "export_memories":
+            result = await memory_rag_server.export_memories(
+                output_path=arguments.get("output_path"),
+                format=arguments.get("format", "json"),
+                category=arguments.get("category"),
+                context_level=arguments.get("context_level"),
+                scope=arguments.get("scope"),
+                project_name=arguments.get("project_name"),
+                tags=arguments.get("tags"),
+                min_importance=arguments.get("min_importance", 0.0),
+                max_importance=arguments.get("max_importance", 1.0),
+                date_from=arguments.get("date_from"),
+                date_to=arguments.get("date_to")
+            )
+
+            output = f"✅ Export Complete\n\n"
+            output += f"**Format:** {result['format']}\n"
+            output += f"**Memories Exported:** {result['count']}\n"
+
+            if "file_path" in result:
+                output += f"**File Path:** {result['file_path']}\n"
+            else:
+                output += f"\n**Content Preview:**\n```\n{result['content'][:500]}...\n```\n"
+
+            return [TextContent(type="text", text=output)]
+
+        elif name == "import_memories":
+            result = await memory_rag_server.import_memories(
+                file_path=arguments.get("file_path"),
+                conflict_mode=arguments.get("conflict_mode", "skip"),
+                format=arguments.get("format")
+            )
+
+            status_emoji = "✅" if result["status"] == "success" else "⚠️"
+            output = f"{status_emoji} Import Complete\n\n"
+            output += f"**Status:** {result['status']}\n"
+            output += f"**Total Processed:** {result['total_processed']}\n"
+            output += f"**Created:** {result['created']}\n"
+            output += f"**Updated:** {result['updated']}\n"
+            output += f"**Skipped:** {result['skipped']}\n"
+
+            if result.get("errors"):
+                output += f"\n**Errors ({len(result['errors'])}):**\n"
+                for error in result['errors'][:10]:  # Show first 10 errors
+                    output += f"  - {error}\n"
+                if len(result['errors']) > 10:
+                    output += f"  ... and {len(result['errors']) - 10} more errors\n"
+
+            return [TextContent(type="text", text=output)]
+
         elif name == "get_stats":
             stats = await memory_rag_server.get_stats()
 
