@@ -139,9 +139,10 @@ A pre-commit hook enforces CHANGELOG updates:
 ### Fixed - 2025-11-17
 
 - **CI/CD:** Fixed Qdrant container health check failing in GitHub Actions
-  - Replaced `curl`-based health check with TCP port check using shell built-ins
+  - Replaced `curl`-based health check with TCP port check using bash `/dev/tcp`
   - Previous check failed because curl is not available in Qdrant container
-  - New check: `timeout 2 sh -c 'cat < /dev/null > /dev/tcp/localhost/6333'`
+  - New check: `timeout 2 bash -c 'cat < /dev/null > /dev/tcp/localhost/6333'`
+  - Fixed to use `bash` instead of `sh` (needed for `/dev/tcp` support)
 
 - **BUG-010:** Fixed RepositoryRegistry initialization errors in server.py and CLI commands
   - Corrected ServerConfig parameter type and WorkspaceManager argument order
