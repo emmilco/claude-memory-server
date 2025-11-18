@@ -345,3 +345,95 @@ class ErrorResponse(BaseModel):
         default_factory=lambda: datetime.now(UTC),
         description="Error timestamp"
     )
+
+
+class UpdateMemoryRequest(BaseModel):
+    """Request to update an existing memory.
+
+    Only fields that are provided will be updated. All fields except
+    memory_id are optional.
+    """
+
+    memory_id: str = Field(..., description="ID of memory to update (required)")
+
+    # Optional update fields
+    content: Optional[str] = Field(None, min_length=1, max_length=50000)
+    category: Optional[MemoryCategory] = None
+    importance: Optional[float] = Field(None, ge=0.0, le=1.0)
+    tags: Optional[List[str]] = None
+    metadata: Optional[Dict[str, Any]] = None
+    context_level: Optional[ContextLevel] = None
+
+    # Update behavior flags
+    preserve_timestamps: bool = Field(
+        default=True,
+        description="Keep created_at, update modified_at"
+    )
+    regenerate_embedding: bool = Field(
+        default=True,
+        description="Auto-regenerate embedding if content changes"
+    )
+
+    @model_validator(mode='after')
+    def validate_has_updates(self) -> 'UpdateMemoryRequest':
+        """Validate at least one field is being updated."""
+        update_fields = [
+            self.content,
+            self.category,
+            self.importance,
+            self.tags,
+            self.metadata,
+            self.context_level
+        ]
+
+        if all(field is None for field in update_fields):
+            raise ValueError("At least one field must be provided for update")
+
+        return self
+
+    @field_validator("tags")
+    @classmethod
+    def validate_tags_list(cls, v: Optional[List[str]]) -> Optional[List[str]]:
+        """Validate tags if provided."""
+        if v is None:
+            return v
+
+        if len(v) > 20:
+            raise ValueError("Maximum 20 tags allowed")
+
+        validated_tags = []
+        for tag in v:
+            if not isinstance(tag, str):
+                raise ValueError("Tags must be strings")
+            tag_clean = tag.strip().lower()
+            if not tag_clean:
+                continue
+            if len(tag_clean) > 50:
+                raise ValueError("Tags must be <= 50 characters")
+            validated_tags.append(tag_clean)
+
+        return validated_tags
+
+    model_config = ConfigDict(use_enum_values=False)
+
+
+class UpdateMemoryResponse(BaseModel):
+    """Response from memory update operation."""
+
+    memory_id: str = Field(..., description="ID of updated memory")
+    status: str = Field(default="updated", description="Update status")
+    updated_fields: List[str] = Field(
+        default_factory=list,
+        description="List of fields that were changed"
+    )
+    embedding_regenerated: bool = Field(
+        default=False,
+        description="Whether embedding was regenerated"
+    )
+    updated_at: str = Field(..., description="ISO timestamp of update")
+    previous_version: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Previous values for audit trail (optional)"
+    )
+
+    model_config = ConfigDict(use_enum_values=False)

@@ -511,8 +511,23 @@ class SQLiteMemoryStore(MemoryStore):
             logger.error(f"Failed to count memories: {e}")
             return 0
 
-    async def update(self, memory_id: str, updates: Dict[str, Any]) -> bool:
-        """Update a memory's metadata."""
+    async def update(
+        self,
+        memory_id: str,
+        updates: Dict[str, Any],
+        new_embedding: Optional[List[float]] = None
+    ) -> bool:
+        """
+        Update a memory's metadata and optionally its embedding.
+
+        Args:
+            memory_id: ID of memory to update
+            updates: Dictionary of fields to update
+            new_embedding: Optional new embedding vector (for content updates)
+
+        Returns:
+            bool: True if updated, False if not found
+        """
         if self.conn is None:
             await self.initialize()
 
@@ -531,6 +546,11 @@ class SQLiteMemoryStore(MemoryStore):
                 else:
                     set_parts.append(f"{key} = ?")
                     params.append(value)
+
+            # Add embedding if provided
+            if new_embedding is not None:
+                set_parts.append("embedding = ?")
+                params.append(json.dumps(new_embedding))
 
             set_parts.append("updated_at = ?")
             params.append(datetime.now(UTC).isoformat())

@@ -557,6 +557,71 @@ async def list_tools() -> List[Tool]:
             }
         ),
         Tool(
+            name="get_memory_by_id",
+            description="Retrieve a specific memory by its ID. Returns the complete memory record with all metadata.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "memory_id": {
+                        "type": "string",
+                        "description": "ID of the memory to retrieve"
+                    }
+                },
+                "required": ["memory_id"]
+            }
+        ),
+        Tool(
+            name="update_memory",
+            description="Update an existing memory. Can update content, category, importance, tags, metadata, or context level. If content changes, embedding is automatically regenerated.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "memory_id": {
+                        "type": "string",
+                        "description": "ID of the memory to update"
+                    },
+                    "content": {
+                        "type": "string",
+                        "description": "New content (optional)"
+                    },
+                    "category": {
+                        "type": "string",
+                        "enum": ["preference", "fact", "event", "workflow", "context"],
+                        "description": "New category (optional)"
+                    },
+                    "importance": {
+                        "type": "number",
+                        "description": "New importance score 0.0-1.0 (optional)",
+                        "minimum": 0.0,
+                        "maximum": 1.0
+                    },
+                    "tags": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "New tags list (optional)"
+                    },
+                    "metadata": {
+                        "type": "object",
+                        "description": "New metadata dict (optional)"
+                    },
+                    "context_level": {
+                        "type": "string",
+                        "enum": ["USER_PREFERENCE", "PROJECT_CONTEXT", "SESSION_STATE"],
+                        "description": "New context level (optional)"
+                    },
+                    "preserve_timestamps": {
+                        "type": "boolean",
+                        "description": "Keep created_at timestamp (default: true)"
+                    },
+                    "regenerate_embedding": {
+                        "type": "boolean",
+                        "description": "Auto-regenerate embedding if content changes (default: true)"
+                    }
+                },
+                "required": ["memory_id"]
+            }
+        ),
+        Tool(
             name="get_stats",
             description="Get statistics about stored memories and documentation.",
             inputSchema={
@@ -804,6 +869,77 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
                 return [TextContent(type="text", text=f" {result['message']}")]
             else:
                 return [TextContent(type="text", text=f" {result['message']}")]
+
+        elif name == "get_memory_by_id":
+            from src.core.server import MemoryRAGServer as NewServer
+            from src.config import get_config
+
+            config = get_config()
+            new_server = NewServer(config)
+            await new_server.initialize()
+
+            try:
+                result = await new_server.get_memory_by_id(
+                    memory_id=arguments["memory_id"]
+                )
+
+                if result["status"] == "not_found":
+                    return [TextContent(type="text", text=f"Memory not found: {result['message']}")]
+
+                memory = result["memory"]
+                output = f"Memory Retrieved\n\n"
+                output += f"**ID:** {memory['id']}\n"
+                output += f"**Content:** {memory['content']}\n"
+                output += f"**Category:** {memory['category']}\n"
+                output += f"**Context Level:** {memory['context_level']}\n"
+                output += f"**Scope:** {memory['scope']}\n"
+                if memory.get('project_name'):
+                    output += f"**Project:** {memory['project_name']}\n"
+                output += f"**Importance:** {memory['importance']}\n"
+                output += f"**Created:** {memory['created_at']}\n"
+                output += f"**Updated:** {memory['updated_at']}\n"
+                if memory.get('tags'):
+                    output += f"**Tags:** {', '.join(memory['tags'])}\n"
+                if memory.get('metadata'):
+                    output += f"**Metadata:** {memory['metadata']}\n"
+
+                return [TextContent(type="text", text=output)]
+            finally:
+                await new_server.close()
+
+        elif name == "update_memory":
+            from src.core.server import MemoryRAGServer as NewServer
+            from src.config import get_config
+
+            config = get_config()
+            new_server = NewServer(config)
+            await new_server.initialize()
+
+            try:
+                result = await new_server.update_memory(
+                    memory_id=arguments["memory_id"],
+                    content=arguments.get("content"),
+                    category=arguments.get("category"),
+                    importance=arguments.get("importance"),
+                    tags=arguments.get("tags"),
+                    metadata=arguments.get("metadata"),
+                    context_level=arguments.get("context_level"),
+                    preserve_timestamps=arguments.get("preserve_timestamps", True),
+                    regenerate_embedding=arguments.get("regenerate_embedding", True),
+                )
+
+                if result["status"] == "not_found":
+                    return [TextContent(type="text", text=f"Memory not found: {result['message']}")]
+
+                output = f"Memory Updated\n\n"
+                output += f"**Memory ID:** {result['memory_id']}\n"
+                output += f"**Updated Fields:** {', '.join(result['updated_fields'])}\n"
+                output += f"**Embedding Regenerated:** {'Yes' if result['embedding_regenerated'] else 'No'}\n"
+                output += f"**Updated At:** {result['updated_at']}\n"
+
+                return [TextContent(type="text", text=output)]
+            finally:
+                await new_server.close()
 
         elif name == "get_stats":
             stats = await memory_rag_server.get_stats()
