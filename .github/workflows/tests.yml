@@ -42,6 +42,7 @@ jobs:
       with:
         version: "latest"
         enable-cache: true
+        cache-dependency-glob: "requirements.txt"
 
     - name: Set up Rust
       uses: dtolnay/rust-toolchain@stable
