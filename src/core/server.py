@@ -2,7 +2,8 @@
 
 import logging
 import asyncio
-from typing import Optional, Dict, Any, List
+import json
+from typing import Optional, Dict, Any, List, Tuple
 from datetime import datetime
 from pathlib import Path
 import subprocess
@@ -869,6 +870,354 @@ class MemoryRAGServer:
         except Exception as e:
             logger.error(f"Failed to list memories: {e}")
             raise StorageError(f"Failed to list memories: {e}")
+
+    async def export_memories(
+        self,
+        output_path: Optional[str] = None,
+        format: str = "json",
+        category: Optional[str] = None,
+        context_level: Optional[str] = None,
+        scope: Optional[str] = None,
+        project_name: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        min_importance: float = 0.0,
+        max_importance: float = 1.0,
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Export memories to JSON or Markdown format.
+
+        Args:
+            output_path: Optional file path to write export. If None, returns content as string.
+            format: Export format - "json" or "markdown"
+            category: Filter by category
+            context_level: Filter by context level
+            scope: Filter by scope
+            project_name: Filter by project
+            tags: Filter by tags (must have all)
+            min_importance: Minimum importance (0.0-1.0)
+            max_importance: Maximum importance (0.0-1.0)
+            date_from: Filter memories created after this date (ISO format)
+            date_to: Filter memories created before this date (ISO format)
+
+        Returns:
+            Dict with status, file_path/content, and count
+
+        Raises:
+            ValidationError: If format is invalid
+            StorageError: If export fails
+        """
+        # Validate format
+        if format not in ["json", "markdown"]:
+            raise ValidationError(f"Invalid export format: {format}. Must be 'json' or 'markdown'")
+
+        try:
+            # Get all matching memories using list_memories (no limit, get all)
+            result = await self.list_memories(
+                category=category,
+                context_level=context_level,
+                scope=scope,
+                project_name=project_name,
+                tags=tags,
+                min_importance=min_importance,
+                max_importance=max_importance,
+                date_from=date_from,
+                date_to=date_to,
+                sort_by="created_at",
+                sort_order="asc",
+                limit=10000,  # Large limit to get all memories
+                offset=0
+            )
+
+            memories = result["memories"]
+            total_count = result["total_count"]
+
+            # Generate export content based on format
+            if format == "json":
+                export_data = {
+                    "version": "1.0",
+                    "exported_at": datetime.now().isoformat(),
+                    "total_count": total_count,
+                    "filters": {
+                        "category": category,
+                        "context_level": context_level,
+                        "scope": scope,
+                        "project_name": project_name,
+                        "tags": tags,
+                        "min_importance": min_importance,
+                        "max_importance": max_importance,
+                        "date_from": date_from,
+                        "date_to": date_to,
+                    },
+                    "memories": memories
+                }
+                content = json.dumps(export_data, indent=2)
+
+            else:  # markdown
+                lines = [
+                    "# Memory Export",
+                    f"Exported: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                    f"Total Memories: {total_count}",
+                    ""
+                ]
+
+                for mem in memories:
+                    lines.append(f"## Memory: {mem['memory_id']}")
+                    lines.append(f"**Category:** {mem['category']}")
+                    lines.append(f"**Importance:** {mem['importance']:.2f}")
+                    lines.append(f"**Context Level:** {mem['context_level']}")
+                    lines.append(f"**Scope:** {mem['scope']}")
+                    if mem.get('project_name'):
+                        lines.append(f"**Project:** {mem['project_name']}")
+                    if mem.get('tags'):
+                        lines.append(f"**Tags:** {', '.join(mem['tags'])}")
+                    lines.append(f"**Created:** {mem['created_at']}")
+                    lines.append(f"**Updated:** {mem.get('updated_at', 'N/A')}")
+                    lines.append("")
+                    lines.append(mem['content'])
+                    lines.append("")
+                    lines.append("---")
+                    lines.append("")
+
+                content = "\n".join(lines)
+
+            # Write to file or return content
+            if output_path:
+                output_file = Path(output_path).expanduser()
+                output_file.parent.mkdir(parents=True, exist_ok=True)
+                output_file.write_text(content, encoding='utf-8')
+
+                logger.info(f"Exported {total_count} memories to {output_path} ({format} format)")
+                return {
+                    "status": "success",
+                    "file_path": str(output_file),
+                    "format": format,
+                    "count": total_count
+                }
+            else:
+                return {
+                    "status": "success",
+                    "content": content,
+                    "format": format,
+                    "count": total_count
+                }
+
+        except ValidationError:
+            raise
+        except Exception as e:
+            logger.error(f"Failed to export memories: {e}")
+            raise StorageError(f"Failed to export memories: {e}")
+
+    async def import_memories(
+        self,
+        file_path: Optional[str] = None,
+        content: Optional[str] = None,
+        conflict_mode: str = "skip",
+        format: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Import memories from JSON file or content.
+
+        Args:
+            file_path: Path to import file (JSON format)
+            content: Direct JSON content string (alternative to file_path)
+            conflict_mode: How to handle existing memories - "skip", "overwrite", or "merge"
+            format: File format - "json" (auto-detected from extension if not provided)
+
+        Returns:
+            Dict with import summary (created, updated, skipped, errors)
+
+        Raises:
+            ValidationError: If file doesn't exist, format invalid, or conflict_mode invalid
+            StorageError: If import fails
+        """
+        # Validate conflict mode
+        if conflict_mode not in ["skip", "overwrite", "merge"]:
+            raise ValidationError(
+                f"Invalid conflict mode: {conflict_mode}. Must be 'skip', 'overwrite', or 'merge'"
+            )
+
+        # Validate input
+        if not file_path and not content:
+            raise ValidationError("Must provide either file_path or content")
+
+        try:
+            # Load content from file or use provided content
+            if file_path:
+                import_file = Path(file_path).expanduser()
+                if not import_file.exists():
+                    raise ValidationError(f"Import file not found: {file_path}")
+
+                # Auto-detect format from extension
+                if not format:
+                    ext = import_file.suffix.lower()
+                    if ext == ".json":
+                        format = "json"
+                    else:
+                        raise ValidationError(
+                            f"Cannot auto-detect format from extension: {ext}. "
+                            "Supported: .json"
+                        )
+
+                import_content = import_file.read_text(encoding='utf-8')
+            else:
+                import_content = content
+                format = format or "json"
+
+            # Validate format
+            if format != "json":
+                raise ValidationError(f"Only JSON format is supported for import, got: {format}")
+
+            # Parse JSON
+            try:
+                data = json.loads(import_content)
+            except json.JSONDecodeError as e:
+                raise ValidationError(f"Invalid JSON format: {e}")
+
+            # Validate schema
+            if "memories" not in data:
+                raise ValidationError("Import file must contain 'memories' key")
+
+            if not isinstance(data["memories"], list):
+                raise ValidationError("'memories' must be a list")
+
+            memories = data["memories"]
+            created_count = 0
+            updated_count = 0
+            skipped_count = 0
+            errors = []
+
+            # Process each memory
+            for idx, mem_data in enumerate(memories):
+                try:
+                    # Extract memory ID
+                    mem_id = mem_data.get("memory_id") or mem_data.get("id")
+                    if not mem_id:
+                        errors.append(f"Memory at index {idx}: Missing memory_id/id")
+                        continue
+
+                    # Check if memory exists
+                    existing = await self.store.get_by_id(mem_id)
+
+                    if existing:
+                        # Handle existing memory based on conflict mode
+                        if conflict_mode == "skip":
+                            skipped_count += 1
+                            continue
+
+                        elif conflict_mode == "overwrite":
+                            # Generate embedding for new content
+                            embedding = await self.embedding_gen.generate(mem_data["content"])
+
+                            # Build metadata
+                            metadata = {
+                                "category": mem_data.get("category", "general"),
+                                "context_level": mem_data.get("context_level", "SESSION"),
+                                "scope": mem_data.get("scope", "global"),
+                                "importance": mem_data.get("importance", 0.5),
+                                "tags": mem_data.get("tags", []),
+                                "created_at": mem_data.get("created_at", datetime.now().isoformat()),
+                                "updated_at": datetime.now().isoformat(),
+                            }
+
+                            # Add optional fields
+                            if "project_name" in mem_data:
+                                metadata["project_name"] = mem_data["project_name"]
+                            if "metadata" in mem_data:
+                                metadata["metadata"] = mem_data["metadata"]
+
+                            # Update using store's update method
+                            success = await self.store.update(mem_id, {
+                                "content": mem_data["content"],
+                                "embedding": embedding,
+                                "metadata": metadata
+                            })
+
+                            if success:
+                                updated_count += 1
+                            else:
+                                errors.append(f"Memory {mem_id}: Update failed")
+
+                        elif conflict_mode == "merge":
+                            # Merge: update only non-null fields
+                            updates = {}
+
+                            if "content" in mem_data and mem_data["content"]:
+                                updates["content"] = mem_data["content"]
+                                updates["embedding"] = await self.embedding_gen.generate(mem_data["content"])
+
+                            # Merge metadata
+                            metadata_updates = {}
+                            for field in ["category", "context_level", "scope", "importance", "tags", "project_name"]:
+                                if field in mem_data and mem_data[field] is not None:
+                                    metadata_updates[field] = mem_data[field]
+
+                            if metadata_updates:
+                                metadata_updates["updated_at"] = datetime.now().isoformat()
+                                updates["metadata"] = metadata_updates
+
+                            if updates:
+                                success = await self.store.update(mem_id, updates)
+                                if success:
+                                    updated_count += 1
+                                else:
+                                    errors.append(f"Memory {mem_id}: Merge update failed")
+                            else:
+                                skipped_count += 1
+
+                    else:
+                        # Memory doesn't exist - create new
+                        embedding = await self.embedding_gen.generate(mem_data["content"])
+
+                        # Build metadata
+                        metadata = {
+                            "category": mem_data.get("category", "general"),
+                            "context_level": mem_data.get("context_level", "SESSION"),
+                            "scope": mem_data.get("scope", "global"),
+                            "importance": mem_data.get("importance", 0.5),
+                            "tags": mem_data.get("tags", []),
+                            "created_at": mem_data.get("created_at", datetime.now().isoformat()),
+                            "updated_at": datetime.now().isoformat(),
+                        }
+
+                        # Add optional fields
+                        if "project_name" in mem_data:
+                            metadata["project_name"] = mem_data["project_name"]
+                        if "metadata" in mem_data:
+                            metadata["metadata"] = mem_data["metadata"]
+
+                        # Store new memory
+                        new_id = await self.store.store(
+                            content=mem_data["content"],
+                            embedding=embedding,
+                            metadata=metadata
+                        )
+
+                        created_count += 1
+
+                except Exception as e:
+                    errors.append(f"Memory at index {idx} (ID: {mem_id if 'mem_id' in locals() else 'unknown'}): {str(e)}")
+
+            logger.info(
+                f"Import completed: {created_count} created, {updated_count} updated, "
+                f"{skipped_count} skipped, {len(errors)} errors"
+            )
+
+            return {
+                "status": "success" if len(errors) == 0 else "partial",
+                "created": created_count,
+                "updated": updated_count,
+                "skipped": skipped_count,
+                "errors": errors,
+                "total_processed": len(memories)
+            }
+
+        except ValidationError:
+            raise
+        except Exception as e:
+            logger.error(f"Failed to import memories: {e}")
+            raise StorageError(f"Failed to import memories: {e}")
 
     async def retrieve_preferences(
         self,
