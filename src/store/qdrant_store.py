@@ -286,8 +286,23 @@ class QdrantMemoryStore(MemoryStore):
             logger.error(f"Failed to count memories: {e}")
             return 0
 
-    async def update(self, memory_id: str, updates: Dict[str, Any]) -> bool:
-        """Update a memory's metadata."""
+    async def update(
+        self,
+        memory_id: str,
+        updates: Dict[str, Any],
+        new_embedding: Optional[List[float]] = None
+    ) -> bool:
+        """
+        Update a memory's metadata and optionally its embedding.
+
+        Args:
+            memory_id: ID of memory to update
+            updates: Dictionary of fields to update
+            new_embedding: Optional new embedding vector (for content updates)
+
+        Returns:
+            bool: True if updated, False if not found
+        """
         if self.client is None:
             await self.initialize()
 
@@ -300,12 +315,53 @@ class QdrantMemoryStore(MemoryStore):
             # Update timestamp
             updates["updated_at"] = datetime.now(UTC).isoformat()
 
-            # Set payload (merge with existing)
-            self.client.set_payload(
-                collection_name=self.collection_name,
-                payload=updates,
-                points=[memory_id],
-            )
+            if new_embedding is not None:
+                # Use upsert to update both vector and payload
+                from qdrant_client.models import PointStruct
+
+                # Merge existing payload with updates
+                existing_dict = existing.model_dump()
+                merged_payload = {
+                    "id": memory_id,
+                    "content": updates.get("content", existing.content),
+                    "category": updates.get("category", existing.category.value if hasattr(existing.category, 'value') else existing.category),
+                    "context_level": updates.get("context_level", existing.context_level.value if hasattr(existing.context_level, 'value') else existing.context_level),
+                    "scope": updates.get("scope", existing.scope.value if hasattr(existing.scope, 'value') else existing.scope),
+                    "project_name": updates.get("project_name", existing.project_name),
+                    "importance": updates.get("importance", existing.importance),
+                    "tags": updates.get("tags", existing.tags),
+                    "metadata": updates.get("metadata", existing.metadata),
+                    "created_at": existing.created_at.isoformat(),
+                    "updated_at": updates["updated_at"],
+                    "last_accessed": existing.last_accessed.isoformat() if existing.last_accessed else None,
+                    "lifecycle_state": updates.get("lifecycle_state", existing.lifecycle_state.value if hasattr(existing.lifecycle_state, 'value') else existing.lifecycle_state),
+                }
+
+                # Handle provenance
+                if hasattr(existing, 'provenance') and existing.provenance:
+                    prov = existing.provenance
+                    merged_payload["provenance"] = {
+                        "source": prov.source.value if hasattr(prov.source, 'value') else prov.source,
+                        "created_by": prov.created_by,
+                        "confidence": prov.confidence,
+                        "verified": prov.verified,
+                    }
+
+                self.client.upsert(
+                    collection_name=self.collection_name,
+                    points=[PointStruct(
+                        id=memory_id,
+                        vector=new_embedding,
+                        payload=merged_payload
+                    )]
+                )
+            else:
+                # Only update payload (no vector change)
+                self.client.set_payload(
+                    collection_name=self.collection_name,
+                    payload=updates,
+                    points=[memory_id],
+                )
 
             logger.debug(f"Updated memory: {memory_id}")
             return True

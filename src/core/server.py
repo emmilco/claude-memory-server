@@ -3,7 +3,7 @@
 import logging
 import asyncio
 from typing import Optional, Dict, Any, List
-from datetime import datetime
+from datetime import datetime, UTC
 from pathlib import Path
 import subprocess
 
@@ -18,6 +18,8 @@ from src.core.models import (
     MemoryResult,
     RetrievalResponse,
     DeleteMemoryRequest,
+    UpdateMemoryRequest,
+    UpdateMemoryResponse,
     StatusResponse,
     SearchFilters,
     ContextLevel,
@@ -651,6 +653,163 @@ class MemoryRAGServer:
         except Exception as e:
             logger.error(f"Failed to delete memory: {e}")
             raise StorageError(f"Failed to delete memory: {e}")
+
+    async def get_memory_by_id(self, memory_id: str) -> Dict[str, Any]:
+        """
+        Retrieve a specific memory by its ID.
+
+        Args:
+            memory_id: Memory ID to retrieve
+
+        Returns:
+            Dict with memory data if found, or error status if not found
+        """
+        try:
+            memory = await self.store.get_by_id(memory_id)
+
+            if memory is None:
+                return {
+                    "status": "not_found",
+                    "memory_id": memory_id,
+                    "message": f"No memory found with ID: {memory_id}"
+                }
+
+            return {
+                "status": "success",
+                "memory": memory.model_dump(),
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to retrieve memory by ID: {e}")
+            raise RetrievalError(f"Failed to retrieve memory: {e}")
+
+    async def update_memory(
+        self,
+        memory_id: str,
+        content: Optional[str] = None,
+        category: Optional[str] = None,
+        importance: Optional[float] = None,
+        tags: Optional[List[str]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        context_level: Optional[str] = None,
+        preserve_timestamps: bool = True,
+        regenerate_embedding: bool = True,
+    ) -> Dict[str, Any]:
+        """
+        Update an existing memory.
+
+        Args:
+            memory_id: ID of memory to update
+            content: New content (triggers embedding regeneration if changed)
+            category: New category
+            importance: New importance score (0.0-1.0)
+            tags: New tags list
+            metadata: New metadata dict
+            context_level: New context level
+            preserve_timestamps: Keep created_at, update updated_at
+            regenerate_embedding: Auto-regenerate embedding if content changes
+
+        Returns:
+            Dict with update status and metadata
+        """
+        if self.config.read_only_mode:
+            raise ReadOnlyError("Cannot update memory in read-only mode")
+
+        try:
+            # Validate request
+            request = UpdateMemoryRequest(
+                memory_id=memory_id,
+                content=content,
+                category=MemoryCategory(category) if category else None,
+                importance=importance,
+                tags=tags,
+                metadata=metadata,
+                context_level=ContextLevel(context_level) if context_level else None,
+                preserve_timestamps=preserve_timestamps,
+                regenerate_embedding=regenerate_embedding,
+            )
+
+            # Check if memory exists
+            existing_memory = await self.store.get_by_id(memory_id)
+            if existing_memory is None:
+                return {
+                    "status": "not_found",
+                    "memory_id": memory_id,
+                    "message": f"No memory found with ID: {memory_id}"
+                }
+
+            # Track which fields are being updated
+            updated_fields = []
+            updates = {}
+
+            # Build updates dict
+            if request.content is not None:
+                updates["content"] = request.content
+                updated_fields.append("content")
+            if request.category is not None:
+                updates["category"] = request.category.value
+                updated_fields.append("category")
+            if request.importance is not None:
+                updates["importance"] = request.importance
+                updated_fields.append("importance")
+            if request.tags is not None:
+                updates["tags"] = request.tags
+                updated_fields.append("tags")
+            if request.metadata is not None:
+                updates["metadata"] = request.metadata
+                updated_fields.append("metadata")
+            if request.context_level is not None:
+                updates["context_level"] = request.context_level.value
+                updated_fields.append("context_level")
+
+            # Handle timestamp preservation
+            if request.preserve_timestamps:
+                updates["updated_at"] = datetime.now(UTC)
+            else:
+                updates["created_at"] = datetime.now(UTC)
+                updates["updated_at"] = datetime.now(UTC)
+
+            # Generate new embedding if content changed
+            new_embedding = None
+            embedding_regenerated = False
+            if request.content is not None and request.regenerate_embedding:
+                new_embedding = await self._get_embedding(request.content)
+                embedding_regenerated = True
+
+            # Update in store
+            success = await self.store.update(
+                memory_id=memory_id,
+                updates=updates,
+                new_embedding=new_embedding,
+            )
+
+            if not success:
+                return {
+                    "status": "not_found",
+                    "memory_id": memory_id,
+                    "message": f"Failed to update memory with ID: {memory_id}"
+                }
+
+            self.stats["memories_updated"] = self.stats.get("memories_updated", 0) + 1
+            logger.info(f"Updated memory: {memory_id} (fields: {', '.join(updated_fields)})")
+
+            # Build response
+            response = UpdateMemoryResponse(
+                memory_id=memory_id,
+                status="updated",
+                updated_fields=updated_fields,
+                embedding_regenerated=embedding_regenerated,
+                updated_at=updates["updated_at"].isoformat(),
+            )
+
+            return response.model_dump()
+
+        except ValidationError as e:
+            logger.error(f"Validation error: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Failed to update memory: {e}")
+            raise StorageError(f"Failed to update memory: {e}")
 
     async def retrieve_preferences(
         self,

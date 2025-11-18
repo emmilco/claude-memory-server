@@ -81,6 +81,14 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-18
 
+- **FEAT-040: Memory Update/Edit Operations**
+  - Added `UpdateMemoryRequest` and `UpdateMemoryResponse` models to `src/core/models.py`
+  - Enhanced `update()` method in `src/store/qdrant_store.py` and `src/store/sqlite_store.py` to support embedding regeneration
+  - Added `update_memory()` and `get_memory_by_id()` methods to `src/core/server.py`
+  - Registered `update_memory` and `get_memory_by_id` MCP tools in `src/mcp_server.py`
+  - Comprehensive test suite: 15 unit tests + 15 integration tests (100% passing)
+  - Features: partial updates, automatic embedding regeneration, timestamp preservation, read-only mode protection
+
 - **PERF-006: Test Suite Performance Optimization - Phases 2 & 3**
   - Added session-scoped test fixtures in `tests/conftest.py` for reusable resources
   - Created `LazyResource` class for lazy initialization of expensive resources
