@@ -79,6 +79,14 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ## [Unreleased]
 
+### Changed - 2025-11-17
+
+- **PERF-007: CI Test Suite Performance Optimization**
+  - Added pytest-xdist for parallel test execution (`-n auto` flag)
+  - Enhanced Qdrant service with Docker health checks (5s intervals, faster startup detection)
+  - Improved Rust build caching with shared keys across branches
+  - Expected CI runtime improvement: 340s → ~140-165s (50-60% faster)
+
 ### Added - 2025-11-17
 
 - **CI/CD:** GitHub Actions workflow for automated testing

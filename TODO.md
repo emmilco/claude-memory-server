@@ -13,6 +13,29 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
 
 ## Current Sprint
 
+### 🔥 Tier 1: Critical Developer Experience (Top Priority)
+
+**These items directly impact development velocity and test reliability**
+
+- [ ] **PERF-006**: Test Suite Performance Optimization (~2-3 days) 🔥🔥🔥🔥🔥
+  - **Planning doc:** `planning_docs/PERF-006_test_performance_optimization.md`
+  - **CRITICAL: 28-31% test suite speedup (340s → 235s), improves dev velocity**
+  - **Current state:** 1927 passing tests, 340s runtime, top 20 tests = 50% of runtime
+  - **Phase 1: Quick Wins (60-80s savings)**
+    - [ ] Mock embeddings in test_server_extended.py (8 tests, ~50s savings)
+    - [ ] Use small test project in test_cross_project.py (1 test, ~65s savings)
+    - [ ] Reduce corpus size in hybrid_search tests (3 tests, ~6-8s savings)
+  - **Phase 2: Fixture Optimization (10-15s savings)**
+    - [ ] Session-scoped database fixtures in conftest.py
+    - [ ] Lazy initialization of heavy resources
+    - [ ] In-memory stores for unit tests
+  - **Phase 3: Advanced Optimizations (5-10s savings)**
+    - [ ] Test embedding cache (session-scoped)
+    - [ ] Parallel test execution where safe
+    - [ ] Test data factories instead of repeated setup
+  - **Impact:** Faster CI/CD, quicker local development, better developer experience
+  - **Strategic Priority:** P0 - Foundation for sustainable development velocity
+
 ### 🔥 Tier 2: High-Impact Core Functionality Improvements
 
 **These are the highest-impact features that directly enhance search, retrieval, and core capabilities**

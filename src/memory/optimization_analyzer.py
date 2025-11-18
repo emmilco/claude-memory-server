@@ -314,9 +314,10 @@ class OptimizationAnalyzer:
         return "other"
 
     def _categorize_directory(self, dir_path: Path) -> str:
-        """Categorize directory by name."""
+        """Categorize directory by name or parent."""
         dir_name = dir_path.name
 
+        # Check immediate directory name first
         if dir_name == "node_modules":
             return "node_modules"
         if dir_name in {"venv", ".venv", "env", ".env", "virtualenv"}:
@@ -329,6 +330,22 @@ class OptimizationAnalyzer:
             return "git"
         if dir_name in {"vendor", "third_party", "external"}:
             return "vendor"
+
+        # Check if directory is inside a categorized parent directory
+        for parent in dir_path.parents:
+            parent_name = parent.name
+            if parent_name == "node_modules":
+                return "node_modules"
+            if parent_name in {"venv", ".venv", "env", ".env", "virtualenv"}:
+                return "venv"
+            if parent_name in {"dist", "build", "out", "target", ".next", ".nuxt"}:
+                return "build"
+            if parent_name in {"__pycache__", ".cache", ".pytest_cache", ".mypy_cache"}:
+                return "cache"
+            if parent_name == ".git":
+                return "git"
+            if parent_name in {"vendor", "third_party", "external"}:
+                return "vendor"
 
         return "other"
 
