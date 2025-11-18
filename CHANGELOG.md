@@ -93,6 +93,8 @@ A pre-commit hook enforces CHANGELOG updates:
   - Added workflow permissions for check runs and PR comments
   - Fixed test results publishing to only run when test-results.xml exists
   - Fixed Qdrant healthcheck endpoint from `/health` to `/` (root path)
+  - Optimized build time with Swatinem/rust-cache (smarter Rust dependency caching)
+  - Added pytest-timeout with 30s timeout per test to prevent hanging on slow CI operations
 
 ### Planning - 2025-11-17
 

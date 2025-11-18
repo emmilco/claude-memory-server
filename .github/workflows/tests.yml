@@ -38,28 +38,21 @@ jobs:
       with:
         toolchain: stable
 
-    - name: Cache Rust dependencies
-      uses: actions/cache@v4
+    - name: Cache Rust compilation
+      uses: Swatinem/rust-cache@v2
       with:
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          rust_core/target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-cargo-
+        workspaces: rust_core
+        cache-on-failure: true
 
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
+        pip install maturin
         pip install -r requirements.txt
-        pip install pytest pytest-asyncio pytest-cov
+        pip install pytest pytest-asyncio pytest-cov pytest-timeout
 
     - name: Build Rust module
       run: |
-        pip install maturin
         cd rust_core
         maturin build --release --interpreter python3.13
         pip install target/wheels/mcp_performance_core-*-cp313-cp313-manylinux*.whl
@@ -88,7 +81,7 @@ jobs:
         QDRANT_API_KEY: development
       run: |
         set -o pipefail
-        pytest tests/ -v --tb=short --cov=src --cov-report=term-missing --cov-report=xml --junitxml=test-results.xml 2>&1 | tee pytest-output.txt
+        pytest tests/ -v --tb=short --timeout=30 --timeout-method=thread --cov=src --cov-report=term-missing --cov-report=xml --junitxml=test-results.xml 2>&1 | tee pytest-output.txt
         echo "PYTEST_EXIT_CODE=${PIPESTATUS[0]}" >> $GITHUB_ENV
 
     - name: Generate test summary
