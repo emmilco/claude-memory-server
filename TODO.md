@@ -189,13 +189,14 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - [x] **Phase 2.1: Index compression for archived projects** ✅ (2025-11-18)
   - [x] **Phase 2.2: Bulk operations (auto-archive multiple projects)** ✅ (2025-11-18)
   - [x] **Phase 2.3: Automatic archival scheduler** ✅ (2025-11-18)
-  - [ ] Phase 2.4: Export to file / import from archive
+  - [x] **Phase 2.4: Export to file / import from archive** ✅ (2025-11-18)
   - [ ] Phase 2.5: Documentation & polish
   - **Completed (Phase 2.1):** ArchiveCompressor with tar.gz compression, 60-80% storage reduction, manifests, 14 tests (100% passing)
   - **Completed (Phase 2.2):** BulkArchivalManager for multi-project archival, auto-archive inactive projects, 20 tests (100% passing)
   - **Completed (Phase 2.3):** ArchivalScheduler with APScheduler, configurable schedules (daily/weekly/monthly), 23 tests (100% passing)
+  - **Completed (Phase 2.4):** ArchiveExporter and ArchiveImporter for portable archives, conflict resolution, roundtrip validation, 18 tests (100% passing)
   - **Impact:** Enables graceful project lifecycle, improves search performance
-  - **Status:** Phase 1 complete, Phases 2.1-2.3 complete, Phases 2.4-2.5 pending
+  - **Status:** Phase 1 complete, Phases 2.1-2.4 complete, Phase 2.5 pending (documentation)
 
 ### 🟢 Tier 4: High-Value UX Quick Wins
 
