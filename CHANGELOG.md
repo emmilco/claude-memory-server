@@ -81,6 +81,16 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-18
 
+- **FEAT-036: Project Archival Phase 2.4 - Export/Import**
+  - Created `src/memory/archive_exporter.py` with ArchiveExporter for portable archive export
+  - Created `src/memory/archive_importer.py` with ArchiveImporter for portable archive import
+  - Export to portable .tar.gz files with manifest, compressed index, and human-readable README
+  - Import with validation, conflict resolution (skip/overwrite), and integrity checking
+  - Conflict resolution strategies for handling existing archives
+  - Archive validation without importing
+  - Roundtrip integrity validation (export → import → verify)
+  - Files: `src/memory/archive_exporter.py`, `src/memory/archive_importer.py`, `tests/unit/test_archive_export_import.py` (18 tests, 100% passing)
+
 - **FEAT-036: Project Archival Phase 2.3 - Automatic Scheduler**
   - Created `src/memory/archival_scheduler.py` with ArchivalScheduler for automatic periodic archival
   - Implemented APScheduler integration with configurable schedules (daily, weekly, monthly)
