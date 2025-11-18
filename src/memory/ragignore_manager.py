@@ -91,7 +91,7 @@ class RagignoreManager:
         try:
             # Backup existing file
             if backup and self.ragignore_path.exists():
-                backup_path = self.ragignore_path.with_suffix(".ragignore.bak")
+                backup_path = self.ragignore_path.parent / (self.ragignore_path.name + ".bak")
                 self.ragignore_path.rename(backup_path)
                 logger.info(f"Created backup: {backup_path}")
 

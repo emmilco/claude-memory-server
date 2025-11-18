@@ -141,28 +141,27 @@ class HealthMaintenanceJobs:
                 )
                 result.success = True
                 result.memories_archived = len(candidates)
-                return result
+            else:
+                # Execute archival
+                archived_count = 0
+                for memory, target_state in candidates:
+                    try:
+                        # Update lifecycle state
+                        await self.store.update_lifecycle_state(
+                            memory.id, target_state
+                        )
+                        archived_count += 1
+                    except Exception as e:
+                        error_msg = f"Failed to archive memory {memory.id}: {e}"
+                        logger.error(error_msg)
+                        result.errors.append(error_msg)
 
-            # Execute archival
-            archived_count = 0
-            for memory, target_state in candidates:
-                try:
-                    # Update lifecycle state
-                    await self.store.update_lifecycle_state(
-                        memory.id, target_state
-                    )
-                    archived_count += 1
-                except Exception as e:
-                    error_msg = f"Failed to archive memory {memory.id}: {e}"
-                    logger.error(error_msg)
-                    result.errors.append(error_msg)
+                result.memories_archived = archived_count
+                result.success = True
 
-            result.memories_archived = archived_count
-            result.success = True
-
-            logger.info(
-                f"Archived {archived_count} memories, {len(result.errors)} errors"
-            )
+                logger.info(
+                    f"Archived {archived_count} memories, {len(result.errors)} errors"
+                )
 
         except Exception as e:
             error_msg = f"Weekly archival job failed: {e}"
@@ -239,25 +238,24 @@ class HealthMaintenanceJobs:
                 )
                 result.success = True
                 result.memories_deleted = len(candidates)
-                return result
+            else:
+                # Execute deletion
+                deleted_count = 0
+                for memory in candidates:
+                    try:
+                        await self.store.delete_memory(memory.id)
+                        deleted_count += 1
+                    except Exception as e:
+                        error_msg = f"Failed to delete memory {memory.id}: {e}"
+                        logger.error(error_msg)
+                        result.errors.append(error_msg)
 
-            # Execute deletion
-            deleted_count = 0
-            for memory in candidates:
-                try:
-                    await self.store.delete_memory(memory.id)
-                    deleted_count += 1
-                except Exception as e:
-                    error_msg = f"Failed to delete memory {memory.id}: {e}"
-                    logger.error(error_msg)
-                    result.errors.append(error_msg)
+                result.memories_deleted = deleted_count
+                result.success = True
 
-            result.memories_deleted = deleted_count
-            result.success = True
-
-            logger.info(
-                f"Deleted {deleted_count} STALE memories, {len(result.errors)} errors"
-            )
+                logger.info(
+                    f"Deleted {deleted_count} STALE memories, {len(result.errors)} errors"
+                )
 
         except Exception as e:
             error_msg = f"Monthly cleanup job failed: {e}"

@@ -1,6 +1,7 @@
 # Setup Guide
 
 **Last Updated:** November 17, 2025
+**Version:** 4.0 (Production-Ready)
 
 ---
 
@@ -237,10 +238,14 @@ CLAUDE_RAG_COLLECTION_NAME=memory
 CLAUDE_RAG_EMBEDDING_MODEL=all-MiniLM-L6-v2
 CLAUDE_RAG_EMBEDDING_DIMENSION=384
 CLAUDE_RAG_EMBEDDING_BATCH_SIZE=32
+CLAUDE_RAG_ENABLE_PARALLEL_EMBEDDINGS=true  # 4-8x faster indexing
+CLAUDE_RAG_EMBEDDING_PARALLEL_WORKERS=auto  # auto-detects CPU count
 
 # Features
 CLAUDE_RAG_ENABLE_FILE_WATCHER=true
 CLAUDE_RAG_WATCH_DEBOUNCE_MS=1000
+CLAUDE_RAG_ENABLE_HYBRID_SEARCH=true  # Semantic + keyword search
+CLAUDE_RAG_HYBRID_SEARCH_ALPHA=0.5  # Weight: 0=BM25 only, 1=semantic only
 
 # Storage
 CLAUDE_RAG_STORAGE_BACKEND=qdrant  # or sqlite
@@ -418,4 +423,36 @@ After setup is complete:
 
 ---
 
+## Performance Optimization
+
+### Enable Parallel Embeddings (4-8x faster)
+
+Add to `.env`:
+```bash
+CLAUDE_RAG_ENABLE_PARALLEL_EMBEDDINGS=true
+CLAUDE_RAG_EMBEDDING_PARALLEL_WORKERS=auto  # Uses CPU count
+```
+
+### Enable Hybrid Search (Better accuracy)
+
+Add to `.env`:
+```bash
+CLAUDE_RAG_ENABLE_HYBRID_SEARCH=true
+CLAUDE_RAG_HYBRID_SEARCH_ALPHA=0.5  # 0.5 = balanced semantic+keyword
+CLAUDE_RAG_HYBRID_FUSION_METHOD=weighted  # weighted, rrf, or cascade
+```
+
+### Use Qdrant for Production
+
+For better performance at scale:
+- **SQLite**: Good for <10K memories, no Docker required
+- **Qdrant**: Recommended for >10K memories, better scalability
+
+Switch by changing `CLAUDE_RAG_STORAGE_BACKEND=qdrant` in `.env`
+
+---
+
 **Setup Complete!** You're ready to use the Claude Memory RAG Server.
+
+**Document Version:** 2.0
+**Last Updated:** November 17, 2025

@@ -1012,19 +1012,20 @@ class SQLiteMemoryStore(MemoryStore):
             logger.error(f"Failed to find unused memories: {e}")
             return []
 
-    async def get_all_memories(self) -> List[Dict[str, Any]]:
+    async def get_all_memories(self) -> List[MemoryUnit]:
         """
         Get all memories (for fallback queries).
 
         Returns:
-            List of all memory dictionaries
+            List of all MemoryUnit objects
         """
         if not self.conn:
             raise StorageError("Store not initialized")
 
         try:
             cursor = self.conn.execute("SELECT * FROM memories")
-            return [dict(row) for row in cursor.fetchall()]
+            rows = cursor.fetchall()
+            return [self._row_to_memory_unit(dict(row)) for row in rows]
 
         except Exception as e:
             logger.error(f"Failed to get all memories: {e}")

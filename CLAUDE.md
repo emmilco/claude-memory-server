@@ -9,19 +9,27 @@ This document provides essential context for AI agents working on the Claude Mem
 A Model Context Protocol (MCP) server providing persistent memory, documentation search, and semantic code search capabilities for Claude. Production-ready with comprehensive testing and documentation.
 
 ### Core Capabilities
-- **Semantic code search** - Find code by meaning, not keywords (7-13ms latency)
-- **Memory management** - Store/retrieve memories with context stratification
+- **Semantic code search** - Find code by meaning, not keywords (7-13ms latency, hybrid: 10-18ms)
+- **Memory management** - Store/retrieve memories with 4-tier lifecycle and provenance tracking
+- **Memory intelligence** - Duplicate detection, consolidation, trust scoring, contradiction resolution
 - **Documentation RAG** - Search project documentation semantically
-- **Code indexing** - Parse and index 6 languages using tree-sitter
-- **Real-time watching** - Auto-reindex on file changes
+- **Code indexing** - Parse and index 12 file formats (9 languages + 3 config types) using tree-sitter
+- **Parallel embeddings** - 4-8x faster indexing with multi-process architecture
+- **Incremental caching** - 98% cache hit rate, 5-10x faster re-indexing
+- **Real-time watching** - Auto-reindex on file changes with smart batching
+- **Multi-project support** - Cross-project search with privacy consent
+- **Health monitoring** - Continuous monitoring with automated remediation
+- **Git history search** - Semantic search over commit history
 
 ### Technology Stack
-- **Language:** Python 3.13+ with type hints
-- **Performance:** Rust module via PyO3 for parsing (1-6ms per file)
-- **Vector DB:** Qdrant (Docker, localhost:6333)
-- **Embeddings:** all-MiniLM-L6-v2 (384 dimensions)
-- **Framework:** MCP (Model Context Protocol)
-- **Testing:** pytest with 1413/1414 tests passing (67% overall, 80-85% core coverage)
+- **Language:** Python 3.13+ with type hints (123 modules, ~500KB code)
+- **Performance:** Rust module via PyO3 for parsing (1-6ms per file) OR pure Python fallback
+- **Vector DB:** Qdrant (Docker, localhost:6333) OR SQLite (no Docker required)
+- **Embeddings:** all-MiniLM-L6-v2 (384 dimensions) with parallel generation
+- **Search:** Hybrid (BM25 + vector) with 3 fusion strategies, query synonyms, reranking
+- **Framework:** MCP (Model Context Protocol) - 14 MCP tools + 28 CLI commands
+- **Testing:** pytest with 1413/1414 tests passing (99.9% pass rate, 67% overall coverage, 80-85% core)
+- **Languages Supported:** Python, JS, TS, Java, Go, Rust, C, C++, C#, SQL, JSON, YAML, TOML (12 total)
 
 ## Essential Files
 
@@ -410,42 +418,36 @@ python -m src.mcp_server
 ### Metrics
 - **Test Status:** 1413/1414 passing (1 flaky performance test that passes when run individually)
 - **Pass Rate:** 99.9% (improved from 97.9% → 99.4% → 99.9%)
-- **Coverage:** 66.95% overall (9929 statements, 6647 covered, 3282 missing)
-  - **Note:** Coverage excludes 14 impractical-to-test files (CLI commands, interactive TUIs, schedulers)
-  - **Core modules:** 80-85% coverage (meets original target)
-  - **See:** `.coveragerc` for exclusion rationale
-- **Languages:** Python, JavaScript, TypeScript, Java, Go, Rust
+- **Coverage:** 67% overall (80-85% core modules, meets original target)
+  - **Note:** Coverage excludes 14 impractical-to-test files per `.coveragerc` (CLI/TUI/schedulers)
+- **Modules:** 123 Python modules totaling ~500KB production code
+- **Languages:** 12 formats (Python, JS, TS, Java, Go, Rust, C, C++, C#, SQL, JSON, YAML, TOML)
+- **Commands:** 14 MCP tools + 28 CLI commands
 - **Performance:**
-  - Search: 7-13ms
-  - Indexing: 10-20 files/sec (4-8x faster with parallel embeddings)
-  - Re-indexing: 5-10x faster with cache (98%+ hit rate for unchanged code)
+  - Search: 7-13ms (semantic), 3-7ms (keyword), 10-18ms (hybrid)
+  - Indexing: 10-20 files/sec (parallel, 4-8x faster than single-threaded)
+  - Re-indexing: 5-10x faster with 98% cache hit rate
+  - Parsing: 1-6ms per file (Rust) OR 10-20ms (Python fallback)
 
-### Active Development
-- ✅ **COMPLETED (Nov 17):** Test Suite Comprehensive Fixes - 99.9% Pass Rate Achieved
-  - **First Round (21 tests fixed):** Async fixtures, test mocks, timezone handling, deprecation warnings
-  - **Second Round (9 tests fixed):** Hybrid search integration tests - achieved near-perfect test suite
-    - Fixed SQLite store compatibility in file deletion (incremental_indexer.py)
-    - Added "status" field to search_code() API response for consistency
-    - Added graceful empty query handling to prevent embedding errors
-    - Fixed remaining server.cleanup() → server.close() calls
-  - **Final Result:** 1413/1414 passing (99.9%), only 1 flaky performance test remains
-- ✅ **COMPLETED (Nov 17):** Performance Optimizations (PERF-001, PERF-003, PERF-004, PERF-005)
-  - **PERF-001:** Parallel indexing with multiprocessing (4-8x faster, 10-20 files/sec)
-  - **PERF-003:** Incremental embeddings via cache (5-10x faster re-indexing, 98%+ cache hits)
-  - **PERF-004:** Smart batching with adaptive batch sizing based on text length
-  - **PERF-005:** Streaming indexing (verified existing concurrent implementation)
-  - **Combined Impact:** 4-8x faster initial indexing, 5-10x faster re-indexing
-- ✅ **COMPLETED (Nov 17):** UX-011 Actionable Error Messages
-  - Enhanced all exceptions with solution and docs_url parameters
-  - Context-aware diagnostics with troubleshooting checklists
-  - Specific guidance for QdrantConnectionError, CollectionNotFoundError, EmbeddingError
-  - Formatted error output with "💡 Solution:" and "📖 Docs:" sections
-- ✅ **COMPLETED (Nov 17):** FEAT-037 Continuous Health Monitoring & Alerts
-- ✅ **COMPLETED (Nov 17):** FEAT-034 Memory Provenance & Trust Signals
-- ✅ **COMPLETED (Nov 17):** FEAT-035 Intelligent Memory Consolidation
+### Version 4.0 Status (Production-Ready Enterprise Features)
+
+**Major Systems Implemented:**
+- ✅ Memory Intelligence (lifecycle, provenance, trust, consolidation, relationships)
+- ✅ Multi-Project Support (cross-project search, workspace management, consent)
+- ✅ Health Monitoring (continuous monitoring, alerts, automated remediation)
+- ✅ Performance Optimization (parallel embeddings, incremental cache, hybrid search)
+- ✅ Enhanced UX (actionable errors, interactive TUIs, comprehensive CLI)
+- ✅ Enterprise Features (backup/restore, analytics, token tracking, optimization)
+
+**Production Readiness:**
+- ✅ 99.9% test pass rate (1413/1414 tests)
+- ✅ Comprehensive documentation (8 guides, all updated to v4.0)
+- ✅ Security hardened (267+ attack patterns blocked, read-only mode)
+- ✅ Performance optimized (4-8x indexing, 98% cache hit rate)
+- ✅ Fully featured (123 modules, 14 MCP tools, 28 CLI commands)
 
 ### Known Issues
-- **1 parallel embeddings performance test:** Occasionally fails during full suite run due to system load variability (passes consistently when run individually) - considered non-blocking
+- **1 performance test:** Flaky under heavy system load (passes individually) - non-blocking
 
 ## Key Commands Reference
 

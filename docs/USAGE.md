@@ -1,6 +1,7 @@
 # Usage Guide
 
 **Last Updated:** November 17, 2025
+**Version:** 4.0 (Production-Ready with 28 CLI Commands)
 
 ---
 
@@ -431,6 +432,127 @@ python -m src.cli health
 # - Disk space and memory
 ```
 
+### Project Management Commands
+
+```bash
+# List all indexed projects
+python -m src.cli project list
+
+# Get detailed project statistics
+python -m src.cli project stats my-app
+
+# Switch active project context
+python -m src.cli project switch my-app
+
+# Archive inactive project
+python -m src.cli project archive old-project
+
+# Rename project
+python -m src.cli project rename old-name new-name
+
+# Delete project (requires confirmation)
+python -m src.cli project delete old-project
+```
+
+### Memory Management Commands
+
+```bash
+# Interactive memory browser (TUI)
+python -m src.cli memory-browser
+
+# Find and consolidate duplicates
+python -m src.cli consolidate --interactive --execute
+
+# Verify memories and resolve contradictions
+python -m src.cli verify --auto-verify
+python -m src.cli verify --contradictions
+
+# Prune stale memories
+python -m src.cli prune --dry-run
+python -m src.cli prune --execute
+
+# Lifecycle management
+python -m src.cli lifecycle health
+python -m src.cli lifecycle update
+python -m src.cli lifecycle optimize --execute
+```
+
+### Git Integration Commands
+
+```bash
+# Index git commit history
+python -m src.cli git-index ./repo --project-name my-app
+
+# Search git history semantically
+python -m src.cli git-search "authentication bug fix" --since "last week"
+python -m src.cli git-search "refactor" --author "john@example.com"
+```
+
+### Health Monitoring Commands
+
+```bash
+# Continuous health monitoring status
+python -m src.cli health-monitor status
+
+# Generate health report
+python -m src.cli health-monitor report --period weekly
+
+# Apply automated fixes
+python -m src.cli health-monitor fix --auto
+
+# View health history
+python -m src.cli health-monitor history --days 30
+
+# Interactive health dashboard
+python -m src.cli health-dashboard
+```
+
+### Analytics & Reporting Commands
+
+```bash
+# Token usage analytics
+python -m src.cli analytics --period-days 30
+python -m src.cli analytics --project-name my-app
+
+# Session summary
+python -m src.cli session-summary
+python -m src.cli session-summary --session-id abc123
+```
+
+### Data Management Commands
+
+```bash
+# Backup memories
+python -m src.cli backup create
+python -m src.cli backup list
+
+# Export data
+python -m src.cli export --format json --output backup.json
+python -m src.cli export --format markdown --output memories.md
+
+# Import data
+python -m src.cli import --file backup.json
+
+# Repository management
+python -m src.cli repository list
+python -m src.cli repository add ./path/to/repo --name my-repo
+
+# Workspace management
+python -m src.cli workspace list
+python -m src.cli workspace create my-workspace
+```
+
+### Tagging Commands
+
+```bash
+# Auto-tag memories
+python -m src.cli auto-tag
+
+# Manage tags
+python -m src.cli tags list
+python -m src.cli tags add <memory-id> tag1 tag2
+```
+
 ---
 
 ## Best Practices
@@ -567,9 +689,197 @@ You can also explicitly ask Claude to use tools:
 
 ---
 
+## Multi-Project Features
+
+### Cross-Project Code Search
+
+```python
+# Search across all opted-in projects
+results = await server.search_all_projects(
+    query="authentication patterns",
+    limit=10
+)
+
+# Opt-in project for cross-project search
+await server.opt_in_cross_project("my-web-app")
+
+# List opted-in projects
+projects = await server.list_opted_in_projects()
+
+# Opt-out project
+await server.opt_out_cross_project("old-project")
+```
+
+### Find Similar Code
+
+```python
+# Find similar code snippets
+results = await server.find_similar_code(
+    code_snippet="""
+    async def login(username, password):
+        user = await db.authenticate(username, password)
+        return create_token(user)
+    """,
+    limit=5
+)
+
+# Interpretation:
+# >0.95: Likely duplicates
+# 0.80-0.95: Similar patterns
+# <0.80: Related but different
+```
+
+### Git History Search
+
+```python
+# Search git commits semantically
+results = await server.search_git_history(
+    query="authentication bug",
+    since="2024-01-01",
+    author="john@example.com"
+)
+
+# Track function evolution
+evolution = await server.show_function_evolution(
+    file_path="src/auth/handlers.py",
+    function_name="login"
+)
+```
+
+---
+
+## Advanced Features
+
+### Memory Lifecycle Management
+
+Memories automatically transition through lifecycle states:
+- **ACTIVE** (0-7 days): 1.0x search weight
+- **RECENT** (7-30 days): 0.7x search weight
+- **ARCHIVED** (30-180 days): 0.3x search weight
+- **STALE** (180+ days): 0.1x search weight
+
+```bash
+# View lifecycle health
+python -m src.cli lifecycle health
+
+# Update lifecycle states
+python -m src.cli lifecycle update
+
+# Optimize storage
+python -m src.cli lifecycle optimize --execute
+```
+
+### Memory Provenance & Trust
+
+```bash
+# Verify memories with low confidence
+python -m src.cli verify --auto-verify
+
+# Review contradictions
+python -m src.cli verify --contradictions
+
+# Filter by category
+python -m src.cli verify --category preference
+```
+
+### Intelligent Consolidation
+
+```bash
+# Find duplicates (dry-run by default)
+python -m src.cli consolidate --interactive
+
+# Auto-merge high-confidence duplicates
+python -m src.cli consolidate --auto --execute
+
+# Filter by category
+python -m src.cli consolidate --category fact --execute
+```
+
+### Health Monitoring
+
+```bash
+# Check current health status
+python -m src.cli health-monitor status
+
+# Generate weekly report
+python -m src.cli health-monitor report --period weekly
+
+# Auto-fix issues
+python -m src.cli health-monitor fix --auto
+
+# View trends
+python -m src.cli health-monitor history --days 30
+```
+
+### Token Analytics
+
+```bash
+# View token savings
+python -m src.cli analytics --period-days 30
+
+# Project-specific analytics
+python -m src.cli analytics --project-name my-app
+
+# Top sessions by savings
+python -m src.cli analytics --top-sessions
+```
+
+---
+
+## Complete CLI Command Reference
+
+**Total:** 28 commands across 7 categories
+
+### 1. Indexing & Watching (3 commands)
+- `index` - Index code files
+- `watch` - Watch for file changes
+- `auto-tag` - Auto-tag memories
+
+### 2. Project Management (4 commands)
+- `project` - Project lifecycle (list, stats, switch, archive, rename, delete)
+- `repository` - Repository management (add, remove, list)
+- `workspace` - Workspace coordination (create, list)
+- `collections` - Memory collection management
+
+### 3. Memory Management (6 commands)
+- `memory-browser` - Interactive TUI
+- `consolidate` - Duplicate consolidation
+- `verify` - Memory verification
+- `prune` - Prune stale memories
+- `lifecycle` - Lifecycle management
+- `tags` - Tag management
+
+### 4. Git Integration (2 commands)
+- `git-index` - Index git history
+- `git-search` - Search commits
+
+### 5. Health & Monitoring (3 commands)
+- `health` - Health checks
+- `health-monitor` - Continuous monitoring
+- `health-dashboard` - Interactive dashboard
+
+### 6. Analytics & Reporting (3 commands)
+- `status` - System status
+- `analytics` - Token analytics
+- `session-summary` - Session summaries
+
+### 7. Data Management (4 commands)
+- `backup` - Backup creation
+- `export` - Data export
+- `import` - Data import
+- `archival` - Project archival
+
+**Usage:** `python -m src.cli <command> [options]`
+
+---
+
 ## Next Steps
 
 - **API Reference:** [API.md](API.md) - Detailed API documentation
 - **Development Guide:** [DEVELOPMENT.md](DEVELOPMENT.md) - Contributing
 - **Troubleshooting:** [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Common issues
+
+**Document Version:** 2.0
+**Last Updated:** November 17, 2025
+**Status:** Comprehensive update with all 28 CLI commands documented
 

@@ -1,6 +1,7 @@
 # Security Guide
 
 **Last Updated:** November 17, 2025
+**Version:** 4.0 (Production-Ready Security)
 
 ---
 
@@ -312,4 +313,34 @@ If you discover a security vulnerability:
 
 ---
 
+## Enhanced Security Features (v4.0)
+
+### Actionable Error Messages (UX-011)
+- **Feature:** Enhanced exception handling with solution and docs_url parameters
+- **Security Benefit:** Clear guidance prevents misconfigurations
+- **Examples:**
+  - QdrantConnectionError includes Qdrant startup checklist
+  - ValidationError explains what pattern was detected and why
+  - All errors include documentation links for resolution
+
+### Memory Provenance Tracking (FEAT-034)
+- **Feature:** Track memory source, created_by, confidence, verification status
+- **Security Benefit:** Audit trail for all memories
+- **Audit Fields:**
+  - `source`: MANUAL, AUTOMATIC, IMPORT
+  - `created_by`: System or user identifier
+  - `verified`: Boolean verification flag
+  - `verification_notes`: Audit trail
+
+### Cross-Project Consent (FEAT-036)
+- **Feature:** Explicit opt-in required for cross-project search
+- **Privacy Benefit:** No data leakage between projects without consent
+- **Default:** Projects are isolated by default
+
+---
+
 **Security is a shared responsibility. Stay vigilant!**
+
+**Document Version:** 2.0
+**Last Updated:** November 17, 2025
+**Status:** Updated with v4.0 security enhancements

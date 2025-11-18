@@ -48,6 +48,8 @@ class TestHealthDashboardIntegration:
         """Test complete lifecycle progression from ACTIVE to STALE."""
         # Create memories with different ages
         now = datetime.now(UTC)
+        # Create test embedding (384 dimensions for MiniLM-L6)
+        test_embedding = [0.1] * 384
 
         memories = [
             # Recent (should be ACTIVE)
@@ -82,7 +84,16 @@ class TestHealthDashboardIntegration:
 
         # Store memories
         for mem in memories:
-            await temp_db.store(mem)
+            await temp_db.store(
+                content=mem.content,
+                embedding=test_embedding,
+                metadata={
+                    "category": mem.category.value,
+                    "context_level": mem.context_level.value,
+                    "created_at": mem.created_at.isoformat(),
+                    "lifecycle_state": mem.lifecycle_state.value,
+                }
+            )
 
         # Calculate health
         health_scorer = HealthScorer(temp_db)
@@ -100,6 +111,8 @@ class TestHealthDashboardIntegration:
         """Test weekly archival job on real data."""
         # Create old ACTIVE memories
         now = datetime.now(UTC)
+        # Create test embedding (384 dimensions for MiniLM-L6)
+        test_embedding = [0.1] * 384
 
         for i in range(5):
             mem = MemoryUnit(
@@ -108,7 +121,16 @@ class TestHealthDashboardIntegration:
                 context_level=ContextLevel.SESSION_STATE,
                 created_at=now - timedelta(days=200),
             )
-            await temp_db.store(mem)
+            await temp_db.store(
+                content=mem.content,
+                embedding=test_embedding,
+                metadata={
+                    "category": mem.category.value,
+                    "context_level": mem.context_level.value,
+                    "created_at": mem.created_at.isoformat(),
+                    "lifecycle_state": mem.lifecycle_state.value,
+                }
+            )
 
         # Run archival job
         lifecycle_manager = LifecycleManager()
@@ -130,6 +152,8 @@ class TestHealthDashboardIntegration:
         """Test monthly cleanup job on real data."""
         # Create old STALE memories
         now = datetime.now(UTC)
+        # Create test embedding (384 dimensions for MiniLM-L6)
+        test_embedding = [0.1] * 384
 
         for i in range(3):
             mem = MemoryUnit(
@@ -139,7 +163,16 @@ class TestHealthDashboardIntegration:
                 created_at=now - timedelta(days=250),
                 lifecycle_state=LifecycleState.STALE,
             )
-            await temp_db.store(mem)
+            await temp_db.store(
+                content=mem.content,
+                embedding=test_embedding,
+                metadata={
+                    "category": mem.category.value,
+                    "context_level": mem.context_level.value,
+                    "created_at": mem.created_at.isoformat(),
+                    "lifecycle_state": mem.lifecycle_state.value,
+                }
+            )
 
         # Get initial count
         initial_memories = await temp_db.get_all_memories()
@@ -173,6 +206,8 @@ class TestHealthDashboardIntegration:
         """Test weekly health report generation."""
         # Create some memories
         now = datetime.now(UTC)
+        # Create test embedding (384 dimensions for MiniLM-L6)
+        test_embedding = [0.1] * 384
 
         for i in range(10):
             mem = MemoryUnit(
@@ -181,7 +216,16 @@ class TestHealthDashboardIntegration:
                 context_level=ContextLevel.SESSION_STATE,
                 created_at=now - timedelta(days=i * 10),
             )
-            await temp_db.store(mem)
+            await temp_db.store(
+                content=mem.content,
+                embedding=test_embedding,
+                metadata={
+                    "category": mem.category.value,
+                    "context_level": mem.context_level.value,
+                    "created_at": mem.created_at.isoformat(),
+                    "lifecycle_state": mem.lifecycle_state.value,
+                }
+            )
 
         # Run health report
         lifecycle_manager = LifecycleManager()
@@ -222,6 +266,8 @@ class TestHealthDashboardIntegration:
         """Test that health scorer generates appropriate recommendations."""
         # Create a problematic database (all STALE)
         now = datetime.now(UTC)
+        # Create test embedding (384 dimensions for MiniLM-L6)
+        test_embedding = [0.1] * 384
 
         for i in range(10):
             mem = MemoryUnit(
@@ -231,7 +277,16 @@ class TestHealthDashboardIntegration:
                 created_at=now - timedelta(days=200),
                 lifecycle_state=LifecycleState.STALE,
             )
-            await temp_db.store(mem)
+            await temp_db.store(
+                content=mem.content,
+                embedding=test_embedding,
+                metadata={
+                    "category": mem.category.value,
+                    "context_level": mem.context_level.value,
+                    "created_at": mem.created_at.isoformat(),
+                    "lifecycle_state": mem.lifecycle_state.value,
+                }
+            )
 
         # Calculate health
         health_scorer = HealthScorer(temp_db)
@@ -247,6 +302,8 @@ class TestHealthDashboardIntegration:
         """Test that USER_PREFERENCE memories are protected from cleanup."""
         # Create old USER_PREFERENCE memory
         now = datetime.now(UTC)
+        # Create test embedding (384 dimensions for MiniLM-L6)
+        test_embedding = [0.1] * 384
 
         mem = MemoryUnit(
             content="Important user preference",
@@ -255,7 +312,16 @@ class TestHealthDashboardIntegration:
             created_at=now - timedelta(days=250),
             lifecycle_state=LifecycleState.STALE,
         )
-        await temp_db.store(mem)
+        await temp_db.store(
+            content=mem.content,
+            embedding=test_embedding,
+            metadata={
+                "category": mem.category.value,
+                "context_level": mem.context_level.value,
+                "created_at": mem.created_at.isoformat(),
+                "lifecycle_state": mem.lifecycle_state.value,
+            }
+        )
 
         # Try to clean up
         lifecycle_manager = LifecycleManager()
@@ -273,6 +339,8 @@ class TestHealthDashboardIntegration:
         """Test that quick stats match full health calculation."""
         # Create memories
         now = datetime.now(UTC)
+        # Create test embedding (384 dimensions for MiniLM-L6)
+        test_embedding = [0.1] * 384
 
         for i in range(5):
             mem = MemoryUnit(
@@ -281,7 +349,16 @@ class TestHealthDashboardIntegration:
                 context_level=ContextLevel.SESSION_STATE,
                 created_at=now - timedelta(days=i * 20),
             )
-            await temp_db.store(mem)
+            await temp_db.store(
+                content=mem.content,
+                embedding=test_embedding,
+                metadata={
+                    "category": mem.category.value,
+                    "context_level": mem.context_level.value,
+                    "created_at": mem.created_at.isoformat(),
+                    "lifecycle_state": mem.lifecycle_state.value,
+                }
+            )
 
         # Get quick stats
         health_scorer = HealthScorer(temp_db)
@@ -306,6 +383,8 @@ class TestHealthDashboardIntegration:
         """Test that multiple jobs can run concurrently without conflicts."""
         # Create some memories
         now = datetime.now(UTC)
+        # Create test embedding (384 dimensions for MiniLM-L6)
+        test_embedding = [0.1] * 384
 
         for i in range(20):
             mem = MemoryUnit(
@@ -314,7 +393,16 @@ class TestHealthDashboardIntegration:
                 context_level=ContextLevel.SESSION_STATE,
                 created_at=now - timedelta(days=i * 15),
             )
-            await temp_db.store(mem)
+            await temp_db.store(
+                content=mem.content,
+                embedding=test_embedding,
+                metadata={
+                    "category": mem.category.value,
+                    "context_level": mem.context_level.value,
+                    "created_at": mem.created_at.isoformat(),
+                    "lifecycle_state": mem.lifecycle_state.value,
+                }
+            )
 
         # Run multiple jobs concurrently (all dry-run to avoid conflicts)
         lifecycle_manager = LifecycleManager()

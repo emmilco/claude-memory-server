@@ -1,6 +1,7 @@
 # Developer Guide
 
 **Last Updated:** November 17, 2025
+**Version:** 4.0 (Production-Ready Architecture)
 
 ---
 
@@ -50,50 +51,126 @@ pytest tests/security/ -v
 
 ```
 claude-memory-server/
-├── src/                      # Main source code
-│   ├── core/                # Core server logic
-│   │   ├── server.py       # Main MCP server
-│   │   ├── models.py       # Pydantic models
-│   │   ├── validation.py   # Input validation
-│   │   └── exceptions.py   # Custom exceptions
-│   ├── memory/              # Code indexing & tracking
-│   │   ├── incremental_indexer.py    # Code indexing
-│   │   ├── file_watcher.py           # File watching
-│   │   ├── classifier.py             # Context classification
-│   │   ├── import_extractor.py       # Import extraction (NEW)
-│   │   ├── dependency_graph.py       # Dependency analysis (NEW)
-│   │   ├── git_indexer.py            # Git history indexing (NEW)
-│   │   ├── usage_tracker.py          # Memory usage tracking (NEW)
-│   │   ├── pruner.py                 # Auto-expiration (NEW)
-│   │   ├── conversation_tracker.py   # Session management (NEW)
-│   │   ├── query_expander.py         # Query expansion (NEW)
-│   │   └── python_parser.py          # Python fallback parser (NEW)
-│   ├── store/               # Storage backends
-│   │   ├── qdrant_store.py
-│   │   └── sqlite_store.py
-│   ├── embeddings/          # Embedding generation
-│   │   ├── generator.py
-│   │   └── cache.py
-│   ├── search/              # Search algorithms (NEW)
-│   │   ├── bm25.py         # BM25 keyword search
-│   │   └── hybrid_search.py # Hybrid fusion strategies
-│   └── cli/                 # CLI commands
+├── src/                           # Main source code (123 Python modules)
+│   ├── core/                      # Core server logic
+│   │   ├── server.py             # Main MCP server (186 lines)
+│   │   ├── models.py             # Pydantic models (133 lines)
+│   │   ├── validation.py         # Input validation (130 lines)
+│   │   ├── exceptions.py         # Custom exceptions with solutions
+│   │   └── tools.py              # Specialized retrieval tools
+│   ├── memory/                    # Code indexing & tracking (44 modules)
+│   │   ├── incremental_indexer.py       # Core indexing with progress
+│   │   ├── auto_indexing_service.py     # Foreground/background orchestration
+│   │   ├── background_indexer.py        # Async background service
+│   │   ├── file_watcher.py              # Real-time file watching
+│   │   ├── python_parser.py             # Pure Python fallback
+│   │   ├── classifier.py                # Context stratification
+│   │   ├── lifecycle_manager.py         # 4-tier lifecycle (ACTIVE/RECENT/ARCHIVED/STALE)
+│   │   ├── storage_optimizer.py         # Storage optimization analysis
+│   │   ├── import_extractor.py          # Multi-language imports
+│   │   ├── dependency_graph.py          # Dependency analysis
+│   │   ├── docstring_extractor.py       # Multi-language docstrings
+│   │   ├── change_detector.py           # Smart diffing
+│   │   ├── git_indexer.py               # Git history indexing
+│   │   ├── project_context.py           # Project switching
+│   │   ├── project_archival.py          # Project lifecycle
+│   │   ├── project_index_tracker.py     # Index metadata
+│   │   ├── multi_repository_*.py        # Multi-repo support
+│   │   ├── repository_registry.py       # Central repo registry
+│   │   ├── workspace_manager.py         # Workspace coordination
+│   │   ├── provenance_tracker.py        # Memory provenance
+│   │   ├── relationship_detector.py     # Memory relationships
+│   │   ├── trust_signals.py             # Trust scoring
+│   │   ├── duplicate_detector.py        # Semantic duplicates
+│   │   ├── consolidation_*.py           # Merging & jobs
+│   │   ├── usage_tracker.py             # Access patterns
+│   │   ├── pruner.py                    # Auto-expiration
+│   │   ├── conversation_tracker.py      # Session management
+│   │   ├── query_expander.py            # Query expansion
+│   │   ├── cross_project_consent.py     # Privacy controls
+│   │   ├── optimization_analyzer.py     # Project analysis
+│   │   ├── ragignore_manager.py         # .ragignore support
+│   │   ├── pattern_detector.py          # Code patterns
+│   │   ├── health_*.py                  # Health monitoring
+│   │   ├── feedback_tracker.py          # User feedback
+│   │   ├── notification_manager.py      # Notifications
+│   │   ├── suggestion_engine.py         # Proactive suggestions
+│   │   └── [+ 15 more utility modules]
+│   ├── store/                     # Storage backends
+│   │   ├── base.py               # Abstract interface
+│   │   ├── qdrant_store.py       # Production vector DB
+│   │   ├── sqlite_store.py       # Fallback/dev storage
+│   │   └── readonly_wrapper.py   # Read-only mode
+│   ├── embeddings/                # Embedding generation
+│   │   ├── generator.py          # Standard single-threaded
+│   │   ├── parallel_generator.py # Multi-process (4-8x faster)
+│   │   ├── cache.py              # SHA256-based caching
+│   │   └── rust_bridge.py        # Optional FFI
+│   ├── search/                    # Search algorithms
+│   │   ├── bm25.py               # BM25+ keyword search
+│   │   ├── hybrid_search.py      # 3 fusion strategies
+│   │   ├── query_synonyms.py     # 200+ programming synonyms
+│   │   └── reranker.py           # Multi-signal reranking
+│   ├── monitoring/                # Health & monitoring
+│   │   ├── metrics_collector.py  # Comprehensive metrics
+│   │   ├── alert_engine.py       # Alert rules
+│   │   ├── health_reporter.py    # Health scoring
+│   │   └── remediation.py        # Auto-remediation
+│   ├── analytics/                 # Analytics & tracking
+│   │   └── token_tracker.py      # Token usage analytics
+│   ├── backup/                    # Data management
+│   │   ├── importer.py
+│   │   └── exporter.py
+│   ├── tagging/                   # Organization
+│   │   ├── tag_manager.py
+│   │   └── auto_tagger.py
+│   ├── router/                    # Retrieval optimization
+│   │   ├── retrieval_predictor.py
+│   │   └── retrieval_gate.py
+│   └── cli/                       # CLI commands (28 commands)
 │       ├── index_command.py
 │       ├── watch_command.py
-│       ├── status_command.py         # (NEW)
-│       ├── health_command.py         # (NEW)
-│       └── git_index_command.py      # (NEW)
-├── rust_core/               # Rust parsing module
+│       ├── status_command.py
+│       ├── health_*.py            # Health commands (3)
+│       ├── project_command.py
+│       ├── repository_command.py
+│       ├── workspace_command.py
+│       ├── memory_browser.py      # Interactive TUI
+│       ├── consolidate_command.py
+│       ├── verify_command.py
+│       ├── lifecycle_command.py
+│       ├── git_*.py               # Git commands (2)
+│       ├── analytics_command.py
+│       └── [+ 12 more commands]
+├── rust_core/                     # Rust parsing module
 │   ├── src/
 │   │   ├── lib.rs
-│   │   └── parsing.rs
+│   │   └── parsing.rs            # Tree-sitter AST parsing
 │   └── Cargo.toml
-├── tests/                   # Test suite
-│   ├── unit/
-│   ├── integration/
-│   └── security/
-└── docs/                    # Documentation
+├── tests/                         # Test suite (1413/1414 passing)
+│   ├── unit/                     # Component tests
+│   ├── integration/              # Workflow tests
+│   └── security/                 # Injection prevention
+├── docs/                          # Documentation
+│   ├── ARCHITECTURE.md           # System architecture (v4.0)
+│   ├── API.md                    # MCP tools reference (v4.0)
+│   ├── SETUP.md                  # Installation guide (v4.0)
+│   ├── USAGE.md                  # Usage guide (v4.0)
+│   ├── PERFORMANCE.md            # Performance guide (v4.0)
+│   ├── SECURITY.md               # Security guide (v4.0)
+│   ├── DEVELOPMENT.md            # This file
+│   └── TROUBLESHOOTING.md        # Common issues
+├── planning_docs/                 # Task planning documents
+└── .worktrees/                    # Git worktrees (gitignored)
 ```
+
+**Project Stats:**
+- **123 Python modules** totaling ~500KB
+- **44 memory/indexing modules** (comprehensive code intelligence)
+- **28 CLI commands** across 7 categories
+- **12 supported formats** (9 languages + 3 config types)
+- **1413/1414 tests passing** (99.9% pass rate)
+- **67% overall coverage** (80-85% core modules)
 
 ---
 
@@ -531,10 +608,61 @@ python benchmark_indexing.py
 
 ---
 
+## Key Development Areas (v4.0)
+
+### Recent Major Features
+
+1. **Parallel Embeddings (PERF-001)**
+   - Location: `src/embeddings/parallel_generator.py`
+   - 4-8x faster indexing with multi-process architecture
+   - Automatic worker count detection
+
+2. **Memory Lifecycle Management (FEAT-035)**
+   - Location: `src/memory/lifecycle_manager.py`
+   - 4-tier lifecycle with automatic transitions
+   - Search weight multipliers based on age
+
+3. **Memory Provenance & Trust (FEAT-034)**
+   - Location: `src/memory/provenance_tracker.py`, `trust_signals.py`
+   - Track source, confidence, verification status
+   - Multi-factor trust scoring
+
+4. **Health Monitoring (FEAT-037)**
+   - Location: `src/monitoring/`, `src/memory/health_*.py`
+   - Continuous monitoring with automated remediation
+   - 4-component health scoring
+
+5. **Multi-Project Support (FEAT-036)**
+   - Location: `src/memory/multi_repository_*.py`, `workspace_manager.py`
+   - Cross-project search with consent
+   - Workspace-level coordination
+
+### Testing Guidelines
+
+**Coverage Targets:**
+- **Core modules**: 80-85% (server, store, embeddings, memory)
+- **Overall**: 67% (excludes CLI/TUI tools per `.coveragerc`)
+- **Security**: 100% (all 267+ attack patterns blocked)
+
+**Test Categories:**
+- **Unit**: Component-level functionality
+- **Integration**: End-to-end workflows
+- **Security**: Injection prevention
+- **Performance**: Benchmarking (optional)
+
+**Current Status:** 1413/1414 tests passing (99.9%)
+
+---
+
 ## Resources
 
 - **MCP Protocol:** https://modelcontextprotocol.io/
 - **Qdrant Docs:** https://qdrant.tech/documentation/
 - **PyO3 Guide:** https://pyo3.rs/
 - **tree-sitter:** https://tree-sitter.github.io/
+- **Project Docs:** See `docs/` directory for comprehensive guides
+
+**Document Version:** 2.0
+**Last Updated:** November 17, 2025
+**Status:** Major update reflecting v4.0 architecture with 123 modules
 

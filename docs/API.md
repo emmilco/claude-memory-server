@@ -1,7 +1,7 @@
 # API Reference
 
 **Last Updated:** November 17, 2025
-**Version:** 3.1
+**Version:** 4.0 (Production-Ready with Advanced Features)
 
 ---
 
@@ -9,27 +9,28 @@
 
 The Claude Memory RAG Server exposes tools through the Model Context Protocol (MCP). All tools are accessible to Claude via MCP tool calls.
 
-### Available Tools
+**Total Tools:** 14 MCP tools + 28 CLI commands
+
+### Available MCP Tools
 
 | Tool Name | Purpose | Category |
 |-----------|---------|----------|
 | `store_memory` | Store a new memory | Memory Management |
 | `retrieve_memories` | Search memories by query | Memory Management |
-| `retrieve_preferences` | Get user preferences only | Specialized Retrieval |
-| `retrieve_project_context` | Get project context only | Specialized Retrieval |
-| `retrieve_session_state` | Get session state only | Specialized Retrieval |
 | `delete_memory` | Delete a memory by ID | Memory Management |
-| `get_memory_stats` | Get statistics | System |
-| `show_current_context` | Debug context (dev only) | System |
+| `get_stats` | Get system statistics | System |
+| `show_context` | Debug context (dev only) | System |
 | `search_code` | Semantic code search with hybrid mode | Code Intelligence |
 | `index_codebase` | Index code files | Code Intelligence |
-| `get_file_dependencies` | Get file imports/dependencies | Code Intelligence |
-| `get_file_dependents` | Get files that import this file | Code Intelligence |
-| `find_dependency_path` | Find import path between files | Code Intelligence |
-| `get_dependency_stats` | Get dependency statistics | Code Intelligence |
-| `start_conversation_session` | Start a conversation session | Session Management |
-| `end_conversation_session` | End a conversation session | Session Management |
-| `list_conversation_sessions` | List active sessions | Session Management |
+| `find_similar_code` | Find similar code snippets | Code Intelligence |
+| `search_all` | Search all indexed content | Search |
+| `search_all_projects` | Cross-project code search | Multi-Project |
+| `opt_in_cross_project` | Enable cross-project search | Multi-Project |
+| `opt_out_cross_project` | Disable cross-project search | Multi-Project |
+| `list_opted_in_projects` | List projects with cross-search enabled | Multi-Project |
+| `ingest_docs` | Ingest documentation files | Documentation |
+
+**Note:** Additional specialized retrieval tools are available via the SpecializedRetrievalTools class (retrieve_preferences, retrieve_project_context, retrieve_session_state) and dependency tracking tools (get_file_dependencies, get_file_dependents, find_dependency_path, get_dependency_stats) are available via the server API.
 
 ---
 
@@ -316,6 +317,17 @@ Semantic search across indexed code with hybrid search support (BM25 + vector).
 - Java (.java)
 - Go (.go)
 - Rust (.rs)
+- C (.c, .h)
+- C++ (.cpp, .hpp, .cc, .hh)
+- C# (.cs)
+- SQL (.sql)
+
+**Supported Config Files:**
+- JSON (.json)
+- YAML (.yaml, .yml)
+- TOML (.toml)
+
+**Total:** 12 file formats supported
 
 ---
 
@@ -710,6 +722,296 @@ All tools return errors in this format:
 
 ---
 
+## Multi-Project Tools
+
+### search_all_projects
+
+Search code across all opted-in projects with consent-based privacy.
+
+**Input Schema:**
+```json
+{
+  "query": "string (required)",
+  "limit": "integer 1-50 (default: 10)",
+  "file_pattern": "string (optional)",
+  "language": "python|javascript|typescript|java|go|rust|c|cpp|csharp|sql (optional)",
+  "search_mode": "semantic|keyword|hybrid (default: semantic)"
+}
+```
+
+**Example Request:**
+```json
+{
+  "query": "user authentication patterns",
+  "limit": 10,
+  "language": "python"
+}
+```
+
+**Response:**
+```json
+{
+  "results": [
+    {
+      "project_name": "web-app",
+      "file_path": "src/auth/handlers.py",
+      "unit_name": "login",
+      "score": 0.92,
+      "language": "python",
+      "content": "async def login(...)..."
+    },
+    {
+      "project_name": "api-service",
+      "file_path": "auth/middleware.py",
+      "unit_name": "authenticate",
+      "score": 0.88,
+      "language": "python",
+      "content": "def authenticate(...)..."
+    }
+  ],
+  "count": 2,
+  "projects_searched": ["web-app", "api-service"],
+  "interpretation": "Found similar authentication patterns across 2 projects"
+}
+```
+
+**Privacy:** Only searches projects that have been explicitly opted-in via `opt_in_cross_project`. Current project is always searchable.
+
+---
+
+### opt_in_cross_project
+
+Enable cross-project search for a specific project.
+
+**Input Schema:**
+```json
+{
+  "project_name": "string (required)"
+}
+```
+
+**Example:**
+```json
+{
+  "project_name": "my-web-app"
+}
+```
+
+**Response:**
+```json
+{
+  "project_name": "my-web-app",
+  "opted_in": true,
+  "message": "Project 'my-web-app' is now searchable in cross-project queries"
+}
+```
+
+---
+
+### opt_out_cross_project
+
+Disable cross-project search for a specific project.
+
+**Input Schema:**
+```json
+{
+  "project_name": "string (required)"
+}
+```
+
+**Response:**
+```json
+{
+  "project_name": "my-web-app",
+  "opted_in": false,
+  "message": "Project 'my-web-app' removed from cross-project search"
+}
+```
+
+---
+
+### list_opted_in_projects
+
+List all projects that have cross-project search enabled.
+
+**Input Schema:**
+```json
+{}
+```
+
+**Response:**
+```json
+{
+  "opted_in_projects": [
+    "web-app",
+    "api-service",
+    "mobile-backend"
+  ],
+  "count": 3
+}
+```
+
+---
+
+## Advanced Code Intelligence Tools
+
+### find_similar_code
+
+Find similar code snippets based on semantic similarity.
+
+**Input Schema:**
+```json
+{
+  "code_snippet": "string (required, the code to find similar examples of)",
+  "project_name": "string (optional)",
+  "limit": "integer 1-50 (default: 10)",
+  "file_pattern": "string (optional)",
+  "language": "string (optional)"
+}
+```
+
+**Example Request:**
+```json
+{
+  "code_snippet": "async def login(username, password):\n    user = await db.authenticate(username, password)\n    return create_token(user)",
+  "limit": 5,
+  "language": "python"
+}
+```
+
+**Response:**
+```json
+{
+  "results": [
+    {
+      "file_path": "src/auth/handlers.py",
+      "unit_name": "login",
+      "score": 0.95,
+      "confidence_label": "excellent",
+      "confidence_display": "95% (excellent)",
+      "content": "async def login(...)...",
+      "interpretation": "Duplicate or very similar implementation"
+    },
+    {
+      "file_path": "src/admin/auth.py",
+      "unit_name": "admin_login",
+      "score": 0.82,
+      "confidence_label": "good",
+      "confidence_display": "82% (good)",
+      "content": "async def admin_login(...)...",
+      "interpretation": "Similar pattern, different context"
+    }
+  ],
+  "count": 2,
+  "interpretation": "Found similar authentication patterns",
+  "use_cases": [
+    "Duplicate detection (>0.95 similarity)",
+    "Pattern discovery (>0.80 similarity)",
+    "Code reuse opportunities (<0.80 similarity)"
+  ]
+}
+```
+
+**Similarity Interpretation:**
+- **>0.95**: Likely duplicates - consider consolidating
+- **0.80-0.95**: Similar patterns - good for reference
+- **<0.80**: Related but different - may provide ideas
+
+---
+
+### search_all
+
+Search all indexed content (code + documentation + memories).
+
+**Input Schema:**
+```json
+{
+  "query": "string (required)",
+  "limit": "integer 1-100 (default: 10)",
+  "content_types": ["code", "docs", "memories"] (optional, default: all)
+}
+```
+
+**Example:**
+```json
+{
+  "query": "authentication best practices",
+  "limit": 10,
+  "content_types": ["code", "docs"]
+}
+```
+
+**Response:**
+```json
+{
+  "results": [
+    {
+      "type": "code",
+      "file_path": "src/auth/handlers.py",
+      "score": 0.89,
+      "content": "..."
+    },
+    {
+      "type": "docs",
+      "file_path": "docs/SECURITY.md",
+      "score": 0.85,
+      "content": "..."
+    }
+  ],
+  "count": 2,
+  "breakdown": {
+    "code": 1,
+    "docs": 1,
+    "memories": 0
+  }
+}
+```
+
+---
+
+## Documentation Tools
+
+### ingest_docs
+
+Ingest and index documentation files (Markdown, text, etc.).
+
+**Input Schema:**
+```json
+{
+  "directory_path": "string (required, absolute path)",
+  "project_name": "string (optional)",
+  "file_patterns": ["*.md", "*.txt"] (optional, default: *.md)
+}
+```
+
+**Example:**
+```json
+{
+  "directory_path": "/Users/me/projects/my-app/docs",
+  "project_name": "my-app",
+  "file_patterns": ["*.md"]
+}
+```
+
+**Response:**
+```json
+{
+  "status": "completed",
+  "files_ingested": 15,
+  "chunks_created": 45,
+  "indexing_time_seconds": 1.23,
+  "project_name": "my-app"
+}
+```
+
+**Process:**
+1. Scans directory for matching file patterns
+2. Chunks documents intelligently (preserves structure)
+3. Generates embeddings for each chunk
+4. Stores in vector database with doc metadata
+
+---
+
 ## Rate Limits
 
 No rate limits currently enforced. Recommended client-side limits:
@@ -787,5 +1089,23 @@ asyncio.run(main())
 
 ---
 
-**Document Version:** 1.1
+## CLI Commands Reference
+
+In addition to the 14 MCP tools, the system provides 28 CLI commands for direct system management. See `docs/USAGE.md` for complete CLI reference.
+
+**Categories:**
+- **Indexing & Watching** (3 commands): index, watch, auto-tag
+- **Project Management** (4 commands): project, repository, workspace, collections
+- **Memory Management** (5 commands): memory-browser, consolidate, verify, prune, lifecycle, tags
+- **Git Integration** (2 commands): git-index, git-search
+- **Health & Monitoring** (3 commands): health, health-monitor, health-dashboard
+- **Analytics & Reporting** (3 commands): status, analytics, session-summary
+- **Data Management** (4 commands): backup, export, import, archival
+
+**Usage:** `python -m src.cli <command> [options]`
+
+---
+
+**Document Version:** 2.0
 **Last Updated:** November 17, 2025
+**Status:** Major update with all new MCP tools and CLI commands documented
