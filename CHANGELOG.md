@@ -79,6 +79,13 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ## [Unreleased]
 
+### Fixed - 2025-11-18
+
+- **BUG-011: Health Check Config Error**
+  - Fixed `check_cache_hit_rate()` in `src/cli/health_command.py` to pass ServerConfig object instead of non-existent `cache_dir_expanded` attribute
+  - Added 4 comprehensive tests for cache hit rate checking in `tests/unit/test_health_command.py`
+  - Health check command now works correctly with both SQLite and Qdrant backends
+
 ### Added - 2025-11-18
 
 - **FEAT-036: Project Archival Phase 2.5 - Documentation & Polish**

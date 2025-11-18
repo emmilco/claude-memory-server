@@ -266,7 +266,7 @@ class HealthCommand:
             from src.config import get_config
 
             config = get_config()
-            cache = EmbeddingCache(config.cache_dir_expanded)
+            cache = EmbeddingCache(config)
 
             stats = cache.get_stats()
             total = stats.get("total_queries", 0)
