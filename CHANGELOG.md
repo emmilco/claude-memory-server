@@ -90,6 +90,8 @@ A pre-commit hook enforces CHANGELOG updates:
   - Fixed Qdrant service healthcheck (removed incompatible curl check, added manual wait loop)
   - Enhanced test summary with pass/fail counts, coverage percentage, and PR annotations
   - Fixed Rust module build to use `maturin build` with platform-specific wheel selection
+  - Added workflow permissions for check runs and PR comments
+  - Fixed test results publishing to only run when test-results.xml exists
 
 ### Planning - 2025-11-17
 
