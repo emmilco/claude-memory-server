@@ -81,6 +81,14 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Fixed - 2025-11-18
 
+- **BUG-012/FEAT-040: Memory Update/Edit Operations**
+  - Implemented `update_memory()` and `get_memory_by_id()` methods in `src/core/server.py`
+  - Added UTC import and fixed attribute references (memory.id vs memory.memory_id)
+  - All 15 integration tests for memory update operations now passing
+  - Supports updating content, category, importance, tags, metadata, and context_level
+  - Automatic embedding regeneration when content changes
+  - Preserves creation timestamps and update tracking
+
 - **BUG-011: Health Check Config Error**
   - Fixed `check_cache_hit_rate()` in `src/cli/health_command.py` to pass ServerConfig object instead of non-existent `cache_dir_expanded` attribute
   - Added 4 comprehensive tests for cache hit rate checking in `tests/unit/test_health_command.py`
