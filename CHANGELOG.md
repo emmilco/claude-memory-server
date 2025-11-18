@@ -81,6 +81,15 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-18
 
+- **FEAT-036: Project Archival Phase 2.2 - Bulk Operations**
+  - Created `src/memory/bulk_archival.py` with BulkArchivalManager for multi-project archival operations
+  - Implemented bulk_archive_projects() and bulk_reactivate_projects() with dry-run mode and progress tracking
+  - Added auto_archive_inactive() for automatic archival based on inactivity threshold (configurable days)
+  - Implemented get_archival_candidates() for identifying projects suitable for archival
+  - Safety features: max 20 projects per operation limit, state validation, skip already-archived projects
+  - Progress callback support for real-time operation tracking
+  - Files: `src/memory/bulk_archival.py`, `tests/unit/test_bulk_archival.py` (20 tests, 100% passing)
+
 - **FEAT-036: Project Archival Phase 2.1 - Archive Compression**
   - Created `src/memory/archive_compressor.py` with ArchiveCompressor for efficient project index compression
   - Implemented compress_project_index() and decompress_project_index() with tar.gz compression

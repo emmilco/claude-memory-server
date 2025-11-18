@@ -187,13 +187,14 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
 
 - [ ] **FEAT-036**: Project Archival & Reactivation System - Phase 2 (~1 week)
   - [x] **Phase 2.1: Index compression for archived projects** ✅ (2025-11-18)
-  - [ ] Phase 2.2: Bulk operations (auto-archive multiple projects)
+  - [x] **Phase 2.2: Bulk operations (auto-archive multiple projects)** ✅ (2025-11-18)
   - [ ] Phase 2.3: Automatic archival scheduler
   - [ ] Phase 2.4: Export to file / import from archive
   - [ ] Phase 2.5: Documentation & polish
   - **Completed (Phase 2.1):** ArchiveCompressor with tar.gz compression, 60-80% storage reduction, manifests, 14 tests (100% passing)
+  - **Completed (Phase 2.2):** BulkArchivalManager for multi-project archival, auto-archive inactive projects, 20 tests (100% passing)
   - **Impact:** Enables graceful project lifecycle, improves search performance
-  - **Status:** Phase 1 complete, Phase 2.1 complete (compression), Phases 2.2-2.5 pending
+  - **Status:** Phase 1 complete, Phases 2.1-2.2 complete, Phases 2.3-2.5 pending
 
 ### 🟢 Tier 4: High-Value UX Quick Wins
 
