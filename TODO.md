@@ -186,13 +186,14 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Enhances:** Existing dependency tools (get_file_dependencies, etc.)
 
 - [ ] **FEAT-036**: Project Archival & Reactivation System - Phase 2 (~1 week)
-  - [ ] Index compression for archived projects
-  - [ ] Bulk operations (auto-archive multiple projects)
-  - [ ] Archive manifests with full snapshot
-  - [ ] Automatic archival scheduler
-  - [ ] Export to file / import from archive
+  - [x] **Phase 2.1: Index compression for archived projects** ✅ (2025-11-18)
+  - [ ] Phase 2.2: Bulk operations (auto-archive multiple projects)
+  - [ ] Phase 2.3: Automatic archival scheduler
+  - [ ] Phase 2.4: Export to file / import from archive
+  - [ ] Phase 2.5: Documentation & polish
+  - **Completed (Phase 2.1):** ArchiveCompressor with tar.gz compression, 60-80% storage reduction, manifests, 14 tests (100% passing)
   - **Impact:** Enables graceful project lifecycle, improves search performance
-  - **Status:** Phase 1 complete (core states, tracking, CLI commands)
+  - **Status:** Phase 1 complete, Phase 2.1 complete (compression), Phases 2.2-2.5 pending
 
 ### 🟢 Tier 4: High-Value UX Quick Wins
 
