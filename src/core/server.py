@@ -4,7 +4,7 @@ import logging
 import asyncio
 import json
 from typing import Optional, Dict, Any, List, Tuple
-from datetime import datetime
+from datetime import datetime, UTC
 from pathlib import Path
 import subprocess
 
@@ -756,6 +756,175 @@ class MemoryRAGServer:
         except Exception as e:
             logger.error(f"Failed to delete memory: {e}")
             raise StorageError(f"Failed to delete memory: {e}")
+
+    async def get_memory_by_id(self, memory_id: str) -> Dict[str, Any]:
+        """
+        Retrieve a specific memory by its ID.
+
+        Args:
+            memory_id: The unique ID of the memory to retrieve
+
+        Returns:
+            Dict with status and memory data:
+            - If found: {"status": "success", "memory": {...}}
+            - If not found: {"status": "not_found", "message": "..."}
+        """
+        try:
+            memory = await self.store.get_by_id(memory_id)
+
+            if memory:
+                return {
+                    "status": "success",
+                    "memory": {
+                        "id": memory.id,
+                        "memory_id": memory.id,
+                        "content": memory.content,
+                        "category": memory.category.value if hasattr(memory.category, 'value') else memory.category,
+                        "context_level": memory.context_level.value if hasattr(memory.context_level, 'value') else memory.context_level,
+                        "importance": memory.importance,
+                        "tags": memory.tags or [],
+                        "metadata": memory.metadata or {},
+                        "scope": memory.scope.value if hasattr(memory.scope, 'value') else memory.scope,
+                        "project_name": memory.project_name,
+                        "created_at": memory.created_at.isoformat() if hasattr(memory.created_at, 'isoformat') else memory.created_at,
+                        "updated_at": memory.updated_at.isoformat() if hasattr(memory.updated_at, 'isoformat') else memory.updated_at,
+                        "last_accessed": memory.last_accessed.isoformat() if memory.last_accessed and hasattr(memory.last_accessed, 'isoformat') else memory.last_accessed,
+                    }
+                }
+            else:
+                return {
+                    "status": "not_found",
+                    "message": f"Memory {memory_id} not found"
+                }
+
+        except Exception as e:
+            logger.error(f"Failed to get memory by ID: {e}")
+            raise StorageError(f"Failed to get memory by ID: {e}")
+
+    async def update_memory(
+        self,
+        memory_id: str,
+        content: Optional[str] = None,
+        category: Optional[str] = None,
+        importance: Optional[float] = None,
+        tags: Optional[List[str]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        context_level: Optional[str] = None,
+        regenerate_embedding: bool = True,
+    ) -> Dict[str, Any]:
+        """
+        Update an existing memory.
+
+        Args:
+            memory_id: ID of memory to update (required)
+            content: New content (optional)
+            category: New category (optional)
+            importance: New importance score 0.0-1.0 (optional)
+            tags: New tags list (optional)
+            metadata: New metadata dict (optional)
+            context_level: New context level (optional)
+            regenerate_embedding: Whether to regenerate embedding if content changes (default: True)
+
+        Returns:
+            Dict with status and update details:
+            {
+                "status": "updated" or "not_found",
+                "updated_fields": List[str],
+                "embedding_regenerated": bool,
+                "updated_at": ISO timestamp
+            }
+        """
+        if self.config.read_only_mode:
+            raise ReadOnlyError("Cannot update memory in read-only mode")
+
+        try:
+            # Build updates dictionary
+            updates = {}
+            updated_fields = []
+
+            if content is not None:
+                # Validate content length
+                if not (1 <= len(content) <= 50000):
+                    raise ValidationError("content must be 1-50000 characters")
+                updates["content"] = content
+                updated_fields.append("content")
+
+            if category is not None:
+                # Validate category
+                cat = MemoryCategory(category)
+                updates["category"] = cat.value
+                updated_fields.append("category")
+
+            if importance is not None:
+                # Validate importance
+                if not (0.0 <= importance <= 1.0):
+                    raise ValidationError("importance must be between 0.0 and 1.0")
+                updates["importance"] = importance
+                updated_fields.append("importance")
+
+            if tags is not None:
+                # Validate tags
+                for tag in tags:
+                    if not isinstance(tag, str) or len(tag) > 50:
+                        raise ValidationError("Tags must be strings <= 50 chars")
+                updates["tags"] = tags
+                updated_fields.append("tags")
+
+            if metadata is not None:
+                # Validate metadata is a dict
+                if not isinstance(metadata, dict):
+                    raise ValidationError("metadata must be a dictionary")
+                updates["metadata"] = metadata
+                updated_fields.append("metadata")
+
+            if context_level is not None:
+                # Validate context level
+                cl = ContextLevel(context_level)
+                updates["context_level"] = cl.value
+                updated_fields.append("context_level")
+
+            # Check that at least one field is being updated
+            if not updates:
+                raise ValidationError("At least one field must be provided for update")
+
+            # Regenerate embedding if content changed
+            new_embedding = None
+            embedding_regenerated = False
+
+            if "content" in updates and regenerate_embedding:
+                embedding_regenerated = True
+                new_embedding = await self.embedding_generator.generate(updates["content"])
+
+            # Perform update
+            success = await self.store.update(
+                memory_id=memory_id,
+                updates=updates,
+                new_embedding=new_embedding
+            )
+
+            if success:
+                # Update stats
+                self.stats["memories_updated"] = self.stats.get("memories_updated", 0) + 1
+
+                return {
+                    "status": "updated",
+                    "updated_fields": updated_fields,
+                    "embedding_regenerated": embedding_regenerated,
+                    "updated_at": datetime.now(UTC).isoformat()
+                }
+            else:
+                return {
+                    "status": "not_found",
+                    "message": f"Memory {memory_id} not found"
+                }
+
+        except ValidationError:
+            raise
+        except ReadOnlyError:
+            raise
+        except Exception as e:
+            logger.error(f"Failed to update memory {memory_id}: {e}")
+            raise StorageError(f"Failed to update memory: {e}")
 
     async def list_memories(
         self,
