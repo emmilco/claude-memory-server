@@ -90,6 +90,14 @@ A pre-commit hook enforces CHANGELOG updates:
   - Added comprehensive test suite with 16 tests covering all filtering, sorting, and pagination scenarios
   - Files: `src/store/base.py`, `src/store/qdrant_store.py`, `src/store/sqlite_store.py`, `src/core/server.py`, `src/mcp_server.py`, `tests/unit/test_list_memories.py`
 
+### Documentation - 2025-11-18
+
+- **CLAUDE.md: Merge Conflict Prevention**
+  - Added comprehensive "Avoiding Merge Conflicts" section to worktree workflow
+  - Updated "When task is complete" workflow to sync main before merging
+  - Added step-by-step conflict resolution guide
+  - Documented common conflict zones (CHANGELOG.md, server.py, mcp_server.py)
+
 - **PERF-006: Test Suite Performance Optimization - Phases 2 & 3**
   - Added session-scoped test fixtures in `tests/conftest.py` for reusable resources
   - Created `LazyResource` class for lazy initialization of expensive resources

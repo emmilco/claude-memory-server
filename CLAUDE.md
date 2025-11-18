@@ -105,27 +105,28 @@ A Model Context Protocol (MCP) server providing persistent memory, documentation
 
 4. **When task is complete:**
    ```bash
-   # Ensure all changes are committed
+   # From within the worktree, ensure all changes are committed
    git status
+   git add .
+   git commit -m "Your commit message"
 
-   # Push feature branch
-   git push -u origin $TASK_ID
-
-   # Create pull request using GitHub CLI
-   gh pr create --title "FEAT-042: Your feature description" \
-                --body "## Summary
-
-   Brief description of changes
-
-   ## Test Plan
-   - [ ] All tests pass
-   - [ ] Coverage maintained
-
-   Closes #issue-number (if applicable)" \
-                --base main
-
-   # Return to main repository
+   # Return to main repository directory
    cd ../..
+
+   # Sync main with latest changes to avoid conflicts
+   git checkout main
+   git pull origin main
+
+   # Merge your feature branch
+   git merge --no-ff $TASK_ID
+
+   # If conflicts occur:
+   # 1. Resolve conflicts in the affected files
+   # 2. Run: git add <resolved-files>
+   # 3. Run: git commit (to complete the merge)
+
+   # Push to remote
+   git push origin main
 
    # Clean up worktree and local branch
    git worktree remove .worktrees/$TASK_ID
@@ -153,6 +154,55 @@ git worktree prune
 - **One task per worktree:** Don't mix multiple tasks in one worktree
 - **Clean up after PRs are merged:** Remove worktrees and delete local branches
 - **Worktrees are gitignored:** The `.worktrees/` directory won't be committed
+
+#### Avoiding Merge Conflicts
+
+When multiple agents work in parallel on different features, merge conflicts are common. Follow these practices:
+
+1. **Before starting work:**
+   ```bash
+   # From main repository, sync with latest
+   git checkout main
+   git pull origin main
+
+   # Create worktree from updated main
+   git worktree add .worktrees/$TASK_ID -b $TASK_ID
+   ```
+
+2. **During long-running tasks:**
+   ```bash
+   # Periodically sync your feature branch with main
+   cd .worktrees/$TASK_ID
+   git fetch origin main
+   git rebase origin/main
+
+   # Or merge if you prefer (less clean history)
+   git merge origin/main
+   ```
+
+3. **Before merging to main:**
+   ```bash
+   # Always sync main first (from main repo directory)
+   git checkout main
+   git pull origin main
+
+   # Then merge your feature
+   git merge --no-ff $TASK_ID
+   ```
+
+4. **If conflicts occur during merge:**
+   - Conflicts appear in files with `<<<<<<< HEAD`, `=======`, and `>>>>>>> $TASK_ID` markers
+   - Manually edit each conflicted file to resolve conflicts
+   - Look for resolved versions in your worktree at `.worktrees/$TASK_ID/<file>`
+   - Verify syntax with `python -m py_compile <file>`
+   - Mark resolved: `git add <file>`
+   - Complete merge: `git commit`
+
+5. **Common conflict zones:**
+   - `CHANGELOG.md` - Keep both entries, order by feature ID
+   - `src/core/server.py` - Keep all methods from both features
+   - `src/mcp_server.py` - Keep all tool registrations and handlers from both features
+   - `TODO.md` - Merge task updates carefully
 
 ### Before Starting Any Task
 
@@ -548,7 +598,7 @@ python -c "from src.core.server import MemoryRAGServer; print('Import successful
 - Use `git commit --no-verify` sparingly and only when documentation is verified current
 - The hook ensures CLAUDE.md, CHANGELOG.md, and TODO.md stay synchronized
 - **Branch naming:** Use task IDs directly (FEAT-042, not feature/feat-042)
-- **PR workflow:** Push branch → Create PR → Clean up worktree
+- **PR workflow:** Merge into main and push → Clean up worktree -> Update main from remote
 
 ## Self-Update Protocol
 
