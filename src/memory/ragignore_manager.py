@@ -200,16 +200,21 @@ class RagignoreManager:
             Regex pattern string
         """
         # This is a simplified conversion, not full gitignore semantics
+        import re as re_module
+
+        # First, handle the wildcards by replacing them with placeholders
         regex = pattern
+        regex = regex.replace("**", "\x00DOUBLESTAR\x00")
+        regex = regex.replace("*", "\x00STAR\x00")
+        regex = regex.replace("?", "\x00QUESTION\x00")
 
-        # Escape special regex characters (except * and ?)
-        for char in [".  ", "+", "^", "$", "(", ")", "[", "]", "{", "}", "|", "\\"]:
-            regex = regex.replace(char, "\\" + char)
+        # Now escape all regex special characters
+        regex = re_module.escape(regex)
 
-        # Convert gitignore wildcards to regex
-        regex = regex.replace("**", ".*")  # ** matches any path
-        regex = regex.replace("*", "[^/]*")  # * matches within path segment
-        regex = regex.replace("?", ".")  # ? matches single character
+        # Replace placeholders with regex patterns
+        regex = regex.replace("\x00DOUBLESTAR\x00", ".*")  # ** matches any path
+        regex = regex.replace("\x00STAR\x00", "[^/]*")  # * matches within path segment
+        regex = regex.replace("\x00QUESTION\x00", ".")  # ? matches single character
 
         # Handle directory patterns (ending with /)
         if regex.endswith("/"):

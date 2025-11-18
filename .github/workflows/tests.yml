@@ -18,12 +18,6 @@ jobs:
           - 6334:6334
         env:
           QDRANT_API_KEY: development
-        options: >-
-          --health-cmd "curl -f http://localhost:6333/health"
-          --health-interval 5s
-          --health-timeout 10s
-          --health-retries 5
-          --health-start-period 10s
 
     steps:
     - name: Checkout code
@@ -68,7 +62,18 @@ jobs:
 
     - name: Wait for Qdrant
       run: |
-        timeout 30 bash -c 'until curl -f http://localhost:6333/health; do sleep 1; done'
+        echo "Waiting for Qdrant to be ready..."
+        sleep 5
+        for i in {1..30}; do
+          if curl -f http://localhost:6333/health > /dev/null 2>&1; then
+            echo "Qdrant is ready!"
+            exit 0
+          fi
+          echo "Attempt $i: Qdrant not ready yet, waiting..."
+          sleep 2
+        done
+        echo "Qdrant failed to start in time"
+        exit 1
 
     - name: Run tests
       env:
