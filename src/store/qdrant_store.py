@@ -373,6 +373,159 @@ class QdrantMemoryStore(MemoryStore):
         """Check if the storage backend is healthy and accessible."""
         return self.setup.health_check()
 
+    async def list_memories(
+        self,
+        filters: Optional[Dict[str, Any]] = None,
+        sort_by: str = "created_at",
+        sort_order: str = "desc",
+        limit: int = 20,
+        offset: int = 0
+    ) -> Tuple[List[MemoryUnit], int]:
+        """
+        List memories with filtering, sorting, and pagination.
+
+        Args:
+            filters: Optional filters to apply.
+            sort_by: Field to sort by (created_at, updated_at, importance).
+            sort_order: Sort order (asc, desc).
+            limit: Maximum number of results to return.
+            offset: Number of results to skip for pagination.
+
+        Returns:
+            Tuple of (list of memories, total count before pagination).
+
+        Raises:
+            StorageError: If listing operation fails.
+        """
+        if self.client is None:
+            await self.initialize()
+
+        filters = filters or {}
+
+        try:
+            # Build Qdrant filter conditions
+            must_conditions = []
+
+            if "category" in filters:
+                category = filters["category"]
+                must_conditions.append(
+                    FieldCondition(
+                        key="category",
+                        match=MatchValue(value=category.value if hasattr(category, 'value') else category)
+                    )
+                )
+
+            if "context_level" in filters:
+                context_level = filters["context_level"]
+                must_conditions.append(
+                    FieldCondition(
+                        key="context_level",
+                        match=MatchValue(value=context_level.value if hasattr(context_level, 'value') else context_level)
+                    )
+                )
+
+            if "scope" in filters:
+                scope = filters["scope"]
+                must_conditions.append(
+                    FieldCondition(
+                        key="scope",
+                        match=MatchValue(value=scope.value if hasattr(scope, 'value') else scope)
+                    )
+                )
+
+            if "project_name" in filters:
+                must_conditions.append(
+                    FieldCondition(
+                        key="project_name",
+                        match=MatchValue(value=filters["project_name"])
+                    )
+                )
+
+            if "tags" in filters:
+                # Match ANY of the provided tags
+                from qdrant_client.models import MatchAny
+                must_conditions.append(
+                    FieldCondition(
+                        key="tags",
+                        match=MatchAny(any=filters["tags"])
+                    )
+                )
+
+            # Importance range filter
+            min_importance = filters.get("min_importance", 0.0)
+            max_importance = filters.get("max_importance", 1.0)
+            if min_importance > 0.0 or max_importance < 1.0:
+                must_conditions.append(
+                    FieldCondition(
+                        key="importance",
+                        range=Range(
+                            gte=min_importance,
+                            lte=max_importance
+                        )
+                    )
+                )
+
+            # Build filter object
+            qdrant_filter = Filter(must=must_conditions) if must_conditions else None
+
+            # Scroll through all matching results
+            all_memories = []
+            scroll_offset = None
+
+            while True:
+                result = self.client.scroll(
+                    collection_name=self.collection_name,
+                    scroll_filter=qdrant_filter,
+                    limit=100,  # Fetch in batches
+                    offset=scroll_offset,
+                    with_payload=True,
+                    with_vectors=False
+                )
+
+                points, next_offset = result
+
+                for point in points:
+                    memory = self._payload_to_memory_unit(dict(point.payload))
+                    all_memories.append(memory)
+
+                if next_offset is None:
+                    break
+
+                scroll_offset = next_offset
+
+            # Apply date filtering (Qdrant doesn't handle datetime ranges well)
+            if "date_from" in filters:
+                all_memories = [
+                    m for m in all_memories
+                    if m.created_at >= filters["date_from"]
+                ]
+
+            if "date_to" in filters:
+                all_memories = [
+                    m for m in all_memories
+                    if m.created_at <= filters["date_to"]
+                ]
+
+            # Sort memories
+            reverse = (sort_order == "desc")
+            all_memories.sort(
+                key=lambda m: getattr(m, sort_by),
+                reverse=reverse
+            )
+
+            # Get total count
+            total_count = len(all_memories)
+
+            # Apply pagination
+            paginated = all_memories[offset:offset + limit]
+
+            logger.debug(f"Listed {len(paginated)} memories (total {total_count})")
+            return paginated, total_count
+
+        except Exception as e:
+            logger.error(f"Error listing memories: {e}")
+            raise StorageError(f"Failed to list memories: {e}")
+
     async def close(self) -> None:
         """Close connections and clean up resources."""
         if self.client:

@@ -578,6 +578,115 @@ class SQLiteMemoryStore(MemoryStore):
             logger.error(f"SQLite health check failed: {e}", exc_info=True)
             return False
 
+    async def list_memories(
+        self,
+        filters: Optional[Dict[str, Any]] = None,
+        sort_by: str = "created_at",
+        sort_order: str = "desc",
+        limit: int = 20,
+        offset: int = 0
+    ) -> Tuple[List[MemoryUnit], int]:
+        """
+        List memories with filtering, sorting, and pagination.
+
+        Args:
+            filters: Optional filters to apply.
+            sort_by: Field to sort by (created_at, updated_at, importance).
+            sort_order: Sort order (asc, desc).
+            limit: Maximum number of results to return.
+            offset: Number of results to skip for pagination.
+
+        Returns:
+            Tuple of (list of memories, total count before pagination).
+
+        Raises:
+            StorageError: If listing operation fails.
+        """
+        if self.conn is None:
+            await self.initialize()
+
+        filters = filters or {}
+
+        try:
+            # Build WHERE clauses
+            where_clauses = []
+            params = []
+
+            if "category" in filters:
+                where_clauses.append("category = ?")
+                category = filters["category"]
+                params.append(category.value if hasattr(category, 'value') else category)
+
+            if "context_level" in filters:
+                where_clauses.append("context_level = ?")
+                context_level = filters["context_level"]
+                params.append(context_level.value if hasattr(context_level, 'value') else context_level)
+
+            if "scope" in filters:
+                where_clauses.append("scope = ?")
+                scope = filters["scope"]
+                params.append(scope.value if hasattr(scope, 'value') else scope)
+
+            if "project_name" in filters:
+                where_clauses.append("project_name = ?")
+                params.append(filters["project_name"])
+
+            if "tags" in filters:
+                # Match ANY of the provided tags (JSON contains)
+                tag_conditions = " OR ".join(["tags LIKE ?" for _ in filters["tags"]])
+                where_clauses.append(f"({tag_conditions})")
+                params.extend([f'%"{tag}"%' for tag in filters["tags"]])
+
+            if "min_importance" in filters:
+                where_clauses.append("importance >= ?")
+                params.append(filters["min_importance"])
+
+            if "max_importance" in filters:
+                where_clauses.append("importance <= ?")
+                params.append(filters["max_importance"])
+
+            if "date_from" in filters:
+                where_clauses.append("created_at >= ?")
+                date_from = filters["date_from"]
+                params.append(date_from.isoformat() if hasattr(date_from, 'isoformat') else date_from)
+
+            if "date_to" in filters:
+                where_clauses.append("created_at <= ?")
+                date_to = filters["date_to"]
+                params.append(date_to.isoformat() if hasattr(date_to, 'isoformat') else date_to)
+
+            where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
+
+            # Get total count
+            count_sql = f"SELECT COUNT(*) FROM memories WHERE {where_sql}"
+            cursor = self.conn.execute(count_sql, params)
+            total_count = cursor.fetchone()[0]
+
+            # Get paginated results
+            data_sql = f"""
+                SELECT * FROM memories
+                WHERE {where_sql}
+                ORDER BY {sort_by} {sort_order.upper()}
+                LIMIT ? OFFSET ?
+            """
+            data_params = params + [limit, offset]
+            cursor = self.conn.execute(data_sql, data_params)
+            rows = cursor.fetchall()
+
+            # Convert rows to MemoryUnit objects
+            memories = []
+            for row in rows:
+                row_dict = dict(row)
+                memory = self._row_to_memory_unit(row_dict)
+                memories.append(memory)
+
+            logger.debug(f"Listed {len(memories)} memories (total {total_count})")
+            return memories, total_count
+
+        except Exception as e:
+            logger.error(f"Error listing memories: {e}")
+            raise StorageError(f"Failed to list memories: {e}")
+
     async def close(self) -> None:
         """Close the database connection."""
         if self.conn:
