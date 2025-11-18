@@ -81,6 +81,14 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-18
 
+- **FEAT-047: Proactive Memory Suggestions**
+  - Created `src/memory/intent_detector.py` for conversation intent detection (implementation, debugging, learning, exploration)
+  - Created `src/memory/proactive_suggester.py` for context-aware memory and code suggestions
+  - Added `Suggestion`, `SuggestionResponse`, `DetectedIntentInfo`, and `RelevanceFactors` models to `src/core/models.py`
+  - Added `suggest_memories()` MCP tool to `src/core/server.py` with confidence scoring and ranking
+  - Comprehensive test suite: 24 intent detector tests + 17 suggester tests (100% passing)
+  - Features: pattern-based intent detection, keyword extraction, confidence scoring (semantic + recency + importance + context), deduplication, configurable thresholds
+
 - **FEAT-041: Memory Listing and Browsing**
   - Added `list_memories()` MCP tool for browsing memories without semantic search
   - Implemented filtering by category, context_level, scope, project_name, tags, importance, and date range
@@ -97,6 +105,14 @@ A pre-commit hook enforces CHANGELOG updates:
   - Updated "When task is complete" workflow to sync main before merging
   - Added step-by-step conflict resolution guide
   - Documented common conflict zones (CHANGELOG.md, server.py, mcp_server.py)
+- **FEAT-040: Memory Update/Edit Operations**
+  - Added `UpdateMemoryRequest` and `UpdateMemoryResponse` models to `src/core/models.py`
+  - Enhanced `update()` method in `src/store/qdrant_store.py` and `src/store/sqlite_store.py` to support embedding regeneration
+  - Added `update_memory()` and `get_memory_by_id()` methods to `src/core/server.py`
+  - Registered `update_memory` and `get_memory_by_id` MCP tools in `src/mcp_server.py`
+  - Comprehensive test suite: 15 unit tests + 15 integration tests (100% passing)
+  - Features: partial updates, automatic embedding regeneration, timestamp preservation, read-only mode protection
+>>>>>>> FEAT-047
 
 - **PERF-006: Test Suite Performance Optimization - Phases 2 & 3**
   - Added session-scoped test fixtures in `tests/conftest.py` for reusable resources
