@@ -81,6 +81,12 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Changed - 2025-11-17
 
+- **PERF-007: CI Dependency Installation Optimization**
+  - Replaced pip with uv (Rust-based package installer) in GitHub Actions workflow
+  - Removed `cache: 'pip'` in favor of uv's built-in caching (`enable-cache: true`)
+  - Expected pip install speedup: 10-100x faster (especially for heavy deps like sentence-transformers)
+  - File: `.github/workflows/tests.yml`
+
 - **PERF-007: CI Test Suite Performance Optimization**
   - Added pytest-xdist for parallel test execution (`-n auto` flag)
   - Enhanced Qdrant service with Docker health checks (5s intervals, faster startup detection)
