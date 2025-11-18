@@ -23,7 +23,7 @@ jobs:
         env:
           QDRANT_API_KEY: development
         options: >-
-          --health-cmd "curl -f http://localhost:6333/health || exit 1"
+          --health-cmd "timeout 2 sh -c 'cat < /dev/null > /dev/tcp/localhost/6333' || exit 1"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
