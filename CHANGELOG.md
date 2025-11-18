@@ -79,6 +79,13 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ## [Unreleased]
 
+### Fixed - 2025-11-17
+
+- **Build:** Rust compiler warnings for unused `file_path` parameters
+  - Prefixed unused parameters with underscores in `rust_core/src/config_parsing.rs`
+  - Functions: `parse_json`, `parse_yaml`, `parse_toml`
+  - Resolves 3 warnings in CI builds
+
 ### Changed - 2025-11-17
 
 - **PERF-007: CI Dependency Installation Optimization**

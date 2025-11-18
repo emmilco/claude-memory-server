@@ -5,7 +5,7 @@ use toml::Value as TomlValue;
 use crate::parsing::{SemanticUnit, ParseResult};
 
 /// Parse JSON configuration files and extract top-level keys as semantic units
-pub fn parse_json(file_path: &str, source_code: &str) -> Result<Vec<SemanticUnit>, String> {
+pub fn parse_json(_file_path: &str, source_code: &str) -> Result<Vec<SemanticUnit>, String> {
     let parsed: JsonValue = serde_json::from_str(source_code)
         .map_err(|e| format!("JSON parse error: {}", e))?;
 
@@ -37,7 +37,7 @@ pub fn parse_json(file_path: &str, source_code: &str) -> Result<Vec<SemanticUnit
 }
 
 /// Parse YAML configuration files and extract top-level keys as semantic units
-pub fn parse_yaml(file_path: &str, source_code: &str) -> Result<Vec<SemanticUnit>, String> {
+pub fn parse_yaml(_file_path: &str, source_code: &str) -> Result<Vec<SemanticUnit>, String> {
     let parsed: YamlValue = serde_yaml::from_str(source_code)
         .map_err(|e| format!("YAML parse error: {}", e))?;
 
@@ -69,7 +69,7 @@ pub fn parse_yaml(file_path: &str, source_code: &str) -> Result<Vec<SemanticUnit
 }
 
 /// Parse TOML configuration files and extract top-level sections as semantic units
-pub fn parse_toml(file_path: &str, source_code: &str) -> Result<Vec<SemanticUnit>, String> {
+pub fn parse_toml(_file_path: &str, source_code: &str) -> Result<Vec<SemanticUnit>, String> {
     let parsed: TomlValue = source_code.parse()
         .map_err(|e: toml::de::Error| format!("TOML parse error: {}", e))?;
 
