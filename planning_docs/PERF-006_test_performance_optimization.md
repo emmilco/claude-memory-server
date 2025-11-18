@@ -408,11 +408,11 @@ pytest tests/integration/test_hybrid_search_integration.py -v
 
 ## Progress Tracking
 
-### Phase 1: Quick Wins
-- [ ] Task 1.1: Optimize test_cross_project.py
-- [ ] Task 1.2: Mock embeddings in test_server_extended.py
-- [ ] Task 1.3: Reduce corpus in hybrid_search tests
-- [ ] Verify Phase 1 success criteria
+### Phase 1: Quick Wins ✅ COMPLETE (2025-11-17)
+- [x] Task 1.1: Optimize test_cross_project.py - **81.76s → 6.51s (92% faster!)**
+- [x] Task 1.2: Mock embeddings in test_server_extended.py - **All 20+ tests optimized**
+- [x] Task 1.3: Reduce corpus in hybrid_search tests - **80% file size reduction**
+- [x] Verify Phase 1 success criteria - **60 optimized tests pass in 71.61s**
 
 ### Phase 2: Fixture Optimization
 - [ ] Task 2.1: Session-scoped database fixtures

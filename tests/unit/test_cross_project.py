@@ -141,17 +141,14 @@ class TestSearchAllProjects:
         assert len(result["projects_searched"]) >= 1
 
     @pytest.mark.asyncio
-    async def test_search_all_projects_with_indexing(self, server):
+    async def test_search_all_projects_with_indexing(self, server, small_test_project):
         """Test cross-project search with actual indexed code."""
-        # Index a test directory
-        test_dir = Path(__file__).parent.parent / "unit"
-
         # Get the current project name (auto-detected from git)
         current_project = server.project_name or "test-project-1"
 
         # Index with current project name
         await server.index_codebase(
-            directory_path=str(test_dir),
+            directory_path=str(small_test_project),
             project_name=current_project,
             recursive=False
         )
@@ -169,13 +166,10 @@ class TestSearchAllProjects:
         assert "query_time_ms" in result
 
     @pytest.mark.asyncio
-    async def test_search_all_projects_result_format(self, server):
+    async def test_search_all_projects_result_format(self, server, small_test_project):
         """Test that cross-project results have correct format."""
-        # Index a test directory
-        test_dir = Path(__file__).parent.parent / "unit"
-
         await server.index_codebase(
-            directory_path=str(test_dir),
+            directory_path=str(small_test_project),
             project_name="test-project",
             recursive=False
         )

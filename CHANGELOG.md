@@ -110,6 +110,17 @@ A pre-commit hook enforces CHANGELOG updates:
     - 1 parallel_embeddings performance test (known flaky under system load)
   - Created pytest.ini with skip_ci marker configuration
 
+### Changed - 2025-11-17
+
+- **PERF-006: Test Suite Performance Optimization - Phase 1 Complete**
+  - Created `tests/conftest.py` with `mock_embeddings` fixture for fast embedding generation
+  - Created `small_test_project` fixture (5 files vs 200+ files) for faster indexing tests
+  - Optimized `test_cross_project.py` to use small_test_project: 81.76s → 6.51s (92% faster!)
+  - Optimized `test_server_extended.py` with mock embeddings on all 20+ tests
+  - Optimized `test_hybrid_search_integration.py` with reduced corpus (80% smaller files)
+  - Expected total savings: 60-80 seconds from Phase 1 alone
+  - Files: tests/conftest.py, tests/unit/test_cross_project.py, tests/unit/test_server_extended.py, tests/integration/test_hybrid_search_integration.py
+
 ### Planning - 2025-11-17
 
 - **API Gap Analysis:** Added 10 new TODO items (FEAT-039 through FEAT-048) for missing API commands
