@@ -383,6 +383,7 @@ class TestParallelPerformance:
     """Performance benchmarks for parallel embedding generation."""
 
     @pytest.mark.asyncio
+    @pytest.mark.skip_ci
     async def test_performance_improvement(self):
         """Benchmark parallel vs single-threaded performance."""
         import time

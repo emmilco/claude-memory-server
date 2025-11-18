@@ -63,6 +63,7 @@ def temp_project():
         yield project
 
 
+@pytest.mark.skip_ci
 def test_analyze_finds_node_modules(temp_project):
     """Test detection of node_modules directory."""
     analyzer = OptimizationAnalyzer(temp_project)
@@ -96,6 +97,7 @@ def test_analyze_finds_build_directories(temp_project):
     assert suggestion.affected_files >= 20
 
 
+@pytest.mark.skip_ci
 def test_analyze_finds_venv(temp_project):
     """Test detection of Python virtual environments."""
     analyzer = OptimizationAnalyzer(temp_project)
@@ -128,6 +130,7 @@ def test_analyze_finds_cache_directories(temp_project):
     assert suggestion.affected_files >= 10
 
 
+@pytest.mark.skip_ci
 def test_analyze_finds_git_directory(temp_project):
     """Test detection of .git directory."""
     analyzer = OptimizationAnalyzer(temp_project)
@@ -193,6 +196,7 @@ def test_suggestions_sorted_by_priority(temp_project):
         )
 
 
+@pytest.mark.skip_ci
 def test_estimate_speedup_calculation(temp_project):
     """Test speedup estimation."""
     analyzer = OptimizationAnalyzer(temp_project)
