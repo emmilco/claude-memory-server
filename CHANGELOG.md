@@ -81,6 +81,12 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Fixed - 2025-11-18
 
+- **BUG-013: Query Synonym Test Failure**
+  - Added plural form support for "exceptions" in `src/search/query_synonyms.py`
+  - Added "exceptions" to both PROGRAMMING_SYNONYMS and CODE_CONTEXT_PATTERNS dictionaries
+  - Fixed test_error_handling_search to correctly expand "handle exceptions" query
+  - All 33 query synonym tests now passing (32→33 passing)
+
 - **BUG-012/FEAT-040: Memory Update/Edit Operations**
   - Implemented `update_memory()` and `get_memory_by_id()` methods in `src/core/server.py`
   - Added UTC import and fixed attribute references (memory.id vs memory.memory_id)

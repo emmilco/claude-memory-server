@@ -64,6 +64,7 @@ PROGRAMMING_SYNONYMS: Dict[str, Set[str]] = {
     # Error Handling
     "error": {"exception", "fault", "failure", "bug"},
     "exception": {"error", "fault", "failure"},
+    "exceptions": {"error", "fault", "failure"},  # plural form
     "handle": {"catch", "manage", "process"},
     "catch": {"handle", "trap", "intercept"},
     "throw": {"raise", "emit", "trigger"},
@@ -173,6 +174,7 @@ CODE_CONTEXT_PATTERNS: Dict[str, Set[str]] = {
     # Error handling
     "error": {"exception", "try", "catch", "finally", "throw", "handle"},
     "exception": {"try", "catch", "throw", "error", "fault"},
+    "exceptions": {"try", "catch", "throw", "error", "fault"},  # plural form
 
     # Async patterns
     "async": {"await", "promise", "future", "callback", "concurrent"},
