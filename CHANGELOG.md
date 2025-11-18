@@ -116,9 +116,10 @@ A pre-commit hook enforces CHANGELOG updates:
   - Created `tests/conftest.py` with `mock_embeddings` fixture for fast embedding generation
   - Created `small_test_project` fixture (5 files vs 200+ files) for faster indexing tests
   - Optimized `test_cross_project.py` to use small_test_project: 81.76s → 6.51s (92% faster!)
-  - Optimized `test_server_extended.py` with mock embeddings on all 20+ tests
+  - Optimized `test_server_extended.py` with mock embeddings on all 20+ tests (except cache test)
   - Optimized `test_hybrid_search_integration.py` with reduced corpus (80% smaller files)
-  - Expected total savings: 60-80 seconds from Phase 1 alone
+  - Fixed `test_same_text_uses_cache` to exclude mock_embeddings (needs real cache verification)
+  - Full test suite: 1926/1932 passing in 214.93s (3:34)
   - Files: tests/conftest.py, tests/unit/test_cross_project.py, tests/unit/test_server_extended.py, tests/integration/test_hybrid_search_integration.py
 
 ### Planning - 2025-11-17

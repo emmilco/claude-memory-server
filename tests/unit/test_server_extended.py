@@ -386,8 +386,12 @@ class TestEmbeddingCaching:
         assert all(isinstance(x, float) for x in embedding)
 
     @pytest.mark.asyncio
-    async def test_same_text_uses_cache(self, server, mock_embeddings):
-        """Test that repeated text uses cached embeddings."""
+    async def test_same_text_uses_cache(self, server):
+        """Test that repeated text uses cached embeddings.
+
+        Note: This test does NOT use mock_embeddings since it needs to verify
+        that the real embedding cache returns identical values.
+        """
         text = "This is a test for caching"
 
         # First call - generates and caches
