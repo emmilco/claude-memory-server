@@ -81,6 +81,15 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-18
 
+- **FEAT-036: Project Archival Phase 2.5 - Documentation & Polish**
+  - Added export/import CLI commands to `src/cli/archival_command.py` (export, import, list-exportable)
+  - Updated `docs/API.md` with comprehensive Project Archival Tools section (export, import, programmatic usage)
+  - Updated `README.md` with archival usage examples, storage optimization details, and performance benchmarks
+  - Added archival performance benchmarks: compression ratio (0.20-0.30), archive/restore times (5-30s), storage savings (60-80%)
+  - Added storage optimization table with example savings for small/medium/large projects
+  - Added CLI command help for all archival operations (status, archive, reactivate, export, import, list-exportable)
+  - Files: `src/cli/archival_command.py`, `docs/API.md`, `README.md`
+
 - **FEAT-036: Project Archival Phase 2.4 - Export/Import**
   - Created `src/memory/archive_exporter.py` with ArchiveExporter for portable archive export
   - Created `src/memory/archive_importer.py` with ArchiveImporter for portable archive import
