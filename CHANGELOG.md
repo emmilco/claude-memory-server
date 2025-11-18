@@ -148,6 +148,12 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Fixed - 2025-11-17
 
+- **Pattern Detector:** Fixed CamelCase regex extracting regular words when using IGNORECASE flag
+  - Separated CamelCase pattern to run case-sensitive (without IGNORECASE flag)
+  - Bug caused "How does the authentication system work?" to extract entities: ['system', 'does', 'work', 'authentication']
+  - Now correctly extracts only technical terms: ['authentication']
+  - File: `src/memory/pattern_detector.py`
+
 - **Test Suite:** Fixed 4 flaky test failures in background_indexer and parallel_embeddings
   - Fixed race condition in `test_start_background_job` - added sleep to allow background task to start
   - Fixed KeyError in `test_cancel_job` and `test_cannot_delete_running_job` - added check before deleting from `_active_tasks` dict
