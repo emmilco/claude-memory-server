@@ -54,7 +54,7 @@ class RepositoryCommand:
         """List all repositories."""
         try:
             # Initialize registry
-            registry = RepositoryRegistry(self.config)
+            registry = RepositoryRegistry(self.config.repository_storage_path)
             await registry.initialize()
 
             # Parse status filter
@@ -102,7 +102,7 @@ class RepositoryCommand:
                 return
 
             # Initialize registry
-            registry = RepositoryRegistry(self.config)
+            registry = RepositoryRegistry(self.config.repository_storage_path)
             await registry.initialize()
 
             # Register repository
@@ -132,7 +132,7 @@ class RepositoryCommand:
         """Unregister a repository."""
         try:
             # Initialize registry
-            registry = RepositoryRegistry(self.config)
+            registry = RepositoryRegistry(self.config.repository_storage_path)
             await registry.initialize()
 
             # Get repository info first
@@ -160,7 +160,7 @@ class RepositoryCommand:
         """Get detailed repository information."""
         try:
             # Initialize registry
-            registry = RepositoryRegistry(self.config)
+            registry = RepositoryRegistry(self.config.repository_storage_path)
             await registry.initialize()
 
             # Get repository
@@ -186,7 +186,7 @@ class RepositoryCommand:
         """Add a dependency relationship."""
         try:
             # Initialize registry
-            registry = RepositoryRegistry(self.config)
+            registry = RepositoryRegistry(self.config.repository_storage_path)
             await registry.initialize()
 
             # Verify both repositories exist
@@ -215,7 +215,7 @@ class RepositoryCommand:
         """Remove a dependency relationship."""
         try:
             # Initialize registry
-            registry = RepositoryRegistry(self.config)
+            registry = RepositoryRegistry(self.config.repository_storage_path)
             await registry.initialize()
 
             # Remove dependency
