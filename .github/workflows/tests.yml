@@ -57,7 +57,8 @@ jobs:
       run: |
         pip install maturin
         cd rust_core
-        maturin develop --release
+        maturin build --release
+        pip install target/wheels/*.whl
         cd ..
 
     - name: Wait for Qdrant
