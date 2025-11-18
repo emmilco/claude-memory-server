@@ -230,15 +230,13 @@ class MemoryRAGServer:
             # Initialize multi-repository components if enabled
             if self.config.enable_multi_repository:
                 # Initialize repository registry
-                self.repository_registry = RepositoryRegistry(self.config)
-                await self.repository_registry.initialize()
+                self.repository_registry = RepositoryRegistry(self.config.repository_storage_path)
 
                 # Initialize workspace manager
                 self.workspace_manager = WorkspaceManager(
-                    self.repository_registry,
-                    self.config
+                    self.config.workspace_storage_path,
+                    self.repository_registry
                 )
-                await self.workspace_manager.initialize()
 
                 # Initialize multi-repository indexer
                 self.multi_repo_indexer = MultiRepositoryIndexer(
