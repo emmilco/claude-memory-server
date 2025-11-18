@@ -81,6 +81,15 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-18
 
+- **FEAT-043: Bulk Memory Operations**
+  - Created `src/memory/bulk_operations.py` with BulkDeleteManager for efficient multi-memory deletion
+  - Added `bulk_delete_memories()` MCP tool to `src/core/server.py` with dry-run preview and safety limits
+  - Implemented batch processing (100 memories/batch), progress tracking, and configurable safety limits (max 1000 per operation)
+  - Added preview mode with breakdowns by category/lifecycle/project, storage estimation, and intelligent warnings
+  - Safety features: high-importance warnings, recent memory warnings, multi-project warnings, confirmation thresholds
+  - Comprehensive test suite: 21 tests covering filters, preview, batch processing, safety limits, error handling (100% passing)
+  - Files: `src/memory/bulk_operations.py`, `tests/unit/test_bulk_operations.py`
+
 - **FEAT-047: Proactive Memory Suggestions**
   - Created `src/memory/intent_detector.py` for conversation intent detection (implementation, debugging, learning, exploration)
   - Created `src/memory/proactive_suggester.py` for context-aware memory and code suggestions
