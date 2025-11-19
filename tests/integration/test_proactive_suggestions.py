@@ -7,7 +7,6 @@ from src.config import ServerConfig
 from src.memory.pattern_detector import PatternType
 
 
-@pytest.mark.skip(reason="FEAT-028: Proactive Context Suggestions not yet implemented - see TODO.md")
 @pytest.mark.asyncio
 class TestProactiveSuggestionsIntegration:
     """Integration tests for proactive suggestion system."""

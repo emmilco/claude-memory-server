@@ -102,6 +102,15 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-18
 
+- **FEAT-028: Proactive Context Suggestions**
+  - Created `src/memory/pattern_detector.py` for conversation pattern detection (4 types: implementation, debugging, questions, refactoring)
+  - Created `src/memory/feedback_tracker.py` for tracking suggestion acceptance with SQLite persistence
+  - Created `src/memory/suggestion_engine.py` for proactive context suggestion with adaptive learning
+  - Added 4 new MCP tools: analyze_conversation, get_suggestion_stats, provide_suggestion_feedback, set_suggestion_mode
+  - Added config options: enable_proactive_suggestions (default: True), proactive_suggestions_threshold (default: 0.90)
+  - Adaptive threshold adjustment based on user feedback (target 70% acceptance)
+  - Automatic context injection at high confidence (>0.90)
+
 - **UX-013: Better Installation Error Messages**
   - Created `src/core/system_check.py` for system prerequisites detection (Python, pip, Docker, Rust, Git)
   - Created `src/core/dependency_checker.py` for smart dependency checking with contextual error messages

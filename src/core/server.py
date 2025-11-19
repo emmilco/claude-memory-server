@@ -2,9 +2,8 @@
 
 import logging
 import asyncio
-import json
-from typing import Optional, Dict, Any, List, Tuple
-from datetime import datetime, UTC
+from typing import Optional, Dict, Any, List
+from datetime import datetime
 from pathlib import Path
 import subprocess
 
@@ -36,13 +35,8 @@ from src.memory.usage_tracker import UsageTracker
 from src.memory.pruner import MemoryPruner
 from src.memory.conversation_tracker import ConversationTracker
 from src.memory.query_expander import QueryExpander
-from src.memory.proactive_suggester import ProactiveSuggester
-from src.memory.bulk_operations import BulkDeleteManager
+from src.memory.suggestion_engine import SuggestionEngine
 from src.search.hybrid_search import HybridSearcher, FusionMethod
-from src.memory.repository_registry import RepositoryRegistry
-from src.memory.workspace_manager import WorkspaceManager
-from src.memory.multi_repository_indexer import MultiRepositoryIndexer
-from src.memory.multi_repository_search import MultiRepositorySearch
 
 logger = logging.getLogger(__name__)
 
@@ -87,18 +81,10 @@ class MemoryRAGServer:
         self.pruner: Optional[MemoryPruner] = None
         self.conversation_tracker: Optional[ConversationTracker] = None
         self.query_expander: Optional[QueryExpander] = None
-        self.proactive_suggester: Optional[ProactiveSuggester] = None
-        self.bulk_delete_manager: Optional[BulkDeleteManager] = None
         self.hybrid_searcher: Optional[HybridSearcher] = None
         self.cross_project_consent: Optional = None  # Cross-project consent manager
-        self.project_context_detector: Optional = None  # Project context detector
+        self.suggestion_engine: Optional[SuggestionEngine] = None  # Proactive suggestions
         self.scheduler = None  # APScheduler instance
-
-        # Multi-repository components
-        self.repository_registry: Optional = None  # Repository registry
-        self.workspace_manager: Optional = None  # Workspace manager
-        self.multi_repo_indexer: Optional = None  # Multi-repository indexer
-        self.multi_repo_search: Optional = None  # Multi-repository search
 
         # Statistics
         self.stats = {
@@ -197,29 +183,9 @@ class MemoryRAGServer:
                 # Initialize query expander (requires embedding generator)
                 self.query_expander = QueryExpander(self.config, self.embedding_generator)
                 logger.info("Query expansion enabled")
-
-                # Initialize proactive suggester (requires conversation tracker and embedding generator)
-                self.proactive_suggester = ProactiveSuggester(
-                    store=self.store,
-                    embedding_generator=self.embedding_generator,
-                    conversation_tracker=self.conversation_tracker,
-                    confidence_threshold=0.85,
-                    max_suggestions=5,
-                )
-                logger.info("Proactive suggester initialized")
-
-            # Initialize bulk operations manager (always available, not tied to conversation tracking)
-            self.bulk_delete_manager = BulkDeleteManager(
-                store=self.store,
-                max_batch_size=100,
-                max_total_operations=1000,
-            )
-            logger.info("Bulk operations manager initialized")
-
-            if not self.config.enable_conversation_tracking:
+            else:
                 self.conversation_tracker = None
                 self.query_expander = None
-                self.proactive_suggester = None
                 logger.info("Conversation tracking disabled")
 
             # Initialize hybrid searcher if enabled
@@ -247,51 +213,6 @@ class MemoryRAGServer:
                 self.hybrid_searcher = None
                 logger.info("Hybrid search disabled")
 
-            # Initialize project context detector
-            from src.memory.project_context import ProjectContextDetector
-            self.project_context_detector = ProjectContextDetector(config=self.config.__dict__)
-            logger.info("Project context detector initialized")
-
-            # Initialize multi-repository components if enabled
-            if self.config.enable_multi_repository:
-                # Initialize repository registry
-                self.repository_registry = RepositoryRegistry(self.config.repository_storage_path)
-
-                # Initialize workspace manager
-                self.workspace_manager = WorkspaceManager(
-                    self.config.workspace_storage_path,
-                    self.repository_registry
-                )
-
-                # Initialize multi-repository indexer
-                self.multi_repo_indexer = MultiRepositoryIndexer(
-                    repository_registry=self.repository_registry,
-                    workspace_manager=self.workspace_manager,
-                    store=self.store,
-                    embedding_generator=self.embedding_generator,
-                    config=self.config,
-                    max_concurrent_repos=getattr(self.config, 'multi_repo_max_parallel', 3)
-                )
-                await self.multi_repo_indexer.initialize()
-
-                # Initialize multi-repository search
-                self.multi_repo_search = MultiRepositorySearch(
-                    repository_registry=self.repository_registry,
-                    workspace_manager=self.workspace_manager,
-                    store=self.store,
-                    embedding_generator=self.embedding_generator,
-                    config=self.config
-                )
-                await self.multi_repo_search.initialize()
-
-                logger.info("Multi-repository support enabled")
-            else:
-                self.repository_registry = None
-                self.workspace_manager = None
-                self.multi_repo_indexer = None
-                self.multi_repo_search = None
-                logger.info("Multi-repository support disabled")
-
             # Initialize cross-project consent manager if enabled
             if self.config.enable_cross_project_search:
                 from src.memory.cross_project_consent import CrossProjectConsent
@@ -306,6 +227,21 @@ class MemoryRAGServer:
             else:
                 self.cross_project_consent = None
                 logger.info("Cross-project search disabled")
+
+            # Initialize suggestion engine for proactive context
+            # Only enabled if store is initialized (needed for searches)
+            if self.config.enable_proactive_suggestions:
+                self.suggestion_engine = SuggestionEngine(
+                    config=self.config,
+                    store=self.store,
+                )
+                logger.info(
+                    f"Proactive suggestions enabled "
+                    f"(threshold: {self.suggestion_engine.high_confidence_threshold:.2f})"
+                )
+            else:
+                self.suggestion_engine = None
+                logger.info("Proactive suggestions disabled")
 
             logger.info("Server initialized successfully")
 
@@ -649,86 +585,6 @@ class MemoryRAGServer:
             logger.error(f"Failed to retrieve memories: {e}")
             raise RetrievalError(f"Failed to retrieve memories: {e}")
 
-    async def suggest_memories(
-        self,
-        session_id: str,
-        max_suggestions: Optional[int] = None,
-        confidence_threshold: Optional[float] = None,
-        include_code: bool = True,
-        project_name: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        """
-        Proactively suggest relevant memories based on conversation context.
-
-        Analyzes recent queries in the conversation session to detect user intent
-        and suggests relevant memories and code without requiring explicit queries.
-
-        Args:
-            session_id: Conversation session ID for context analysis
-            max_suggestions: Maximum suggestions to return (default: 5)
-            confidence_threshold: Minimum confidence score 0-1 (default: 0.85)
-            include_code: Include code search results (default: True)
-            project_name: Filter suggestions by project name (optional)
-
-        Returns:
-            Dict with suggestions, detected intent, and metadata
-
-        Raises:
-            ValidationError: If session_id is missing or proactive suggester disabled
-            RetrievalError: If suggestion generation fails
-        """
-        if not self.proactive_suggester:
-            raise ValidationError(
-                "Proactive suggestions are disabled. "
-                "Enable conversation tracking to use this feature."
-            )
-
-        try:
-            # Generate suggestions
-            response = await self.proactive_suggester.suggest_memories(
-                session_id=session_id,
-                max_suggestions=max_suggestions,
-                confidence_threshold=confidence_threshold,
-                include_code=include_code,
-                project_name=project_name or self.project_name,
-            )
-
-            # Convert to dict for MCP response
-            return {
-                "suggestions": [
-                    {
-                        "memory_id": s.memory_id,
-                        "content": s.content,
-                        "confidence": s.confidence,
-                        "reason": s.reason,
-                        "source_type": s.source_type,
-                        "relevance_factors": {
-                            "semantic_similarity": s.relevance_factors.semantic_similarity,
-                            "recency": s.relevance_factors.recency,
-                            "importance": s.relevance_factors.importance,
-                            "context_match": s.relevance_factors.context_match,
-                        },
-                        "metadata": s.metadata,
-                    }
-                    for s in response.suggestions
-                ],
-                "detected_intent": {
-                    "intent_type": response.detected_intent.intent_type,
-                    "keywords": response.detected_intent.keywords,
-                    "confidence": response.detected_intent.confidence,
-                    "search_query": response.detected_intent.search_query,
-                },
-                "confidence_threshold": response.confidence_threshold,
-                "total_suggestions": response.total_suggestions,
-                "session_id": response.session_id,
-            }
-
-        except ValidationError:
-            raise
-        except Exception as e:
-            logger.error(f"Failed to generate suggestions: {e}")
-            raise RetrievalError(f"Failed to generate suggestions: {e}")
-
     async def delete_memory(self, memory_id: str) -> Dict[str, Any]:
         """
         Delete a memory by ID.
@@ -756,852 +612,6 @@ class MemoryRAGServer:
         except Exception as e:
             logger.error(f"Failed to delete memory: {e}")
             raise StorageError(f"Failed to delete memory: {e}")
-
-    async def get_memory_by_id(self, memory_id: str) -> Dict[str, Any]:
-        """
-        Retrieve a specific memory by its ID.
-
-        Args:
-            memory_id: The unique ID of the memory to retrieve
-
-        Returns:
-            Dict with status and memory data:
-            - If found: {"status": "success", "memory": {...}}
-            - If not found: {"status": "not_found", "message": "..."}
-        """
-        try:
-            memory = await self.store.get_by_id(memory_id)
-
-            if memory:
-                return {
-                    "status": "success",
-                    "memory": {
-                        "id": memory.id,
-                        "memory_id": memory.id,
-                        "content": memory.content,
-                        "category": memory.category.value if hasattr(memory.category, 'value') else memory.category,
-                        "context_level": memory.context_level.value if hasattr(memory.context_level, 'value') else memory.context_level,
-                        "importance": memory.importance,
-                        "tags": memory.tags or [],
-                        "metadata": memory.metadata or {},
-                        "scope": memory.scope.value if hasattr(memory.scope, 'value') else memory.scope,
-                        "project_name": memory.project_name,
-                        "created_at": memory.created_at.isoformat() if hasattr(memory.created_at, 'isoformat') else memory.created_at,
-                        "updated_at": memory.updated_at.isoformat() if hasattr(memory.updated_at, 'isoformat') else memory.updated_at,
-                        "last_accessed": memory.last_accessed.isoformat() if memory.last_accessed and hasattr(memory.last_accessed, 'isoformat') else memory.last_accessed,
-                    }
-                }
-            else:
-                return {
-                    "status": "not_found",
-                    "message": f"Memory {memory_id} not found"
-                }
-
-        except Exception as e:
-            logger.error(f"Failed to get memory by ID: {e}")
-            raise StorageError(f"Failed to get memory by ID: {e}")
-
-    async def update_memory(
-        self,
-        memory_id: str,
-        content: Optional[str] = None,
-        category: Optional[str] = None,
-        importance: Optional[float] = None,
-        tags: Optional[List[str]] = None,
-        metadata: Optional[Dict[str, Any]] = None,
-        context_level: Optional[str] = None,
-        regenerate_embedding: bool = True,
-    ) -> Dict[str, Any]:
-        """
-        Update an existing memory.
-
-        Args:
-            memory_id: ID of memory to update (required)
-            content: New content (optional)
-            category: New category (optional)
-            importance: New importance score 0.0-1.0 (optional)
-            tags: New tags list (optional)
-            metadata: New metadata dict (optional)
-            context_level: New context level (optional)
-            regenerate_embedding: Whether to regenerate embedding if content changes (default: True)
-
-        Returns:
-            Dict with status and update details:
-            {
-                "status": "updated" or "not_found",
-                "updated_fields": List[str],
-                "embedding_regenerated": bool,
-                "updated_at": ISO timestamp
-            }
-        """
-        if self.config.read_only_mode:
-            raise ReadOnlyError("Cannot update memory in read-only mode")
-
-        try:
-            # Build updates dictionary
-            updates = {}
-            updated_fields = []
-
-            if content is not None:
-                # Validate content length
-                if not (1 <= len(content) <= 50000):
-                    raise ValidationError("content must be 1-50000 characters")
-                updates["content"] = content
-                updated_fields.append("content")
-
-            if category is not None:
-                # Validate category
-                cat = MemoryCategory(category)
-                updates["category"] = cat.value
-                updated_fields.append("category")
-
-            if importance is not None:
-                # Validate importance
-                if not (0.0 <= importance <= 1.0):
-                    raise ValidationError("importance must be between 0.0 and 1.0")
-                updates["importance"] = importance
-                updated_fields.append("importance")
-
-            if tags is not None:
-                # Validate tags
-                for tag in tags:
-                    if not isinstance(tag, str) or len(tag) > 50:
-                        raise ValidationError("Tags must be strings <= 50 chars")
-                updates["tags"] = tags
-                updated_fields.append("tags")
-
-            if metadata is not None:
-                # Validate metadata is a dict
-                if not isinstance(metadata, dict):
-                    raise ValidationError("metadata must be a dictionary")
-                updates["metadata"] = metadata
-                updated_fields.append("metadata")
-
-            if context_level is not None:
-                # Validate context level
-                cl = ContextLevel(context_level)
-                updates["context_level"] = cl.value
-                updated_fields.append("context_level")
-
-            # Check that at least one field is being updated
-            if not updates:
-                raise ValidationError("At least one field must be provided for update")
-
-            # Regenerate embedding if content changed
-            new_embedding = None
-            embedding_regenerated = False
-
-            if "content" in updates and regenerate_embedding:
-                embedding_regenerated = True
-                new_embedding = await self.embedding_generator.generate(updates["content"])
-
-            # Perform update
-            success = await self.store.update(
-                memory_id=memory_id,
-                updates=updates,
-                new_embedding=new_embedding
-            )
-
-            if success:
-                # Update stats
-                self.stats["memories_updated"] = self.stats.get("memories_updated", 0) + 1
-
-                return {
-                    "status": "updated",
-                    "updated_fields": updated_fields,
-                    "embedding_regenerated": embedding_regenerated,
-                    "updated_at": datetime.now(UTC).isoformat()
-                }
-            else:
-                return {
-                    "status": "not_found",
-                    "message": f"Memory {memory_id} not found"
-                }
-
-        except ValidationError:
-            raise
-        except ReadOnlyError:
-            raise
-        except Exception as e:
-            logger.error(f"Failed to update memory {memory_id}: {e}")
-            raise StorageError(f"Failed to update memory: {e}")
-
-    async def list_memories(
-        self,
-        category: Optional[str] = None,
-        context_level: Optional[str] = None,
-        scope: Optional[str] = None,
-        project_name: Optional[str] = None,
-        tags: Optional[List[str]] = None,
-        min_importance: float = 0.0,
-        max_importance: float = 1.0,
-        date_from: Optional[str] = None,
-        date_to: Optional[str] = None,
-        sort_by: str = "created_at",
-        sort_order: str = "desc",
-        limit: int = 20,
-        offset: int = 0
-    ) -> Dict[str, Any]:
-        """
-        List memories with filtering, sorting, and pagination.
-
-        Args:
-            category: Filter by category (optional)
-            context_level: Filter by context level (optional)
-            scope: Filter by scope (global/project) (optional)
-            project_name: Filter by project (optional)
-            tags: Filter by tags - matches ANY tag (optional)
-            min_importance: Minimum importance (default 0.0)
-            max_importance: Maximum importance (default 1.0)
-            date_from: Filter by created_at >= date (ISO format) (optional)
-            date_to: Filter by created_at <= date (ISO format) (optional)
-            sort_by: Sort field (created_at, updated_at, importance)
-            sort_order: Sort order (asc, desc)
-            limit: Max results to return (1-100, default 20)
-            offset: Number of results to skip (default 0)
-
-        Returns:
-            {
-                "memories": List[memory dict],
-                "total_count": int,
-                "returned_count": int,
-                "offset": int,
-                "limit": int,
-                "has_more": bool
-            }
-
-        Raises:
-            ValidationError: If parameters are invalid
-            StorageError: If listing fails
-        """
-        try:
-            # Validate parameters
-            if not (1 <= limit <= 100):
-                raise ValidationError("limit must be 1-100")
-            if offset < 0:
-                raise ValidationError("offset must be >= 0")
-            if sort_by not in ["created_at", "updated_at", "importance"]:
-                raise ValidationError("Invalid sort_by field")
-            if sort_order not in ["asc", "desc"]:
-                raise ValidationError("sort_order must be 'asc' or 'desc'")
-
-            # Build filters dict
-            filters = {}
-
-            if category:
-                filters["category"] = MemoryCategory(category)
-            if context_level:
-                filters["context_level"] = ContextLevel(context_level)
-            if scope:
-                filters["scope"] = MemoryScope(scope)
-            if project_name:
-                filters["project_name"] = project_name
-            if tags:
-                filters["tags"] = tags
-
-            filters["min_importance"] = min_importance
-            filters["max_importance"] = max_importance
-
-            if date_from:
-                filters["date_from"] = datetime.fromisoformat(date_from)
-            if date_to:
-                filters["date_to"] = datetime.fromisoformat(date_to)
-
-            # Query store
-            memories, total_count = await self.store.list_memories(
-                filters=filters,
-                sort_by=sort_by,
-                sort_order=sort_order,
-                limit=limit,
-                offset=offset
-            )
-
-            # Convert to dicts
-            memory_dicts = [
-                {
-                    "memory_id": m.id,
-                    "content": m.content,
-                    "category": m.category.value,
-                    "context_level": m.context_level.value,
-                    "importance": m.importance,
-                    "tags": m.tags,
-                    "metadata": m.metadata,
-                    "scope": m.scope.value,
-                    "project_name": m.project_name,
-                    "created_at": m.created_at.isoformat(),
-                    "updated_at": m.updated_at.isoformat(),
-                }
-                for m in memories
-            ]
-
-            logger.info(f"Listed {len(memory_dicts)} memories (total {total_count})")
-
-            return {
-                "memories": memory_dicts,
-                "total_count": total_count,
-                "returned_count": len(memory_dicts),
-                "offset": offset,
-                "limit": limit,
-                "has_more": (offset + len(memory_dicts)) < total_count
-            }
-
-        except ValidationError:
-            raise
-        except Exception as e:
-            logger.error(f"Failed to list memories: {e}")
-            raise StorageError(f"Failed to list memories: {e}")
-
-    async def bulk_delete_memories(
-        self,
-        dry_run: bool = False,
-        category: Optional[str] = None,
-        context_level: Optional[str] = None,
-        scope: Optional[str] = None,
-        project_name: Optional[str] = None,
-        tags: Optional[List[str]] = None,
-        min_importance: float = 0.0,
-        max_importance: float = 1.0,
-        date_from: Optional[str] = None,
-        date_to: Optional[str] = None,
-        lifecycle_state: Optional[str] = None,
-        max_count: int = 1000,
-        enable_rollback: bool = False,
-    ) -> Dict[str, Any]:
-        """
-        Bulk delete memories matching filter criteria with safety checks.
-
-        Args:
-            dry_run: If True, preview deletion without executing (default: False)
-            category: Filter by category (optional)
-            context_level: Filter by context level (optional)
-            scope: Filter by scope (global/project) (optional)
-            project_name: Filter by project (optional)
-            tags: Filter by tags - matches ANY tag (optional)
-            min_importance: Minimum importance (default 0.0)
-            max_importance: Maximum importance (default 1.0)
-            date_from: Delete memories created after this date (ISO format) (optional)
-            date_to: Delete memories created before this date (ISO format) (optional)
-            lifecycle_state: Filter by lifecycle state (optional)
-            max_count: Maximum memories to delete (hard limit: 1000, default: 1000)
-            enable_rollback: Enable rollback support (soft delete) (default: False)
-
-        Returns:
-            If dry_run=True:
-                {
-                    "dry_run": true,
-                    "total_matches": int,
-                    "sample_memories": List[memory dict],
-                    "breakdown": {
-                        "by_category": {"category": count},
-                        "by_lifecycle": {"state": count},
-                        "by_project": {"project": count}
-                    },
-                    "estimated_storage_freed_mb": float,
-                    "warnings": List[str],
-                    "requires_confirmation": bool
-                }
-            If dry_run=False:
-                {
-                    "success": bool,
-                    "dry_run": false,
-                    "total_deleted": int,
-                    "failed_deletions": List[memory_id],
-                    "rollback_id": Optional[str],
-                    "execution_time": float,
-                    "storage_freed_mb": float,
-                    "errors": List[str]
-                }
-
-        Raises:
-            ValidationError: If parameters are invalid
-            ReadOnlyError: If in read-only mode (for actual deletion)
-            StorageError: If bulk deletion fails
-        """
-        if self.config.read_only_mode and not dry_run:
-            raise ReadOnlyError(
-                "Cannot delete memories in read-only mode. "
-                "Either use dry_run=True to preview, or restart server without --read-only flag."
-            )
-
-        if not self.bulk_delete_manager:
-            raise ValidationError("Bulk operations are not initialized")
-
-        try:
-            # Validate max_count
-            if not (1 <= max_count <= 1000):
-                raise ValidationError("max_count must be between 1 and 1000")
-
-            # Build BulkDeleteFilters from parameters
-            from src.memory.bulk_operations import BulkDeleteFilters
-
-            filters = BulkDeleteFilters(
-                category=category,
-                context_level=context_level,
-                scope=scope,
-                project_name=project_name,
-                tags=tags,
-                min_importance=min_importance,
-                max_importance=max_importance,
-                date_from=date_from,
-                date_to=date_to,
-                lifecycle_state=lifecycle_state,
-                max_count=max_count,
-            )
-
-            # Fetch matching memories using list_memories logic
-            # We fetch up to max_count to respect the limit
-            list_filters = {}
-
-            if category:
-                list_filters["category"] = MemoryCategory(category)
-            if context_level:
-                list_filters["context_level"] = ContextLevel(context_level)
-            if scope:
-                list_filters["scope"] = MemoryScope(scope)
-            if project_name:
-                list_filters["project_name"] = project_name
-            if tags:
-                list_filters["tags"] = tags
-            if lifecycle_state:
-                from src.core.models import LifecycleState
-                list_filters["lifecycle_state"] = LifecycleState(lifecycle_state)
-
-            list_filters["min_importance"] = min_importance
-            list_filters["max_importance"] = max_importance
-
-            if date_from:
-                list_filters["date_from"] = datetime.fromisoformat(date_from)
-            if date_to:
-                list_filters["date_to"] = datetime.fromisoformat(date_to)
-
-            # Fetch all matching memories (up to max_count)
-            matching_memories, _ = await self.store.list_memories(
-                filters=list_filters,
-                sort_by="created_at",
-                sort_order="desc",
-                limit=max_count,
-                offset=0,
-            )
-
-            logger.info(
-                f"Bulk delete: found {len(matching_memories)} matching memories (dry_run={dry_run})"
-            )
-
-            # Execute bulk delete operation
-            result = await self.bulk_delete_manager.bulk_delete(
-                memories=matching_memories,
-                filters=filters,
-                dry_run=dry_run,
-                enable_rollback=enable_rollback,
-            )
-
-            # Convert result to dict for MCP response
-            if dry_run:
-                # Preview mode
-                preview = result  # BulkDeletePreview
-                return {
-                    "dry_run": True,
-                    "total_matches": preview.total_matches,
-                    "sample_memories": [
-                        {
-                            "memory_id": m.id,
-                            "content": m.content[:100] + "..." if len(m.content) > 100 else m.content,
-                            "category": m.category.value,
-                            "importance": m.importance,
-                            "created_at": m.created_at.isoformat() if m.created_at else None,
-                            "project_name": m.project_name,
-                        }
-                        for m in preview.sample_memories
-                    ],
-                    "breakdown": {
-                        "by_category": preview.breakdown_by_category,
-                        "by_lifecycle": preview.breakdown_by_lifecycle,
-                        "by_project": preview.breakdown_by_project,
-                    },
-                    "estimated_storage_freed_mb": preview.estimated_storage_freed_mb,
-                    "warnings": preview.warnings,
-                    "requires_confirmation": preview.requires_confirmation,
-                }
-            else:
-                # Actual deletion
-                delete_result = result  # BulkDeleteResult
-
-                # Update stats
-                self.stats["memories_deleted"] += delete_result.total_deleted
-
-                logger.info(
-                    f"Bulk delete completed: {delete_result.total_deleted} deleted, "
-                    f"{len(delete_result.failed_deletions)} failed"
-                )
-
-                return {
-                    "success": delete_result.success,
-                    "dry_run": False,
-                    "total_deleted": delete_result.total_deleted,
-                    "failed_deletions": delete_result.failed_deletions,
-                    "rollback_id": delete_result.rollback_id,
-                    "execution_time": delete_result.execution_time,
-                    "storage_freed_mb": delete_result.storage_freed_mb,
-                    "errors": delete_result.errors,
-                }
-
-        except ValidationError:
-            self.stats["validation_errors"] += 1
-            raise
-        except ReadOnlyError:
-            raise
-        except Exception as e:
-            logger.error(f"Bulk delete failed: {e}")
-            self.stats["storage_errors"] += 1
-            raise StorageError(f"Bulk delete failed: {e}")
-
-    async def export_memories(
-        self,
-        output_path: Optional[str] = None,
-        format: str = "json",
-        category: Optional[str] = None,
-        context_level: Optional[str] = None,
-        scope: Optional[str] = None,
-        project_name: Optional[str] = None,
-        tags: Optional[List[str]] = None,
-        min_importance: float = 0.0,
-        max_importance: float = 1.0,
-        date_from: Optional[str] = None,
-        date_to: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        """
-        Export memories to JSON or Markdown format.
-
-        Args:
-            output_path: Optional file path to write export. If None, returns content as string.
-            format: Export format - "json" or "markdown"
-            category: Filter by category
-            context_level: Filter by context level
-            scope: Filter by scope
-            project_name: Filter by project
-            tags: Filter by tags (must have all)
-            min_importance: Minimum importance (0.0-1.0)
-            max_importance: Maximum importance (0.0-1.0)
-            date_from: Filter memories created after this date (ISO format)
-            date_to: Filter memories created before this date (ISO format)
-
-        Returns:
-            Dict with status, file_path/content, and count
-
-        Raises:
-            ValidationError: If format is invalid
-            StorageError: If export fails
-        """
-        # Validate format
-        if format not in ["json", "markdown"]:
-            raise ValidationError(f"Invalid export format: {format}. Must be 'json' or 'markdown'")
-
-        try:
-            # Get all matching memories using list_memories (no limit, get all)
-            result = await self.list_memories(
-                category=category,
-                context_level=context_level,
-                scope=scope,
-                project_name=project_name,
-                tags=tags,
-                min_importance=min_importance,
-                max_importance=max_importance,
-                date_from=date_from,
-                date_to=date_to,
-                sort_by="created_at",
-                sort_order="asc",
-                limit=10000,  # Large limit to get all memories
-                offset=0
-            )
-
-            memories = result["memories"]
-            total_count = result["total_count"]
-
-            # Generate export content based on format
-            if format == "json":
-                export_data = {
-                    "version": "1.0",
-                    "exported_at": datetime.now().isoformat(),
-                    "total_count": total_count,
-                    "filters": {
-                        "category": category,
-                        "context_level": context_level,
-                        "scope": scope,
-                        "project_name": project_name,
-                        "tags": tags,
-                        "min_importance": min_importance,
-                        "max_importance": max_importance,
-                        "date_from": date_from,
-                        "date_to": date_to,
-                    },
-                    "memories": memories
-                }
-                content = json.dumps(export_data, indent=2)
-
-            else:  # markdown
-                lines = [
-                    "# Memory Export",
-                    f"Exported: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-                    f"Total Memories: {total_count}",
-                    ""
-                ]
-
-                for mem in memories:
-                    lines.append(f"## Memory: {mem['memory_id']}")
-                    lines.append(f"**Category:** {mem['category']}")
-                    lines.append(f"**Importance:** {mem['importance']:.2f}")
-                    lines.append(f"**Context Level:** {mem['context_level']}")
-                    lines.append(f"**Scope:** {mem['scope']}")
-                    if mem.get('project_name'):
-                        lines.append(f"**Project:** {mem['project_name']}")
-                    if mem.get('tags'):
-                        lines.append(f"**Tags:** {', '.join(mem['tags'])}")
-                    lines.append(f"**Created:** {mem['created_at']}")
-                    lines.append(f"**Updated:** {mem.get('updated_at', 'N/A')}")
-                    lines.append("")
-                    lines.append(mem['content'])
-                    lines.append("")
-                    lines.append("---")
-                    lines.append("")
-
-                content = "\n".join(lines)
-
-            # Write to file or return content
-            if output_path:
-                output_file = Path(output_path).expanduser()
-                output_file.parent.mkdir(parents=True, exist_ok=True)
-                output_file.write_text(content, encoding='utf-8')
-
-                logger.info(f"Exported {total_count} memories to {output_path} ({format} format)")
-                return {
-                    "status": "success",
-                    "file_path": str(output_file),
-                    "format": format,
-                    "count": total_count
-                }
-            else:
-                return {
-                    "status": "success",
-                    "content": content,
-                    "format": format,
-                    "count": total_count
-                }
-
-        except ValidationError:
-            raise
-        except Exception as e:
-            logger.error(f"Failed to export memories: {e}")
-            raise StorageError(f"Failed to export memories: {e}")
-
-    async def import_memories(
-        self,
-        file_path: Optional[str] = None,
-        content: Optional[str] = None,
-        conflict_mode: str = "skip",
-        format: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        """
-        Import memories from JSON file or content.
-
-        Args:
-            file_path: Path to import file (JSON format)
-            content: Direct JSON content string (alternative to file_path)
-            conflict_mode: How to handle existing memories - "skip", "overwrite", or "merge"
-            format: File format - "json" (auto-detected from extension if not provided)
-
-        Returns:
-            Dict with import summary (created, updated, skipped, errors)
-
-        Raises:
-            ValidationError: If file doesn't exist, format invalid, or conflict_mode invalid
-            StorageError: If import fails
-        """
-        # Validate conflict mode
-        if conflict_mode not in ["skip", "overwrite", "merge"]:
-            raise ValidationError(
-                f"Invalid conflict mode: {conflict_mode}. Must be 'skip', 'overwrite', or 'merge'"
-            )
-
-        # Validate input
-        if not file_path and not content:
-            raise ValidationError("Must provide either file_path or content")
-
-        try:
-            # Load content from file or use provided content
-            if file_path:
-                import_file = Path(file_path).expanduser()
-                if not import_file.exists():
-                    raise ValidationError(f"Import file not found: {file_path}")
-
-                # Auto-detect format from extension
-                if not format:
-                    ext = import_file.suffix.lower()
-                    if ext == ".json":
-                        format = "json"
-                    else:
-                        raise ValidationError(
-                            f"Cannot auto-detect format from extension: {ext}. "
-                            "Supported: .json"
-                        )
-
-                import_content = import_file.read_text(encoding='utf-8')
-            else:
-                import_content = content
-                format = format or "json"
-
-            # Validate format
-            if format != "json":
-                raise ValidationError(f"Only JSON format is supported for import, got: {format}")
-
-            # Parse JSON
-            try:
-                data = json.loads(import_content)
-            except json.JSONDecodeError as e:
-                raise ValidationError(f"Invalid JSON format: {e}")
-
-            # Validate schema
-            if "memories" not in data:
-                raise ValidationError("Import file must contain 'memories' key")
-
-            if not isinstance(data["memories"], list):
-                raise ValidationError("'memories' must be a list")
-
-            memories = data["memories"]
-            created_count = 0
-            updated_count = 0
-            skipped_count = 0
-            errors = []
-
-            # Process each memory
-            for idx, mem_data in enumerate(memories):
-                try:
-                    # Extract memory ID
-                    mem_id = mem_data.get("memory_id") or mem_data.get("id")
-                    if not mem_id:
-                        errors.append(f"Memory at index {idx}: Missing memory_id/id")
-                        continue
-
-                    # Check if memory exists
-                    existing = await self.store.get_by_id(mem_id)
-
-                    if existing:
-                        # Handle existing memory based on conflict mode
-                        if conflict_mode == "skip":
-                            skipped_count += 1
-                            continue
-
-                        elif conflict_mode == "overwrite":
-                            # Generate embedding for new content
-                            embedding = await self.embedding_gen.generate(mem_data["content"])
-
-                            # Build metadata
-                            metadata = {
-                                "category": mem_data.get("category", "general"),
-                                "context_level": mem_data.get("context_level", "SESSION"),
-                                "scope": mem_data.get("scope", "global"),
-                                "importance": mem_data.get("importance", 0.5),
-                                "tags": mem_data.get("tags", []),
-                                "created_at": mem_data.get("created_at", datetime.now().isoformat()),
-                                "updated_at": datetime.now().isoformat(),
-                            }
-
-                            # Add optional fields
-                            if "project_name" in mem_data:
-                                metadata["project_name"] = mem_data["project_name"]
-                            if "metadata" in mem_data:
-                                metadata["metadata"] = mem_data["metadata"]
-
-                            # Update using store's update method
-                            success = await self.store.update(mem_id, {
-                                "content": mem_data["content"],
-                                "embedding": embedding,
-                                "metadata": metadata
-                            })
-
-                            if success:
-                                updated_count += 1
-                            else:
-                                errors.append(f"Memory {mem_id}: Update failed")
-
-                        elif conflict_mode == "merge":
-                            # Merge: update only non-null fields
-                            updates = {}
-
-                            if "content" in mem_data and mem_data["content"]:
-                                updates["content"] = mem_data["content"]
-                                updates["embedding"] = await self.embedding_gen.generate(mem_data["content"])
-
-                            # Merge metadata
-                            metadata_updates = {}
-                            for field in ["category", "context_level", "scope", "importance", "tags", "project_name"]:
-                                if field in mem_data and mem_data[field] is not None:
-                                    metadata_updates[field] = mem_data[field]
-
-                            if metadata_updates:
-                                metadata_updates["updated_at"] = datetime.now().isoformat()
-                                updates["metadata"] = metadata_updates
-
-                            if updates:
-                                success = await self.store.update(mem_id, updates)
-                                if success:
-                                    updated_count += 1
-                                else:
-                                    errors.append(f"Memory {mem_id}: Merge update failed")
-                            else:
-                                skipped_count += 1
-
-                    else:
-                        # Memory doesn't exist - create new
-                        embedding = await self.embedding_gen.generate(mem_data["content"])
-
-                        # Build metadata
-                        metadata = {
-                            "category": mem_data.get("category", "general"),
-                            "context_level": mem_data.get("context_level", "SESSION"),
-                            "scope": mem_data.get("scope", "global"),
-                            "importance": mem_data.get("importance", 0.5),
-                            "tags": mem_data.get("tags", []),
-                            "created_at": mem_data.get("created_at", datetime.now().isoformat()),
-                            "updated_at": datetime.now().isoformat(),
-                        }
-
-                        # Add optional fields
-                        if "project_name" in mem_data:
-                            metadata["project_name"] = mem_data["project_name"]
-                        if "metadata" in mem_data:
-                            metadata["metadata"] = mem_data["metadata"]
-
-                        # Store new memory
-                        new_id = await self.store.store(
-                            content=mem_data["content"],
-                            embedding=embedding,
-                            metadata=metadata
-                        )
-
-                        created_count += 1
-
-                except Exception as e:
-                    errors.append(f"Memory at index {idx} (ID: {mem_id if 'mem_id' in locals() else 'unknown'}): {str(e)}")
-
-            logger.info(
-                f"Import completed: {created_count} created, {updated_count} updated, "
-                f"{skipped_count} skipped, {len(errors)} errors"
-            )
-
-            return {
-                "status": "success" if len(errors) == 0 else "partial",
-                "created": created_count,
-                "updated": updated_count,
-                "skipped": skipped_count,
-                "errors": errors,
-                "total_processed": len(memories)
-            }
-
-        except ValidationError:
-            raise
-        except Exception as e:
-            logger.error(f"Failed to import memories: {e}")
-            raise StorageError(f"Failed to import memories: {e}")
 
     async def retrieve_preferences(
         self,
@@ -2740,24 +1750,11 @@ class MemoryRAGServer:
             # Get gate metrics
             gate_metrics = self.retrieval_gate.get_metrics() if self.retrieval_gate else {}
 
-            # Get active project info
-            active_project_info = None
-            if self.project_context_detector:
-                context = self.project_context_detector.get_active_context()
-                if context:
-                    active_project_info = {
-                        "name": context.project_name,
-                        "path": context.project_path,
-                        "git_branch": context.git_branch,
-                        "last_activity": context.last_activity.isoformat(),
-                    }
-
             return {
                 **response.model_dump(),
                 "statistics": self.stats,
                 "cache_stats": self.embedding_cache.get_stats(),
                 "gate_metrics": gate_metrics,
-                "active_project": active_project_info,
             }
 
         except Exception as e:
@@ -3318,891 +2315,202 @@ class MemoryRAGServer:
         except Exception as e:
             logger.error(f"Auto-prune job failed: {e}", exc_info=True)
 
-    async def switch_project(self, project_name: str) -> Dict[str, Any]:
-        """
-        Switch active project context (MCP tool).
-
-        Args:
-            project_name: Name of project to switch to
-
-        Returns:
-            Dictionary with switch status and project info
-
-        Raises:
-            ValueError: If project not found or detector not initialized
-        """
-        if not self.project_context_detector:
-            raise ValueError("Project context detector not initialized")
-
-        # Validate project exists by checking if it has any indexed data
-        projects = await self.store.get_all_projects()
-        if project_name not in projects:
-            # Provide helpful error with suggestions
-            raise ValueError(
-                f"Project '{project_name}' not found. "
-                f"Available projects: {', '.join(projects) if projects else 'none'}"
-            )
-
-        # Switch context
-        context = self.project_context_detector.set_active_context(
-            project_name=project_name,
-            explicit=True
-        )
-
-        # Get project stats
-        stats = await self.store.get_project_stats(project_name)
-
-        logger.info(f"Switched to project: {project_name}")
-
-        return {
-            "status": "success",
-            "project_name": project_name,
-            "project_path": context.project_path,
-            "git_repo": context.git_repo_root,
-            "git_branch": context.git_branch,
-            "statistics": stats,
-            "message": f"Switched to project '{project_name}'",
-        }
-
-    async def get_active_project(self) -> Dict[str, Any]:
-        """
-        Get currently active project context (MCP tool).
-
-        Returns:
-            Dictionary with active project info
-        """
-        if not self.project_context_detector:
-            return {
-                "status": "no_detector",
-                "project_name": None,
-                "message": "Project context detector not initialized",
-            }
-
-        context = self.project_context_detector.get_active_context()
-
-        if not context:
-            return {
-                "status": "no_active_project",
-                "project_name": None,
-                "message": "No active project set",
-            }
-
-        # Get project stats if available
-        stats = None
-        try:
-            stats = await self.store.get_project_stats(context.project_name)
-        except Exception as e:
-            logger.warning(f"Could not get stats for {context.project_name}: {e}")
-
-        return {
-            "status": "success",
-            "project_name": context.project_name,
-            "project_path": context.project_path,
-            "git_repo": context.git_repo_root,
-            "git_branch": context.git_branch,
-            "last_activity": context.last_activity.isoformat(),
-            "file_activity_count": context.file_activity_count,
-            "is_active": context.is_active,
-            "statistics": stats,
-        }
-
-    # ========== Multi-Repository Management Tools ==========
-
-    async def register_repository(
+    async def analyze_conversation(
         self,
-        path: str,
-        name: Optional[str] = None,
-        git_url: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        message: str,
+        session_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        Register a new repository for indexing and search.
+        Analyze a conversation message for proactive context suggestions.
+
+        This tool detects patterns in user messages (implementation requests,
+        error debugging, code questions, refactoring) and automatically suggests
+        relevant code or memories.
 
         Args:
-            path: Absolute path to repository
-            name: Optional user-friendly name (defaults to directory name)
-            git_url: Optional git repository URL
-            tags: Optional tags for organizing repositories
+            message: The user's message to analyze
+            session_id: Optional conversation session ID
 
         Returns:
-            Dict with repository_id and details
+            Dict with patterns detected and suggestions
+
+        Example:
+            User: "I need to add user authentication"
+            Returns: Suggestions for authentication implementations
         """
-        if not self.repository_registry:
+        if not self.suggestion_engine:
             return {
-                "error": "Multi-repository support is disabled",
-                "status": "disabled"
+                "enabled": False,
+                "message": "Proactive suggestions are disabled",
             }
 
         try:
-            repo_id = await self.repository_registry.register_repository(
-                path=path,
-                name=name,
-                git_url=git_url,
-                tags=tags or []
+            result = await self.suggestion_engine.analyze_message(
+                message=message,
+                session_id=session_id,
+                project_name=self.project_name,
             )
 
-            repository = await self.repository_registry.get_repository(repo_id)
-
-            logger.info(f"Registered repository: {repository.name} ({repo_id})")
-
             return {
-                "repository_id": repo_id,
-                "name": repository.name,
-                "path": repository.path,
-                "status": repository.status.value,
-                "message": "Repository registered successfully"
+                "enabled": True,
+                **result.to_dict(),
             }
 
         except Exception as e:
-            logger.error(f"Failed to register repository: {e}")
-            return {
-                "error": str(e),
-                "status": "failed"
-            }
+            logger.error(f"Error analyzing conversation: {e}")
+            raise RetrievalError(
+                f"Failed to analyze conversation: {str(e)}",
+                solution="Check the message format and try again",
+            )
 
-    async def unregister_repository(self, repo_id: str) -> Dict[str, Any]:
+    async def get_suggestion_stats(self) -> Dict[str, Any]:
         """
-        Unregister a repository and optionally clean up its indexed data.
-
-        Args:
-            repo_id: Repository ID to unregister
+        Get statistics about proactive suggestions.
 
         Returns:
-            Dict with status
+            Dict with suggestion metrics, acceptance rates, and threshold info
+
+        Example response:
+            {
+                "enabled": true,
+                "messages_analyzed": 150,
+                "suggestions_made": 45,
+                "auto_injections": 23,
+                "high_confidence_threshold": 0.90,
+                "feedback": {
+                    "overall_acceptance_rate": 0.72,
+                    "per_pattern": {...}
+                }
+            }
         """
-        if not self.repository_registry:
+        if not self.suggestion_engine:
             return {
-                "error": "Multi-repository support is disabled",
-                "status": "disabled"
+                "enabled": False,
+                "message": "Proactive suggestions are disabled",
             }
 
         try:
-            # Get repository info before unregistering
-            repository = await self.repository_registry.get_repository(repo_id)
-            if not repository:
-                return {
-                    "error": f"Repository '{repo_id}' not found",
-                    "status": "not_found"
-                }
+            return self.suggestion_engine.get_stats()
+        except Exception as e:
+            logger.error(f"Error getting suggestion stats: {e}")
+            raise RetrievalError(f"Failed to get suggestion stats: {str(e)}")
 
-            repo_name = repository.name
+    async def provide_suggestion_feedback(
+        self,
+        suggestion_id: str,
+        accepted: bool,
+        implicit: bool = True,
+    ) -> Dict[str, Any]:
+        """
+        Provide feedback on a proactive suggestion.
 
-            # Unregister the repository
-            success = await self.repository_registry.unregister_repository(repo_id)
+        This helps the system learn and adapt its confidence threshold over time.
+
+        Args:
+            suggestion_id: ID of the suggestion (from analyze_conversation)
+            accepted: True if the suggestion was helpful
+            implicit: True if inferred from behavior (default), False for explicit
+
+        Returns:
+            Dict with feedback status
+
+        Example:
+            provide_suggestion_feedback(
+                suggestion_id="abc-123",
+                accepted=True,
+                implicit=False  # User explicitly marked as helpful
+            )
+        """
+        if not self.suggestion_engine:
+            return {
+                "enabled": False,
+                "message": "Proactive suggestions are disabled",
+            }
+
+        try:
+            success = self.suggestion_engine.record_feedback(
+                suggestion_id=suggestion_id,
+                accepted=accepted,
+                implicit=implicit,
+            )
 
             if success:
-                logger.info(f"Unregistered repository: {repo_name} ({repo_id})")
-                return {
-                    "repository_id": repo_id,
-                    "name": repo_name,
-                    "status": "unregistered",
-                    "message": "Repository unregistered successfully"
-                }
-            else:
-                return {
-                    "error": f"Failed to unregister repository '{repo_id}'",
-                    "status": "failed"
-                }
-
-        except Exception as e:
-            logger.error(f"Failed to unregister repository: {e}")
-            return {
-                "error": str(e),
-                "status": "failed"
-            }
-
-    async def list_repositories(
-        self,
-        status: Optional[str] = None,
-        workspace_id: Optional[str] = None,
-        tags: Optional[List[str]] = None,
-    ) -> Dict[str, Any]:
-        """
-        List repositories with optional filtering.
-
-        Args:
-            status: Filter by status (INDEXED, INDEXING, STALE, ERROR, NOT_INDEXED)
-            workspace_id: Filter by workspace membership
-            tags: Filter by tags
-
-        Returns:
-            Dict with repositories list
-        """
-        if not self.repository_registry:
-            return {
-                "error": "Multi-repository support is disabled",
-                "repositories": []
-            }
-
-        try:
-            from src.memory.repository_registry import RepositoryStatus
-
-            # Parse status if provided
-            status_filter = None
-            if status:
-                try:
-                    status_filter = RepositoryStatus(status.upper())
-                except ValueError:
-                    return {
-                        "error": f"Invalid status: {status}",
-                        "repositories": []
-                    }
-
-            # Get repositories
-            repositories = await self.repository_registry.list_repositories(
-                status=status_filter,
-                workspace_id=workspace_id,
-                tags=tags
-            )
-
-            # Convert to dict format
-            repos_data = [
-                {
-                    "repository_id": repo.id,
-                    "name": repo.name,
-                    "path": repo.path,
-                    "status": repo.status.value,
-                    "repo_type": repo.repo_type.value,
-                    "file_count": repo.file_count,
-                    "unit_count": repo.unit_count,
-                    "indexed_at": repo.indexed_at.isoformat() if repo.indexed_at else None,
-                    "tags": repo.tags,
-                    "workspace_ids": repo.workspace_ids,
-                }
-                for repo in repositories
-            ]
-
-            return {
-                "repositories": repos_data,
-                "count": len(repos_data),
-                "status": "success"
-            }
-
-        except Exception as e:
-            logger.error(f"Failed to list repositories: {e}")
-            return {
-                "error": str(e),
-                "repositories": []
-            }
-
-    async def get_repository_info(self, repo_id: str) -> Dict[str, Any]:
-        """
-        Get detailed information about a repository.
-
-        Args:
-            repo_id: Repository ID
-
-        Returns:
-            Dict with repository details
-        """
-        if not self.repository_registry:
-            return {
-                "error": "Multi-repository support is disabled",
-                "status": "disabled"
-            }
-
-        try:
-            repository = await self.repository_registry.get_repository(repo_id)
-
-            if not repository:
-                return {
-                    "error": f"Repository '{repo_id}' not found",
-                    "status": "not_found"
-                }
-
-            # Get dependencies
-            dependencies = await self.repository_registry.get_dependencies(repo_id)
-
-            return {
-                "repository_id": repository.id,
-                "name": repository.name,
-                "path": repository.path,
-                "git_url": repository.git_url,
-                "status": repository.status.value,
-                "repo_type": repository.repo_type.value,
-                "file_count": repository.file_count,
-                "unit_count": repository.unit_count,
-                "indexed_at": repository.indexed_at.isoformat() if repository.indexed_at else None,
-                "last_updated": repository.last_updated.isoformat() if repository.last_updated else None,
-                "tags": repository.tags,
-                "workspace_ids": repository.workspace_ids,
-                "dependencies": {
-                    str(depth): deps for depth, deps in dependencies.items()
-                },
-                "dependency_count": sum(len(deps) for deps in dependencies.values()),
-                "status": "success"
-            }
-
-        except Exception as e:
-            logger.error(f"Failed to get repository info: {e}")
-            return {
-                "error": str(e),
-                "status": "failed"
-            }
-
-    # ========== Workspace Management Tools ==========
-
-    async def create_workspace(
-        self,
-        name: str,
-        description: Optional[str] = None,
-        repository_ids: Optional[List[str]] = None,
-        auto_index: bool = True,
-        cross_repo_search_enabled: bool = True,
-    ) -> Dict[str, Any]:
-        """
-        Create a new workspace for organizing repositories.
-
-        Args:
-            name: Workspace name
-            description: Optional description
-            repository_ids: Optional list of repository IDs to add
-            auto_index: Whether to auto-index when repositories are added
-            cross_repo_search_enabled: Whether to enable cross-repo search
-
-        Returns:
-            Dict with workspace_id and details
-        """
-        if not self.workspace_manager:
-            return {
-                "error": "Multi-repository support is disabled",
-                "status": "disabled"
-            }
-
-        try:
-            # Generate workspace ID from name
-            import re
-            workspace_id = re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
-
-            workspace = await self.workspace_manager.create_workspace(
-                workspace_id=workspace_id,
-                name=name,
-                description=description,
-                repository_ids=repository_ids or [],
-                auto_index=auto_index,
-                cross_repo_search_enabled=cross_repo_search_enabled
-            )
-
-            logger.info(f"Created workspace: {name} ({workspace_id})")
-
-            return {
-                "workspace_id": workspace.id,
-                "name": workspace.name,
-                "description": workspace.description,
-                "repository_count": len(workspace.repository_ids),
-                "auto_index": workspace.auto_index,
-                "cross_repo_search_enabled": workspace.cross_repo_search_enabled,
-                "message": "Workspace created successfully"
-            }
-
-        except Exception as e:
-            logger.error(f"Failed to create workspace: {e}")
-            return {
-                "error": str(e),
-                "status": "failed"
-            }
-
-    async def delete_workspace(self, workspace_id: str) -> Dict[str, Any]:
-        """
-        Delete a workspace.
-
-        Args:
-            workspace_id: Workspace ID to delete
-
-        Returns:
-            Dict with status
-        """
-        if not self.workspace_manager:
-            return {
-                "error": "Multi-repository support is disabled",
-                "status": "disabled"
-            }
-
-        try:
-            # Get workspace info before deleting
-            workspace = await self.workspace_manager.get_workspace(workspace_id)
-            if not workspace:
-                return {
-                    "error": f"Workspace '{workspace_id}' not found",
-                    "status": "not_found"
-                }
-
-            workspace_name = workspace.name
-
-            # Delete the workspace
-            success = await self.workspace_manager.delete_workspace(workspace_id)
-
-            if success:
-                logger.info(f"Deleted workspace: {workspace_name} ({workspace_id})")
-                return {
-                    "workspace_id": workspace_id,
-                    "name": workspace_name,
-                    "status": "deleted",
-                    "message": "Workspace deleted successfully"
-                }
-            else:
-                return {
-                    "error": f"Failed to delete workspace '{workspace_id}'",
-                    "status": "failed"
-                }
-
-        except Exception as e:
-            logger.error(f"Failed to delete workspace: {e}")
-            return {
-                "error": str(e),
-                "status": "failed"
-            }
-
-    async def list_workspaces(
-        self,
-        tags: Optional[List[str]] = None,
-    ) -> Dict[str, Any]:
-        """
-        List all workspaces with optional filtering.
-
-        Args:
-            tags: Filter by tags
-
-        Returns:
-            Dict with workspaces list
-        """
-        if not self.workspace_manager:
-            return {
-                "error": "Multi-repository support is disabled",
-                "workspaces": []
-            }
-
-        try:
-            workspaces = await self.workspace_manager.list_workspaces(tags=tags)
-
-            workspaces_data = [
-                {
-                    "workspace_id": ws.id,
-                    "name": ws.name,
-                    "description": ws.description,
-                    "repository_count": len(ws.repository_ids),
-                    "auto_index": ws.auto_index,
-                    "cross_repo_search_enabled": ws.cross_repo_search_enabled,
-                    "tags": ws.tags,
-                    "created_at": ws.created_at.isoformat(),
-                    "updated_at": ws.updated_at.isoformat(),
-                }
-                for ws in workspaces
-            ]
-
-            return {
-                "workspaces": workspaces_data,
-                "count": len(workspaces_data),
-                "status": "success"
-            }
-
-        except Exception as e:
-            logger.error(f"Failed to list workspaces: {e}")
-            return {
-                "error": str(e),
-                "workspaces": []
-            }
-
-    async def add_repo_to_workspace(
-        self,
-        workspace_id: str,
-        repo_id: str
-    ) -> Dict[str, Any]:
-        """
-        Add a repository to a workspace.
-
-        Args:
-            workspace_id: Workspace ID
-            repo_id: Repository ID to add
-
-        Returns:
-            Dict with status
-        """
-        if not self.workspace_manager:
-            return {
-                "error": "Multi-repository support is disabled",
-                "status": "disabled"
-            }
-
-        try:
-            await self.workspace_manager.add_repository(workspace_id, repo_id)
-
-            logger.info(f"Added repository {repo_id} to workspace {workspace_id}")
-
-            return {
-                "workspace_id": workspace_id,
-                "repository_id": repo_id,
-                "status": "added",
-                "message": "Repository added to workspace successfully"
-            }
-
-        except Exception as e:
-            logger.error(f"Failed to add repository to workspace: {e}")
-            return {
-                "error": str(e),
-                "status": "failed"
-            }
-
-    async def remove_repo_from_workspace(
-        self,
-        workspace_id: str,
-        repo_id: str
-    ) -> Dict[str, Any]:
-        """
-        Remove a repository from a workspace.
-
-        Args:
-            workspace_id: Workspace ID
-            repo_id: Repository ID to remove
-
-        Returns:
-            Dict with status
-        """
-        if not self.workspace_manager:
-            return {
-                "error": "Multi-repository support is disabled",
-                "status": "disabled"
-            }
-
-        try:
-            await self.workspace_manager.remove_repository(workspace_id, repo_id)
-
-            logger.info(f"Removed repository {repo_id} from workspace {workspace_id}")
-
-            return {
-                "workspace_id": workspace_id,
-                "repository_id": repo_id,
-                "status": "removed",
-                "message": "Repository removed from workspace successfully"
-            }
-
-        except Exception as e:
-            logger.error(f"Failed to remove repository from workspace: {e}")
-            return {
-                "error": str(e),
-                "status": "failed"
-            }
-
-    # ========== Multi-Repository Indexing Tools ==========
-
-    async def index_repository(
-        self,
-        repo_id: str,
-        force: bool = False,
-        recursive: bool = True,
-    ) -> Dict[str, Any]:
-        """
-        Index a single repository.
-
-        Args:
-            repo_id: Repository ID to index
-            force: Force re-indexing even if already indexed
-            recursive: Recursively index subdirectories
-
-        Returns:
-            Dict with indexing results
-        """
-        if not self.multi_repo_indexer:
-            return {
-                "error": "Multi-repository support is disabled",
-                "status": "disabled"
-            }
-
-        try:
-            result = await self.multi_repo_indexer.index_repository(
-                repository_id=repo_id,
-                recursive=recursive,
-                show_progress=True
-            )
-
-            if result.success:
-                logger.info(
-                    f"Indexed repository {repo_id}: "
-                    f"{result.files_indexed} files, {result.units_indexed} units"
-                )
+                # Check if threshold should be updated
+                new_threshold, explanation = self.suggestion_engine.update_threshold()
 
                 return {
-                    "repository_id": repo_id,
                     "success": True,
-                    "files_indexed": result.files_indexed,
-                    "units_indexed": result.units_indexed,
-                    "duration_seconds": result.duration_seconds,
-                    "message": "Repository indexed successfully"
+                    "suggestion_id": suggestion_id,
+                    "accepted": accepted,
+                    "threshold_updated": new_threshold != self.suggestion_engine.high_confidence_threshold,
+                    "current_threshold": new_threshold,
+                    "explanation": explanation,
                 }
             else:
                 return {
-                    "repository_id": repo_id,
                     "success": False,
-                    "error": result.error_message,
-                    "errors": result.errors,
-                    "status": "failed"
+                    "error": "Suggestion ID not found",
+                    "suggestion_id": suggestion_id,
                 }
 
         except Exception as e:
-            logger.error(f"Failed to index repository: {e}")
-            return {
-                "error": str(e),
-                "status": "failed"
-            }
+            logger.error(f"Error recording feedback: {e}")
+            raise ValidationError(f"Failed to record feedback: {str(e)}")
 
-    async def index_workspace(
+    async def set_suggestion_mode(
         self,
-        workspace_id: str,
-        force: bool = False,
-        recursive: bool = True,
+        enabled: bool,
+        threshold: Optional[float] = None,
     ) -> Dict[str, Any]:
         """
-        Index all repositories in a workspace.
+        Enable or disable proactive suggestions, and optionally set threshold.
 
         Args:
-            workspace_id: Workspace ID
-            force: Force re-indexing
-            recursive: Recursively index subdirectories
+            enabled: True to enable, False to disable
+            threshold: Optional confidence threshold (0-1) for auto-injection
 
         Returns:
-            Dict with batch indexing results
+            Dict with current configuration
+
+        Example:
+            # Disable suggestions
+            set_suggestion_mode(enabled=False)
+
+            # Enable with custom threshold
+            set_suggestion_mode(enabled=True, threshold=0.85)
         """
-        if not self.multi_repo_indexer:
+        if not self.suggestion_engine:
             return {
-                "error": "Multi-repository support is disabled",
-                "status": "disabled"
+                "error": "Suggestion engine not initialized",
+                "message": "Set enable_proactive_suggestions=True in config",
             }
 
         try:
-            result = await self.multi_repo_indexer.index_workspace(
-                workspace_id=workspace_id,
-                recursive=recursive,
-                show_progress=True
-            )
+            # Update enabled state
+            if enabled:
+                self.suggestion_engine.enable()
+            else:
+                self.suggestion_engine.disable()
 
-            logger.info(
-                f"Indexed workspace {workspace_id}: "
-                f"{result.successful}/{result.total_repositories} repositories, "
-                f"{result.total_files} files, {result.total_units} units"
-            )
+            # Update threshold if provided
+            if threshold is not None:
+                if not 0.0 <= threshold <= 1.0:
+                    raise ValidationError(
+                        "Threshold must be between 0.0 and 1.0",
+                        solution=f"Use a value between 0.0 and 1.0 (got {threshold})",
+                    )
+                self.suggestion_engine.set_threshold(threshold)
 
             return {
-                "workspace_id": workspace_id,
-                "total_repositories": result.total_repositories,
-                "successful": result.successful,
-                "failed": result.failed,
-                "total_files": result.total_files,
-                "total_units": result.total_units,
-                "total_duration": result.total_duration,
-                "repository_results": [
-                    {
-                        "repository_id": r.repository_id,
-                        "success": r.success,
-                        "files_indexed": r.files_indexed,
-                        "units_indexed": r.units_indexed,
-                        "duration_seconds": r.duration_seconds,
-                        "error_message": r.error_message,
-                    }
-                    for r in result.repository_results
-                ],
-                "message": f"Workspace indexed: {result.successful}/{result.total_repositories} successful"
+                "success": True,
+                "enabled": self.suggestion_engine.enabled,
+                "high_confidence_threshold": self.suggestion_engine.high_confidence_threshold,
+                "medium_confidence_threshold": self.suggestion_engine.medium_confidence_threshold,
             }
 
         except Exception as e:
-            logger.error(f"Failed to index workspace: {e}")
-            return {
-                "error": str(e),
-                "status": "failed"
-            }
-
-    async def refresh_stale_repositories(
-        self,
-        max_age_days: int = 7
-    ) -> Dict[str, Any]:
-        """
-        Re-index repositories that haven't been updated recently.
-
-        Args:
-            max_age_days: Consider repositories stale if not indexed in this many days
-
-        Returns:
-            Dict with batch indexing results
-        """
-        if not self.multi_repo_indexer:
-            return {
-                "error": "Multi-repository support is disabled",
-                "status": "disabled"
-            }
-
-        try:
-            result = await self.multi_repo_indexer.reindex_stale_repositories(
-                max_age_days=max_age_days,
-                show_progress=True
-            )
-
-            logger.info(
-                f"Refreshed stale repositories: "
-                f"{result.successful}/{result.total_repositories} successful"
-            )
-
-            return result.to_dict()
-
-        except Exception as e:
-            logger.error(f"Failed to refresh stale repositories: {e}")
-            return {
-                "error": str(e),
-                "status": "failed"
-            }
-
-    # ========== Multi-Repository Search Tools ==========
-
-    async def search_repositories(
-        self,
-        query: str,
-        repository_ids: List[str],
-        limit_per_repo: int = 10,
-        total_limit: Optional[int] = None,
-        search_mode: str = "semantic",
-    ) -> Dict[str, Any]:
-        """
-        Search across multiple repositories.
-
-        Args:
-            query: Search query
-            repository_ids: List of repository IDs to search
-            limit_per_repo: Maximum results per repository
-            total_limit: Optional total limit across all repositories
-            search_mode: Search mode (semantic, keyword, hybrid)
-
-        Returns:
-            Dict with search results grouped by repository
-        """
-        if not self.multi_repo_search:
-            return {
-                "error": "Multi-repository support is disabled",
-                "results": []
-            }
-
-        try:
-            result = await self.multi_repo_search.search_repositories(
-                query=query,
-                repository_ids=repository_ids,
-                limit_per_repo=limit_per_repo,
-                total_limit=total_limit,
-                search_mode=search_mode
-            )
-
-            logger.info(
-                f"Multi-repository search: '{query}' across {result.total_repositories_searched} repositories, "
-                f"{result.total_results_found} results ({result.query_time_ms:.2f}ms)"
-            )
-
-            return result.to_dict()
-
-        except Exception as e:
-            logger.error(f"Failed to search repositories: {e}")
-            return {
-                "error": str(e),
-                "results": []
-            }
-
-    async def search_workspace(
-        self,
-        query: str,
-        workspace_id: str,
-        limit_per_repo: int = 10,
-        total_limit: Optional[int] = None,
-        search_mode: str = "semantic",
-    ) -> Dict[str, Any]:
-        """
-        Search all repositories in a workspace.
-
-        Args:
-            query: Search query
-            workspace_id: Workspace ID
-            limit_per_repo: Maximum results per repository
-            total_limit: Optional total limit across all repositories
-            search_mode: Search mode (semantic, keyword, hybrid)
-
-        Returns:
-            Dict with search results from workspace
-        """
-        if not self.multi_repo_search:
-            return {
-                "error": "Multi-repository support is disabled",
-                "results": []
-            }
-
-        try:
-            result = await self.multi_repo_search.search_workspace(
-                query=query,
-                workspace_id=workspace_id,
-                limit_per_repo=limit_per_repo,
-                total_limit=total_limit,
-                search_mode=search_mode
-            )
-
-            logger.info(
-                f"Workspace search: '{query}' in {workspace_id}, "
-                f"{result.total_results_found} results ({result.query_time_ms:.2f}ms)"
-            )
-
-            return result.to_dict()
-
-        except Exception as e:
-            logger.error(f"Failed to search workspace: {e}")
-            return {
-                "error": str(e),
-                "results": []
-            }
-
-    async def search_with_dependencies(
-        self,
-        query: str,
-        repository_id: str,
-        max_depth: int = 2,
-        limit_per_repo: int = 10,
-        total_limit: Optional[int] = None,
-        search_mode: str = "semantic",
-    ) -> Dict[str, Any]:
-        """
-        Search a repository and its dependencies.
-
-        Args:
-            query: Search query
-            repository_id: Primary repository ID
-            max_depth: Maximum dependency depth to search
-            limit_per_repo: Maximum results per repository
-            total_limit: Optional total limit
-            search_mode: Search mode (semantic, keyword, hybrid)
-
-        Returns:
-            Dict with search results from repository and dependencies
-        """
-        if not self.multi_repo_search:
-            return {
-                "error": "Multi-repository support is disabled",
-                "results": []
-            }
-
-        try:
-            result = await self.multi_repo_search.search_with_dependencies(
-                query=query,
-                repository_id=repository_id,
-                max_depth=max_depth,
-                limit_per_repo=limit_per_repo,
-                total_limit=total_limit,
-                search_mode=search_mode
-            )
-
-            logger.info(
-                f"Dependency search: '{query}' from {repository_id}, "
-                f"{result.total_results_found} results across {result.total_repositories_searched} repositories"
-            )
-
-            return result.to_dict()
-
-        except Exception as e:
-            logger.error(f"Failed to search with dependencies: {e}")
-            return {
-                "error": str(e),
-                "results": []
-            }
+            logger.error(f"Error setting suggestion mode: {e}")
+            raise ValidationError(f"Failed to set suggestion mode: {str(e)}")
 
     async def close(self) -> None:
         """Clean up resources."""
@@ -4220,15 +2528,6 @@ class MemoryRAGServer:
         if self.scheduler:
             self.scheduler.shutdown(wait=False)
             logger.info("Pruning scheduler stopped")
-
-        # Close multi-repository components
-        if self.multi_repo_search:
-            await self.multi_repo_search.close()
-            logger.info("Multi-repository search closed")
-
-        if self.multi_repo_indexer:
-            await self.multi_repo_indexer.close()
-            logger.info("Multi-repository indexer closed")
 
         if self.store:
             await self.store.close()

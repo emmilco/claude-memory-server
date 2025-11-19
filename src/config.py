@@ -111,6 +111,10 @@ class ServerConfig(BaseSettings):
     repository_storage_path: str = "~/.claude-rag/repositories.json"
     workspace_storage_path: str = "~/.claude-rag/workspaces.json"
 
+    # Proactive context suggestions (FEAT-028)
+    enable_proactive_suggestions: bool = True  # Analyze messages for patterns
+    proactive_suggestions_threshold: float = 0.90  # Confidence threshold for auto-injection
+
     model_config = SettingsConfigDict(
         env_prefix="CLAUDE_RAG_",
         env_file=".env",

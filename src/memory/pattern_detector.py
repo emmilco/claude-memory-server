@@ -251,7 +251,7 @@ class PatternDetector:
         """
         entities = []
 
-        # Common technical terms to extract (case-insensitive)
+        # Common technical terms to extract
         tech_terms = [
             # Programming concepts
             r"\b(function|method|class|interface|type|struct|enum)\b",
@@ -262,22 +262,15 @@ class PatternDetector:
             r"\b(cache|session|token|cookie|storage)\b",
             r"\b(test|testing|mock|fixture|assert)\b",
             r"\b(config|configuration|settings|environment)\b",
+            # Specific implementations
+            r"\b[A-Z][a-z]+(?:[A-Z][a-z]+)+\b",  # CamelCase identifiers
+            r"\b[a-z_]+[a-z0-9_]*\b(?=\(\))",  # function_name()
         ]
 
-        # Extract matches (case-insensitive)
+        # Extract matches
         for pattern in tech_terms:
             matches = re.findall(pattern, message, re.IGNORECASE)
             entities.extend(matches)
-
-        # Extract CamelCase identifiers (case-sensitive, no IGNORECASE!)
-        camel_case_pattern = r"\b[A-Z][a-z]+(?:[A-Z][a-z]+)+\b"
-        camel_matches = re.findall(camel_case_pattern, message)
-        entities.extend(camel_matches)
-
-        # Extract function calls like function_name()
-        function_pattern = r"\b[a-z_]+[a-z0-9_]*\b(?=\(\))"
-        function_matches = re.findall(function_pattern, message, re.IGNORECASE)
-        entities.extend(function_matches)
 
         # Deduplicate and clean
         entities = list(set([e.strip().lower() for e in entities if e.strip()]))
