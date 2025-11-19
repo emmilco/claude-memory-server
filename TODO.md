@@ -84,13 +84,13 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - [x] tree-sitter-php integration
   - [x] Function, class, trait extraction
 
-- [ ] **FEAT-009**: Add support for Swift (~3 days)
-  - [ ] tree-sitter-swift integration
-  - [ ] Function, struct, class extraction
+- [x] **FEAT-009**: Add support for Swift ✅ **COMPLETE**
+  - [x] tree-sitter-swift integration
+  - [x] Function, struct, class extraction
 
-- [ ] **FEAT-010**: Add support for Kotlin (~3 days)
-  - [ ] tree-sitter-kotlin integration
-  - [ ] Function, class, object extraction
+- [x] **FEAT-010**: Add support for Kotlin ✅ **COMPLETE**
+  - [x] tree-sitter-kotlin integration
+  - [x] Function, class, object extraction
 
 ### 🚀 Tier 5: Advanced/Future Features
 
@@ -169,7 +169,7 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - [ ] CLI command: `python -m src.cli perf-report`
   - **Impact:** Maintain quality at scale, early warning system
 
-- [ ] **DOC-004**: Update README with code search examples
+- [x] **DOC-004**: Update README with code search examples ✅ **COMPLETE**
 - [ ] **DOC-005**: Add performance tuning guide for large codebases
 - [ ] **DOC-006**: Create troubleshooting guide for common parser issues
 - [ ] **DOC-007**: Document best practices for project organization
