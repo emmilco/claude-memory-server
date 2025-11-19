@@ -102,6 +102,18 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-18
 
+- **FEAT-038: Backup Automation & Cross-Machine Sync**
+  - Created `src/backup/scheduler.py` for automated backup scheduling with APScheduler
+  - Created `src/cli/schedule_command.py` with CLI commands for schedule management
+  - Backup scheduler features: hourly/daily/weekly/monthly frequencies, retention policies, max backup limits
+  - Retention policy management: automatic cleanup based on age and count
+  - CLI commands: `schedule enable`, `schedule disable`, `schedule status`, `schedule test`
+  - Created comprehensive `docs/CROSS_MACHINE_SYNC.md` guide
+  - Cross-machine sync methods: cloud storage, Git, network share, manual export/import
+  - Automated sync setup examples for Dropbox, Google Drive, Git repositories
+  - Conflict resolution strategies: skip, overwrite, merge
+  - Security considerations: encrypted backups, SSH transfer
+
 - **TEST-004: Performance Testing Infrastructure (Phase 1)**
   - Created `scripts/generate_test_data.py` for generating realistic test databases (1K, 10K, 50K memories)
   - Created `scripts/benchmark_scale.py` for comprehensive performance benchmarking
