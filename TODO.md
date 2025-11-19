@@ -219,7 +219,32 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
 
 ---
 
-## Completed Recently (2025-11-18)
+## Completed Recently
+
+### 2025-11-19
+
+- [x] **BUG-008**: File Watcher Async/Threading Bug & Stale Index Cleanup ✅ **COMPLETE**
+  - Fixed RuntimeError: no running event loop in file watcher
+  - Added event loop parameter to DebouncedFileWatcher and FileWatcherService
+  - Implemented thread-safe async scheduling via asyncio.run_coroutine_threadsafe()
+  - Enhanced on_deleted() handler to trigger index cleanup
+  - Implemented automatic cleanup of stale index entries during reindexing
+  - Added _cleanup_stale_entries() and _get_indexed_files() methods
+  - Display cleaned entry count in index command output
+  - **Impact:** File watching now fully functional, index stays clean automatically
+
+- [x] **UX-006**: Enhanced MCP Tool Descriptions for Proactive Use ✅ **COMPLETE**
+  - Added comprehensive "PROACTIVE USE" sections to all 16 MCP tools
+  - Included clear "when to use" guidance and concrete examples
+  - Added comparisons with built-in tools (e.g., search_code vs Grep)
+  - Documented performance characteristics and search modes
+  - Updated: store_memory, retrieve_memories, search_code, list_memories, delete_memory,
+    index_codebase, find_similar_code, search_all_projects, opt_in/out_cross_project,
+    list_opted_in_projects, export/import_memories, get_performance_metrics,
+    get_active_alerts, get_health_score
+  - **Impact:** Claude Code agents should now use MCP tools more proactively
+
+### 2025-11-18
 
 - [x] **FEAT-028**: Proactive Context Suggestions ✅ **COMPLETE**
   - Full proactive suggestion system with adaptive learning
