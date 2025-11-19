@@ -102,6 +102,15 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-18
 
+- **UX-013: Better Installation Error Messages**
+  - Created `src/core/system_check.py` for system prerequisites detection (Python, pip, Docker, Rust, Git)
+  - Created `src/core/dependency_checker.py` for smart dependency checking with contextual error messages
+  - Created `src/cli/validate_install.py` - New `validate-install` command for one-step installation validation
+  - Added OS-specific install commands for all prerequisites (macOS/Linux/Windows)
+  - Enhanced `src/core/exceptions.py` with DependencyError, DockerNotRunningError, RustBuildError
+  - Updated `docs/TROUBLESHOOTING.md` with comprehensive Installation Prerequisites section
+  - All exceptions include actionable solutions and documentation URLs
+
 - **FEAT-032: Memory Lifecycle & Health System Phase 2 - Automated Health Maintenance**
   - Created `src/memory/health_scheduler.py` for automated health job scheduling
   - Created `src/cli/health_schedule_command.py` with CLI commands for health job management

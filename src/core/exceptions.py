@@ -132,3 +132,89 @@ class MemoryNotFoundError(StorageError):
     def __init__(self, memory_id: str):
         self.memory_id = memory_id
         super().__init__(f"Memory with ID '{memory_id}' not found")
+
+
+class DependencyError(MemoryRAGError):
+    """Raised when a required dependency is missing or incompatible."""
+
+    def __init__(self, package_name: str, context: str = ""):
+        import platform
+
+        os_type = platform.system()
+
+        # OS-specific install command
+        if os_type == "Darwin":
+            install_cmd = f"pip install {package_name}"
+        elif os_type == "Linux":
+            # Try both pip and apt
+            apt_name = package_name.replace("_", "-").replace("-", "-")
+            install_cmd = (
+                f"pip install {package_name}\n"
+                f"# Or system package:\n"
+                f"sudo apt-get install python3-{apt_name}  # Ubuntu/Debian"
+            )
+        else:  # Windows
+            install_cmd = f"pip install {package_name}"
+
+        message = f"Required dependency '{package_name}' not found"
+        if context:
+            message += f" ({context})"
+
+        solution = (
+            f"Install the missing package:\n\n"
+            f"  {install_cmd}\n\n"
+            f"Or install all dependencies:\n"
+            f"  pip install -r requirements.txt"
+        )
+
+        docs_url = "https://github.com/anthropics/claude-memory-server/blob/main/docs/setup.md"
+
+        super().__init__(message, solution, docs_url)
+
+
+class DockerNotRunningError(MemoryRAGError):
+    """Raised when Docker is required but not running."""
+
+    def __init__(self):
+        import platform
+
+        os_type = platform.system()
+
+        if os_type == "Darwin":
+            start_cmd = "Open Docker Desktop application"
+        elif os_type == "Linux":
+            start_cmd = "sudo systemctl start docker"
+        else:  # Windows
+            start_cmd = "Start Docker Desktop"
+
+        message = "Docker is required for Qdrant vector store but is not running"
+        solution = (
+            f"Start Docker:\n\n"
+            f"  {start_cmd}\n\n"
+            f"Or use SQLite instead:\n\n"
+            f"  Set CLAUDE_RAG_STORAGE_BACKEND=sqlite in .env\n"
+            f"  # The system will automatically fall back to SQLite"
+        )
+        docs_url = "https://github.com/anthropics/claude-memory-server/blob/main/docs/setup.md#docker-setup"
+
+        super().__init__(message, solution, docs_url)
+
+
+class RustBuildError(MemoryRAGError):
+    """Raised when Rust parser build fails."""
+
+    def __init__(self, error_message: str):
+        message = f"Failed to build Rust parser: {error_message}"
+        solution = (
+            "Options:\n\n"
+            "1. Install Rust and retry:\n\n"
+            "   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh\n"
+            "   source $HOME/.cargo/env\n"
+            "   cd rust_core && maturin develop\n\n"
+            "2. Use Python parser (slower but no build required):\n\n"
+            "   The system will automatically fall back to Python parser\n"
+            "   Performance: ~10-20x slower than Rust parser"
+        )
+        docs_url = "https://github.com/anthropics/claude-memory-server/blob/main/docs/setup.md#rust-parser"
+
+        super().__init__(message, solution, docs_url)
