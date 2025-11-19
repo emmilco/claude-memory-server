@@ -102,6 +102,19 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-18
 
+- **FEAT-032: Memory Lifecycle & Health System Phase 2 - Automated Health Maintenance**
+  - Created `src/memory/health_scheduler.py` for automated health job scheduling
+  - Created `src/cli/health_schedule_command.py` with CLI commands for health job management
+  - Weekly archival job: Automatically archives memories older than 90 days (configurable)
+  - Monthly cleanup job: Deletes STALE memories older than 180 days (configurable)
+  - Weekly health report job: Generates and logs comprehensive health reports
+  - CLI commands: `health-schedule enable`, `health-schedule disable`, `health-schedule status`, `health-schedule test`
+  - Configurable schedules: day of week/month, time, and threshold days for each job
+  - Job history tracking with last 100 executions
+  - Manual job triggers for testing (dry-run support)
+  - Notification callback support for job completion/failure events
+  - Prevents long-term degradation through automated maintenance
+
 - **FEAT-038: Backup Automation & Cross-Machine Sync**
   - Created `src/backup/scheduler.py` for automated backup scheduling with APScheduler
   - Created `src/cli/schedule_command.py` with CLI commands for schedule management
