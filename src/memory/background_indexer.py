@@ -251,7 +251,7 @@ class BackgroundIndexer:
                 logger.warning(f"Job {job_id} did not cancel gracefully, forcing")
                 self._active_tasks[job_id].cancel()
 
-            # Task may have already cleaned itself up
+            # Check again in case the task completed during wait
             if job_id in self._active_tasks:
                 del self._active_tasks[job_id]
 

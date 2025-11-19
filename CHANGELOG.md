@@ -102,6 +102,15 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-18
 
+- **UX-018: Background Indexing for Large Projects**
+  - Created `src/memory/background_indexer.py` for non-blocking indexing with job management
+  - Created `src/memory/job_state_manager.py` for persistent job state tracking
+  - Created `src/memory/notification_manager.py` for multi-backend notifications
+  - Added support for pause, resume, and cancel operations on indexing jobs
+  - Added automatic resumption of interrupted jobs with file-level checkpointing
+  - New `indexing_jobs` database table for job persistence
+  - Real-time progress tracking with indexed/total file counts
+
 - **UX-017: Indexing Time Estimates**
   - Created `src/memory/time_estimator.py` for intelligent time estimation with historical tracking
   - Created `src/memory/indexing_metrics.py` for indexing performance metrics storage
