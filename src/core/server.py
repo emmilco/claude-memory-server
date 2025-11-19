@@ -4839,6 +4839,11 @@ class MemoryRAGServer:
             return formatter.format(graph, title="Dependency Graph")
         elif format == "json":
             formatter = JSONFormatter(include_metadata=include_metadata)
+            return formatter.format(graph, title="Dependency Graph")
+        else:  # mermaid
+            formatter = MermaidFormatter(include_metadata=include_metadata)
+            return formatter.format(graph, title="Dependency Graph")
+
     async def close(self) -> None:
         """Clean up resources."""
         # Stop conversation tracker
