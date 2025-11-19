@@ -57,19 +57,46 @@ This is an MCP server that sits between Claude and your development environment,
 
 ### 🔍 Semantic Code Search (NEW!)
 
-Search your codebase by meaning, not keywords:
+Search your codebase by meaning, not keywords. Ask questions in natural language and find relevant code based on semantics, not just text matching.
+
+**Example Searches:**
 
 ```
-You: Find the authentication logic
-Claude: [Searches semantically]
-       → auth/handlers.py:45-67 - login() function
-       → auth/middleware.py:23-45 - authenticate_request()
+📌 Find authentication logic:
+You: "Find the authentication logic"
+→ auth/handlers.py:45-67 - login() async function
+→ auth/middleware.py:23-45 - authenticate_request()
+→ auth/token.py:12-34 - verify_jwt_token()
+
+📌 Find error handling:
+You: "Where do we handle database errors?"
+→ db/connection.py:89-105 - handle_db_exception()
+→ models/base.py:34-56 - retry_on_connection_error() decorator
+→ api/error_handlers.py:12-28 - database_error_handler()
+
+📌 Find API endpoints:
+You: "Show me all the user-related API routes"
+→ api/routes/users.py:23-45 - GET /api/users endpoint
+→ api/routes/users.py:67-89 - POST /api/users/create endpoint
+→ api/routes/users.py:102-124 - PUT /api/users/{id} endpoint
+
+📌 Find initialization code:
+You: "How does the application start up?"
+→ main.py:12-34 - initialize_app() function
+→ config/startup.py:45-78 - load_configuration()
+→ db/init.py:23-45 - setup_database_connection()
 ```
+
+**Why It Works:**
+- **Semantic Understanding**: Finds code based on what it *does*, not just variable names
+- **Hybrid Mode**: Combines semantic search with keyword matching for precision
+- **Context-Aware**: Understands relationships between functions, classes, and modules
+- **Fast**: 7-13ms search latency, even on large codebases
 
 **Supported Languages:**
-- Python, JavaScript, TypeScript, Java, Go, Rust, PHP, C, C++, C#, SQL (11 languages)
-- Configuration files: JSON, YAML, TOML (3 formats)
-- **Total:** 13 file formats supported
+- **Programming:** Python, JavaScript, TypeScript, Java, Go, Rust, Ruby, Swift, Kotlin, PHP, C, C++, C#, SQL (14 languages)
+- **Configuration:** JSON, YAML, TOML (3 formats)
+- **Total:** 15 file formats supported
 
 **Performance:**
 - 7-13ms search latency (hybrid search: 10-18ms)

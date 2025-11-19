@@ -94,6 +94,13 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-18
 
+- **DOC-004: Enhanced README with Code Search Examples**
+  - Added comprehensive code search examples section showing 4 realistic scenarios
+  - Examples: authentication, error handling, API routes, initialization code
+  - Added "Why It Works" section explaining semantic search benefits
+  - Updated supported languages count: 13 → 15 file formats
+  - Added Ruby, Swift, Kotlin to language list
+
 - **FEAT-046: Indexed Content Visibility**
   - Added `get_indexed_files()` MCP tool to list indexed files with metadata (file_path, language, last_indexed, unit_count)
   - Added `list_indexed_units()` MCP tool to list code units (functions, classes, methods) with filtering
