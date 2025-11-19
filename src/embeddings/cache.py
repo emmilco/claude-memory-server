@@ -364,9 +364,9 @@ class EmbeddingCache:
             return 0
 
         # Run blocking SQLite operations in thread pool for proper async handling
-        return await asyncio.to_thread(self._clean_old_sync)
+        return await asyncio.to_thread(self._clean_old_sync, days)
 
-    def _clean_old_sync(self) -> int:
+    def _clean_old_sync(self, days: Optional[int] = None) -> int:
         """Synchronous implementation of clean_old() for thread pool execution."""
         if not self.enabled or self.conn is None:
             return 0
@@ -437,12 +437,12 @@ class EmbeddingCache:
             int: Number of entries cleared.
         """
         if not self.enabled or self.conn is None:
-            return
+            return 0
 
         # Run blocking SQLite operations in thread pool for proper async handling
-        await asyncio.to_thread(self._clear_sync)
+        return await asyncio.to_thread(self._clear_sync)
 
-    def _clear_sync(self) -> None:
+    def _clear_sync(self) -> int:
         """Synchronous implementation of clear() for thread pool execution."""
         if not self.enabled or self.conn is None:
             return 0

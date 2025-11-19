@@ -34,7 +34,11 @@ class ReadOnlyStoreWrapper(MemoryStore):
         logger.info(f"Read-only wrapper enabled for {type(wrapped_store).__name__}")
 
     async def initialize(self) -> None:
-        """Initialize the wrapped store."""
+        """Initialize the wrapped store.
+
+        Note: This function is async for framework/interface compatibility, even
+        though it doesn't currently use await. Future changes may add async operations.
+        """
         await self.wrapped_store.initialize()
 
     async def store(
@@ -163,6 +167,10 @@ class ReadOnlyStoreWrapper(MemoryStore):
 
         Returns:
             True if healthy
+        
+
+        Note: This function is async for framework/interface compatibility, even
+        though it doesn't currently use await. Future changes may add async operations.
         """
         return await self.wrapped_store.health_check()
 
@@ -251,6 +259,10 @@ class ReadOnlyStoreWrapper(MemoryStore):
         )
 
     async def close(self) -> None:
-        """Close the wrapped store."""
+        """Close the wrapped store.
+
+        Note: This function is async for framework/interface compatibility, even
+        though it doesn't currently use await. Future changes may add async operations.
+        """
         await self.wrapped_store.close()
         logger.info("Read-only wrapper closed")

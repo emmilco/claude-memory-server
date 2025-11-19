@@ -163,6 +163,10 @@ class PatternMatcher:
         return max(0.0, min(1.0, similarity))
 
     async def clear_cache(self):
-        """Clear the pattern embeddings cache."""
+        """Clear the pattern embeddings cache.
+
+        Note: This function is async for framework/interface compatibility, even
+        though it doesn't currently use await. Future changes may add async operations.
+        """
         self._pattern_embeddings_cache.clear()
         logger.info("Pattern embeddings cache cleared")

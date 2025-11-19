@@ -423,10 +423,15 @@ class ParallelEmbeddingGenerator:
     async def close(self) -> None:
         """Shutdown the process pool executor."""
         if self.executor:
-            logger.info("Shutting down process pool executor")
-            self.executor.shutdown(wait=True)
-            self.executor = None
-            logger.info("Process pool shut down successfully")
+            # Run blocking shutdown in thread pool to avoid blocking event loop
+            await asyncio.to_thread(self._close_sync)
+
+    def _close_sync(self) -> None:
+        """Synchronous implementation of close() for thread pool execution."""
+        logger.info("Shutting down process pool executor")
+        self.executor.shutdown(wait=True)
+        self.executor = None
+        logger.info("Process pool shut down successfully")
 
     def __del__(self):
         """Cleanup on destruction."""

@@ -86,7 +86,12 @@ class MemoryRAGServer:
         importance: float = 0.5,
         scope: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Store a memory."""
+        """Store a memory.
+
+        Note: This function is async for MCP protocol compatibility, even though it
+        doesn't currently use await. The MCP framework requires handler functions to
+        be async, and future changes may add async operations.
+        """
         # Determine scope if not provided
         if scope is None:
             # Auto-determine: preferences/workflows � global, others � project
@@ -131,7 +136,12 @@ class MemoryRAGServer:
         limit: int = 10,
         include_docs: bool = True
     ) -> List[Dict]:
-        """Retrieve relevant memories and/or docs using smart routing."""
+        """Retrieve relevant memories and/or docs using smart routing.
+
+        Note: This function is async for MCP protocol compatibility, even though it
+        doesn't currently use await. The MCP framework requires handler functions to
+        be async, and future changes may add async operations.
+        """
         if include_docs:
             # Use smart routing
             results = self.router.route_query(
@@ -159,7 +169,12 @@ class MemoryRAGServer:
         limit: int = 20,
         filter_type: Optional[str] = None
     ) -> List[Dict]:
-        """Explicit search across all content."""
+        """Explicit search across all content.
+
+        Note: This function is async for MCP protocol compatibility, even though it
+        doesn't currently use await. The MCP framework requires handler functions to
+        be async, and future changes may add async operations.
+        """
         query_embedding = self.embedder.generate(query)
 
         filters = {}
@@ -180,7 +195,12 @@ class MemoryRAGServer:
         recursive: bool = True,
         force: bool = False
     ) -> Dict:
-        """Ingest documentation from directory."""
+        """Ingest documentation from directory.
+
+        Note: This function is async for MCP protocol compatibility, even though it
+        doesn't currently use await. The MCP framework requires handler functions to
+        be async, and future changes may add async operations.
+        """
         if patterns is None:
             patterns = ["*.md", "README.md", "docs/**/*.md"]
 
@@ -197,7 +217,12 @@ class MemoryRAGServer:
         return result
 
     async def delete_memory(self, memory_id: int) -> Dict[str, Any]:
-        """Delete a memory by ID."""
+        """Delete a memory by ID.
+
+        Note: This function is async for MCP protocol compatibility, even though it
+        doesn't currently use await. The MCP framework requires handler functions to
+        be async, and future changes may add async operations.
+        """
         success = self.db.delete_memory(memory_id)
         return {
             "success": success,
@@ -206,7 +231,12 @@ class MemoryRAGServer:
         }
 
     async def get_stats(self) -> Dict[str, Any]:
-        """Get statistics about stored memories and docs."""
+        """Get statistics about stored memories and docs.
+
+        Note: This function is async for MCP protocol compatibility, even though it
+        doesn't currently use await. The MCP framework requires handler functions to
+        be async, and future changes may add async operations.
+        """
         stats = self.db.get_stats()
         stats['current_project'] = self.project_name
         return stats
@@ -439,7 +469,12 @@ memory_rag_server = MemoryRAGServer()
 
 @app.list_tools()
 async def list_tools() -> List[Tool]:
-    """List available memory and documentation tools."""
+    """List available memory and documentation tools.
+
+    Note: This function is async for MCP protocol compatibility, even though it
+    doesn't currently use await. The MCP framework requires handler functions to
+    be async, and future changes may add async operations.
+    """
     return [
         Tool(
             name="store_memory",

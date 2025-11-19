@@ -339,10 +339,15 @@ class EmbeddingGenerator:
     async def close(self) -> None:
         """
         Clean up resources.
-        
+
         Should be called when the generator is no longer needed.
         Shuts down the thread pool executor, closes the cache, and unloads the model.
         """
+        # Run blocking shutdown operations in thread pool to avoid blocking event loop
+        await asyncio.to_thread(self._close_sync)
+
+    def _close_sync(self) -> None:
+        """Synchronous implementation of close() for thread pool execution."""
         self.executor.shutdown(wait=True)
         if self.cache:
             self.cache.close()

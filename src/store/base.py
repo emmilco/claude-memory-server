@@ -172,6 +172,11 @@ class MemoryStore(ABC):
 
         Returns:
             bool: True if healthy, False otherwise.
+        
+
+        Note: This function is async for interface compatibility. Abstract methods
+        in base classes must be async even without await to maintain consistent
+        interface across all storage backend implementations.
         """
         pass
 
@@ -182,6 +187,11 @@ class MemoryStore(ABC):
 
         Raises:
             StorageError: If initialization fails.
+        
+
+        Note: This function is async for interface compatibility. Abstract methods
+        in base classes must be async even without await to maintain consistent
+        interface across all storage backend implementations.
         """
         pass
 
@@ -189,6 +199,11 @@ class MemoryStore(ABC):
     async def close(self) -> None:
         """
         Close connections and clean up resources.
+        
+
+        Note: This function is async for interface compatibility. Abstract methods
+        in base classes must be async even without await to maintain consistent
+        interface across all storage backend implementations.
         """
         pass
 
