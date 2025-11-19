@@ -177,7 +177,10 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
 
 - [x] **DOC-004**: Update README with code search examples ✅ **COMPLETE**
 - [ ] **DOC-005**: Add performance tuning guide for large codebases
-- [ ] **DOC-006**: Create troubleshooting guide for common parser issues
+- [x] **DOC-006**: Create troubleshooting guide for common parser issues ✅ **COMPLETE**
+  - Added comprehensive "Code Parsing Issues" section to TROUBLESHOOTING.md
+  - Covers: syntax errors, encoding, performance, memory, unsupported languages, skipped files
+  - 6 subsections with practical solutions and code examples
 - [ ] **DOC-007**: Document best practices for project organization
 
 - [ ] **DOC-001**: Interactive documentation
