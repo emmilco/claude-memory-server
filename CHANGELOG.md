@@ -970,3 +970,15 @@ A pre-commit hook enforces CHANGELOG updates:
 ---
 
 For detailed migration notes, see the documentation in the `docs/` directory.
+
+### Fixed - 2025-11-18
+
+- **REF-001: Async/Await Pattern Optimization - Phase 1 (Cache Operations)**
+  - Fixed 5 async cache methods that were blocking: `get()`, `set()`, `batch_get()`, `clean_old()`, `clear()`
+  - Refactored to use `asyncio.to_thread()` for proper async handling of blocking SQLite operations
+  - Prevents event loop blocking during embedding cache operations
+  - All cache tests passing (4/4)
+  - **Status:** Phase 1 complete - 5 of 194 async/await issues resolved
+  - **Remaining:** 189 issues across generators, MCP handlers, server methods, and utilities
+  - **Impact:** HIGH - cache operations are called frequently during indexing
+  - Files: `src/embeddings/cache.py`, `planning_docs/REF-001_async_await_optimization.md`
