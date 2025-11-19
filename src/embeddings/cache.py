@@ -1,5 +1,6 @@
 """Embedding cache using SQLite for fast lookups."""
 
+import asyncio
 import sqlite3
 import hashlib
 import json
@@ -119,6 +120,11 @@ class EmbeddingCache:
         if not self.enabled or self.conn is None:
             return None
 
+        # Run blocking SQLite operations in thread pool for proper async handling
+        return await asyncio.to_thread(self._get_sync, text, model_name)
+
+    def _get_sync(self, text: str, model_name: str) -> Optional[List[float]]:
+        """Synchronous implementation of get() for thread pool execution."""
         try:
             cache_key, _ = self._compute_key(text, model_name)
 
@@ -164,11 +170,11 @@ class EmbeddingCache:
 
                 # Deserialize embedding
                 embedding = json.loads(embedding_json)
-                
+
                 # Normalize cached embedding to match fresh embeddings
                 # Fresh embeddings from generator are normalized via Rust bridge
                 normalized = RustBridge.batch_normalize([embedding])[0]
-                
+
                 self.hits += 1
                 logger.debug(f"Cache hit for key: {cache_key[:16]}...")
                 return normalized
@@ -190,6 +196,11 @@ class EmbeddingCache:
         if not self.enabled or self.conn is None:
             return
 
+        # Run blocking SQLite operations in thread pool for proper async handling
+        await asyncio.to_thread(self._set_sync, text, model_name, embedding)
+
+    def _set_sync(self, text: str, model_name: str, embedding: List[float]) -> None:
+        """Synchronous implementation of set() for thread pool execution."""
         try:
             cache_key, text_hash = self._compute_key(text, model_name)
             embedding_json = json.dumps(embedding)
@@ -256,6 +267,14 @@ class EmbeddingCache:
         Returns:
             List[Optional[List[float]]]: List of embeddings (None if not found/expired).
         """
+        if not self.enabled or self.conn is None:
+            return {}
+
+        # Run blocking SQLite operations in thread pool for proper async handling
+        return await asyncio.to_thread(self._batch_get_sync, texts, model_name)
+
+    def _batch_get_sync(self, texts: List[str], model_name: str) -> dict[str, Optional[List[float]]]:
+        """Synchronous implementation of batch_get() for thread pool execution."""
         if not self.enabled or self.conn is None or not texts:
             return [None] * len(texts)
 
@@ -344,6 +363,14 @@ class EmbeddingCache:
         if not self.enabled or self.conn is None:
             return 0
 
+        # Run blocking SQLite operations in thread pool for proper async handling
+        return await asyncio.to_thread(self._clean_old_sync)
+
+    def _clean_old_sync(self) -> int:
+        """Synchronous implementation of clean_old() for thread pool execution."""
+        if not self.enabled or self.conn is None:
+            return 0
+
         try:
             days = days or self.ttl_days
             cutoff = (datetime.now(UTC) - timedelta(days=days)).isoformat()
@@ -409,6 +436,14 @@ class EmbeddingCache:
         Returns:
             int: Number of entries cleared.
         """
+        if not self.enabled or self.conn is None:
+            return
+
+        # Run blocking SQLite operations in thread pool for proper async handling
+        await asyncio.to_thread(self._clear_sync)
+
+    def _clear_sync(self) -> None:
+        """Synchronous implementation of clear() for thread pool execution."""
         if not self.enabled or self.conn is None:
             return 0
 
