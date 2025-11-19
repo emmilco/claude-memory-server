@@ -392,10 +392,11 @@ claude-memory-server/
 ## Documentation
 
 📖 **Essential Documentation:**
-1. **[CLAUDE.md](CLAUDE.md)** - Guide for AI agents working on this project
-2. **[CHANGELOG.md](CHANGELOG.md)** - Version history and changes
-3. **[TODO.md](TODO.md)** - Current tasks and future work
-4. **[README.md](README.md)** - This file (user guide)
+1. **[TUTORIAL.md](TUTORIAL.md)** - 🚀 **START HERE!** Complete beginner-friendly tutorial (macOS + Qdrant)
+2. **[README.md](README.md)** - This file (user guide and quick reference)
+3. **[CLAUDE.md](CLAUDE.md)** - Guide for AI agents working on this project
+4. **[CHANGELOG.md](CHANGELOG.md)** - Version history and changes
+5. **[TODO.md](TODO.md)** - Current tasks and future work
 
 ### Comprehensive Guides (docs/)
 - **[SETUP.md](docs/SETUP.md)** - Installation and setup instructions
@@ -589,4 +590,4 @@ Built with:
 
 ---
 
-**🚀 Ready to use! Start with [START_HERE.md](START_HERE.md) or run `python -m src.cli index ./src`**
+**🚀 Ready to get started? Follow the complete [TUTORIAL.md](TUTORIAL.md) for step-by-step setup!**

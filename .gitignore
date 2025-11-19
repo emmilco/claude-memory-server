@@ -36,3 +36,5 @@ archived_docs/
 
 # Git worktrees (parallel development)
 .worktrees/
+# Rust build artifacts
+rust_core/target/

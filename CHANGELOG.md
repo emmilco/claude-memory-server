@@ -79,6 +79,17 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ## [Unreleased]
 
+### Added - 2025-11-19
+
+- **DOC-007: Comprehensive Tutorial for macOS + Qdrant Setup**
+  - Created `TUTORIAL.md` - Complete beginner-friendly walkthrough from zero to production
+  - Covers: Installation, setup, indexing, semantic search, memory management, documentation search
+  - Includes real Claude Code conversation examples demonstrating MCP integration
+  - Features advanced topics: git history search, multi-project support, hybrid search modes
+  - Contains common workflows, best practices, and macOS-specific troubleshooting
+  - Linear structure with step-by-step instructions and expected outputs
+  - Target audience: Developers with command line basics, 30-45 minute completion time
+
 ### Changed - 2025-11-18
 
 - **REF-006: Update Qdrant API to query_points()**

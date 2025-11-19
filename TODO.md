@@ -152,12 +152,13 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - 19 comprehensive tests, all passing
   - Backward compatible with existing logging patterns
 
-- [ ] **REF-003**: Split Validation Module (~2 hours)
-  - Requires careful refactoring for circular imports
-  - Separate validation concerns
+- [x] **REF-003**: Split Validation Module ✅ **COMPLETE** (~1.5 hours)
+  - Split monolithic validation.py (532 lines) into separate modules
+  - Prevents circular import issues by separating concerns
+  - Maintains backward compatibility through __init__.py exports
 
-- [ ] **REF-005**: Update to Pydantic v2 ConfigDict style
-  - Low priority, modernize configuration
+- [x] **REF-005**: Update to Pydantic v2 ConfigDict style ✅ **COMPLETE**
+  - Already using model_config = ConfigDict() throughout codebase
 
 - [x] **REF-006**: Update Qdrant search() to query_points() ✅ **COMPLETE**
   - Replaced deprecated API for future Qdrant compatibility
