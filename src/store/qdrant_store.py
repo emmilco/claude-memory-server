@@ -136,7 +136,7 @@ class QdrantMemoryStore(MemoryStore):
                     memory = self._payload_to_memory_unit(hit.payload)
                     score = float(hit.score)
                     results.append((memory, score))
-                except ValueError as e:
+                except (ValueError, KeyError) as e:
                     logger.warning(f"Failed to parse search result payload: {e}")
                     continue
 

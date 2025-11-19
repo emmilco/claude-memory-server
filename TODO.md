@@ -155,8 +155,9 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
 - [ ] **REF-005**: Update to Pydantic v2 ConfigDict style
   - Low priority, modernize configuration
 
-- [ ] **REF-006**: Update Qdrant search() to query_points()
-  - Low priority, will be required in future Qdrant versions
+- [x] **REF-006**: Update Qdrant search() to query_points() ✅ **COMPLETE**
+  - Replaced deprecated API for future Qdrant compatibility
+  - Enhanced error handling for payload parsing
 
 ### 📚 Tier 7: Documentation & Monitoring
 
