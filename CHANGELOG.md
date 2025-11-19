@@ -94,6 +94,15 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-18
 
+- **FEAT-010: Kotlin Language Support**
+  - Added tree-sitter-kotlin = "0.2" to rust_core/Cargo.toml
+  - Updated rust_core/src/parsing.rs with Kotlin support
+  - Kotlin file extensions .kt and .kts now recognized
+  - Extracts Kotlin functions, classes, data classes, objects, and interfaces
+  - Created tests/unit/test_kotlin_parsing.py with comprehensive tests
+  - Created tests/test_data/sample_kotlin.kt
+  - Total supported file formats: 14 → 15
+
 - **FEAT-009: Swift Language Support**
   - Added tree-sitter-swift = "0.7" to rust_core/Cargo.toml
   - Updated rust_core/src/parsing.rs with Swift support
