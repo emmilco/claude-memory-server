@@ -364,6 +364,79 @@ class SQLiteMemoryStore(MemoryStore):
                         query += " AND json_extract(m.tags, '$') LIKE ?"
                         params.append(f'%"{tag}"%')
 
+                # Handle advanced filters if present
+                if filters.advanced_filters:
+                    adv = filters.advanced_filters
+
+                    # Date range filtering
+                    if adv.created_after:
+                        query += " AND m.created_at >= ?"
+                        params.append(adv.created_after.isoformat())
+                    if adv.created_before:
+                        query += " AND m.created_at <= ?"
+                        params.append(adv.created_before.isoformat())
+                    if adv.updated_after:
+                        query += " AND m.updated_at >= ?"
+                        params.append(adv.updated_after.isoformat())
+                    if adv.updated_before:
+                        query += " AND m.updated_at <= ?"
+                        params.append(adv.updated_before.isoformat())
+                    if adv.accessed_after:
+                        query += " AND m.last_accessed >= ?"
+                        params.append(adv.accessed_after.isoformat())
+                    if adv.accessed_before:
+                        query += " AND m.last_accessed <= ?"
+                        params.append(adv.accessed_before.isoformat())
+
+                    # Tag logic - ANY (OR)
+                    if adv.tags_any:
+                        tag_conditions = []
+                        for tag in adv.tags_any:
+                            tag_conditions.append(f'json_extract(m.tags, "$") LIKE ?')
+                            params.append(f'%"{tag}"%')
+                        if tag_conditions:
+                            query += f" AND ({' OR '.join(tag_conditions)})"
+
+                    # Tag logic - ALL (AND)
+                    if adv.tags_all:
+                        for tag in adv.tags_all:
+                            query += " AND json_extract(m.tags, '$') LIKE ?"
+                            params.append(f'%"{tag}"%')
+
+                    # Tag logic - NONE (NOT)
+                    if adv.tags_none:
+                        for tag in adv.tags_none:
+                            query += " AND json_extract(m.tags, '$') NOT LIKE ?"
+                            params.append(f'%"{tag}"%')
+
+                    # Lifecycle filtering
+                    if adv.lifecycle_states:
+                        state_placeholders = ','.join('?' * len(adv.lifecycle_states))
+                        query += f" AND m.lifecycle_state IN ({state_placeholders})"
+                        params.extend([s.value if hasattr(s, 'value') else s for s in adv.lifecycle_states])
+
+                    # Exclusions - categories
+                    if adv.exclude_categories:
+                        cat_placeholders = ','.join('?' * len(adv.exclude_categories))
+                        query += f" AND m.category NOT IN ({cat_placeholders})"
+                        params.extend([c.value if hasattr(c, 'value') else c for c in adv.exclude_categories])
+
+                    # Exclusions - projects
+                    if adv.exclude_projects:
+                        proj_placeholders = ','.join('?' * len(adv.exclude_projects))
+                        query += f" AND m.project_name NOT IN ({proj_placeholders})"
+                        params.extend(adv.exclude_projects)
+
+                    # Provenance filtering - min trust score
+                    if adv.min_trust_score is not None:
+                        query += " AND json_extract(m.provenance, '$.confidence') >= ?"
+                        params.append(adv.min_trust_score)
+
+                    # Provenance filtering - source
+                    if adv.source:
+                        query += " AND json_extract(m.provenance, '$.source') = ?"
+                        params.append(adv.source.value if hasattr(adv.source, 'value') else adv.source)
+
             query += " ORDER BY m.created_at DESC LIMIT ?"
             params.append(limit)
 
