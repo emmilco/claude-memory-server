@@ -100,6 +100,16 @@ A pre-commit hook enforces CHANGELOG updates:
   - Added 4 comprehensive tests for cache hit rate checking in `tests/unit/test_health_command.py`
   - Health check command now works correctly with both SQLite and Qdrant backends
 
+### Documentation - 2025-11-18
+
+- **FEAT-040 & FEAT-041: Memory CRUD Operations API Documentation**
+  - Added comprehensive API documentation for `list_memories`, `update_memory`, and `get_memory_by_id` tools in `docs/API.md`
+  - Updated MCP tool count from 14 to 17 tools
+  - Added input schemas, examples, and response formats for all three memory CRUD tools
+  - Documented filtering, sorting, and pagination capabilities for list_memories
+  - Documented partial update support and embedding regeneration for update_memory
+  - All 16 list_memories tests passing, functionality verified
+
 ### Added - 2025-11-18
 
 - **FEAT-036: Project Archival Phase 2.5 - Documentation & Polish**

@@ -1,6 +1,6 @@
 # API Reference
 
-**Last Updated:** November 17, 2025
+**Last Updated:** November 18, 2025
 **Version:** 4.0 (Production-Ready with Advanced Features)
 
 ---
@@ -9,7 +9,7 @@
 
 The Claude Memory RAG Server exposes tools through the Model Context Protocol (MCP). All tools are accessible to Claude via MCP tool calls.
 
-**Total Tools:** 14 MCP tools + 28 CLI commands
+**Total Tools:** 17 MCP tools + 28 CLI commands
 
 ### Available MCP Tools
 
@@ -17,6 +17,9 @@ The Claude Memory RAG Server exposes tools through the Model Context Protocol (M
 |-----------|---------|----------|
 | `store_memory` | Store a new memory | Memory Management |
 | `retrieve_memories` | Search memories by query | Memory Management |
+| `list_memories` | Browse and filter memories | Memory Management |
+| `update_memory` | Update an existing memory | Memory Management |
+| `get_memory_by_id` | Get a memory by ID | Memory Management |
 | `delete_memory` | Delete a memory by ID | Memory Management |
 | `get_stats` | Get system statistics | System |
 | `show_context` | Debug context (dev only) | System |
@@ -201,6 +204,190 @@ Specialized tool to retrieve only SESSION_STATE level memories.
 ```json
 {
   "query": "current task progress"
+}
+```
+
+---
+
+### list_memories
+
+Browse and filter memories without semantic search. Useful for listing memories by category, tags, importance, or date range.
+
+**Input Schema:**
+```json
+{
+  "category": "string (optional: 'FACT', 'PREFERENCE', 'PROJECT_CONTEXT', 'SESSION_STATE')",
+  "context_level": "string (optional: 'CORE_IDENTITY', 'PROJECT_SPECIFIC', 'CONVERSATION')",
+  "scope": "string (optional: 'global', 'project')",
+  "project_name": "string (optional)",
+  "tags": "array of strings (optional, matches ANY tag)",
+  "min_importance": "float (optional, 0.0-1.0, default: 0.0)",
+  "max_importance": "float (optional, 0.0-1.0, default: 1.0)",
+  "date_from": "string (optional, ISO format)",
+  "date_to": "string (optional, ISO format)",
+  "sort_by": "string (optional: 'created_at', 'updated_at', 'importance', default: 'created_at')",
+  "sort_order": "string (optional: 'asc', 'desc', default: 'desc')",
+  "limit": "integer (optional, 1-100, default: 20)",
+  "offset": "integer (optional, default: 0)"
+}
+```
+
+**Examples:**
+
+List all high-importance preferences:
+```json
+{
+  "category": "PREFERENCE",
+  "min_importance": 0.7,
+  "sort_by": "importance",
+  "sort_order": "desc",
+  "limit": 50
+}
+```
+
+List recent project-specific memories:
+```json
+{
+  "context_level": "PROJECT_SPECIFIC",
+  "project_name": "my-app",
+  "date_from": "2025-11-01T00:00:00Z",
+  "sort_by": "created_at",
+  "sort_order": "desc"
+}
+```
+
+List memories with pagination:
+```json
+{
+  "limit": 20,
+  "offset": 40
+}
+```
+
+**Response:**
+```json
+{
+  "memories": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "content": "User prefers tabs over spaces",
+      "category": "PREFERENCE",
+      "importance": 0.8,
+      "tags": ["coding-style"],
+      "created_at": "2025-11-18T10:00:00Z",
+      "updated_at": "2025-11-18T10:00:00Z"
+    }
+  ],
+  "total_count": 150,
+  "returned_count": 20,
+  "offset": 0,
+  "limit": 20,
+  "has_more": true
+}
+```
+
+---
+
+### update_memory
+
+Update an existing memory. Supports partial updates - only provide fields you want to change.
+
+**Input Schema:**
+```json
+{
+  "memory_id": "string (required, UUID format)",
+  "content": "string (optional, 1-50000 characters)",
+  "category": "string (optional: 'FACT', 'PREFERENCE', 'PROJECT_CONTEXT', 'SESSION_STATE')",
+  "importance": "float (optional, 0.0-1.0)",
+  "tags": "array of strings (optional)",
+  "metadata": "object (optional)",
+  "context_level": "string (optional: 'CORE_IDENTITY', 'PROJECT_SPECIFIC', 'CONVERSATION')",
+  "regenerate_embedding": "boolean (optional, default: true)"
+}
+```
+
+**Examples:**
+
+Update just the content:
+```json
+{
+  "memory_id": "550e8400-e29b-41d4-a716-446655440000",
+  "content": "User prefers 4 spaces for indentation (not tabs)"
+}
+```
+
+Update importance and tags:
+```json
+{
+  "memory_id": "550e8400-e29b-41d4-a716-446655440000",
+  "importance": 0.95,
+  "tags": ["coding-style", "high-priority"]
+}
+```
+
+Update without regenerating embedding (faster):
+```json
+{
+  "memory_id": "550e8400-e29b-41d4-a716-446655440000",
+  "importance": 0.9,
+  "regenerate_embedding": false
+}
+```
+
+**Response:**
+```json
+{
+  "status": "updated",
+  "updated_fields": ["content", "importance"],
+  "embedding_regenerated": true,
+  "updated_at": "2025-11-18T10:30:00Z"
+}
+```
+
+---
+
+### get_memory_by_id
+
+Retrieve a specific memory by its ID.
+
+**Input Schema:**
+```json
+{
+  "memory_id": "string (required, UUID format)"
+}
+```
+
+**Example:**
+```json
+{
+  "memory_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Response (success):**
+```json
+{
+  "status": "success",
+  "memory": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "content": "User prefers tabs over spaces",
+    "category": "PREFERENCE",
+    "importance": 0.8,
+    "tags": ["coding-style"],
+    "metadata": {},
+    "context_level": "CORE_IDENTITY",
+    "scope": "global",
+    "created_at": "2025-11-18T10:00:00Z",
+    "updated_at": "2025-11-18T10:00:00Z"
+  }
+}
+```
+
+**Response (not found):**
+```json
+{
+  "status": "not_found",
+  "message": "Memory 550e8400-e29b-41d4-a716-446655440000 not found"
 }
 ```
 
