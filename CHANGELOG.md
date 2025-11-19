@@ -90,6 +90,14 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-18
 
+- **FEAT-014: Semantic Refactoring**
+  - Created `src/refactoring/code_analyzer.py` for code quality analysis and refactoring suggestions
+  - Added `find_usages()` MCP tool for semantic code usage detection across codebase
+  - Added `suggest_refactorings()` MCP tool for automated code smell detection
+  - Detection rules: long parameter lists (>5), large functions (>50 lines), high complexity (>10), deep nesting (>4 levels)
+  - Calculates code metrics: lines of code, cyclomatic complexity, parameter count, nesting depth
+  - Created `tests/unit/test_code_analyzer.py` with 16 comprehensive tests (all passing)
+
 - **FEAT-017: Multi-Repository Support (Foundation)**
   - Created `src/memory/git_detector.py` for git repository detection and metadata extraction
   - Functions: `is_git_repository()`, `get_git_root()`, `get_git_metadata()`, `get_repository_name()`
