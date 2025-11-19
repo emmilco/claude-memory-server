@@ -79,6 +79,22 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ## [Unreleased]
 
+### Added - 2025-11-19
+
+- **UX-007: pyenv Environment Isolation Fix & MCP Configuration Improvements**
+  - Enhanced setup.py to detect pyenv and provide absolute Python paths for MCP configuration
+  - Added `_detect_pyenv()` method to identify pyenv usage and extract absolute Python executable path
+  - Setup wizard now displays pyenv warning with correct absolute path in MCP configuration command
+  - **Changed MCP config to use absolute script path** (`/path/to/src/mcp_server.py`) instead of module syntax (`-m src.mcp_server`)
+  - Removed `cwd` parameter from examples as it's not reliably respected in all Claude Code versions
+  - Updated README.md with pyenv-aware MCP configuration using absolute paths
+  - Updated docs/SETUP.md with comprehensive pyenv troubleshooting section using absolute script paths
+  - Updated docs/TROUBLESHOOTING.md with new "pyenv Environment Isolation Issues" and "MCP Server Failed to Connect" sections
+  - Added troubleshooting for `cwd` parameter not being respected and module import errors
+  - Troubleshooting guide includes 3 solutions for pyenv: absolute paths, dedicated MCP environment, or multi-env install
+  - Prevents MCP server failures when switching between projects with different pyenv environments
+  - Files: `setup.py`, `README.md`, `docs/SETUP.md`, `docs/TROUBLESHOOTING.md`
+
 ### Changed - 2025-11-19
 
 - **UX-006: Enhanced MCP Tool Descriptions for Proactive Use**

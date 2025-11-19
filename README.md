@@ -149,9 +149,19 @@ The interactive wizard will:
 ### Add to Claude Code
 
 ```bash
-claude mcp add --transport stdio --scope user claude-memory-rag -- \
-  python "$(pwd)/src/mcp_server.py"
+# Get absolute Python path (important for pyenv users!)
+PYTHON_PATH=$(which python)
+PROJECT_DIR=$(pwd)  # Make sure you're in claude-memory-server directory!
+
+# Add MCP server with absolute paths
+claude mcp add --transport stdio --scope user \
+  claude-memory-rag -- \
+  $PYTHON_PATH "$PROJECT_DIR/src/mcp_server.py"
 ```
+
+**Important Configuration Notes:**
+- **For pyenv users:** Using the absolute Python path (`$PYTHON_PATH`) ensures the MCP server uses the correct Python environment with installed dependencies, even when you switch between different project directories with different pyenv environments.
+- **Use absolute script path:** The configuration uses the full path to `mcp_server.py` instead of `-m src.mcp_server` to ensure it works from any directory. The `cwd` parameter is not reliably respected in all Claude Code versions.
 
 ### Verify Installation
 

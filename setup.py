@@ -646,6 +646,19 @@ class TestClass:
         else:
             return ""
 
+    def _detect_pyenv(self) -> Tuple[bool, Optional[str]]:
+        """Detect if pyenv is in use and get the absolute Python path.
+
+        Returns:
+            Tuple of (is_pyenv, absolute_python_path)
+        """
+        python_path = sys.executable
+
+        # Check if Python is running from pyenv
+        is_pyenv = '.pyenv' in python_path
+
+        return is_pyenv, python_path
+
     def print_success(self):
         """Print success message with next steps."""
         console.print()
@@ -653,6 +666,28 @@ class TestClass:
         # Show .env file location
         env_path = self.project_root / ".env"
         env_exists = env_path.exists()
+
+        # Detect pyenv and get absolute Python path
+        is_pyenv, python_path = self._detect_pyenv()
+
+        # Format MCP configuration command with absolute script path
+        mcp_server_path = self.project_root / "src" / "mcp_server.py"
+        mcp_command = (
+            f"     [dim]claude mcp add --transport stdio --scope user \\\n"
+            f"       claude-memory-rag -- \\\n"
+            f"       {python_path} {mcp_server_path}[/dim]"
+        )
+
+        # Add pyenv warning if detected
+        pyenv_warning = ""
+        if is_pyenv:
+            pyenv_warning = (
+                "\n\n"
+                "[yellow]⚠ pyenv detected:[/yellow] Using absolute Python path to avoid environment isolation issues.\n"
+                f"     Python: [cyan]{python_path}[/cyan]\n"
+                f"     If you use multiple pyenv environments, this ensures the MCP server\n"
+                f"     always uses the correct Python installation with required dependencies."
+            )
 
         console.print(
             Panel.fit(
@@ -662,7 +697,8 @@ class TestClass:
                 f"({'Qdrant on localhost:6333' if self.config['storage'] == 'qdrant' else '~/.claude-rag/memory.db'})\n"
                 f"  • Parser: [cyan]{self.config['parser'].upper()}[/cyan] "
                 f"({'optimal performance' if self.config['parser'] == 'rust' else '10-20x slower fallback'})\n"
-                f"  • Config file: [cyan].env[/cyan] {'✓ created' if env_exists else '⚠ not found'}\n\n"
+                f"  • Config file: [cyan].env[/cyan] {'✓ created' if env_exists else '⚠ not found'}\n"
+                f"  • Python: [cyan]{python_path}[/cyan] {'[yellow](pyenv)[/yellow]' if is_pyenv else ''}\n\n"
                 "[bold]Next Steps:[/bold]\n"
                 "  1. Verify configuration:\n"
                 "     [dim]cat .env[/dim]\n\n"
@@ -671,9 +707,9 @@ class TestClass:
                 "  3. Index your first project:\n"
                 "     [dim]python -m src.cli index ./your-project[/dim]\n\n"
                 "  4. Add to Claude Code (optional):\n"
-                f"     [dim]claude mcp add --transport stdio --scope user claude-memory-rag -- \\\n"
-                f"       python {self.project_root / 'src' / 'mcp_server.py'}[/dim]\n\n"
-                + self._format_upgrade_options(),
+                + mcp_command + "\n\n"
+                + self._format_upgrade_options()
+                + pyenv_warning,
                 border_style="green",
             )
         )

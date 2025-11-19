@@ -133,6 +133,26 @@ pyenv local 3.13.6
 pip install -r requirements.txt
 ```
 
+**Important for pyenv users:** When configuring the MCP server for Claude Code, you must use an **absolute Python path** to avoid environment isolation issues. If you use relative paths like `python`, the MCP server will fail when you're in a directory with a different pyenv environment.
+
+**Recommended MCP Configuration:**
+```bash
+# Get the absolute path to the Python interpreter with dependencies installed
+PYTHON_PATH=$(which python)
+PROJECT_DIR=/Users/you/path/to/claude-memory-server  # Update this path!
+
+# Use this in your MCP configuration with absolute script path
+claude mcp add --transport stdio --scope user \
+  claude-memory-rag -- \
+  $PYTHON_PATH "$PROJECT_DIR/src/mcp_server.py"
+```
+
+**Important:** Use the full path to `mcp_server.py` instead of `-m src.mcp_server`. The `cwd` parameter is not reliably respected in all Claude Code versions, so absolute paths ensure the server works from any directory.
+
+Or manually configure with the absolute paths:
+- Command: `/Users/you/.pyenv/versions/3.13.6/bin/python`
+- Args: `/Users/you/path/to/claude-memory-server/src/mcp_server.py`
+
 #### Option 3: Using conda
 
 ```bash

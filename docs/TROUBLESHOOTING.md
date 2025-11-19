@@ -123,6 +123,171 @@ python -m ensurepip --upgrade
 
 ---
 
+### pyenv Environment Isolation Issues
+
+**Error:** MCP server fails to load or reports missing dependencies when switching between project directories
+
+**Symptoms:**
+- MCP server works in one directory but fails in another
+- Error: `ModuleNotFoundError` for packages you know are installed
+- MCP server won't start when in a different project directory
+- Dependencies are installed but Claude can't find them
+
+**Root Cause:**
+
+pyenv creates isolated Python environments per project directory. When you:
+1. Install dependencies in environment A (e.g., `claude-memory-server` project)
+2. Configure MCP with relative path `python -m src.mcp_server`
+3. Switch to environment B (e.g., `olympus-storage` project with different `.python-version`)
+
+The MCP server tries to use environment B's Python (which doesn't have the dependencies), causing it to fail.
+
+**Solution 1: Use Absolute Python Path (Recommended)**
+
+Configure MCP to use the absolute path to the Python interpreter where dependencies are installed:
+
+```bash
+# 1. Navigate to claude-memory-server directory
+cd ~/path/to/claude-memory-server
+
+# 2. Activate the correct pyenv environment (if using pyenv local/shell)
+# This should happen automatically if you have .python-version file
+
+# 3. Get the absolute Python path
+which python
+# Example output: /Users/you/.pyenv/versions/3.13.9/bin/python
+
+# 4. Use this absolute path in your MCP configuration
+claude mcp add --transport stdio --scope user \
+  claude-memory-rag -- \
+  /Users/you/.pyenv/versions/3.13.9/bin/python \
+  ~/path/to/claude-memory-server/src/mcp_server.py
+```
+
+**Critical:** Use the full path to `mcp_server.py` instead of `-m src.mcp_server`. The `cwd` parameter is not reliably respected in some Claude Code versions, so absolute script paths ensure the server works from any directory.
+
+**Solution 2: Create Dedicated MCP Environment**
+
+Create a dedicated pyenv virtualenv for MCP servers:
+
+```bash
+# 1. Create dedicated environment
+pyenv virtualenv 3.13.9 claude-mcp-servers
+
+# 2. Activate it
+pyenv activate claude-mcp-servers
+
+# 3. Install dependencies
+cd ~/path/to/claude-memory-server
+pip install -r requirements.txt
+
+# 4. Get the absolute path
+which python
+# Example: /Users/you/.pyenv/versions/claude-mcp-servers/bin/python
+
+# 5. Use this in MCP configuration
+claude mcp add --transport stdio --scope user \
+  claude-memory-rag -- \
+  /Users/you/.pyenv/versions/claude-mcp-servers/bin/python \
+  ~/path/to/claude-memory-server/src/mcp_server.py
+```
+
+**Solution 3: Install in Multiple Environments (Not Recommended)**
+
+Install dependencies in every pyenv environment where you want to use the MCP server. This wastes disk space and requires maintenance.
+
+**Verification:**
+
+After updating your MCP configuration:
+
+1. **Test from different directories:**
+   ```bash
+   cd ~/some-other-project-with-different-pyenv
+   # Now restart Claude Code and verify MCP server loads
+   ```
+
+2. **Check Python path in MCP config:**
+   - Your MCP configuration should show an absolute path like:
+     `/Users/you/.pyenv/versions/3.13.9/bin/python`
+   - **NOT** a relative path like `python` or `$(which python)`
+
+3. **Verify dependencies are available:**
+   ```bash
+   /Users/you/.pyenv/versions/3.13.9/bin/python -c "import sentence_transformers, qdrant_client; print('OK')"
+   ```
+
+**Pro Tip:** The setup wizard (`python setup.py`) automatically detects pyenv and provides the correct absolute path for your MCP configuration. Look for the yellow warning message at the end of setup!
+
+---
+
+### MCP Server "Failed to Connect" Error
+
+**Error:** `claude mcp list` shows "✗ Failed to connect" or `ModuleNotFoundError: No module named 'src'`
+
+**Symptoms:**
+- MCP server shows as connected in one directory but fails in others
+- Error: `Error while finding module specification for 'src.mcp_server'`
+- `claude mcp list` shows connection failure
+
+**Root Cause:**
+
+The `cwd` (current working directory) parameter in MCP configuration is not reliably respected in all Claude Code versions. When using `-m src.mcp_server` (module syntax), Python tries to find the `src` module from the current directory instead of the configured `cwd`.
+
+**Solution: Use Absolute Script Path**
+
+Instead of using `-m src.mcp_server`, use the full path to `mcp_server.py`:
+
+```bash
+# Remove old configuration
+claude mcp remove claude-memory-rag
+
+# Add with absolute script path
+PYTHON_PATH=/Users/you/.pyenv/versions/3.13.9/bin/python  # Your Python path
+SCRIPT_PATH=/Users/you/path/to/claude-memory-server/src/mcp_server.py
+
+claude mcp add --transport stdio --scope user \
+  claude-memory-rag -- \
+  $PYTHON_PATH $SCRIPT_PATH
+```
+
+**Or manually edit `~/.claude.json`:**
+
+Change this:
+```json
+{
+  "mcpServers": {
+    "claude-memory-rag": {
+      "command": "/Users/you/.pyenv/versions/3.13.9/bin/python",
+      "args": ["-m", "src.mcp_server"],
+      "cwd": "/Users/you/path/to/claude-memory-server"
+    }
+  }
+}
+```
+
+To this:
+```json
+{
+  "mcpServers": {
+    "claude-memory-rag": {
+      "command": "/Users/you/.pyenv/versions/3.13.9/bin/python",
+      "args": ["/Users/you/path/to/claude-memory-server/src/mcp_server.py"]
+    }
+  }
+}
+```
+
+**Verification:**
+
+```bash
+# Test from any directory
+cd ~/some-other-project
+claude mcp list
+# Should show: ✓ Connected
+```
+
+---
+
 ### Docker Not Installed
 
 **Error:** `Docker is required but not installed`
