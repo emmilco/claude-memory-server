@@ -3,9 +3,11 @@
 import asyncio
 import json
 import logging
+import threading
+from datetime import datetime
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any
 from urllib.parse import urlparse, parse_qs
 
 from src.core.server import MemoryRAGServer
@@ -14,11 +16,21 @@ from src.config import get_config
 logger = logging.getLogger(__name__)
 
 
+class DateTimeEncoder(json.JSONEncoder):
+    """JSON encoder that handles datetime objects."""
+
+    def default(self, obj: Any) -> Any:
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
+
+
 class DashboardHandler(SimpleHTTPRequestHandler):
     """HTTP handler for dashboard requests."""
 
-    # Class variable to store server instance
+    # Class variables to store server instance and event loop
     rag_server: Optional[MemoryRAGServer] = None
+    event_loop: Optional[asyncio.AbstractEventLoop] = None
 
     def __init__(self, *args, **kwargs):
         # Set directory to static files
@@ -41,17 +53,16 @@ class DashboardHandler(SimpleHTTPRequestHandler):
     def _handle_api_stats(self):
         """Handle /api/stats endpoint."""
         try:
-            if not self.rag_server:
+            if not self.rag_server or not self.event_loop:
                 self._send_error_response(500, "Server not initialized")
                 return
 
-            # Run async method in event loop
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                result = loop.run_until_complete(self.rag_server.get_dashboard_stats())
-            finally:
-                loop.close()
+            # Run async method in the dedicated event loop
+            future = asyncio.run_coroutine_threadsafe(
+                self.rag_server.get_dashboard_stats(),
+                self.event_loop
+            )
+            result = future.result(timeout=10)  # 10 second timeout
 
             self._send_json_response(result)
         except Exception as e:
@@ -61,7 +72,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
     def _handle_api_activity(self, query_string: str):
         """Handle /api/activity endpoint."""
         try:
-            if not self.rag_server:
+            if not self.rag_server or not self.event_loop:
                 self._send_error_response(500, "Server not initialized")
                 return
 
@@ -70,18 +81,15 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             limit = int(params.get('limit', ['20'])[0])
             project_name = params.get('project', [None])[0]
 
-            # Run async method in event loop
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                result = loop.run_until_complete(
-                    self.rag_server.get_recent_activity(
-                        limit=limit,
-                        project_name=project_name
-                    )
-                )
-            finally:
-                loop.close()
+            # Run async method in the dedicated event loop
+            future = asyncio.run_coroutine_threadsafe(
+                self.rag_server.get_recent_activity(
+                    limit=limit,
+                    project_name=project_name
+                ),
+                self.event_loop
+            )
+            result = future.result(timeout=10)  # 10 second timeout
 
             self._send_json_response(result)
         except Exception as e:
@@ -94,7 +102,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         self.send_header("Content-Type", "application/json")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
-        self.wfile.write(json.dumps(data, indent=2).encode())
+        self.wfile.write(json.dumps(data, indent=2, cls=DateTimeEncoder).encode())
 
     def _send_error_response(self, code: int, message: str):
         """Send error response."""
@@ -107,6 +115,12 @@ class DashboardHandler(SimpleHTTPRequestHandler):
     def log_message(self, format, *args):
         """Override to use logger instead of stderr."""
         logger.info(f"{self.address_string()} - {format % args}")
+
+
+def _run_event_loop(loop: asyncio.AbstractEventLoop):
+    """Run event loop in a separate thread."""
+    asyncio.set_event_loop(loop)
+    loop.run_forever()
 
 
 async def start_dashboard_server(
@@ -122,13 +136,24 @@ async def start_dashboard_server(
     """
     logger.info(f"Initializing dashboard server on {host}:{port}")
 
-    # Initialize RAG server
+    # Create a dedicated event loop for async operations
+    event_loop = asyncio.new_event_loop()
+
+    # Start event loop in a separate thread
+    loop_thread = threading.Thread(target=_run_event_loop, args=(event_loop,), daemon=True)
+    loop_thread.start()
+
+    # Initialize RAG server in the dedicated event loop
     config = get_config()
     rag_server = MemoryRAGServer(config)
-    await rag_server.initialize()
 
-    # Set RAG server on handler class
+    # Initialize server in the event loop
+    future = asyncio.run_coroutine_threadsafe(rag_server.initialize(), event_loop)
+    future.result()
+
+    # Set RAG server and event loop on handler class
     DashboardHandler.rag_server = rag_server
+    DashboardHandler.event_loop = event_loop
 
     # Create HTTP server
     server = HTTPServer((host, port), DashboardHandler)
@@ -141,7 +166,14 @@ async def start_dashboard_server(
     except KeyboardInterrupt:
         logger.info("Shutting down dashboard server")
         server.shutdown()
-        await rag_server.close()
+
+        # Close RAG server in the event loop
+        future = asyncio.run_coroutine_threadsafe(rag_server.close(), event_loop)
+        future.result(timeout=5)
+
+        # Stop event loop
+        event_loop.call_soon_threadsafe(event_loop.stop)
+        loop_thread.join(timeout=5)
 
 
 def main():

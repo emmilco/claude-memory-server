@@ -485,8 +485,13 @@ class QdrantMemoryStore(MemoryStore):
                 points, next_offset = result
 
                 for point in points:
-                    memory = self._payload_to_memory_unit(dict(point.payload))
-                    all_memories.append(memory)
+                    try:
+                        memory = self._payload_to_memory_unit(dict(point.payload))
+                        all_memories.append(memory)
+                    except Exception as e:
+                        # Skip memories that fail validation (e.g., content > 50KB)
+                        logger.warning(f"Skipping invalid memory {point.id}: {e}")
+                        continue
 
                 if next_offset is None:
                     break
@@ -2082,3 +2087,143 @@ class QdrantMemoryStore(MemoryStore):
         except Exception as e:
             logger.error(f"Error merging memories: {e}")
             raise StorageError(f"Failed to merge memories: {e}")
+
+    async def get_recent_activity(
+        self,
+        limit: int = 20,
+        project_name: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Get recent activity including searches and memory additions.
+
+        Args:
+            limit: Maximum number of items per category (default 20)
+            project_name: Optional project filter
+
+        Returns:
+            Dictionary with recent_searches and recent_additions
+        """
+        if not self.client:
+            raise StorageError("Store not initialized")
+
+        try:
+            # Get recent searches from feedback database
+            # Use the feedback database path from config
+            import sqlite3
+            from pathlib import Path
+
+            feedback_db = Path.home() / ".claude-rag" / "feedback.db"
+            recent_searches = []
+
+            if feedback_db.exists():
+                try:
+                    conn = sqlite3.connect(str(feedback_db))
+                    cursor = conn.cursor()
+
+                    if project_name:
+                        cursor.execute("""
+                            SELECT search_id, query, timestamp, rating, project_name
+                            FROM search_feedback
+                            WHERE project_name = ?
+                            ORDER BY timestamp DESC
+                            LIMIT ?
+                        """, (project_name, limit))
+                    else:
+                        cursor.execute("""
+                            SELECT search_id, query, timestamp, rating, project_name
+                            FROM search_feedback
+                            ORDER BY timestamp DESC
+                            LIMIT ?
+                        """, (limit,))
+
+                    for row in cursor.fetchall():
+                        recent_searches.append({
+                            "search_id": row[0],
+                            "query": row[1],
+                            "timestamp": row[2],
+                            "rating": row[3],
+                            "project_name": row[4],
+                        })
+
+                    conn.close()
+                except Exception as e:
+                    logger.warning(f"Could not read feedback database: {e}")
+
+            # Get recent memory additions from Qdrant
+            recent_additions = []
+            offset = None
+            collected = 0
+
+            # Build filter if project specified
+            scroll_filter = None
+            if project_name:
+                scroll_filter = Filter(
+                    must=[
+                        FieldCondition(
+                            key="project_name",
+                            match=MatchValue(value=project_name)
+                        )
+                    ]
+                )
+
+            # Scroll through points to get recent memories
+            # Note: Qdrant doesn't support sorting by payload fields in scroll,
+            # so we need to fetch more and sort in memory
+            all_memories = []
+
+            while len(all_memories) < limit * 10 and collected < 1000:  # Fetch up to 1000 to sort
+                results, next_offset = self.client.scroll(
+                    collection_name=self.collection_name,
+                    scroll_filter=scroll_filter,
+                    limit=100,
+                    offset=offset,
+                    with_payload=True,
+                    with_vectors=False,
+                )
+
+                if not results:
+                    break
+
+                for point in results:
+                    payload = point.payload
+                    created_at = payload.get("created_at")
+                    if created_at:
+                        all_memories.append({
+                            "id": str(point.id),
+                            "content": payload.get("content", ""),
+                            "category": payload.get("category", "unknown"),
+                            "created_at": created_at,
+                            "project_name": payload.get("project_name", ""),
+                        })
+
+                collected += len(results)
+                offset = next_offset
+
+                if next_offset is None:
+                    break
+
+            # Sort by created_at (most recent first) and take limit
+            all_memories.sort(key=lambda x: x["created_at"], reverse=True)
+
+            for memory in all_memories[:limit]:
+                # Truncate content for overview
+                content = memory["content"]
+                if len(content) > 100:
+                    content = content[:100] + "..."
+
+                recent_additions.append({
+                    "id": memory["id"],
+                    "content": content,
+                    "category": memory["category"],
+                    "created_at": memory["created_at"],
+                    "project_name": memory["project_name"],
+                })
+
+            return {
+                "recent_searches": recent_searches,
+                "recent_additions": recent_additions,
+            }
+
+        except Exception as e:
+            logger.error(f"Error retrieving recent activity: {e}")
+            raise StorageError(f"Failed to retrieve recent activity: {e}")

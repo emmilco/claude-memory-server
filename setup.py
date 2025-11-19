@@ -15,6 +15,7 @@ import sys
 import subprocess
 import shutil
 import platform
+from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, List, Tuple
 
@@ -307,6 +308,43 @@ class SetupWizard:
             console.print("[yellow]⚠ rust_core directory not found, skipping[/yellow]\n")
             return True
 
+        # Check if maturin is installed
+        try:
+            subprocess.run(
+                ["maturin", "--version"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+        except FileNotFoundError:
+            # maturin not found, ask user if they want to install it
+            console.print("[yellow]maturin not found (required to build Rust parser)[/yellow]\n")
+
+            if Confirm.ask("Install maturin now?", default=True):
+                try:
+                    console.print("Installing maturin...", end=" ")
+                    result = subprocess.run(
+                        [sys.executable, "-m", "pip", "install", "maturin"],
+                        capture_output=True,
+                        text=True,
+                    )
+                    if result.returncode == 0:
+                        console.print("[green]✓[/green]\n")
+                    else:
+                        console.print("[red]✗[/red]")
+                        console.print(f"[yellow]Could not install maturin, falling back to Python parser[/yellow]\n")
+                        self.config["parser"] = "python"
+                        return True
+                except Exception as e:
+                    console.print(f"[yellow]⚠ Error installing maturin: {e}[/yellow]")
+                    console.print("[yellow]Falling back to Python parser[/yellow]\n")
+                    self.config["parser"] = "python"
+                    return True
+            else:
+                console.print("[yellow]Skipping Rust parser build, will use Python parser fallback[/yellow]\n")
+                self.config["parser"] = "python"
+                return True
+
         try:
             with Progress(
                 SpinnerColumn(),
@@ -315,8 +353,9 @@ class SetupWizard:
             ) as progress:
                 task = progress.add_task("Building Rust module (this may take a few minutes)...", total=None)
 
+                # Use 'maturin build' instead of 'develop' to avoid virtualenv requirement
                 result = subprocess.run(
-                    ["maturin", "develop"],
+                    ["maturin", "build", "--release"],
                     cwd=rust_dir,
                     capture_output=True,
                     text=True,
@@ -325,7 +364,32 @@ class SetupWizard:
                 progress.update(task, completed=True)
 
             if result.returncode == 0:
-                console.print("[green]✓ Rust parser built successfully[/green]\n")
+                # Find the built wheel
+                wheels_dir = rust_dir / "target" / "wheels"
+                if wheels_dir.exists():
+                    wheels = list(wheels_dir.glob("*.whl"))
+                    if wheels:
+                        # Install the wheel
+                        console.print("[green]✓ Rust module built[/green]")
+                        console.print("Installing Rust module...", end=" ")
+
+                        install_result = subprocess.run(
+                            [sys.executable, "-m", "pip", "install", "--force-reinstall", str(wheels[0])],
+                            capture_output=True,
+                            text=True,
+                        )
+
+                        if install_result.returncode == 0:
+                            console.print("[green]✓[/green]\n")
+                            return True
+                        else:
+                            console.print("[red]✗[/red]")
+                            console.print(f"[yellow]Failed to install wheel: {install_result.stderr[:200]}[/yellow]\n")
+                            self.config["parser"] = "python"
+                            return True
+
+                console.print("[yellow]⚠ Could not find built wheel, falling back to Python parser[/yellow]\n")
+                self.config["parser"] = "python"
                 return True
             else:
                 console.print("[yellow]⚠ Rust build failed, will use Python parser fallback[/yellow]")
@@ -333,10 +397,6 @@ class SetupWizard:
                 self.config["parser"] = "python"
                 return True  # Not fatal
 
-        except FileNotFoundError:
-            console.print("[yellow]⚠ maturin not found, will use Python parser fallback[/yellow]\n")
-            self.config["parser"] = "python"
-            return True  # Not fatal
         except Exception as e:
             console.print(f"[yellow]⚠ Error building Rust parser: {e}[/yellow]")
             console.print("[yellow]Will use Python parser fallback[/yellow]\n")
@@ -351,15 +411,26 @@ class SetupWizard:
             # Create .claude-rag directory
             data_dir = Path.home() / ".claude-rag"
             data_dir.mkdir(exist_ok=True)
+
+            # Create .env file with SQLite configuration
+            self._write_env_config({"CLAUDE_RAG_STORAGE_BACKEND": "sqlite"})
+
             console.print(f"[green]✓ SQLite storage configured at {data_dir}[/green]\n")
             return True
 
         elif self.config["storage"] == "qdrant":
-            # Check if Docker is running
-            success, _ = await self.check_docker()
+            # Check if Qdrant is already running
+            qdrant_running = await self._check_qdrant_health()
 
-            if not success:
-                console.print("[yellow]⚠ Docker not running, starting Qdrant...[/yellow]")
+            if not qdrant_running:
+                console.print("[yellow]⚠ Qdrant not running, starting...[/yellow]")
+
+                # Check if Docker is available
+                docker_available, _ = await self.check_docker()
+                if not docker_available:
+                    console.print("[yellow]⚠ Docker not available, falling back to SQLite[/yellow]\n")
+                    self.config["storage"] = "sqlite"
+                    return await self.setup_storage()
 
                 try:
                     # Try to start docker-compose
@@ -371,8 +442,17 @@ class SetupWizard:
                     )
 
                     if result.returncode == 0:
-                        console.print("[green]✓ Qdrant started successfully[/green]\n")
-                        return True
+                        # Wait a moment for Qdrant to start
+                        import asyncio
+                        await asyncio.sleep(2)
+
+                        # Verify Qdrant is responsive
+                        if await self._check_qdrant_health():
+                            console.print("[green]✓ Qdrant started successfully[/green]\n")
+                        else:
+                            console.print("[yellow]⚠ Qdrant started but not responding, falling back to SQLite[/yellow]\n")
+                            self.config["storage"] = "sqlite"
+                            return await self.setup_storage()
                     else:
                         console.print("[yellow]⚠ Could not start Qdrant, falling back to SQLite[/yellow]\n")
                         self.config["storage"] = "sqlite"
@@ -385,9 +465,53 @@ class SetupWizard:
                     return await self.setup_storage()
             else:
                 console.print("[green]✓ Qdrant already running[/green]\n")
-                return True
+
+            # Create .env file with Qdrant configuration
+            self._write_env_config({"CLAUDE_RAG_STORAGE_BACKEND": "qdrant"})
+            console.print("[green]✓ Configuration written to .env[/green]\n")
+            return True
 
         return True
+
+    async def _check_qdrant_health(self) -> bool:
+        """Check if Qdrant is running and healthy."""
+        try:
+            import urllib.request
+            import json
+            # Qdrant doesn't have /health, use root endpoint instead
+            req = urllib.request.Request("http://localhost:6333/", method="GET")
+            with urllib.request.urlopen(req, timeout=2) as response:
+                if response.status == 200:
+                    data = json.loads(response.read().decode())
+                    # Verify it's actually Qdrant by checking for version
+                    return 'version' in data and 'title' in data
+            return False
+        except Exception:
+            return False
+
+    def _write_env_config(self, config: Dict[str, str]):
+        """Write configuration to .env file."""
+        env_path = self.project_root / ".env"
+
+        # Read existing .env if it exists
+        existing_config = {}
+        if env_path.exists():
+            with open(env_path, "r") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        key, value = line.split("=", 1)
+                        existing_config[key.strip()] = value.strip()
+
+        # Update with new config
+        existing_config.update(config)
+
+        # Write back to .env
+        with open(env_path, "w") as f:
+            f.write("# Claude Memory RAG Server Configuration\n")
+            f.write(f"# Generated by setup.py on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+            for key, value in existing_config.items():
+                f.write(f"{key}={value}\n")
 
     async def verify_installation(self) -> bool:
         """Verify installation with basic tests."""
@@ -396,7 +520,9 @@ class SetupWizard:
         tests = [
             ("Import core modules", self.test_imports),
             ("Check storage connection", self.test_storage),
+            ("Verify storage backend", self.test_storage_backend),
             ("Load embedding model", self.test_embedding_model),
+            ("Test code parsing", self.test_code_parsing),
         ]
 
         all_passed = True
@@ -439,30 +565,115 @@ class SetupWizard:
         embedding = await gen.generate("test")
         assert len(embedding) == 384
 
+    async def test_storage_backend(self):
+        """Test that the correct storage backend is configured."""
+        from src.config import get_config
+
+        config = get_config()
+        expected_backend = self.config["storage"]
+
+        if expected_backend == "qdrant":
+            assert config.storage_backend == "qdrant", f"Expected qdrant backend, got {config.storage_backend}"
+        else:
+            assert config.storage_backend == "sqlite", f"Expected sqlite backend, got {config.storage_backend}"
+
+    async def test_code_parsing(self):
+        """Test code parsing and SemanticUnit structure."""
+        import tempfile
+        import os
+
+        # Test if Rust parser is available, otherwise use Python
+        try:
+            from mcp_performance_core import parse_source_file, SemanticUnit
+            parser_mode = "rust"
+        except ImportError:
+            from src.memory.incremental_indexer import parse_source_file, SemanticUnit
+            parser_mode = "python"
+
+        # Create a simple test file
+        test_code = '''
+def test_function():
+    """Test function."""
+    return 42
+
+class TestClass:
+    """Test class."""
+    def method(self):
+        return "test"
+'''
+
+        # Write to temp file
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+            f.write(test_code)
+            temp_path = f.name
+
+        try:
+            # Parse the file
+            result = parse_source_file(temp_path, test_code)
+
+            # Verify units were found
+            assert len(result.units) > 0, "No semantic units found"
+
+            # Verify SemanticUnit has required fields
+            unit = result.units[0]
+            assert hasattr(unit, 'unit_type'), "SemanticUnit missing unit_type"
+            assert hasattr(unit, 'name'), "SemanticUnit missing name"
+            assert hasattr(unit, 'start_line'), "SemanticUnit missing start_line"
+            assert hasattr(unit, 'end_line'), "SemanticUnit missing end_line"
+            assert hasattr(unit, 'start_byte'), "SemanticUnit missing start_byte"
+            assert hasattr(unit, 'end_byte'), "SemanticUnit missing end_byte"
+            assert hasattr(unit, 'signature'), "SemanticUnit missing signature"
+
+        finally:
+            # Clean up
+            os.unlink(temp_path)
+
+    def _format_upgrade_options(self) -> str:
+        """Format upgrade options based on current configuration."""
+        upgrade_options = []
+
+        # Only suggest Rust parser if currently using Python
+        if self.config["parser"] == "python":
+            upgrade_options.append("  • Build Rust parser (10-20x faster): [dim]python setup.py --build-rust[/dim]")
+
+        # Only suggest Qdrant if currently using SQLite
+        if self.config["storage"] == "sqlite":
+            upgrade_options.append("  • Upgrade to Qdrant (better scalability): [dim]python setup.py --upgrade-to-qdrant[/dim]")
+
+        # Only show section if there are upgrade options
+        if upgrade_options:
+            return "[bold]Upgrade Options:[/bold]\n" + "\n".join(upgrade_options) + "\n"
+        else:
+            return ""
+
     def print_success(self):
         """Print success message with next steps."""
         console.print()
+
+        # Show .env file location
+        env_path = self.project_root / ".env"
+        env_exists = env_path.exists()
+
         console.print(
             Panel.fit(
                 "[bold green]Installation Successful! 🎉[/bold green]\n\n"
                 f"[bold]Configuration:[/bold]\n"
-                f"  • Storage: [cyan]{self.config['storage']}[/cyan]\n"
-                f"  • Parser: [cyan]{self.config['parser']}[/cyan]\n\n"
+                f"  • Storage: [cyan]{self.config['storage'].upper()}[/cyan] "
+                f"({'Qdrant on localhost:6333' if self.config['storage'] == 'qdrant' else '~/.claude-rag/memory.db'})\n"
+                f"  • Parser: [cyan]{self.config['parser'].upper()}[/cyan] "
+                f"({'optimal performance' if self.config['parser'] == 'rust' else '10-20x slower fallback'})\n"
+                f"  • Config file: [cyan].env[/cyan] {'✓ created' if env_exists else '⚠ not found'}\n\n"
                 "[bold]Next Steps:[/bold]\n"
-                "  1. Add to Claude Code:\n"
+                "  1. Verify configuration:\n"
+                "     [dim]cat .env[/dim]\n\n"
+                "  2. Check system health:\n"
+                "     [dim]python -m src.cli health[/dim]\n\n"
+                "  3. Index your first project:\n"
+                "     [dim]python -m src.cli index ./your-project[/dim]\n\n"
+                "  4. Add to Claude Code (optional):\n"
                 f"     [dim]claude mcp add --transport stdio --scope user claude-memory-rag -- \\\n"
                 f"       python {self.project_root / 'src' / 'mcp_server.py'}[/dim]\n\n"
-                "  2. Verify health:\n"
-                "     [dim]python -m src.cli health[/dim]\n\n"
-                "  3. Index a project:\n"
-                "     [dim]python -m src.cli index ./your-project[/dim]\n\n"
-                + (
-                    "[bold]Upgrade Options:[/bold]\n"
-                    "  • Build Rust parser: [dim]python setup.py --build-rust[/dim]\n"
-                    "  • Upgrade to Qdrant: [dim]python setup.py --upgrade-to-qdrant[/dim]\n"
-                    if self.config["parser"] == "python" or self.config["storage"] == "sqlite"
-                    else ""
-                ),
+                + self._format_upgrade_options(),
                 border_style="green",
             )
         )

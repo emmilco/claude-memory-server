@@ -1293,8 +1293,16 @@ class MemoryRAGServer:
                 date_to=date_to,
             )
 
-            # Get memories from store
-            memories_list = await self.store.list_all(filters=filters, project_name=project_name)
+            # Get memories from store (using list_memories with large limit to get all)
+            filters_dict = filters.to_dict() if filters else {}
+            if project_name:
+                filters_dict['project_name'] = project_name
+
+            memories_list, total_count = await self.store.list_memories(
+                filters=filters_dict,
+                limit=999999,  # Get all matching memories
+                offset=0
+            )
 
             # Convert to dict format
             memories = []
@@ -1557,17 +1565,22 @@ class MemoryRAGServer:
                             project_name=mem_data.get("project_name"),
                         )
 
-                        # Store new memory
+                        # Store new memory - build metadata dict for store
+                        store_metadata = {
+                            "id": mem_id,  # Preserve original ID from export
+                            "category": request.category.value if hasattr(request.category, 'value') else request.category,
+                            "context_level": request.context_level.value if hasattr(request.context_level, 'value') else request.context_level,
+                            "scope": request.scope.value if hasattr(request.scope, 'value') else request.scope,
+                            "importance": request.importance,
+                            "tags": request.tags,
+                            "metadata": request.metadata,
+                            "project_name": request.project_name,
+                        }
+
                         new_id = await self.store.store(
                             content=request.content,
                             embedding=embedding,
-                            category=request.category,
-                            context_level=request.context_level,
-                            scope=request.scope,
-                            importance=request.importance,
-                            tags=request.tags,
-                            metadata=request.metadata,
-                            project_name=request.project_name,
+                            metadata=store_metadata,
                         )
 
                         created_count += 1
@@ -2227,8 +2240,10 @@ class MemoryRAGServer:
                     limit=limit,
                 )
 
-            # Format results for code search
+            # Format results for code search with deduplication
             code_results = []
+            seen_units = set()  # Track (file_path, start_line, unit_name) to deduplicate
+
             for memory, score in results:
                 # Extract code-specific metadata (stored in nested metadata dict during indexing)
                 metadata = memory.metadata or {}
@@ -2243,14 +2258,24 @@ class MemoryRAGServer:
                 if language and language_val.lower() != language.lower():
                     continue
 
+                # Deduplication: Skip if we've already seen this exact code unit
+                unit_name = nested_metadata.get("unit_name") or nested_metadata.get("name", "(unnamed)")
+                start_line = nested_metadata.get("start_line", 0)
+                dedup_key = (file_path, start_line, unit_name)
+
+                if dedup_key in seen_units:
+                    logger.debug(f"Skipping duplicate: {unit_name} at {file_path}:{start_line}")
+                    continue
+                seen_units.add(dedup_key)
+
                 relevance_score = min(max(score, 0.0), 1.0)
                 confidence_label = self._get_confidence_label(relevance_score)
 
                 code_results.append({
                     "file_path": file_path or "(no path)",
-                    "start_line": nested_metadata.get("start_line", 0),
+                    "start_line": start_line,
                     "end_line": nested_metadata.get("end_line", 0),
-                    "unit_name": nested_metadata.get("unit_name") or nested_metadata.get("name", "(unnamed)"),
+                    "unit_name": unit_name,
                     "unit_type": nested_metadata.get("unit_type", "(unknown type)"),
                     "signature": nested_metadata.get("signature", ""),
                     "language": language_val or "(unknown language)",
@@ -2349,8 +2374,10 @@ class MemoryRAGServer:
                 limit=limit,
             )
 
-            # Format results for code search
+            # Format results for code search with deduplication
             code_results = []
+            seen_units = set()  # Track (file_path, start_line, unit_name) to deduplicate
+
             for memory, score in results:
                 # Extract code-specific metadata (stored in nested metadata dict during indexing)
                 metadata = memory.metadata or {}
@@ -2365,14 +2392,24 @@ class MemoryRAGServer:
                 if language and language_val.lower() != language.lower():
                     continue
 
+                # Deduplication: Skip if we've already seen this exact code unit
+                unit_name = nested_metadata.get("unit_name") or nested_metadata.get("name", "(unnamed)")
+                start_line = nested_metadata.get("start_line", 0)
+                dedup_key = (file_path, start_line, unit_name)
+
+                if dedup_key in seen_units:
+                    logger.debug(f"Skipping duplicate: {unit_name} at {file_path}:{start_line}")
+                    continue
+                seen_units.add(dedup_key)
+
                 similarity_score = min(max(score, 0.0), 1.0)
                 confidence_label = self._get_confidence_label(similarity_score)
 
                 code_results.append({
                     "file_path": file_path or "(no path)",
-                    "start_line": nested_metadata.get("start_line", 0),
+                    "start_line": start_line,
                     "end_line": nested_metadata.get("end_line", 0),
-                    "unit_name": nested_metadata.get("unit_name") or nested_metadata.get("name", "(unnamed)"),
+                    "unit_name": unit_name,
                     "unit_type": nested_metadata.get("unit_type", "(unknown type)"),
                     "signature": nested_metadata.get("signature", ""),
                     "language": language_val or "(unknown language)",
@@ -4310,7 +4347,7 @@ class MemoryRAGServer:
             return {
                 "health_score": {
                     "overall_score": health_score.overall_score,
-                    "status": health_score.status.value,
+                    "status": health_score.status.value,  # Extract string value from enum
                     "performance_score": health_score.performance_score,
                     "quality_score": health_score.quality_score,
                     "database_health_score": health_score.database_health_score,

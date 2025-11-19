@@ -193,7 +193,7 @@ def configure_logging(
         log_file: Optional file path to write logs to
 
     Example:
-        from src.logging.structured_logger import configure_logging
+        from src.log_utils.structured_logger import configure_logging
 
         # Configure JSON logging to file and console
         configure_logging(use_json=True, level=logging.DEBUG, log_file=Path("app.log"))
@@ -248,7 +248,7 @@ def get_logger(name: str) -> StructuredLogger:
         StructuredLogger: Logger instance with structured logging support
 
     Example:
-        from src.logging.structured_logger import get_logger
+        from src.log_utils.structured_logger import get_logger
 
         logger = get_logger(__name__)
 

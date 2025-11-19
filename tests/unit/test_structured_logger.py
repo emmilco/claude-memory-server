@@ -7,7 +7,7 @@ from pathlib import Path
 import tempfile
 import pytest
 
-from src.logging.structured_logger import (
+from src.log_utils.structured_logger import (
     configure_logging,
     get_logger,
     is_json_logging,

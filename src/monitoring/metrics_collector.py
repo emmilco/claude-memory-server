@@ -196,12 +196,11 @@ class MetricsCollector:
 
             # Collect project metrics
             projects = await self._get_all_projects()
-            metrics.active_projects = len(
-                [p for p in projects if p.get("state") == "ACTIVE"]
-            )
-            metrics.archived_projects = len(
-                [p for p in projects if p.get("state") == "ARCHIVED"]
-            )
+            # Note: get_all_projects() returns List[str] (project names only)
+            # Without ProjectArchivalManager access, we count all as active
+            # TODO: Integrate with ProjectArchivalManager for accurate state tracking
+            metrics.active_projects = len(projects)
+            metrics.archived_projects = 0  # Requires archival manager integration
 
             # Collect quality metrics
             metrics.noise_ratio = await self._calculate_noise_ratio()

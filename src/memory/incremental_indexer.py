@@ -47,6 +47,8 @@ except ImportError:
         signature: str
         start_line: int
         end_line: int
+        start_byte: int
+        end_byte: int
         content: str
         language: str
         file_path: str
@@ -112,6 +114,8 @@ except ImportError:
                 signature=u["signature"],
                 start_line=u["start_line"],
                 end_line=u["end_line"],
+                start_byte=u["start_byte"],
+                end_byte=u["end_byte"],
                 content=u["content"],
                 language=u["language"],
                 file_path=u["file_path"],
@@ -719,7 +723,14 @@ class IncrementalIndexer(BaseCodeIndexer):
                 "import_count": import_metadata.get("import_count", 0),
             }
 
+            # Generate deterministic ID for this code unit
+            # Format: hash(project_name + file_path + start_line + unit_name)
+            import hashlib
+            id_string = f"{self.project_name}:{str(file_path.resolve())}:{unit.start_line}:{unit.name}"
+            deterministic_id = hashlib.sha256(id_string.encode()).hexdigest()[:32]
+
             metadata = {
+                "id": deterministic_id,  # Deterministic ID prevents duplicates
                 "category": MemoryCategory.CONTEXT.value,
                 "context_level": ContextLevel.PROJECT_CONTEXT.value,
                 "scope": MemoryScope.PROJECT.value,

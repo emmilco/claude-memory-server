@@ -52,7 +52,7 @@ class ServerConfig(BaseSettings):
 
     # Adaptive retrieval
     enable_retrieval_gate: bool = True
-    retrieval_gate_threshold: float = 0.8
+    retrieval_gate_threshold: float = 0.6  # Lowered to reduce false negatives while still filtering low-utility queries
 
     # Memory pruning and ranking
     session_state_ttl_hours: int = 48

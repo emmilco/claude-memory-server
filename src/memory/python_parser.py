@@ -222,6 +222,10 @@ class PythonParser:
             start_line = node.start_point[0] + 1
             end_line = node.end_point[0] + 1
 
+            # Get byte positions
+            start_byte = node.start_byte
+            end_byte = node.end_byte
+
             # Get full content
             full_content = self._get_node_text(node, content)
 
@@ -231,6 +235,8 @@ class PythonParser:
                 "signature": signature,
                 "start_line": start_line,
                 "end_line": end_line,
+                "start_byte": start_byte,
+                "end_byte": end_byte,
                 "content": full_content,
                 "language": language,
                 "file_path": file_path or "unknown",
@@ -257,6 +263,10 @@ class PythonParser:
             start_line = node.start_point[0] + 1
             end_line = node.end_point[0] + 1
 
+            # Get byte positions
+            start_byte = node.start_byte
+            end_byte = node.end_byte
+
             # Get full content
             full_content = self._get_node_text(node, content)
 
@@ -266,6 +276,8 @@ class PythonParser:
                 "signature": signature,
                 "start_line": start_line,
                 "end_line": end_line,
+                "start_byte": start_byte,
+                "end_byte": end_byte,
                 "content": full_content,
                 "language": language,
                 "file_path": file_path or "unknown",
