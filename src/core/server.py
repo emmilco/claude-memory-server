@@ -2,8 +2,9 @@
 
 import logging
 import asyncio
+import json
 from typing import Optional, Dict, Any, List
-from datetime import datetime
+from datetime import datetime, UTC
 from pathlib import Path
 import subprocess
 
@@ -623,6 +624,300 @@ class MemoryRAGServer:
             logger.error(f"Failed to delete memory: {e}")
             raise StorageError(f"Failed to delete memory: {e}")
 
+    async def get_memory_by_id(self, memory_id: str) -> Dict[str, Any]:
+        """
+        Retrieve a specific memory by its ID.
+
+        Args:
+            memory_id: The unique ID of the memory to retrieve
+
+        Returns:
+            Dict with status and memory data:
+            - If found: {"status": "success", "memory": {...}}
+            - If not found: {"status": "not_found", "message": "..."}
+        """
+        try:
+            memory = await self.store.get_by_id(memory_id)
+
+            if memory:
+                return {
+                    "status": "success",
+                    "memory": {
+                        "id": memory.id,
+                        "memory_id": memory.id,
+                        "content": memory.content,
+                        "category": memory.category.value if hasattr(memory.category, 'value') else memory.category,
+                        "context_level": memory.context_level.value if hasattr(memory.context_level, 'value') else memory.context_level,
+                        "importance": memory.importance,
+                        "tags": memory.tags or [],
+                        "metadata": memory.metadata or {},
+                        "scope": memory.scope.value if hasattr(memory.scope, 'value') else memory.scope,
+                        "project_name": memory.project_name,
+                        "created_at": memory.created_at.isoformat() if hasattr(memory.created_at, 'isoformat') else memory.created_at,
+                        "updated_at": memory.updated_at.isoformat() if hasattr(memory.updated_at, 'isoformat') else memory.updated_at,
+                        "last_accessed": memory.last_accessed.isoformat() if memory.last_accessed and hasattr(memory.last_accessed, 'isoformat') else memory.last_accessed,
+                    }
+                }
+            else:
+                return {
+                    "status": "not_found",
+                    "message": f"Memory {memory_id} not found"
+                }
+
+        except Exception as e:
+            logger.error(f"Failed to get memory by ID: {e}")
+            raise StorageError(f"Failed to get memory by ID: {e}")
+
+    async def update_memory(
+        self,
+        memory_id: str,
+        content: Optional[str] = None,
+        category: Optional[str] = None,
+        importance: Optional[float] = None,
+        tags: Optional[List[str]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        context_level: Optional[str] = None,
+        regenerate_embedding: bool = True,
+    ) -> Dict[str, Any]:
+        """
+        Update an existing memory.
+
+        Args:
+            memory_id: ID of memory to update (required)
+            content: New content (optional)
+            category: New category (optional)
+            importance: New importance score 0.0-1.0 (optional)
+            tags: New tags list (optional)
+            metadata: New metadata dict (optional)
+            context_level: New context level (optional)
+            regenerate_embedding: Whether to regenerate embedding if content changes (default: True)
+
+        Returns:
+            Dict with status and update details:
+            {
+                "status": "updated" or "not_found",
+                "updated_fields": List[str],
+                "embedding_regenerated": bool,
+                "updated_at": ISO timestamp
+            }
+        """
+        if self.config.read_only_mode:
+            raise ReadOnlyError("Cannot update memory in read-only mode")
+
+        try:
+            # Build updates dictionary
+            updates = {}
+            updated_fields = []
+
+            if content is not None:
+                # Validate content length
+                if not (1 <= len(content) <= 50000):
+                    raise ValidationError("content must be 1-50000 characters")
+                updates["content"] = content
+                updated_fields.append("content")
+
+            if category is not None:
+                # Validate category
+                cat = MemoryCategory(category)
+                updates["category"] = cat.value
+                updated_fields.append("category")
+
+            if importance is not None:
+                # Validate importance
+                if not (0.0 <= importance <= 1.0):
+                    raise ValidationError("importance must be between 0.0 and 1.0")
+                updates["importance"] = importance
+                updated_fields.append("importance")
+
+            if tags is not None:
+                # Validate tags
+                for tag in tags:
+                    if not isinstance(tag, str) or len(tag) > 50:
+                        raise ValidationError("Tags must be strings <= 50 chars")
+                updates["tags"] = tags
+                updated_fields.append("tags")
+
+            if metadata is not None:
+                # Validate metadata is a dict
+                if not isinstance(metadata, dict):
+                    raise ValidationError("metadata must be a dictionary")
+                updates["metadata"] = metadata
+                updated_fields.append("metadata")
+
+            if context_level is not None:
+                # Validate context level
+                cl = ContextLevel(context_level)
+                updates["context_level"] = cl.value
+                updated_fields.append("context_level")
+
+            # Check that at least one field is being updated
+            if not updates:
+                raise ValidationError("At least one field must be provided for update")
+
+            # Regenerate embedding if content changed
+            new_embedding = None
+            embedding_regenerated = False
+
+            if "content" in updates and regenerate_embedding:
+                embedding_regenerated = True
+                new_embedding = await self.embedding_generator.generate(updates["content"])
+
+            # Perform update
+            success = await self.store.update(
+                memory_id=memory_id,
+                updates=updates,
+                new_embedding=new_embedding
+            )
+
+            if success:
+                # Update stats
+                self.stats["memories_updated"] = self.stats.get("memories_updated", 0) + 1
+
+                return {
+                    "status": "updated",
+                    "updated_fields": updated_fields,
+                    "embedding_regenerated": embedding_regenerated,
+                    "updated_at": datetime.now(UTC).isoformat()
+                }
+            else:
+                return {
+                    "status": "not_found",
+                    "message": f"Memory {memory_id} not found"
+                }
+
+        except ValidationError:
+            raise
+        except ReadOnlyError:
+            raise
+        except Exception as e:
+            logger.error(f"Failed to update memory {memory_id}: {e}")
+            raise StorageError(f"Failed to update memory: {e}")
+
+    async def list_memories(
+        self,
+        category: Optional[str] = None,
+        context_level: Optional[str] = None,
+        scope: Optional[str] = None,
+        project_name: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        min_importance: float = 0.0,
+        max_importance: float = 1.0,
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
+        sort_by: str = "created_at",
+        sort_order: str = "desc",
+        limit: int = 20,
+        offset: int = 0
+    ) -> Dict[str, Any]:
+        """
+        List memories with filtering, sorting, and pagination.
+
+        Args:
+            category: Filter by category (optional)
+            context_level: Filter by context level (optional)
+            scope: Filter by scope (global/project) (optional)
+            project_name: Filter by project (optional)
+            tags: Filter by tags - matches ANY tag (optional)
+            min_importance: Minimum importance (default 0.0)
+            max_importance: Maximum importance (default 1.0)
+            date_from: Filter by created_at >= date (ISO format) (optional)
+            date_to: Filter by created_at <= date (ISO format) (optional)
+            sort_by: Sort field (created_at, updated_at, importance)
+            sort_order: Sort order (asc, desc)
+            limit: Max results to return (1-100, default 20)
+            offset: Number of results to skip (default 0)
+
+        Returns:
+            {
+                "memories": List[memory dict],
+                "total_count": int,
+                "returned_count": int,
+                "offset": int,
+                "limit": int,
+                "has_more": bool
+            }
+
+        Raises:
+            ValidationError: If parameters are invalid
+            StorageError: If listing fails
+        """
+        try:
+            # Validate parameters
+            if not (1 <= limit <= 100):
+                raise ValidationError("limit must be 1-100")
+            if offset < 0:
+                raise ValidationError("offset must be >= 0")
+            if sort_by not in ["created_at", "updated_at", "importance"]:
+                raise ValidationError("Invalid sort_by field")
+            if sort_order not in ["asc", "desc"]:
+                raise ValidationError("sort_order must be 'asc' or 'desc'")
+
+            # Build filters dict
+            filters = {}
+
+            if category:
+                filters["category"] = MemoryCategory(category)
+            if context_level:
+                filters["context_level"] = ContextLevel(context_level)
+            if scope:
+                filters["scope"] = MemoryScope(scope)
+            if project_name:
+                filters["project_name"] = project_name
+            if tags:
+                filters["tags"] = tags
+
+            filters["min_importance"] = min_importance
+            filters["max_importance"] = max_importance
+
+            if date_from:
+                filters["date_from"] = datetime.fromisoformat(date_from)
+            if date_to:
+                filters["date_to"] = datetime.fromisoformat(date_to)
+
+            # Query store
+            memories, total_count = await self.store.list_memories(
+                filters=filters,
+                sort_by=sort_by,
+                sort_order=sort_order,
+                limit=limit,
+                offset=offset
+            )
+
+            # Convert to dicts
+            memory_dicts = [
+                {
+                    "memory_id": m.id,
+                    "content": m.content,
+                    "category": m.category.value,
+                    "context_level": m.context_level.value,
+                    "importance": m.importance,
+                    "tags": m.tags,
+                    "metadata": m.metadata,
+                    "scope": m.scope.value,
+                    "project_name": m.project_name,
+                    "created_at": m.created_at.isoformat(),
+                    "updated_at": m.updated_at.isoformat(),
+                }
+                for m in memories
+            ]
+
+            logger.info(f"Listed {len(memory_dicts)} memories (total {total_count})")
+
+            return {
+                "memories": memory_dicts,
+                "total_count": total_count,
+                "returned_count": len(memory_dicts),
+                "offset": offset,
+                "limit": limit,
+                "has_more": (offset + len(memory_dicts)) < total_count
+            }
+
+        except ValidationError:
+            raise
+        except Exception as e:
+            logger.error(f"Failed to list memories: {e}")
+            raise StorageError(f"Failed to list memories: {e}")
+
     async def migrate_memory_scope(
         self,
         memory_id: str,
@@ -780,6 +1075,362 @@ class MemoryRAGServer:
         except Exception as e:
             logger.error(f"Failed to merge memories: {e}")
             raise StorageError(f"Failed to merge memories: {e}")
+
+    async def export_memories(
+        self,
+        output_path: Optional[str] = None,
+        format: str = "json",
+        category: Optional[str] = None,
+        context_level: Optional[str] = None,
+        scope: Optional[str] = None,
+        project_name: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        min_importance: float = 0.0,
+        max_importance: float = 1.0,
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Export memories to JSON or Markdown format.
+
+        Args:
+            output_path: Optional file path to write export. If None, returns content as string.
+            format: Export format - "json" or "markdown"
+            category: Filter by category
+            context_level: Filter by context level
+            scope: Filter by scope
+            project_name: Filter by project
+            tags: Filter by tags (must have all)
+            min_importance: Minimum importance (0.0-1.0)
+            max_importance: Maximum importance (0.0-1.0)
+            date_from: Filter memories created after this date (ISO format)
+            date_to: Filter memories created before this date (ISO format)
+
+        Returns:
+            Dict with status, file_path/content, and count
+
+        Raises:
+            ValidationError: If format is invalid
+            StorageError: If export fails
+        """
+        # Validate format
+        if format not in ["json", "markdown"]:
+            raise ValidationError(f"Invalid export format: {format}. Must be 'json' or 'markdown'")
+
+        try:
+            # Get all matching memories by querying the store directly
+            filters = SearchFilters(
+                category=MemoryCategory(category) if category else None,
+                context_level=ContextLevel(context_level) if context_level else None,
+                scope=MemoryScope(scope) if scope else None,
+                tags=tags or [],
+                min_importance=min_importance,
+                max_importance=max_importance,
+                date_from=date_from,
+                date_to=date_to,
+            )
+
+            # Get memories from store
+            memories_list = await self.store.list_all(filters=filters, project_name=project_name)
+
+            # Convert to dict format
+            memories = []
+            for mem in memories_list:
+                memories.append({
+                    "id": mem.id,
+                    "memory_id": mem.id,
+                    "content": mem.content,
+                    "category": mem.category.value if hasattr(mem.category, 'value') else mem.category,
+                    "context_level": mem.context_level.value if hasattr(mem.context_level, 'value') else mem.context_level,
+                    "importance": mem.importance,
+                    "tags": mem.tags or [],
+                    "metadata": mem.metadata or {},
+                    "scope": mem.scope.value if hasattr(mem.scope, 'value') else mem.scope,
+                    "project_name": mem.project_name,
+                    "created_at": mem.created_at.isoformat() if hasattr(mem.created_at, 'isoformat') else mem.created_at,
+                    "updated_at": mem.updated_at.isoformat() if hasattr(mem.updated_at, 'isoformat') else mem.updated_at,
+                    "last_accessed": mem.last_accessed.isoformat() if mem.last_accessed and hasattr(mem.last_accessed, 'isoformat') else mem.last_accessed,
+                })
+
+            total_count = len(memories)
+
+            # Generate export content based on format
+            if format == "json":
+                export_data = {
+                    "version": "1.0",
+                    "exported_at": datetime.now().isoformat(),
+                    "total_count": total_count,
+                    "filters": {
+                        "category": category,
+                        "context_level": context_level,
+                        "scope": scope,
+                        "project_name": project_name,
+                        "tags": tags,
+                        "min_importance": min_importance,
+                        "max_importance": max_importance,
+                        "date_from": date_from,
+                        "date_to": date_to,
+                    },
+                    "memories": memories
+                }
+                content = json.dumps(export_data, indent=2)
+
+            else:  # markdown
+                lines = [
+                    "# Memory Export",
+                    f"Exported: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                    f"Total Memories: {total_count}",
+                    ""
+                ]
+
+                for mem in memories:
+                    lines.append(f"## Memory: {mem['memory_id']}")
+                    lines.append(f"**Category:** {mem['category']}")
+                    lines.append(f"**Importance:** {mem['importance']:.2f}")
+                    lines.append(f"**Context Level:** {mem['context_level']}")
+                    lines.append(f"**Scope:** {mem['scope']}")
+                    if mem.get('project_name'):
+                        lines.append(f"**Project:** {mem['project_name']}")
+                    if mem.get('tags'):
+                        lines.append(f"**Tags:** {', '.join(mem['tags'])}")
+                    lines.append(f"**Created:** {mem['created_at']}")
+                    lines.append(f"**Updated:** {mem.get('updated_at', 'N/A')}")
+                    lines.append("")
+                    lines.append(mem['content'])
+                    lines.append("")
+                    lines.append("---")
+                    lines.append("")
+
+                content = "\n".join(lines)
+
+            # Write to file or return content
+            if output_path:
+                output_file = Path(output_path).expanduser()
+                output_file.parent.mkdir(parents=True, exist_ok=True)
+                output_file.write_text(content, encoding='utf-8')
+
+                logger.info(f"Exported {total_count} memories to {output_path} ({format} format)")
+                return {
+                    "status": "success",
+                    "file_path": str(output_file),
+                    "format": format,
+                    "count": total_count
+                }
+            else:
+                return {
+                    "status": "success",
+                    "content": content,
+                    "format": format,
+                    "count": total_count
+                }
+
+        except ValidationError:
+            raise
+        except Exception as e:
+            logger.error(f"Failed to export memories: {e}")
+            raise StorageError(f"Failed to export memories: {e}")
+
+    async def import_memories(
+        self,
+        file_path: Optional[str] = None,
+        content: Optional[str] = None,
+        conflict_mode: str = "skip",
+        format: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Import memories from JSON file or content.
+
+        Args:
+            file_path: Path to import file (JSON format)
+            content: Direct JSON content string (alternative to file_path)
+            conflict_mode: How to handle existing memories - "skip", "overwrite", or "merge"
+            format: File format - "json" (auto-detected from extension if not provided)
+
+        Returns:
+            Dict with import summary (created, updated, skipped, errors)
+
+        Raises:
+            ValidationError: If file doesn't exist, format invalid, or conflict_mode invalid
+            StorageError: If import fails
+        """
+        # Validate conflict mode
+        if conflict_mode not in ["skip", "overwrite", "merge"]:
+            raise ValidationError(
+                f"Invalid conflict mode: {conflict_mode}. Must be 'skip', 'overwrite', or 'merge'"
+            )
+
+        # Validate input
+        if not file_path and not content:
+            raise ValidationError("Must provide either file_path or content")
+
+        try:
+            # Load content from file or use provided content
+            if file_path:
+                import_file = Path(file_path).expanduser()
+                if not import_file.exists():
+                    raise ValidationError(f"Import file not found: {file_path}")
+
+                # Auto-detect format from extension
+                if not format:
+                    ext = import_file.suffix.lower()
+                    if ext == ".json":
+                        format = "json"
+                    else:
+                        raise ValidationError(
+                            f"Cannot auto-detect format from extension: {ext}. "
+                            "Supported: .json"
+                        )
+
+                import_content = import_file.read_text(encoding='utf-8')
+            else:
+                import_content = content
+                format = format or "json"
+
+            # Validate format
+            if format != "json":
+                raise ValidationError(f"Only JSON format is supported for import, got: {format}")
+
+            # Parse JSON
+            try:
+                data = json.loads(import_content)
+            except json.JSONDecodeError as e:
+                raise ValidationError(f"Invalid JSON format: {e}")
+
+            # Validate schema
+            if "memories" not in data:
+                raise ValidationError("Import file must contain 'memories' key")
+
+            if not isinstance(data["memories"], list):
+                raise ValidationError("'memories' must be a list")
+
+            memories = data["memories"]
+            created_count = 0
+            updated_count = 0
+            skipped_count = 0
+            errors = []
+
+            # Process each memory
+            for idx, mem_data in enumerate(memories):
+                try:
+                    # Extract memory ID
+                    mem_id = mem_data.get("memory_id") or mem_data.get("id")
+                    if not mem_id:
+                        errors.append(f"Memory at index {idx}: Missing memory_id/id")
+                        continue
+
+                    # Check if memory exists
+                    existing = await self.store.get_by_id(mem_id)
+
+                    if existing:
+                        # Handle existing memory based on conflict mode
+                        if conflict_mode == "skip":
+                            skipped_count += 1
+                            continue
+
+                        elif conflict_mode == "overwrite":
+                            # Generate embedding for new content
+                            embedding = await self.embedding_generator.generate(mem_data["content"])
+
+                            # Build updates
+                            updates = {
+                                "content": mem_data["content"],
+                                "category": mem_data.get("category", "general"),
+                                "context_level": mem_data.get("context_level", "SESSION"),
+                                "importance": mem_data.get("importance", 0.5),
+                                "tags": mem_data.get("tags", []),
+                            }
+
+                            if "metadata" in mem_data:
+                                updates["metadata"] = mem_data["metadata"]
+
+                            # Update using store's update method
+                            success = await self.store.update(mem_id, updates, embedding)
+
+                            if success:
+                                updated_count += 1
+                            else:
+                                errors.append(f"Memory {mem_id}: Update failed")
+
+                        elif conflict_mode == "merge":
+                            # Merge: update only non-null fields
+                            updates = {}
+
+                            if "content" in mem_data and mem_data["content"]:
+                                updates["content"] = mem_data["content"]
+                                embedding = await self.embedding_generator.generate(mem_data["content"])
+                            else:
+                                embedding = None
+
+                            # Merge metadata
+                            for field in ["category", "context_level", "scope", "importance", "tags", "project_name"]:
+                                if field in mem_data and mem_data[field] is not None:
+                                    updates[field] = mem_data[field]
+
+                            if "metadata" in mem_data and mem_data["metadata"]:
+                                updates["metadata"] = mem_data["metadata"]
+
+                            if updates:
+                                success = await self.store.update(mem_id, updates, embedding)
+                                if success:
+                                    updated_count += 1
+                                else:
+                                    errors.append(f"Memory {mem_id}: Merge update failed")
+                            else:
+                                skipped_count += 1
+
+                    else:
+                        # Memory doesn't exist - create new
+                        embedding = await self.embedding_generator.generate(mem_data["content"])
+
+                        # Create memory request
+                        request = StoreMemoryRequest(
+                            content=mem_data["content"],
+                            category=mem_data.get("category", "general"),
+                            context_level=mem_data.get("context_level", "SESSION"),
+                            importance=mem_data.get("importance", 0.5),
+                            tags=mem_data.get("tags", []),
+                            metadata=mem_data.get("metadata", {}),
+                            scope=mem_data.get("scope", "global"),
+                            project_name=mem_data.get("project_name"),
+                        )
+
+                        # Store new memory
+                        new_id = await self.store.store(
+                            content=request.content,
+                            embedding=embedding,
+                            category=request.category,
+                            context_level=request.context_level,
+                            scope=request.scope,
+                            importance=request.importance,
+                            tags=request.tags,
+                            metadata=request.metadata,
+                            project_name=request.project_name,
+                        )
+
+                        created_count += 1
+
+                except Exception as e:
+                    errors.append(f"Memory at index {idx} (ID: {mem_id if 'mem_id' in locals() else 'unknown'}): {str(e)}")
+
+            logger.info(
+                f"Import completed: {created_count} created, {updated_count} updated, "
+                f"{skipped_count} skipped, {len(errors)} errors"
+            )
+
+            return {
+                "status": "success" if len(errors) == 0 else "partial",
+                "created": created_count,
+                "updated": updated_count,
+                "skipped": skipped_count,
+                "errors": errors,
+                "total_processed": len(memories)
+            }
+
+        except ValidationError:
+            raise
+        except Exception as e:
+            logger.error(f"Failed to import memories: {e}")
+            raise StorageError(f"Failed to import memories: {e}")
 
     async def submit_search_feedback(
         self,

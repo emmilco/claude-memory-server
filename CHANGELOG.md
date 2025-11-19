@@ -79,6 +79,15 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ## [Unreleased]
 
+### Fixed - 2025-11-18
+
+- **BUG-014: Restore Missing Memory Operation Methods**
+  - Restored `get_memory_by_id()`, `update_memory()`, `list_memories()`, `export_memories()`, `import_memories()` methods in `src/core/server.py`
+  - Fixed merge conflicts in `src/cli/__init__.py` (validate-install, repository, workspace commands)
+  - Added missing imports (json, UTC) to `src/core/server.py`
+  - Fixed SearchFilters validation to handle empty tags list
+  - Test pass rate: 97.2% → 99.9% (60 failures → 1 failure)
+
 ### Added - 2025-11-18
 
 - **UX-026: Web Dashboard MVP (Complete)**
