@@ -90,13 +90,14 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-18
 
-- **FEAT-046: Indexed Content Visibility**
+- **FEAT-046: Indexed Content Visibility** ✅ COMPLETE
   - Added `get_indexed_files()` MCP tool to list indexed files with metadata (file_path, language, last_indexed, unit_count)
   - Added `list_indexed_units()` MCP tool to list code units (functions, classes, methods) with filtering
-  - Implemented in `src/store/base.py`, `src/store/qdrant_store.py`, `src/store/readonly_wrapper.py`, `src/core/server.py`
+  - Implemented in `src/store/base.py`, `src/store/sqlite_store.py`, `src/store/qdrant_store.py`, `src/store/readonly_wrapper.py`, `src/core/server.py`
   - Supports filtering by project, language, file_pattern, unit_type
   - Pagination with auto-capped limit (1-500) and offset (0+)
-  - Created `tests/unit/test_indexed_content_visibility.py` with 17 tests
+  - Fixed category filter ('context' not 'code') and field name mapping ('unit_name' → 'name')
+  - Created `tests/unit/test_indexed_content_visibility.py` with 17 tests (all passing)
 
 - **FEAT-017: Multi-Repository Support (Foundation)**
   - Created `src/memory/git_detector.py` for git repository detection and metadata extraction

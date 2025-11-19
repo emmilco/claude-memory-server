@@ -555,7 +555,7 @@ class QdrantMemoryStore(MemoryStore):
             must_conditions = [
                 FieldCondition(
                     key="category",
-                    match=MatchValue(value="code")
+                    match=MatchValue(value="context")
                 )
             ]
 
@@ -665,7 +665,7 @@ class QdrantMemoryStore(MemoryStore):
             must_conditions = [
                 FieldCondition(
                     key="category",
-                    match=MatchValue(value="code")
+                    match=MatchValue(value="context")
                 )
             ]
 
@@ -725,7 +725,7 @@ class QdrantMemoryStore(MemoryStore):
 
                     unit = {
                         "id": payload.get("id", str(point.id)),
-                        "name": payload.get("name", ""),
+                        "name": payload.get("unit_name", ""),
                         "unit_type": payload.get("unit_type", ""),
                         "file_path": payload.get("file_path", ""),
                         "language": payload.get("language", ""),

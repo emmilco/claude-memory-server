@@ -1025,7 +1025,7 @@ class SQLiteMemoryStore(MemoryStore):
             cursor = self.conn.cursor()
 
             # Build WHERE clause
-            where_clause = "category = 'code'"
+            where_clause = "category = 'context'"
             params = []
             if project_name:
                 where_clause += " AND project_name = ?"
@@ -1127,7 +1127,7 @@ class SQLiteMemoryStore(MemoryStore):
             cursor = self.conn.cursor()
 
             # Build WHERE clause
-            where_clauses = ["category = 'code'"]
+            where_clauses = ["category = 'context'"]
             params = []
 
             if project_name:
