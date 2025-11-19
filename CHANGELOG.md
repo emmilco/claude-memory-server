@@ -94,6 +94,43 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-18
 
+- **FEAT-046: Indexed Content Visibility** ✅ COMPLETE
+  - Added `get_indexed_files()` MCP tool to list indexed files with metadata (file_path, language, last_indexed, unit_count)
+  - Added `list_indexed_units()` MCP tool to list code units (functions, classes, methods) with filtering
+  - Implemented in `src/store/base.py`, `src/store/sqlite_store.py`, `src/store/qdrant_store.py`, `src/store/readonly_wrapper.py`, `src/core/server.py`
+  - Supports filtering by project, language, file_pattern, unit_type
+  - Pagination with auto-capped limit (1-500) and offset (0+)
+  - Fixed category filter ('context' not 'code') and field name mapping ('unit_name' → 'name')
+  - Created `tests/unit/test_indexed_content_visibility.py` with 17 tests (all passing)
+
+- **FEAT-022: Performance Monitoring Dashboard**
+  - Created `src/monitoring/capacity_planner.py` for predictive capacity planning with linear regression
+  - Added 15 Pydantic models for monitoring MCP tools in `src/core/models.py`
+  - Integrated MetricsCollector, AlertEngine, HealthReporter, and CapacityPlanner into server initialization
+  - Added 6 MCP tools: get_performance_metrics, get_active_alerts, get_health_score, get_capacity_forecast, resolve_alert, get_weekly_report
+  - Registered all 6 tools in `src/mcp_server.py` with Rich-formatted handlers
+  - Created `tests/unit/test_capacity_planner.py` with 11 comprehensive tests (all passing)
+  - Updated `docs/API.md` with complete documentation for all monitoring tools
+  - Total MCP tools: 17 → 23
+
+- **FEAT-015: Code Review Features**
+  - Created `src/review/patterns.py` with 14 code smell patterns across 4 categories
+  - Categories: security (4 patterns), performance (3), maintainability (4), best_practice (3)
+  - Created `src/review/pattern_matcher.py` for semantic pattern matching using embeddings
+  - Created `src/review/comment_generator.py` for generating review comments with markdown formatting
+  - Added `review_code()` MCP tool for automated code review
+  - Pattern matching uses 75% similarity threshold with confidence scoring (low/medium/high)
+  - Detects: SQL injection, hardcoded secrets, N+1 queries, magic numbers, missing error handling, etc.
+  - Created `tests/unit/test_pattern_matcher.py` with 10 comprehensive tests (all passing)
+
+- **FEAT-014: Semantic Refactoring**
+  - Created `src/refactoring/code_analyzer.py` for code quality analysis and refactoring suggestions
+  - Added `find_usages()` MCP tool for semantic code usage detection across codebase
+  - Added `suggest_refactorings()` MCP tool for automated code smell detection
+  - Detection rules: long parameter lists (>5), large functions (>50 lines), high complexity (>10), deep nesting (>4 levels)
+  - Calculates code metrics: lines of code, cyclomatic complexity, parameter count, nesting depth
+  - Created `tests/unit/test_code_analyzer.py` with 16 comprehensive tests (all passing)
+
 - **FEAT-010: Kotlin Language Support**
   - Added tree-sitter-kotlin = "0.2" to rust_core/Cargo.toml
   - Updated rust_core/src/parsing.rs with Kotlin support
@@ -112,16 +149,6 @@ A pre-commit hook enforces CHANGELOG updates:
   - Created tests/test_data/sample_swift.swift
   - Total supported file formats: 13 → 14
 
-- **FEAT-015: Code Review Features**
-  - Created `src/review/patterns.py` with 14 code smell patterns across 4 categories
-  - Categories: security (4 patterns), performance (3), maintainability (4), best_practice (3)
-  - Created `src/review/pattern_matcher.py` for semantic pattern matching using embeddings
-  - Created `src/review/comment_generator.py` for generating review comments with markdown formatting
-  - Added `review_code()` MCP tool for automated code review
-  - Pattern matching uses 75% similarity threshold with confidence scoring (low/medium/high)
-  - Detects: SQL injection, hardcoded secrets, N+1 queries, magic numbers, missing error handling, etc.
-  - Created `tests/unit/test_pattern_matcher.py` with 10 comprehensive tests (all passing)
-
 - **FEAT-008: PHP Language Support**
   - Added PHP parsing with function, class, interface, and trait extraction
   - Added tree-sitter-php to Rust parser (`rust_core/src/parsing.rs`)
@@ -129,24 +156,6 @@ A pre-commit hook enforces CHANGELOG updates:
   - Added `.php` extension mapping in `src/memory/incremental_indexer.py`
   - Added `tree-sitter-php>=0.20.0` to requirements.txt
   - Created `tests/unit/test_php_parsing.py` with 24 tests (all passing)
-
-- **FEAT-014: Semantic Refactoring**
-  - Created `src/refactoring/code_analyzer.py` for code quality analysis and refactoring suggestions
-  - Added `find_usages()` MCP tool for semantic code usage detection across codebase
-  - Added `suggest_refactorings()` MCP tool for automated code smell detection
-  - Detection rules: long parameter lists (>5), large functions (>50 lines), high complexity (>10), deep nesting (>4 levels)
-  - Calculates code metrics: lines of code, cyclomatic complexity, parameter count, nesting depth
-  - Created `tests/unit/test_code_analyzer.py` with 16 comprehensive tests (all passing)
-
-- **FEAT-022: Performance Monitoring Dashboard**
-  - Created `src/monitoring/capacity_planner.py` for predictive capacity planning with linear regression
-  - Added 15 Pydantic models for monitoring MCP tools in `src/core/models.py`
-  - Integrated MetricsCollector, AlertEngine, HealthReporter, and CapacityPlanner into server initialization
-  - Added 6 MCP tools: get_performance_metrics, get_active_alerts, get_health_score, get_capacity_forecast, resolve_alert, get_weekly_report
-  - Registered all 6 tools in `src/mcp_server.py` with Rich-formatted handlers
-  - Created `tests/unit/test_capacity_planner.py` with 11 comprehensive tests (all passing)
-  - Updated `docs/API.md` with complete documentation for all monitoring tools
-  - Total MCP tools: 17 → 23
 
 - **FEAT-017: Multi-Repository Support (Foundation)**
   - Created `src/memory/git_detector.py` for git repository detection and metadata extraction

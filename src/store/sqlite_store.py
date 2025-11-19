@@ -1025,7 +1025,7 @@ class SQLiteMemoryStore(MemoryStore):
             cursor = self.conn.cursor()
 
             # Build WHERE clause
-            where_clause = "category = 'code'"
+            where_clause = "category = 'context'"
             params = []
             if project_name:
                 where_clause += " AND project_name = ?"
@@ -1127,7 +1127,7 @@ class SQLiteMemoryStore(MemoryStore):
             cursor = self.conn.cursor()
 
             # Build WHERE clause
-            where_clauses = ["category = 'code'"]
+            where_clauses = ["category = 'context'"]
             params = []
 
             if project_name:
@@ -1160,7 +1160,7 @@ class SQLiteMemoryStore(MemoryStore):
             cursor.execute(f"""
                 SELECT
                     id,
-                    json_extract(metadata, '$.name') as name,
+                    json_extract(metadata, '$.unit_name') as name,
                     json_extract(metadata, '$.unit_type') as unit_type,
                     json_extract(metadata, '$.file_path') as file_path,
                     json_extract(metadata, '$.language') as language,

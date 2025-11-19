@@ -195,6 +195,61 @@ class ReadOnlyStoreWrapper(MemoryStore):
             offset=offset
         )
 
+    async def get_indexed_files(
+        self,
+        project_name: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> Dict[str, Any]:
+        """
+        Get indexed files (read operation allowed).
+
+        Args:
+            project_name: Optional project filter
+            limit: Max results
+            offset: Results to skip
+
+        Returns:
+            Dictionary with files list and pagination info
+        """
+        return await self.wrapped_store.get_indexed_files(
+            project_name=project_name,
+            limit=limit,
+            offset=offset
+        )
+
+    async def list_indexed_units(
+        self,
+        project_name: Optional[str] = None,
+        language: Optional[str] = None,
+        file_pattern: Optional[str] = None,
+        unit_type: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> Dict[str, Any]:
+        """
+        List indexed code units (read operation allowed).
+
+        Args:
+            project_name: Optional project filter
+            language: Optional language filter
+            file_pattern: Optional file pattern
+            unit_type: Optional unit type filter
+            limit: Max results
+            offset: Results to skip
+
+        Returns:
+            Dictionary with units list and pagination info
+        """
+        return await self.wrapped_store.list_indexed_units(
+            project_name=project_name,
+            language=language,
+            file_pattern=file_pattern,
+            unit_type=unit_type,
+            limit=limit,
+            offset=offset
+        )
+
     async def close(self) -> None:
         """Close the wrapped store."""
         await self.wrapped_store.close()
