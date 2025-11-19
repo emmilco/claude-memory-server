@@ -6,6 +6,7 @@ import logging
 from typing import List, Tuple, Optional, Dict, Any
 from datetime import datetime, UTC
 from pathlib import Path
+from uuid import uuid4
 
 from src.store.base import MemoryStore
 from src.core.models import MemoryUnit, SearchFilters, MemoryCategory, ContextLevel, MemoryScope, LifecycleState
@@ -2327,3 +2328,92 @@ class SQLiteMemoryStore(MemoryStore):
         except Exception as e:
             logger.error(f"Error retrieving quality metrics: {e}")
             raise StorageError(f"Failed to retrieve quality metrics: {e}")
+
+    async def get_recent_activity(
+        self,
+        limit: int = 20,
+        project_name: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Get recent activity including searches and memory additions.
+
+        Args:
+            limit: Maximum number of items per category (default 20)
+            project_name: Optional project filter
+
+        Returns:
+            Dictionary with recent_searches and recent_additions
+        """
+        if not self.conn:
+            raise StorageError("Store not initialized")
+
+        try:
+            cursor = self.conn.cursor()
+
+            # Get recent searches from feedback
+            if project_name:
+                cursor.execute("""
+                    SELECT search_id, query, timestamp, rating, project_name
+                    FROM search_feedback
+                    WHERE project_name = ?
+                    ORDER BY timestamp DESC
+                    LIMIT ?
+                """, (project_name, limit))
+            else:
+                cursor.execute("""
+                    SELECT search_id, query, timestamp, rating, project_name
+                    FROM search_feedback
+                    ORDER BY timestamp DESC
+                    LIMIT ?
+                """, (limit,))
+
+            recent_searches = []
+            for row in cursor.fetchall():
+                recent_searches.append({
+                    "search_id": row[0],
+                    "query": row[1],
+                    "timestamp": row[2],
+                    "rating": row[3],
+                    "project_name": row[4],
+                })
+
+            # Get recent memory additions
+            if project_name:
+                cursor.execute("""
+                    SELECT id, content, category, created_at, project_name
+                    FROM memories
+                    WHERE project_name = ?
+                    ORDER BY created_at DESC
+                    LIMIT ?
+                """, (project_name, limit))
+            else:
+                cursor.execute("""
+                    SELECT id, content, category, created_at, project_name
+                    FROM memories
+                    ORDER BY created_at DESC
+                    LIMIT ?
+                """, (limit,))
+
+            recent_additions = []
+            for row in cursor.fetchall():
+                # Truncate content for overview
+                content = row[1]
+                if len(content) > 100:
+                    content = content[:100] + "..."
+
+                recent_additions.append({
+                    "id": row[0],
+                    "content": content,
+                    "category": row[2],
+                    "created_at": row[3],
+                    "project_name": row[4],
+                })
+
+            return {
+                "recent_searches": recent_searches,
+                "recent_additions": recent_additions,
+            }
+
+        except Exception as e:
+            logger.error(f"Error retrieving recent activity: {e}")
+            raise StorageError(f"Failed to retrieve recent activity: {e}")

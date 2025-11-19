@@ -860,6 +860,115 @@ class MemoryRAGServer:
             logger.error(f"Failed to retrieve quality metrics: {e}")
             raise StorageError(f"Failed to retrieve quality metrics: {e}")
 
+    async def get_dashboard_stats(self) -> Dict[str, Any]:
+        """
+        Get aggregated statistics for the dashboard.
+
+        Returns:
+            Dict with dashboard statistics including:
+            - total_memories: Total memory count across all projects
+            - projects: List of project stats
+            - categories: Aggregated category counts
+            - lifecycle_states: Aggregated lifecycle state counts
+        """
+        try:
+            # Get total memory count
+            total_memories = await self.store.count()
+
+            # Get all projects
+            projects = await self.store.get_all_projects()
+
+            # Get stats for each project
+            project_stats = []
+            all_categories: Dict[str, int] = {}
+            all_lifecycle_states: Dict[str, int] = {}
+
+            for project in projects:
+                try:
+                    stats = await self.store.get_project_stats(project)
+                    project_stats.append(stats)
+
+                    # Aggregate categories
+                    for category, count in stats.get("categories", {}).items():
+                        all_categories[category] = all_categories.get(category, 0) + count
+
+                    # Aggregate lifecycle states
+                    for state, count in stats.get("lifecycle_states", {}).items():
+                        all_lifecycle_states[state] = all_lifecycle_states.get(state, 0) + count
+
+                except Exception as e:
+                    logger.warning(f"Failed to get stats for project {project}: {e}")
+                    continue
+
+            # Get memories without project (global memories)
+            try:
+                # Count global memories (those without project_name)
+                if hasattr(self.store, 'conn'):  # SQLite backend
+                    cursor = self.store.conn.execute(
+                        "SELECT COUNT(*) FROM memories WHERE project_name IS NULL"
+                    )
+                    global_count = cursor.fetchone()[0]
+                else:  # Qdrant backend - calculate from total minus project totals
+                    project_total = sum(p.get("total_memories", 0) for p in project_stats)
+                    global_count = total_memories - project_total
+            except Exception as e:
+                logger.debug(f"Could not count global memories: {e}")
+                global_count = 0
+
+            logger.info(
+                f"Dashboard stats: {total_memories} total memories, "
+                f"{len(projects)} projects, {global_count} global memories"
+            )
+
+            return {
+                "status": "success",
+                "total_memories": total_memories,
+                "num_projects": len(projects),
+                "global_memories": global_count,
+                "projects": project_stats,
+                "categories": all_categories,
+                "lifecycle_states": all_lifecycle_states,
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to retrieve dashboard stats: {e}")
+            raise StorageError(f"Failed to retrieve dashboard stats: {e}")
+
+    async def get_recent_activity(
+        self,
+        limit: int = 20,
+        project_name: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Get recent activity including searches and memory additions.
+
+        Args:
+            limit: Maximum number of items per category (default 20)
+            project_name: Optional project filter
+
+        Returns:
+            Dict with recent activity data
+        """
+        try:
+            activity = await self.store.get_recent_activity(
+                limit=limit,
+                project_name=project_name,
+            )
+
+            logger.info(
+                f"Retrieved recent activity: {len(activity['recent_searches'])} searches, "
+                f"{len(activity['recent_additions'])} additions"
+            )
+
+            return {
+                "status": "success",
+                **activity,
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to retrieve recent activity: {e}")
+            raise StorageError(f"Failed to retrieve recent activity: {e}")
+
     async def retrieve_preferences(
         self,
         query: str,
