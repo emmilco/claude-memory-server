@@ -46,11 +46,15 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
 
 #### Error Handling & Graceful Degradation
 
-- [ ] **UX-012**: Graceful degradation (~2 days)
-  - [ ] Auto-fallback: Qdrant unavailable → SQLite
-  - [ ] Auto-fallback: Rust unavailable → Python parser
-  - [ ] Warn user about performance implications
-  - [ ] Option to upgrade later
+- [x] **UX-012**: Graceful degradation ✅ **COMPLETE**
+  - [x] Auto-fallback: Qdrant unavailable → SQLite
+  - [x] Auto-fallback: Rust unavailable → Python parser
+  - [x] Warn user about performance implications
+  - [x] Option to upgrade later
+  - **Implementation:** Config flags `allow_qdrant_fallback`, `allow_rust_fallback`, `warn_on_degradation`
+  - **Files:** `src/store/factory.py`, `src/memory/incremental_indexer.py`, `src/core/degradation_warnings.py`
+  - **Tests:** 15 tests in `test_graceful_degradation.py`, all passing
+  - **Impact:** Better first-run experience, no hard failures for missing dependencies
 
 #### Health & Monitoring
 
