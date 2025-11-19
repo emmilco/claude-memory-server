@@ -623,6 +623,164 @@ class MemoryRAGServer:
             logger.error(f"Failed to delete memory: {e}")
             raise StorageError(f"Failed to delete memory: {e}")
 
+    async def migrate_memory_scope(
+        self,
+        memory_id: str,
+        new_project_name: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Migrate a memory to a different scope (global ↔ project).
+
+        Args:
+            memory_id: ID of the memory to migrate
+            new_project_name: Target project name (None for global scope)
+
+        Returns:
+            Dict with status and scope information
+        """
+        if self.config.read_only_mode:
+            raise ReadOnlyError("Cannot migrate memory in read-only mode")
+
+        try:
+            success = await self.store.migrate_memory_scope(memory_id, new_project_name)
+
+            if success:
+                scope = new_project_name if new_project_name else "global"
+                logger.info(f"Migrated memory {memory_id} to scope: {scope}")
+                return {
+                    "status": "success",
+                    "memory_id": memory_id,
+                    "scope": scope,
+                    "project_name": new_project_name,
+                }
+            else:
+                return {"status": "not_found", "memory_id": memory_id}
+
+        except Exception as e:
+            logger.error(f"Failed to migrate memory scope: {e}")
+            raise StorageError(f"Failed to migrate memory scope: {e}")
+
+    async def bulk_reclassify(
+        self,
+        new_context_level: str,
+        project_name: Optional[str] = None,
+        current_context_level: Optional[str] = None,
+        category: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Bulk reclassify memories by changing their context level.
+
+        Args:
+            new_context_level: New context level to set
+            project_name: Filter by project name (optional)
+            current_context_level: Filter by current context level (optional)
+            category: Filter by category (optional)
+
+        Returns:
+            Dict with count of updated memories
+        """
+        if self.config.read_only_mode:
+            raise ReadOnlyError("Cannot reclassify memories in read-only mode")
+
+        try:
+            count = await self.store.bulk_update_context_level(
+                new_context_level=new_context_level,
+                project_name=project_name,
+                current_context_level=current_context_level,
+                category=category,
+            )
+
+            logger.info(
+                f"Bulk reclassified {count} memories to context level: {new_context_level}"
+            )
+            return {
+                "status": "success",
+                "count": count,
+                "new_context_level": new_context_level,
+                "filters": {
+                    "project_name": project_name,
+                    "current_context_level": current_context_level,
+                    "category": category,
+                },
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to bulk reclassify memories: {e}")
+            raise StorageError(f"Failed to bulk reclassify memories: {e}")
+
+    async def find_duplicate_memories(
+        self,
+        project_name: Optional[str] = None,
+        similarity_threshold: float = 0.95,
+    ) -> Dict[str, Any]:
+        """
+        Find potential duplicate memories based on content similarity.
+
+        Args:
+            project_name: Filter by project name (optional)
+            similarity_threshold: Similarity threshold (0.0-1.0, default: 0.95)
+
+        Returns:
+            Dict with duplicate groups
+        """
+        try:
+            duplicate_groups = await self.store.find_duplicate_memories(
+                project_name=project_name,
+                similarity_threshold=similarity_threshold,
+            )
+
+            logger.info(f"Found {len(duplicate_groups)} potential duplicate groups")
+            return {
+                "status": "success",
+                "duplicate_groups": duplicate_groups,
+                "total_groups": len(duplicate_groups),
+                "similarity_threshold": similarity_threshold,
+                "project_name": project_name,
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to find duplicate memories: {e}")
+            raise StorageError(f"Failed to find duplicate memories: {e}")
+
+    async def merge_memories(
+        self,
+        memory_ids: List[str],
+        keep_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Merge multiple memories into one.
+
+        Args:
+            memory_ids: List of memory IDs to merge
+            keep_id: ID of memory to keep (uses first if not specified)
+
+        Returns:
+            Dict with merged memory ID
+        """
+        if self.config.read_only_mode:
+            raise ReadOnlyError("Cannot merge memories in read-only mode")
+
+        if len(memory_ids) < 2:
+            raise ValidationError("Need at least 2 memories to merge")
+
+        try:
+            merged_id = await self.store.merge_memories(
+                memory_ids=memory_ids,
+                keep_id=keep_id,
+            )
+
+            logger.info(f"Merged {len(memory_ids)} memories into {merged_id}")
+            return {
+                "status": "success",
+                "merged_id": merged_id,
+                "source_ids": memory_ids,
+                "count": len(memory_ids),
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to merge memories: {e}")
+            raise StorageError(f"Failed to merge memories: {e}")
+
     async def retrieve_preferences(
         self,
         query: str,
