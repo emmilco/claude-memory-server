@@ -155,9 +155,6 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - Requires careful refactoring for circular imports
   - Separate validation concerns
 
-- [ ] **REF-004**: Update datetime.utcnow() to datetime.now(UTC)
-  - Low priority, cosmetic fix for deprecation warnings
-
 - [ ] **REF-005**: Update to Pydantic v2 ConfigDict style
   - Low priority, modernize configuration
 
