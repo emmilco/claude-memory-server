@@ -81,12 +81,13 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-18
 
-- **UX-026 Phase 1: Dashboard API Endpoints**
-  - Added `get_dashboard_stats()` to server.py - Aggregates memory statistics across all projects
-  - Added `get_recent_activity()` to server.py and sqlite_store.py - Recent searches and memory additions
+- **UX-026: Web Dashboard MVP (Complete)**
+  - **Phase 1**: Dashboard API endpoints - `get_dashboard_stats()` and `get_recent_activity()` in server.py
+  - **Phase 2**: Web server - `src/dashboard/web_server.py` with HTTP server and API proxying
+  - **Phase 3**: Static dashboard UI - HTML/CSS/JS with responsive design, charts, auto-refresh
   - Created `tests/unit/test_dashboard_api.py` with 14 comprehensive tests
-  - Dashboard stats include: total memories, project breakdown, categories, lifecycle states
-  - Recent activity includes: search feedback with ratings, truncated recent memory content
+  - Run with: `python -m src.dashboard.web_server --port 8080`
+  - Features: Memory overview, project breakdown, category/lifecycle charts, recent activity feed
 
 - **FEAT-045: Project Reindexing Control**
   - Added `reindex_project()` method to MemoryRAGServer with clear_existing and bypass_cache flags
