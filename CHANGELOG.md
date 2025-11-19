@@ -90,6 +90,13 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-18
 
+- **FEAT-017: Multi-Repository Support (Foundation)**
+  - Created `src/memory/git_detector.py` for git repository detection and metadata extraction
+  - Functions: `is_git_repository()`, `get_git_root()`, `get_git_metadata()`, `get_repository_name()`
+  - Extract git metadata: remote URL, current branch, commit hash, dirty status
+  - Created `tests/unit/test_git_detector.py` with 19 comprehensive tests (all passing)
+  - Foundation for repository-aware features and cross-repo search
+
 - **UX-026: Web Dashboard MVP (Complete)**
   - **Phase 1**: Dashboard API endpoints - `get_dashboard_stats()` and `get_recent_activity()` in server.py
   - **Phase 2**: Web server - `src/dashboard/web_server.py` with HTTP server and API proxying
