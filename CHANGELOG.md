@@ -79,6 +79,14 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ## [Unreleased]
 
+### Added - 2025-11-18
+
+- **FEAT-045: Project Reindexing Control**
+  - Added `reindex_project()` method to MemoryRAGServer with clear_existing and bypass_cache flags
+  - Created `tests/unit/test_project_reindexing.py` with 10 comprehensive tests
+  - Supports force full re-index, clearing existing index, and cache bypass
+  - Returns detailed statistics including units_deleted, cache_bypassed, and index_cleared
+
 ### Fixed - 2025-11-18
 
 - **BUG-013: Query Synonym Test Failure**
