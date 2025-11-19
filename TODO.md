@@ -8,35 +8,104 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
 
 **Prioritization Rules:**
 1. Complete partially finished initiatives before starting new ones
-2. Prioritize core functionality improvements over UX and dev tools improvements
-3. Prioritize items that have greater impact over items that have less impact
+2. Prioritize items that have greater user impact over items that have less impact
 
 ## Current Sprint
 
-### 🔥 Tier 1: Critical Developer Experience (Top Priority)
+### 🔴 Tier 0: Critical Production Blockers (MUST FIX BEFORE v4.1 RELEASE)
 
-**These items directly impact development velocity and test reliability**
+**These items block production readiness and must be resolved immediately**
 
-- [ ] **PERF-006**: Test Suite Performance Optimization (~2-3 days) 🔥🔥🔥🔥🔥
-  - **Planning doc:** `planning_docs/PERF-006_test_performance_optimization.md`
-  - **CRITICAL: 28-31% test suite speedup (340s → 235s), improves dev velocity**
-  - **Current state:** 1927 passing tests, 340s runtime, top 20 tests = 50% of runtime
-  - **Phase 1: Quick Wins (60-80s savings)**
-    - [ ] Mock embeddings in test_server_extended.py (8 tests, ~50s savings)
-    - [ ] Use small test project in test_cross_project.py (1 test, ~65s savings)
-    - [ ] Reduce corpus size in hybrid_search tests (3 tests, ~6-8s savings)
-  - **Phase 2: Fixture Optimization (10-15s savings)**
-    - [ ] Session-scoped database fixtures in conftest.py
-    - [ ] Lazy initialization of heavy resources
-    - [ ] In-memory stores for unit tests
-  - **Phase 3: Advanced Optimizations (5-10s savings)**
-    - [ ] Test embedding cache (session-scoped)
-    - [ ] Parallel test execution where safe
-    - [ ] Test data factories instead of repeated setup
-  - **Impact:** Faster CI/CD, quicker local development, better developer experience
-  - **Strategic Priority:** P0 - Foundation for sustainable development velocity
+- [ ] **BUG-011**: Health Check Config Error (~2-4 hours) 🔥🔥🔥🔥🔥
+  - **BLOCKING:** Health check command fails with `'ServerConfig' object has no attribute 'cache_dir_expanded'`
+  - **Location:** `src/cli/health_command.py:38`
+  - [ ] Fix ServerConfig to include cache_dir_expanded attribute
+  - [ ] Add test coverage for health check command
+  - [ ] Verify health check works with both SQLite and Qdrant backends
+  - **Impact:** Core diagnostic tool is broken, blocks user troubleshooting
+  - **Priority:** P0 - Production blocker
 
-### 🔥 Tier 2: High-Impact Core Functionality Improvements
+- [ ] **BUG-012**: Fix FEAT-040 Integration Test Failures (~1-2 days) 🔥🔥🔥🔥🔥
+  - **BLOCKING:** 15/15 integration tests failing for memory update operations
+  - **Status:** FEAT-040 implementation exists but integration tests all fail
+  - **Failed tests:** `tests/integration/test_memory_update_integration.py` (15 failures)
+  - [ ] Debug why update_memory integration tests fail
+  - [ ] Fix MCP tool registration or implementation issues
+  - [ ] Verify embedding regeneration works correctly
+  - [ ] Fix timestamp preservation logic
+  - [ ] Fix read-only mode protection
+  - **Impact:** Memory update operations not production-ready
+  - **Priority:** P0 - Core CRUD operation broken
+
+- [ ] **BUG-013**: Fix Query Synonym Test Failures (~2-4 hours) 🔥🔥🔥
+  - **BLOCKING:** 2 query synonym tests failing
+  - **Failed tests:**
+    - `tests/unit/test_query_synonyms.py::TestSpecificUseCases::test_api_search`
+    - `tests/unit/test_query_synonyms.py::TestSpecificUseCases::test_error_handling_search`
+  - [ ] Debug query expansion failures
+  - [ ] Fix environment-dependent query expansion behavior
+  - **Impact:** Hybrid search quality may be degraded
+  - **Priority:** P0 - Test suite must be 100% passing
+
+- [ ] **FEAT-040**: Memory Update/Edit Operations - VERIFICATION NEEDED (~1 day) 🔥🔥🔥🔥
+  - **STATUS:** Implementation exists but ALL 15 integration tests failing (see BUG-012)
+  - **BLOCKED BY:** BUG-012
+  - [ ] Fix all integration test failures (see BUG-012)
+  - [ ] Run end-to-end manual verification
+  - [ ] Test via MCP protocol (not just unit tests)
+  - [ ] Document known limitations if any
+  - **Impact:** Essential CRUD operation - currently can only create/delete, not update
+  - **Use case:** "I changed my mind about preferring tabs - update to spaces"
+  - **Priority:** P0 - Fundamental CRUD gap
+
+- [ ] **FEAT-041**: Memory Listing and Browsing - VERIFICATION NEEDED (~1 day) 🔥🔥🔥
+  - **STATUS:** Recently implemented (2025-11-18), needs integration testing
+  - [ ] Verify list_memories() works via MCP protocol
+  - [ ] Test all filters (category, scope, tags, importance, dates)
+  - [ ] Test pagination with large datasets (1000+ memories)
+  - [ ] Test sorting options (created_at, updated_at, importance)
+  - [ ] Document usage examples in API.md
+  - **Impact:** Memory discoverability without requiring semantic search
+  - **Priority:** P0 - Core CRUD operation needs verification
+
+- [ ] **TEST-004**: Performance Testing at Scale (~3-5 days) 🔥🔥🔥
+  - **CRITICAL:** No benchmarks for realistic database sizes
+  - [ ] Generate test database with 10K memories
+  - [ ] Generate test database with 50K memories
+  - [ ] Benchmark search latency at scale (target: <50ms p95)
+  - [ ] Benchmark memory retrieval at scale
+  - [ ] Test health dashboard with large datasets
+  - [ ] Identify and document performance degradation points
+  - [ ] Create performance regression test suite
+  - **Impact:** Unknown performance at real-world scale, could be unusable for heavy users
+  - **Priority:** P0 - Required for production readiness
+
+- [ ] **TEST-005**: First-Run Experience Testing (~2-3 days) 🔥🔥
+  - **CRITICAL:** Setup wizard needs validation with real users
+  - [ ] Test minimal preset end-to-end (clean machine)
+  - [ ] Test standard preset end-to-end
+  - [ ] Test full preset end-to-end
+  - [ ] Verify sample project indexing works
+  - [ ] Test common failure scenarios (missing deps, wrong Python version)
+  - [ ] Measure actual installation time vs. documented estimates
+  - [ ] Document all prerequisites clearly
+  - **Impact:** Installation friction = user abandonment
+  - **Priority:** P0 - First impression is critical
+
+- [ ] **DOC-009**: Error Recovery Workflows (~2-3 days) 🔥🔥
+  - **CRITICAL:** No documentation for common failure recovery
+  - [ ] Document: "What if Qdrant corrupts?"
+  - [ ] Document: "What if indexing breaks mid-way?"
+  - [ ] Document: "What if database gets polluted?"
+  - [ ] Document: "How to reset and start fresh?"
+  - [ ] Document: "How to recover from backup?"
+  - [ ] Create troubleshooting decision tree
+  - **Impact:** Users stuck with broken systems have no recovery path
+  - **Priority:** P0 - Production support requirement
+
+---
+
+### 🔥 Tier 1: High-Impact Core Functionality Improvements
 
 **These are the highest-impact features that directly enhance search, retrieval, and core capabilities**
 
@@ -51,19 +120,38 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Strategic Priority:** P0 - Foundation for sustainable long-term use
   - **Status:** Phase 1 complete (lifecycle states, transitions, weighting), Phase 2 pending
 
+- [ ] **FEAT-038**: Data Export, Backup & Portability (~1-2 weeks) 🔥🔥🔥🔥
+  - **Planning doc:** `planning_docs/STRATEGIC-001_long_term_product_evolution.md`
+  - **CRITICAL:** Required for user trust and data ownership
+  - **Status:** Partial implementation via FEAT-044 (export/import MCP tools complete)
+  - [ ] Backup automation: daily/weekly schedules, retention policies (NOT YET IMPLEMENTED)
+  - [ ] Export to Markdown knowledge base: human-readable memory export
+  - [ ] Cloud sync (optional): Dropbox/Google Drive integration, encrypted
+  - [ ] CLI commands for backup scheduling and automation
+  - [ ] Cross-machine workflow documentation and testing
+  - **Completed:**
+    - ✅ Export memories to JSON/Markdown (FEAT-044)
+    - ✅ Import memories from JSON with conflict resolution (FEAT-044)
+    - ✅ Project archival export/import (FEAT-036 Phase 2.4)
+  - **Impact:** Prevents data loss and lock-in, enables migration, disaster recovery
+  - **Priority:** P1 - Critical for production trust
+
 - [ ] **FEAT-028**: Proactive Context Suggestions (~3-4 days) 🔥🔥🔥
+  - **Status:** Partial implementation via FEAT-047 (suggest_memories tool complete)
   - [ ] **Confirm overall feature design with user before proceeding**
-  - [ ] Analyze conversation context to suggest relevant code/memories
-  - [ ] Pattern matching: "I need to add X" → suggest similar implementations
+  - [ ] MCP tool auto-invocation based on conversation (NOT YET IMPLEMENTED)
   - [ ] Automatic context injection (high confidence only)
   - [ ] User sees: "I found similar registration logic - use that pattern?"
-  - [ ] MCP tool auto-invocation based on conversation
   - [ ] Configurable threshold (default: 0.9 confidence)
+  - **Completed:**
+    - ✅ Intent detection (FEAT-047)
+    - ✅ Pattern matching (FEAT-047)
+    - ✅ suggest_memories() MCP tool (FEAT-047)
   - **Impact:** Reduces cognitive load, surfaces hidden gems
 
-### 🟡 Tier 3: Core Functionality Extensions
+### 🟡 Tier 2: Core Functionality Extensions
 
-**These extend core capabilities with new features**
+**These extend core capabilities with new features (nice-to-have)**
 
 #### Critical API Gaps (Documented but Missing Implementation)
 
@@ -82,29 +170,6 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
 
 #### Core Memory Management Gaps
 
-- [ ] **FEAT-040**: Memory Update/Edit Operations (~3-4 days) 🔥🔥🔥🔥
-  - [ ] Implement `update_memory` MCP tool
-  - [ ] Support partial updates (content, importance, tags, category)
-  - [ ] Preserve memory ID, creation date, and provenance
-  - [ ] Update embeddings when content changes
-  - [ ] Add version history tracking (optional)
-  - [ ] Validation: ensure updates maintain data integrity
-  - [ ] Tests: update workflows, concurrent updates, validation
-  - **Impact:** Essential CRUD operation - currently can only create/delete, not update
-  - **Use case:** "I changed my mind about preferring tabs - update to spaces"
-  - **Priority:** CRITICAL - fundamental gap in memory lifecycle
-
-- [ ] **FEAT-041**: Memory Listing and Browsing (~2-3 days) 🔥🔥🔥
-  - [ ] Implement `list_memories` MCP tool (pagination support)
-  - [ ] Implement `get_memory_by_id` MCP tool
-  - [ ] Support filtering: by category, context_level, tags, date range, project
-  - [ ] Support sorting: by importance, date, relevance
-  - [ ] Pagination with cursor-based or offset/limit
-  - [ ] Tests: filtering, pagination, edge cases
-  - **Impact:** Memory discoverability without requiring semantic search
-  - **Use case:** "Show me all my Python preferences" or "Get memory by ID for reference"
-  - **Priority:** HIGH - improves memory management UX significantly
-
 - [ ] **FEAT-042**: Advanced Memory Search Filters (~2-3 days) 🔥🔥
   - [ ] Extend `retrieve_memories` with advanced filters
   - [ ] Date range filtering (created_at, updated_at, last_accessed)
@@ -115,31 +180,6 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - [ ] Tests: filter combinations, edge cases, performance
   - **Impact:** Power-user memory organization and retrieval
   - **Use case:** "Show memories created this week tagged with 'authentication' OR 'security'"
-
-- [x] ~~**FEAT-043**: Bulk Memory Operations (~2-3 days)~~ 🔥🔥 ✅ **COMPLETE** (2025-11-18)
-  - [x] Implement `bulk_delete_memories` MCP tool
-  - [x] Support filtering criteria (same as list_memories)
-  - [x] Dry-run mode (preview what will be deleted)
-  - [x] Batch processing with progress tracking
-  - [ ] Rollback support (deferred - soft delete implementation)
-  - [x] Safety limits (max 1000 per operation)
-  - [x] Tests: bulk operations, dry-run, safety limits (21 tests, 100% passing)
-  - **Completed:** BulkDeleteManager, dry-run previews, batch processing, safety warnings, comprehensive tests
-  - **Impact:** Efficient cleanup operations instead of one-by-one deletion
-  - **Use case:** "Delete all SESSION_STATE memories older than 30 days"
-
-- [ ] **FEAT-044**: Memory Export/Import Tools (~3-4 days) 🔥🔥
-  - [ ] Implement `export_memories` MCP tool
-  - [ ] Implement `import_memories` MCP tool
-  - [ ] Export formats: JSON (structured), Markdown (human-readable), portable archive
-  - [ ] Support filtering for selective export
-  - [ ] Import with conflict resolution (skip, overwrite, merge)
-  - [ ] Preserve metadata: IDs, timestamps, provenance
-  - [ ] Validation and error handling
-  - [ ] Tests: export/import workflows, format validation, conflict resolution
-  - **Impact:** Data portability, backup, migration, sharing memory sets
-  - **Related to:** FEAT-038 (broader backup system) but focused on MCP tools
-  - **Priority:** HIGH - data ownership and portability
 
 #### Code Intelligence Enhancements
 
@@ -163,17 +203,6 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Use case:** "What files are indexed in this project?" or "Show all Python functions indexed"
   - **Enhances:** `get_status` (which only shows counts)
 
-- [x] ~~**FEAT-047**: Proactive Memory Suggestions (~4-5 days)~~ ✅ **COMPLETE** (2025-11-18)
-  - [x] Implement `suggest_memories` MCP tool
-  - [x] Analyze conversation context for relevant memories
-  - [x] Pattern matching: detect user intent ("I need to add X" → suggest similar code)
-  - [x] Confidence scoring (only suggest above threshold, default 0.85)
-  - [x] Integration with conversation tracker
-  - [x] Tests: context analysis (24 tests), pattern matching, confidence scoring (17 tests)
-  - **Completed:** Intent detection, proactive suggester, MCP tool integration, comprehensive tests (41 passing)
-  - **Impact:** Proactive intelligence - surfaces relevant memories without explicit query
-  - **Related to:** FEAT-028 (broader proactive context suggestions)
-
 - [ ] **FEAT-048**: Dependency Graph Visualization (~2-3 days) 🔥
   - [ ] Implement `get_dependency_graph` MCP tool
   - [ ] Export formats: DOT (Graphviz), JSON (D3.js), Mermaid
@@ -185,34 +214,11 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Use case:** "Export dependency graph for visualization in Graphviz"
   - **Enhances:** Existing dependency tools (get_file_dependencies, etc.)
 
-- [x] **FEAT-036**: Project Archival & Reactivation System - Phase 2 (~1 week) ✅ (2025-11-18)
-  - [x] **Phase 2.1: Index compression for archived projects** ✅ (2025-11-18)
-  - [x] **Phase 2.2: Bulk operations (auto-archive multiple projects)** ✅ (2025-11-18)
-  - [x] **Phase 2.3: Automatic archival scheduler** ✅ (2025-11-18)
-  - [x] **Phase 2.4: Export to file / import from archive** ✅ (2025-11-18)
-  - [x] **Phase 2.5: Documentation & polish** ✅ (2025-11-18)
-  - **Completed (Phase 2.1):** ArchiveCompressor with tar.gz compression, 60-80% storage reduction, manifests, 14 tests (100% passing)
-  - **Completed (Phase 2.2):** BulkArchivalManager for multi-project archival, auto-archive inactive projects, 20 tests (100% passing)
-  - **Completed (Phase 2.3):** ArchivalScheduler with APScheduler, configurable schedules (daily/weekly/monthly), 23 tests (100% passing)
-  - **Completed (Phase 2.4):** ArchiveExporter and ArchiveImporter for portable archives, conflict resolution, roundtrip validation, 18 tests (100% passing)
-  - **Completed (Phase 2.5):** CLI commands (export, import, list-exportable), API.md documentation, README examples, performance benchmarks
-  - **Impact:** Enables graceful project lifecycle, 60-80% storage reduction, portable backups
-  - **Status:** Phase 1 complete, Phase 2 complete (all 5 sub-phases), 75 tests total (100% passing)
+### 🟢 Tier 3: UX Improvements & Performance Optimizations
 
-### 🟢 Tier 4: High-Value UX Quick Wins
+**User experience and performance improvements**
 
-**Low effort, high visibility improvements (minimal work for user-facing value)**
-
-- [ ] **FEAT-038**: Data Export, Backup & Portability (~1-2 weeks) 🔥🔥
-  - **Planning doc:** `planning_docs/STRATEGIC-001_long_term_product_evolution.md`
-  - [ ] Export formats: JSON, Markdown, portable archive (.tar.gz)
-  - [ ] Backup automation: daily/weekly schedules, retention policies
-  - [ ] Import/restore: full restore, selective import, merge with conflict resolution
-  - [ ] Export to Markdown knowledge base: human-readable memory export
-  - [ ] Cloud sync (optional): Dropbox/Google Drive integration, encrypted
-  - [ ] CLI commands: export, import, restore, backup config
-  - [ ] Cross-machine workflow support
-  - **Impact:** Prevents data loss and lock-in, enables migration, disaster recovery
+#### UX Quick Wins
 
 - [ ] **UX-033**: Memory Tagging & Organization System (~1 week) 🔥🔥
   - **Planning doc:** `planning_docs/STRATEGIC-001_long_term_product_evolution.md`
@@ -224,18 +230,7 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - [ ] Manual tag curation and editing
   - **Impact:** Better discovery through smart organization
 
-### ⚡ Tier 5: Performance Optimizations
-
-**Core performance improvements**
-
-- [ ] **PERF-002**: GPU acceleration (~1-2 weeks)
-  - [ ] Use CUDA for embedding model
-  - [ ] Target: 50-100x speedup
-  - **Impact:** Massive speedup (requires GPU hardware)
-
-### 🔧 Tier 6: UX Improvements (Lower Priority per User Preferences)
-
-**Complete error UX group**
+#### Error Handling & Graceful Degradation
 
 - [ ] **UX-012**: Graceful degradation (~2 days)
   - [ ] Auto-fallback: Qdrant unavailable → SQLite
@@ -249,7 +244,7 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - [ ] Common error patterns with solutions
   - [ ] Link to troubleshooting guide
 
-**Other UX enhancements**
+#### Health & Monitoring
 
 - [ ] **UX-032**: Health Check Improvements (~2 days) 🔥🔥
   - [ ] **Confirm overall feature design with user before proceeding**
@@ -280,7 +275,16 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - [ ] Notification when complete
   - [ ] Resume interrupted indexing
 
-### 🌐 Tier 7: Language Support Extensions
+#### Performance Optimizations
+
+- [ ] **PERF-002**: GPU acceleration (~1-2 weeks)
+  - [ ] Use CUDA for embedding model
+  - [ ] Target: 50-100x speedup
+  - **Impact:** Massive speedup (requires GPU hardware)
+
+---
+
+### 🌐 Tier 4: Language Support Extensions
 
 - [ ] **FEAT-007**: Add support for Ruby (~3 days)
   - [ ] tree-sitter-ruby integration
@@ -298,7 +302,7 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - [ ] tree-sitter-kotlin integration
   - [ ] Function, class, object extraction
 
-### 🚀 Tier 8: Advanced/Future Features
+### 🚀 Tier 5: Advanced/Future Features
 
 - [ ] **FEAT-016**: Auto-indexing
   - [ ] Automatically index on project open
@@ -345,7 +349,7 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - [ ] Feature adoption rates
   - [ ] Helps identify UX issues in the wild
 
-### 🔨 Tier 9: Refactoring & Tech Debt
+### 🔨 Tier 6: Refactoring & Tech Debt
 
 - [ ] **REF-007**: Consolidate two server implementations
   - Merge old mcp_server.py with new src/core/
@@ -376,7 +380,7 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
 - [ ] **REF-006**: Update Qdrant search() to query_points()
   - Low priority, will be required in future Qdrant versions
 
-### 📚 Tier 10: Documentation & Monitoring
+### 📚 Tier 7: Documentation & Monitoring
 
 - [ ] **PERF-006**: Performance Regression Detection (~3-5 days)
   - [ ] **Confirm overall feature design with user before proceeding**
@@ -428,24 +432,73 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
 
 ---
 
+## Completed Recently (2025-11-18)
+
+- [x] **FEAT-036**: Project Archival Phase 2 (All 5 sub-phases) ✅ **COMPLETE**
+  - Phase 2.1: Archive compression (60-80% storage reduction)
+  - Phase 2.2: Bulk operations (auto-archive multiple projects)
+  - Phase 2.3: Automatic scheduler (daily/weekly/monthly)
+  - Phase 2.4: Export/import for portable archives
+  - Phase 2.5: Documentation & polish
+
+- [x] **FEAT-043**: Bulk Memory Operations ✅ **COMPLETE**
+  - bulk_delete_memories() MCP tool with dry-run preview
+  - Batch processing (100 memories/batch)
+  - Safety limits (max 1000 per operation)
+  - 21 tests (100% passing)
+
+- [x] **FEAT-044**: Memory Export/Import Tools ✅ **COMPLETE**
+  - export_memories() MCP tool (JSON/Markdown formats)
+  - import_memories() MCP tool with conflict resolution
+  - 19 tests (100% passing)
+
+- [x] **FEAT-047**: Proactive Memory Suggestions ✅ **COMPLETE**
+  - suggest_memories() MCP tool
+  - Intent detection (implementation, debugging, learning, exploration)
+  - Confidence scoring
+  - 41 tests (100% passing)
+
+- [x] **FEAT-041**: Memory Listing and Browsing ✅ **COMPLETE** (needs verification - see Tier 0)
+  - list_memories() MCP tool
+  - Filtering by category, scope, tags, importance, dates
+  - Sorting and pagination
+  - 16 tests (100% passing)
+
+---
+
 ## Notes
 
 **Priority Legend:**
-- 🔴 Tier 1 - Complete partially-finished initiatives + critical bugs first
-- 🔥 Tier 2 - High-impact core functionality improvements
-- 🟡 Tier 3 - Core functionality extensions
-- 🟢 Tier 4+ - UX improvements, language support, future features (lower priority per user preferences)
+- 🔴 **Tier 0** - Critical production blockers (MUST FIX before v4.1 release)
+- 🔥 **Tier 1** - High-impact core functionality improvements (prevents 70% abandonment)
+- 🟡 **Tier 2** - Core functionality extensions (nice-to-have)
+- 🟢 **Tier 3** - UX improvements and performance optimizations
+- 🌐 **Tier 4** - Language support extensions
+- 🚀 **Tier 5** - Advanced/future features
+- 🔨 **Tier 6** - Refactoring & tech debt
+- 📚 **Tier 7** - Documentation & monitoring
+
+**Sprint Recommendation for v4.1:**
+1. **Week 1-2:** Fix all Tier 0 blockers (bugs, test failures, verification)
+2. **Week 3-4:** Complete FEAT-032 Phase 2 (health system) + FEAT-038 (backup automation)
+3. **Week 5-6:** Performance testing (TEST-004) + first-run testing (TEST-005)
+4. **Week 7-8:** Documentation (DOC-009) + polish + beta testing
 
 **Time Estimates:**
 - Items marked with time estimates have been scoped
 - Unmarked items need investigation/scoping
 
 **Dependencies:**
-- Some items depend on external library updates
-- GPU acceleration requires CUDA-capable hardware
-- Multi-repo support may require architectural changes
+- BUG-012 blocks FEAT-040 verification
+- TEST-004 required before declaring production-ready
+- DOC-009 required for production support
 
 **Planning Documents:**
 - Check `planning_docs/` folder for detailed implementation plans
 - File format: `{ID}_{description}.md`
 - Create planning doc before starting complex items
+
+**Test Status:**
+- **Current:** 2117 passing, 17 failing, 20 skipped (99.2% pass rate)
+- **Target:** 100% pass rate (all Tier 0 items must pass)
+- **Failing:** BUG-012 (15 tests), BUG-013 (2 tests)

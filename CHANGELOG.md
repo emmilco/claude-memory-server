@@ -158,6 +158,17 @@ A pre-commit hook enforces CHANGELOG updates:
   - Documented partial update support and embedding regeneration for update_memory
   - All 16 list_memories tests passing, functionality verified
 
+### Testing - 2025-11-18
+
+- **TEST-005: First-Run Experience Testing Framework**
+  - Created comprehensive `docs/FIRST_RUN_TESTING.md` testing guide with detailed procedures for all 3 installation presets (minimal, standard, full)
+  - Created `scripts/validate_installation.py` automated validation script for post-installation verification
+  - Testing framework covers: Python version, dependencies, configuration, parser availability, storage backend, core functionality, CLI commands
+  - Documented common failure scenarios with recovery procedures
+  - Included performance benchmarks and success criteria for each preset
+  - Test results template for structured validation reporting
+  - Ready for manual testing on clean machines
+
 ### Added - 2025-11-18
 
 - **FEAT-036: Project Archival Phase 2.5 - Documentation & Polish**
