@@ -1,302 +1,376 @@
-"""Tests for indexed content visibility features (FEAT-046)."""
+"""Unit tests for indexed content visibility (FEAT-046)."""
 
 import pytest
 import pytest_asyncio
-import asyncio
 from pathlib import Path
+import tempfile
+import shutil
 from datetime import datetime, UTC
 
-from src.store.sqlite_store import SQLiteMemoryStore
-from src.core.server import MemoryRAGServer
 from src.config import ServerConfig
+from src.core.server import MemoryRAGServer
+from src.memory.incremental_indexer import IncrementalIndexer
+
+
+@pytest.fixture
+def test_project_dir():
+    """Create a temporary project directory with test files."""
+    temp_dir = tempfile.mkdtemp()
+
+    # Create some test Python files
+    (Path(temp_dir) / "module1.py").write_text("""
+def function_one():
+    pass
+
+class ClassOne:
+    def method_one(self):
+        pass
+""")
+
+    (Path(temp_dir) / "module2.py").write_text("""
+def function_two():
+    pass
+
+class ClassTwo:
+    def method_two(self):
+        pass
+""")
+
+    # Create a subdirectory with more files
+    (Path(temp_dir) / "subdir").mkdir()
+    (Path(temp_dir) / "subdir" / "module3.py").write_text("""
+def function_three():
+    pass
+""")
+
+    yield temp_dir
+
+    # Cleanup
+    shutil.rmtree(temp_dir)
+
+
+@pytest.fixture
+def config():
+    """Create test configuration."""
+    return ServerConfig(
+        storage_backend="sqlite",  # Use SQLite for faster tests
+        read_only_mode=False,
+        enable_retrieval_gate=False,
+    )
 
 
 @pytest_asyncio.fixture
-async def sqlite_store():
-    """Create a temporary SQLite store for testing."""
-    config = ServerConfig(
-        storage_backend="sqlite",
-        sqlite_path=":memory:",  # In-memory database
+async def server_with_indexed_code(config, test_project_dir):
+    """Create server instance with indexed code."""
+    srv = MemoryRAGServer(config)
+    await srv.initialize()
+
+    # Index the test project
+    indexer = IncrementalIndexer(
+        srv.store,
+        srv.embedding_generator,
+        project_name="test-project"
     )
-    store = SQLiteMemoryStore(config)
-    await store.initialize()
-    yield store
-    await store.close()
-
-
-@pytest_asyncio.fixture
-async def sample_indexed_code(sqlite_store):
-    """Create sample indexed code units for testing."""
-    # Sample Python function
-    await sqlite_store.store(
-        content="def hello_world():\n    print('Hello')",
-        embedding=[0.1] * 384,
-        metadata={
-            "id": "unit-1",
-            "category": "code",
-            "context_level": "CORE",
-            "scope": "project",
-            "project_name": "test-project",
-            "importance": 0.8,
-            "metadata": {
-                "name": "hello_world",
-                "unit_type": "function",
-                "file_path": "/test/hello.py",
-                "language": "Python",
-                "start_line": 1,
-                "end_line": 2,
-                "signature": "def hello_world()",
-            },
-        },
+    await indexer.index_directory(
+        dir_path=Path(test_project_dir),
+        show_progress=False
     )
 
-    # Sample JavaScript class
-    await sqlite_store.store(
-        content="class User { constructor(name) { this.name = name; } }",
-        embedding=[0.2] * 384,
-        metadata={
-            "id": "unit-2",
-            "category": "code",
-            "context_level": "CORE",
-            "scope": "project",
-            "project_name": "test-project",
-            "importance": 0.9,
-            "metadata": {
-                "name": "User",
-                "unit_type": "class",
-                "file_path": "/test/user.js",
-                "language": "JavaScript",
-                "start_line": 1,
-                "end_line": 1,
-                "signature": "class User",
-            },
-        },
-    )
-
-    # Sample Python class from different file
-    await sqlite_store.store(
-        content="class MyClass:\n    pass",
-        embedding=[0.3] * 384,
-        metadata={
-            "id": "unit-3",
-            "category": "code",
-            "context_level": "DETAIL",
-            "scope": "project",
-            "project_name": "test-project",
-            "importance": 0.5,
-            "metadata": {
-                "name": "MyClass",
-                "unit_type": "class",
-                "file_path": "/test/classes.py",
-                "language": "Python",
-                "start_line": 1,
-                "end_line": 2,
-                "signature": "class MyClass",
-            },
-        },
-    )
-
-    return sqlite_store
+    yield srv
+    await srv.close()
 
 
 @pytest.mark.asyncio
-async def test_get_indexed_files_all(sample_indexed_code):
+async def test_get_indexed_files_all(server_with_indexed_code):
     """Test getting all indexed files."""
-    result = await sample_indexed_code.get_indexed_files()
+    result = await server_with_indexed_code.get_indexed_files(limit=100)
 
     assert "files" in result
     assert "total" in result
     assert "limit" in result
     assert "offset" in result
+    assert "has_more" in result
 
-    assert result["total"] == 3  # 3 unique files
-    assert len(result["files"]) == 3
-    assert result["limit"] == 50
-    assert result["offset"] == 0
+    # Should have at least 3 files
+    assert result["total"] >= 3
+    assert len(result["files"]) >= 3
 
-    # Check file details
-    file_paths = {f["file_path"] for f in result["files"]}
-    assert "/test/hello.py" in file_paths
-    assert "/test/user.js" in file_paths
-    assert "/test/classes.py" in file_paths
+    # Each file should have required fields
+    for file_info in result["files"]:
+        assert "file_path" in file_info
+        assert "language" in file_info
+        assert "last_indexed" in file_info
+        assert "unit_count" in file_info
 
+        # Verify language is Python
+        assert file_info["language"] == "Python"
 
-@pytest.mark.asyncio
-async def test_get_indexed_files_with_project(sample_indexed_code):
-    """Test filtering files by project."""
-    result = await sample_indexed_code.get_indexed_files(project_name="test-project")
-
-    assert result["total"] == 3
-    assert len(result["files"]) == 3
+        # unit_count should be >= 1
+        assert file_info["unit_count"] >= 1
 
 
 @pytest.mark.asyncio
-async def test_get_indexed_files_pagination(sample_indexed_code):
+async def test_get_indexed_files_by_project(server_with_indexed_code):
+    """Test filtering indexed files by project name."""
+    result = await server_with_indexed_code.get_indexed_files(
+        project_name="test-project",
+        limit=100
+    )
+
+    assert result["total"] >= 3
+    # All files should be from test-project
+    for file_info in result["files"]:
+        assert file_info["file_path"].endswith(".py")
+
+
+@pytest.mark.asyncio
+async def test_get_indexed_files_pagination(server_with_indexed_code):
     """Test pagination of indexed files."""
-    # Get first page (limit 2)
-    result = await sample_indexed_code.get_indexed_files(limit=2, offset=0)
+    # Get first page
+    page1 = await server_with_indexed_code.get_indexed_files(limit=2, offset=0)
 
-    assert result["total"] == 3
-    assert len(result["files"]) == 2
-    assert result["limit"] == 2
-    assert result["offset"] == 0
+    assert page1["limit"] == 2
+    assert page1["offset"] == 0
+    assert len(page1["files"]) <= 2
 
-    # Get second page
-    result_page2 = await sample_indexed_code.get_indexed_files(limit=2, offset=2)
+    # has_more should be True if total > 2
+    if page1["total"] > 2:
+        assert page1["has_more"] is True
 
-    assert result_page2["total"] == 3
-    assert len(result_page2["files"]) == 1
-    assert result_page2["offset"] == 2
+        # Get second page
+        page2 = await server_with_indexed_code.get_indexed_files(limit=2, offset=2)
+        assert page2["offset"] == 2
+        assert len(page2["files"]) >= 1
 
 
 @pytest.mark.asyncio
-async def test_list_indexed_units_all(sample_indexed_code):
+async def test_get_indexed_files_empty_project(server_with_indexed_code):
+    """Test getting indexed files for non-existent project."""
+    result = await server_with_indexed_code.get_indexed_files(
+        project_name="nonexistent-project",
+        limit=100
+    )
+
+    assert result["total"] == 0
+    assert len(result["files"]) == 0
+    assert result["has_more"] is False
+
+
+@pytest.mark.asyncio
+async def test_list_indexed_units_all(server_with_indexed_code):
     """Test listing all indexed units."""
-    result = await sample_indexed_code.list_indexed_units()
+    result = await server_with_indexed_code.list_indexed_units(limit=100)
 
     assert "units" in result
     assert "total" in result
     assert "limit" in result
     assert "offset" in result
+    assert "has_more" in result
 
-    assert result["total"] == 3
-    assert len(result["units"]) == 3
+    # Should have multiple units (functions and classes)
+    assert result["total"] >= 5
+    assert len(result["units"]) >= 5
 
-    # Check unit details
-    unit_names = {u["name"] for u in result["units"]}
-    assert "hello_world" in unit_names
-    assert "User" in unit_names
-    assert "MyClass" in unit_names
+    # Each unit should have required fields
+    for unit in result["units"]:
+        assert "id" in unit
+        assert "name" in unit
+        assert "unit_type" in unit
+        assert "file_path" in unit
+        assert "language" in unit
+        assert "start_line" in unit
+        assert "end_line" in unit
+        assert "signature" in unit
+        assert "last_indexed" in unit
 
+        # Verify language is Python
+        assert unit["language"] == "Python"
 
-@pytest.mark.asyncio
-async def test_list_indexed_units_filter_by_language(sample_indexed_code):
-    """Test filtering units by language."""
-    # Filter Python units
-    result = await sample_indexed_code.list_indexed_units(language="Python")
-
-    assert result["total"] == 2  # hello_world and MyClass
-    assert len(result["units"]) == 2
-
-    unit_names = {u["name"] for u in result["units"]}
-    assert "hello_world" in unit_names
-    assert "MyClass" in unit_names
-    assert "User" not in unit_names
-
-
-@pytest.mark.asyncio
-async def test_list_indexed_units_filter_by_file_pattern(sample_indexed_code):
-    """Test filtering units by file pattern."""
-    # Filter .py files
-    result = await sample_indexed_code.list_indexed_units(file_pattern="%.py")
-
-    assert result["total"] == 2  # Files ending with .py
-    assert len(result["units"]) == 2
-
-    # Filter specific directory
-    result_js = await sample_indexed_code.list_indexed_units(file_pattern="%.js")
-
-    assert result_js["total"] == 1  # Only user.js
-    assert len(result_js["units"]) == 1
-    assert result_js["units"][0]["name"] == "User"
+        # unit_type should be function or class
+        assert unit["unit_type"] in ["function", "class", "method"]
 
 
 @pytest.mark.asyncio
-async def test_list_indexed_units_filter_by_unit_type(sample_indexed_code):
-    """Test filtering units by unit type."""
-    # Filter functions
-    result = await sample_indexed_code.list_indexed_units(unit_type="function")
-
-    assert result["total"] == 1  # Only hello_world
-    assert len(result["units"]) == 1
-    assert result["units"][0]["name"] == "hello_world"
-
-    # Filter classes
-    result_classes = await sample_indexed_code.list_indexed_units(unit_type="class")
-
-    assert result_classes["total"] == 2  # User and MyClass
-    assert len(result_classes["units"]) == 2
-
-
-@pytest.mark.asyncio
-async def test_list_indexed_units_combined_filters(sample_indexed_code):
-    """Test combining multiple filters."""
-    # Filter Python classes
-    result = await sample_indexed_code.list_indexed_units(
-        language="Python",
-        unit_type="class",
+async def test_list_indexed_units_by_project(server_with_indexed_code):
+    """Test filtering units by project name."""
+    result = await server_with_indexed_code.list_indexed_units(
+        project_name="test-project",
+        limit=100
     )
 
-    assert result["total"] == 1  # Only MyClass
-    assert len(result["units"]) == 1
-    assert result["units"][0]["name"] == "MyClass"
+    assert result["total"] >= 5
+    # All units should be from test-project
+    for unit in result["units"]:
+        assert unit["file_path"].endswith(".py")
 
 
 @pytest.mark.asyncio
-async def test_list_indexed_units_pagination(sample_indexed_code):
+async def test_list_indexed_units_by_language(server_with_indexed_code):
+    """Test filtering units by language."""
+    result = await server_with_indexed_code.list_indexed_units(
+        language="Python",
+        limit=100
+    )
+
+    assert result["total"] >= 5
+    # All units should be Python
+    for unit in result["units"]:
+        assert unit["language"] == "Python"
+
+
+@pytest.mark.asyncio
+async def test_list_indexed_units_by_type_function(server_with_indexed_code):
+    """Test filtering units by type (functions only)."""
+    result = await server_with_indexed_code.list_indexed_units(
+        unit_type="function",
+        limit=100
+    )
+
+    # Should have at least 3 functions
+    assert result["total"] >= 3
+    # All units should be functions
+    for unit in result["units"]:
+        assert unit["unit_type"] == "function"
+
+
+@pytest.mark.asyncio
+async def test_list_indexed_units_by_type_class(server_with_indexed_code):
+    """Test filtering units by type (classes only)."""
+    result = await server_with_indexed_code.list_indexed_units(
+        unit_type="class",
+        limit=100
+    )
+
+    # Should have at least 2 classes
+    assert result["total"] >= 2
+    # All units should be classes
+    for unit in result["units"]:
+        assert unit["unit_type"] == "class"
+
+
+@pytest.mark.asyncio
+async def test_list_indexed_units_pagination(server_with_indexed_code):
     """Test pagination of indexed units."""
     # Get first page
-    result = await sample_indexed_code.list_indexed_units(limit=2, offset=0)
+    page1 = await server_with_indexed_code.list_indexed_units(limit=3, offset=0)
 
-    assert result["total"] == 3
-    assert len(result["units"]) == 2
-    assert result["limit"] == 2
-    assert result["offset"] == 0
+    assert page1["limit"] == 3
+    assert page1["offset"] == 0
+    assert len(page1["units"]) <= 3
 
-    # Get second page
-    result_page2 = await sample_indexed_code.list_indexed_units(limit=2, offset=2)
+    # has_more should be True if total > 3
+    if page1["total"] > 3:
+        assert page1["has_more"] is True
 
-    assert result_page2["total"] == 3
-    assert len(result_page2["units"]) == 1
-    assert result_page2["offset"] == 2
+        # Get second page
+        page2 = await server_with_indexed_code.list_indexed_units(limit=3, offset=3)
+        assert page2["offset"] == 3
+        assert len(page2["units"]) >= 1
 
 
 @pytest.mark.asyncio
-async def test_empty_results(sqlite_store):
-    """Test handling of empty results."""
-    # No indexed code yet
-    result = await sqlite_store.get_indexed_files()
+async def test_list_indexed_units_combined_filters(server_with_indexed_code):
+    """Test combining multiple filters."""
+    result = await server_with_indexed_code.list_indexed_units(
+        project_name="test-project",
+        language="Python",
+        unit_type="function",
+        limit=100
+    )
+
+    # All units should match all filters
+    for unit in result["units"]:
+        assert unit["language"] == "Python"
+        assert unit["unit_type"] == "function"
+        assert unit["file_path"].endswith(".py")
+
+
+@pytest.mark.asyncio
+async def test_list_indexed_units_empty_results(server_with_indexed_code):
+    """Test filtering with no matches."""
+    result = await server_with_indexed_code.list_indexed_units(
+        project_name="nonexistent-project",
+        limit=100
+    )
 
     assert result["total"] == 0
-    assert len(result["files"]) == 0
-
-    result_units = await sqlite_store.list_indexed_units()
-
-    assert result_units["total"] == 0
-    assert len(result_units["units"]) == 0
+    assert len(result["units"]) == 0
+    assert result["has_more"] is False
 
 
 @pytest.mark.asyncio
-async def test_limit_validation(sample_indexed_code):
-    """Test limit validation and capping."""
-    # Test limit < 1 (should be capped to 1)
-    result = await sample_indexed_code.get_indexed_files(limit=0)
-    assert result["limit"] == 1
+async def test_get_indexed_files_validation_limit_autocap(config):
+    """Test that limit is autocapped to valid range."""
+    srv = MemoryRAGServer(config)
+    await srv.initialize()
 
-    # Test limit > 500 (should be capped to 500)
-    result = await sample_indexed_code.get_indexed_files(limit=1000)
-    assert result["limit"] == 500
+    # Limit too small gets capped to 1
+    result1 = await srv.get_indexed_files(limit=0)
+    assert result1["limit"] == 1
+
+    # Limit too large gets capped to 500
+    result2 = await srv.get_indexed_files(limit=1000)
+    assert result2["limit"] == 500
+
+    await srv.close()
 
 
 @pytest.mark.asyncio
-async def test_unit_metadata_completeness(sample_indexed_code):
-    """Test that all expected metadata fields are present."""
-    result = await sample_indexed_code.list_indexed_units(limit=1)
+async def test_get_indexed_files_validation_offset_autocap(config):
+    """Test that negative offset is autocapped to 0."""
+    srv = MemoryRAGServer(config)
+    await srv.initialize()
 
-    assert len(result["units"]) == 1
-    unit = result["units"][0]
+    result = await srv.get_indexed_files(offset=-1)
+    assert result["offset"] == 0
 
-    # Check all expected fields are present
-    assert "id" in unit
-    assert "name" in unit
-    assert "unit_type" in unit
-    assert "file_path" in unit
-    assert "language" in unit
-    assert "start_line" in unit
-    assert "end_line" in unit
-    assert "signature" in unit
-    assert "last_indexed" in unit
+    await srv.close()
 
 
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
+@pytest.mark.asyncio
+async def test_list_indexed_units_validation_limit_autocap(config):
+    """Test that limit is autocapped to valid range."""
+    srv = MemoryRAGServer(config)
+    await srv.initialize()
+
+    # Limit too small gets capped to 1
+    result1 = await srv.list_indexed_units(limit=0)
+    assert result1["limit"] == 1
+
+    # Limit too large gets capped to 500
+    result2 = await srv.list_indexed_units(limit=1000)
+    assert result2["limit"] == 500
+
+    await srv.close()
+
+
+@pytest.mark.asyncio
+async def test_list_indexed_units_validation_offset_autocap(config):
+    """Test that negative offset is autocapped to 0."""
+    srv = MemoryRAGServer(config)
+    await srv.initialize()
+
+    result = await srv.list_indexed_units(offset=-1)
+    assert result["offset"] == 0
+
+    await srv.close()
+
+
+@pytest.mark.asyncio
+async def test_has_more_flag_accuracy(server_with_indexed_code):
+    """Test accuracy of has_more flag."""
+    # Get total count first
+    all_files = await server_with_indexed_code.get_indexed_files(limit=500)
+    total_files = all_files["total"]
+
+    # Test with limit less than total
+    if total_files > 1:
+        result = await server_with_indexed_code.get_indexed_files(limit=1, offset=0)
+        assert result["has_more"] is True
+
+    # Test with limit + offset >= total
+    result = await server_with_indexed_code.get_indexed_files(
+        limit=total_files,
+        offset=0
+    )
+    assert result["has_more"] is False

@@ -218,3 +218,86 @@ class MemoryStore(ABC):
             StorageError: If listing operation fails.
         """
         pass
+
+    @abstractmethod
+    async def get_indexed_files(
+        self,
+        project_name: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> Dict[str, Any]:
+        """
+        Get list of indexed files with metadata.
+
+        Args:
+            project_name: Optional project name to filter by
+            limit: Maximum number of files to return (default 50, max 500)
+            offset: Number of files to skip for pagination
+
+        Returns:
+            Dictionary with files list, total count, and pagination info:
+            {
+                "files": [
+                    {
+                        "file_path": str,
+                        "language": str,
+                        "last_indexed": str (ISO timestamp),
+                        "unit_count": int,
+                    }
+                ],
+                "total": int,
+                "limit": int,
+                "offset": int,
+            }
+
+        Raises:
+            StorageError: If operation fails.
+        """
+        pass
+
+    @abstractmethod
+    async def list_indexed_units(
+        self,
+        project_name: Optional[str] = None,
+        language: Optional[str] = None,
+        file_pattern: Optional[str] = None,
+        unit_type: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> Dict[str, Any]:
+        """
+        List indexed code units (functions, classes, etc.) with filtering.
+
+        Args:
+            project_name: Optional project name to filter by
+            language: Optional language to filter by (Python, JavaScript, etc.)
+            file_pattern: Optional pattern for file paths (SQL LIKE for SQLite, glob for Qdrant)
+            unit_type: Optional unit type to filter by (function, class, method, etc.)
+            limit: Maximum number of units to return (default 50, max 500)
+            offset: Number of units to skip for pagination
+
+        Returns:
+            Dictionary with units list, total count, and pagination info:
+            {
+                "units": [
+                    {
+                        "id": str,
+                        "name": str,
+                        "unit_type": str,
+                        "file_path": str,
+                        "language": str,
+                        "start_line": int,
+                        "end_line": int,
+                        "signature": str,
+                        "last_indexed": str (ISO timestamp),
+                    }
+                ],
+                "total": int,
+                "limit": int,
+                "offset": int,
+            }
+
+        Raises:
+            StorageError: If operation fails.
+        """
+        pass

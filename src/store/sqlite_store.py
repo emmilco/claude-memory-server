@@ -1160,7 +1160,7 @@ class SQLiteMemoryStore(MemoryStore):
             cursor.execute(f"""
                 SELECT
                     id,
-                    json_extract(metadata, '$.name') as name,
+                    json_extract(metadata, '$.unit_name') as name,
                     json_extract(metadata, '$.unit_type') as unit_type,
                     json_extract(metadata, '$.file_path') as file_path,
                     json_extract(metadata, '$.language') as language,

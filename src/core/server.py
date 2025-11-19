@@ -918,6 +918,147 @@ class MemoryRAGServer:
             logger.error(f"Failed to list memories: {e}")
             raise StorageError(f"Failed to list memories: {e}")
 
+    async def get_indexed_files(
+        self,
+        project_name: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> Dict[str, Any]:
+        """
+        Get list of indexed files with metadata.
+
+        Provides transparency into what files have been indexed, which is useful for:
+        - Debugging indexing issues
+        - Understanding codebase coverage
+        - Verifying that expected files are indexed
+
+        Args:
+            project_name: Filter by project name (optional)
+            limit: Maximum number of files to return (1-500, default 50)
+            offset: Number of files to skip for pagination (default 0)
+
+        Returns:
+            {
+                "files": [
+                    {
+                        "file_path": str,
+                        "language": str,
+                        "last_indexed": str (ISO timestamp),
+                        "unit_count": int
+                    }
+                ],
+                "total": int,
+                "limit": int,
+                "offset": int,
+                "has_more": bool
+            }
+
+        Raises:
+            ValidationError: If parameters are invalid
+            StorageError: If operation fails
+        """
+        try:
+            # Query store (store auto-caps limit and offset to valid ranges)
+            result = await self.store.get_indexed_files(
+                project_name=project_name,
+                limit=limit,
+                offset=offset
+            )
+
+            # Add has_more flag
+            result["has_more"] = (result["offset"] + len(result["files"])) < result["total"]
+
+            logger.info(
+                f"Retrieved {len(result['files'])} indexed files "
+                f"(total {result['total']}) for project '{project_name or 'all'}'"
+            )
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Failed to get indexed files: {e}")
+            raise StorageError(f"Failed to get indexed files: {e}")
+
+    async def list_indexed_units(
+        self,
+        project_name: Optional[str] = None,
+        language: Optional[str] = None,
+        file_pattern: Optional[str] = None,
+        unit_type: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> Dict[str, Any]:
+        """
+        List indexed code units (functions, classes, etc.) with filtering.
+
+        This allows inspection of individual code units that have been indexed,
+        which is useful for:
+        - Verifying specific functions/classes are indexed
+        - Understanding code structure
+        - Debugging search results
+
+        Args:
+            project_name: Filter by project name (optional)
+            language: Filter by language (Python, JavaScript, etc.) (optional)
+            file_pattern: Filter by file path pattern (optional)
+                - SQLite: SQL LIKE pattern (e.g., "%.py", "src/%")
+                - Qdrant: Glob pattern (e.g., "*.py", "src/**")
+            unit_type: Filter by unit type (function, class, method, etc.) (optional)
+            limit: Maximum number of units to return (1-500, default 50)
+            offset: Number of units to skip for pagination (default 0)
+
+        Returns:
+            {
+                "units": [
+                    {
+                        "id": str,
+                        "name": str,
+                        "unit_type": str,
+                        "file_path": str,
+                        "language": str,
+                        "start_line": int,
+                        "end_line": int,
+                        "signature": str,
+                        "last_indexed": str (ISO timestamp)
+                    }
+                ],
+                "total": int,
+                "limit": int,
+                "offset": int,
+                "has_more": bool
+            }
+
+        Raises:
+            ValidationError: If parameters are invalid
+            StorageError: If operation fails
+        """
+        try:
+            # Query store (store auto-caps limit and offset to valid ranges)
+            result = await self.store.list_indexed_units(
+                project_name=project_name,
+                language=language,
+                file_pattern=file_pattern,
+                unit_type=unit_type,
+                limit=limit,
+                offset=offset
+            )
+
+            # Add has_more flag
+            result["has_more"] = (result["offset"] + len(result["units"])) < result["total"]
+
+            logger.info(
+                f"Retrieved {len(result['units'])} indexed units "
+                f"(total {result['total']}) with filters: "
+                f"project={project_name}, language={language}, "
+                f"file_pattern={file_pattern}, unit_type={unit_type}"
+            )
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Failed to list indexed units: {e}")
+            raise StorageError(f"Failed to list indexed units: {e}")
+
     async def migrate_memory_scope(
         self,
         memory_id: str,
@@ -2992,79 +3133,6 @@ class MemoryRAGServer:
                 "error": str(e),
             }
 
-    async def get_indexed_files(
-        self,
-        project_name: Optional[str] = None,
-        limit: int = 50,
-        offset: int = 0,
-    ) -> Dict[str, Any]:
-        """
-        Get list of indexed files with metadata.
-
-        Args:
-            project_name: Optional project name to filter by
-            limit: Maximum number of files to return (default 50, max 500)
-            offset: Number of files to skip for pagination
-
-        Returns:
-            Dictionary with files list, total count, and pagination info
-        """
-        try:
-            result = await self.store.get_indexed_files(
-                project_name=project_name,
-                limit=limit,
-                offset=offset,
-            )
-            logger.info(
-                f"Retrieved {len(result['files'])} indexed files "
-                f"(total: {result['total']}, limit: {limit}, offset: {offset})"
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Failed to get indexed files: {e}")
-            raise
-
-    async def list_indexed_units(
-        self,
-        project_name: Optional[str] = None,
-        language: Optional[str] = None,
-        file_pattern: Optional[str] = None,
-        unit_type: Optional[str] = None,
-        limit: int = 50,
-        offset: int = 0,
-    ) -> Dict[str, Any]:
-        """
-        List indexed code units (functions, classes, etc.) with filtering.
-
-        Args:
-            project_name: Optional project name to filter by
-            language: Optional language to filter by (Python, JavaScript, etc.)
-            file_pattern: Optional SQL LIKE pattern for file paths (e.g. "%.py", "src/%")
-            unit_type: Optional unit type to filter by (function, class, method, etc.)
-            limit: Maximum number of units to return (default 50, max 500)
-            offset: Number of units to skip for pagination
-
-        Returns:
-            Dictionary with units list, total count, and pagination info
-        """
-        try:
-            result = await self.store.list_indexed_units(
-                project_name=project_name,
-                language=language,
-                file_pattern=file_pattern,
-                unit_type=unit_type,
-                limit=limit,
-                offset=offset,
-            )
-            logger.info(
-                f"Retrieved {len(result['units'])} indexed units "
-                f"(total: {result['total']}, filters: project={project_name}, "
-                f"lang={language}, pattern={file_pattern}, type={unit_type})"
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Failed to list indexed units: {e}")
-            raise
 
     async def get_token_analytics(
         self,

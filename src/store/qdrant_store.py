@@ -526,6 +526,240 @@ class QdrantMemoryStore(MemoryStore):
             logger.error(f"Error listing memories: {e}")
             raise StorageError(f"Failed to list memories: {e}")
 
+    async def get_indexed_files(
+        self,
+        project_name: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> Dict[str, Any]:
+        """
+        Get list of indexed files with metadata.
+
+        Args:
+            project_name: Optional project name to filter by
+            limit: Maximum number of files to return (default 50, max 500)
+            offset: Number of files to skip for pagination
+
+        Returns:
+            Dictionary with files list, total count, and pagination info
+        """
+        if self.client is None:
+            await self.initialize()
+
+        # Validate and cap limit
+        limit = min(max(1, limit), 500)
+        offset = max(0, offset)
+
+        try:
+            # Build filter for code category
+            must_conditions = [
+                FieldCondition(
+                    key="category",
+                    match=MatchValue(value="code")
+                )
+            ]
+
+            if project_name:
+                must_conditions.append(
+                    FieldCondition(
+                        key="project_name",
+                        match=MatchValue(value=project_name)
+                    )
+                )
+
+            qdrant_filter = Filter(must=must_conditions)
+
+            # Scroll through all code memories to group by file
+            file_data = {}  # file_path -> {language, last_indexed, unit_count}
+            scroll_offset = None
+
+            while True:
+                result = self.client.scroll(
+                    collection_name=self.collection_name,
+                    scroll_filter=qdrant_filter,
+                    limit=100,
+                    offset=scroll_offset,
+                    with_payload=True,
+                    with_vectors=False
+                )
+
+                points, next_offset = result
+
+                for point in points:
+                    payload = dict(point.payload)
+                    file_path = payload.get("file_path")
+
+                    if file_path:
+                        if file_path not in file_data:
+                            file_data[file_path] = {
+                                "file_path": file_path,
+                                "language": payload.get("language", "unknown"),
+                                "last_indexed": payload.get("updated_at", payload.get("created_at")),
+                                "unit_count": 0
+                            }
+
+                        file_data[file_path]["unit_count"] += 1
+
+                        # Update to most recent timestamp
+                        current_time = payload.get("updated_at", payload.get("created_at"))
+                        if current_time and current_time > file_data[file_path]["last_indexed"]:
+                            file_data[file_path]["last_indexed"] = current_time
+
+                if next_offset is None:
+                    break
+
+                scroll_offset = next_offset
+
+            # Convert to list and sort by last_indexed (most recent first)
+            files_list = list(file_data.values())
+            files_list.sort(key=lambda x: x["last_indexed"], reverse=True)
+
+            total = len(files_list)
+
+            # Apply pagination
+            paginated_files = files_list[offset:offset + limit]
+
+            return {
+                "files": paginated_files,
+                "total": total,
+                "limit": limit,
+                "offset": offset,
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting indexed files: {e}")
+            raise StorageError(f"Failed to get indexed files: {e}")
+
+    async def list_indexed_units(
+        self,
+        project_name: Optional[str] = None,
+        language: Optional[str] = None,
+        file_pattern: Optional[str] = None,
+        unit_type: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> Dict[str, Any]:
+        """
+        List indexed code units (functions, classes, etc.) with filtering.
+
+        Args:
+            project_name: Optional project name to filter by
+            language: Optional language to filter by
+            file_pattern: Optional glob pattern for file paths
+            unit_type: Optional unit type to filter by
+            limit: Maximum number of units to return (default 50, max 500)
+            offset: Number of units to skip for pagination
+
+        Returns:
+            Dictionary with units list, total count, and pagination info
+        """
+        if self.client is None:
+            await self.initialize()
+
+        # Validate and cap limit
+        limit = min(max(1, limit), 500)
+        offset = max(0, offset)
+
+        try:
+            # Build filter conditions
+            must_conditions = [
+                FieldCondition(
+                    key="category",
+                    match=MatchValue(value="code")
+                )
+            ]
+
+            if project_name:
+                must_conditions.append(
+                    FieldCondition(
+                        key="project_name",
+                        match=MatchValue(value=project_name)
+                    )
+                )
+
+            if language:
+                must_conditions.append(
+                    FieldCondition(
+                        key="language",
+                        match=MatchValue(value=language)
+                    )
+                )
+
+            if unit_type:
+                must_conditions.append(
+                    FieldCondition(
+                        key="unit_type",
+                        match=MatchValue(value=unit_type)
+                    )
+                )
+
+            qdrant_filter = Filter(must=must_conditions)
+
+            # Scroll through all matching code units
+            all_units = []
+            scroll_offset = None
+
+            while True:
+                result = self.client.scroll(
+                    collection_name=self.collection_name,
+                    scroll_filter=qdrant_filter,
+                    limit=100,
+                    offset=scroll_offset,
+                    with_payload=True,
+                    with_vectors=False
+                )
+
+                points, next_offset = result
+
+                for point in points:
+                    payload = dict(point.payload)
+
+                    # Apply file pattern filter if specified (glob-style)
+                    if file_pattern:
+                        file_path = payload.get("file_path", "")
+                        # Convert glob pattern to simple matching
+                        # For now, support basic wildcards
+                        import fnmatch
+                        if not fnmatch.fnmatch(file_path, file_pattern):
+                            continue
+
+                    unit = {
+                        "id": payload.get("id", str(point.id)),
+                        "name": payload.get("name", ""),
+                        "unit_type": payload.get("unit_type", ""),
+                        "file_path": payload.get("file_path", ""),
+                        "language": payload.get("language", ""),
+                        "start_line": payload.get("start_line", 0),
+                        "end_line": payload.get("end_line", 0),
+                        "signature": payload.get("signature", ""),
+                        "last_indexed": payload.get("updated_at", payload.get("created_at", "")),
+                    }
+                    all_units.append(unit)
+
+                if next_offset is None:
+                    break
+
+                scroll_offset = next_offset
+
+            # Sort by last_indexed (most recent first)
+            all_units.sort(key=lambda x: x["last_indexed"], reverse=True)
+
+            total = len(all_units)
+
+            # Apply pagination
+            paginated_units = all_units[offset:offset + limit]
+
+            return {
+                "units": paginated_units,
+                "total": total,
+                "limit": limit,
+                "offset": offset,
+            }
+
+        except Exception as e:
+            logger.error(f"Error listing indexed units: {e}")
+            raise StorageError(f"Failed to list indexed units: {e}")
+
     async def close(self) -> None:
         """Close connections and clean up resources."""
         if self.client:
