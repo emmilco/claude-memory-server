@@ -3813,6 +3813,212 @@ class MemoryRAGServer:
             logger.error(f"Error setting suggestion mode: {e}")
             raise ValidationError(f"Failed to set suggestion mode: {str(e)}")
 
+    async def find_usages(
+        self,
+        code_snippet: str,
+        file_path: Optional[str] = None,
+        project_name: Optional[str] = None,
+        min_similarity: float = 0.75,
+        limit: int = 20,
+    ) -> Dict[str, Any]:
+        """
+        Find all usages of a code snippet semantically.
+
+        Uses semantic search to find where a function, class, or code pattern
+        is used across the codebase, even with renamed variables or different
+        formatting.
+
+        Args:
+            code_snippet: The code to find usages of
+            file_path: Optional file path to search within
+            project_name: Optional project to search within
+            min_similarity: Minimum similarity threshold (0-1), default 0.75
+            limit: Maximum number of results, default 20
+
+        Returns:
+            Dict with:
+                - usages: List of usage locations with context
+                - count: Total number of usages found
+                - query_info: Information about the search query
+
+        Example:
+            find_usages(
+                code_snippet="def calculate_total(items):",
+                project_name="my-project",
+                min_similarity=0.8
+            )
+        """
+        try:
+            # Use search_code with semantic search
+            from .code_search import search_code
+
+            results = await search_code(
+                store=self.store,
+                query=code_snippet,
+                limit=limit,
+                project_name=project_name,
+            )
+
+            # Filter by similarity threshold and format results
+            usages = []
+            for result in results:
+                if result.get("score", 0) >= min_similarity:
+                    usages.append({
+                        "file_path": result.get("metadata", {}).get("file_path"),
+                        "line_number": result.get("metadata", {}).get("start_line"),
+                        "code": result.get("text", ""),
+                        "similarity": result.get("score"),
+                        "context": result.get("metadata", {}).get("parent_name"),
+                    })
+
+            return {
+                "usages": usages,
+                "count": len(usages),
+                "query_info": {
+                    "code_snippet": code_snippet[:100],  # Truncate for display
+                    "min_similarity": min_similarity,
+                    "project_name": project_name,
+                    "file_path": file_path,
+                },
+            }
+
+        except Exception as e:
+            logger.error(f"Error finding usages: {e}")
+            raise RetrievalError(f"Failed to find usages: {str(e)}")
+
+    async def suggest_refactorings(
+        self,
+        file_path: Optional[str] = None,
+        project_name: Optional[str] = None,
+        severity_threshold: str = "medium",
+        limit: int = 50,
+    ) -> Dict[str, Any]:
+        """
+        Suggest refactorings for code in a file or project.
+
+        Analyzes code for common code smells and suggests improvements:
+        - Long parameter lists (>5 parameters)
+        - Large functions (>50 lines)
+        - High complexity (>10 cyclomatic complexity)
+        - Deep nesting (>4 levels)
+
+        Args:
+            file_path: Optional specific file to analyze
+            project_name: Optional project to analyze
+            severity_threshold: Minimum severity ('low', 'medium', 'high')
+            limit: Maximum number of suggestions to return
+
+        Returns:
+            Dict with:
+                - suggestions: List of refactoring suggestions
+                - count: Total number of suggestions
+                - summary: Summary by issue type and severity
+
+        Example:
+            suggest_refactorings(
+                project_name="my-project",
+                severity_threshold="high"
+            )
+        """
+        from ..refactoring.code_analyzer import CodeAnalyzer
+
+        try:
+            analyzer = CodeAnalyzer()
+
+            # Get code units from the store
+            # For MVP, we'll fetch indexed code units and analyze them
+            search_filters = {}
+            if project_name:
+                search_filters["project_name"] = project_name
+            if file_path:
+                search_filters["file_path"] = file_path
+
+            # Use search_code to get code units
+            from .code_search import search_code
+
+            # Get all code units (use broad query)
+            results = await search_code(
+                store=self.store,
+                query="function class method",  # Broad query to get code units
+                limit=limit * 2,  # Get more than needed, filter later
+                project_name=project_name,
+            )
+
+            all_suggestions = []
+
+            # Analyze each code unit
+            for result in results[:limit]:
+                metadata = result.get("metadata", {})
+                code = result.get("text", "")
+                language = metadata.get("language", "python")
+                current_file_path = metadata.get("file_path", "unknown")
+                line_number = metadata.get("start_line", 1)
+
+                # Skip if file_path filter doesn't match
+                if file_path and current_file_path != file_path:
+                    continue
+
+                # Analyze the code
+                suggestions = analyzer.analyze_code(
+                    code=code,
+                    language=language,
+                    file_path=current_file_path,
+                    line_number=line_number,
+                )
+
+                # Filter by severity threshold
+                severity_order = {"low": 0, "medium": 1, "high": 2}
+                min_severity = severity_order.get(severity_threshold.lower(), 1)
+
+                for suggestion in suggestions:
+                    if severity_order.get(suggestion.severity.lower(), 0) >= min_severity:
+                        all_suggestions.append({
+                            "issue_type": suggestion.issue_type,
+                            "severity": suggestion.severity,
+                            "file_path": suggestion.file_path,
+                            "line_number": suggestion.line_number,
+                            "code_unit_name": suggestion.code_unit_name,
+                            "description": suggestion.description,
+                            "suggested_fix": suggestion.suggested_fix,
+                            "metrics": {
+                                "lines_of_code": suggestion.metrics.lines_of_code if suggestion.metrics else None,
+                                "complexity": suggestion.metrics.cyclomatic_complexity if suggestion.metrics else None,
+                                "parameters": suggestion.metrics.parameter_count if suggestion.metrics else None,
+                                "nesting_depth": suggestion.metrics.nesting_depth if suggestion.metrics else None,
+                            } if suggestion.metrics else None,
+                        })
+
+            # Limit to requested number
+            all_suggestions = all_suggestions[:limit]
+
+            # Create summary
+            summary = {
+                "by_severity": {},
+                "by_issue_type": {},
+            }
+
+            for suggestion in all_suggestions:
+                severity = suggestion["severity"]
+                issue_type = suggestion["issue_type"]
+
+                summary["by_severity"][severity] = summary["by_severity"].get(severity, 0) + 1
+                summary["by_issue_type"][issue_type] = summary["by_issue_type"].get(issue_type, 0) + 1
+
+            return {
+                "suggestions": all_suggestions,
+                "count": len(all_suggestions),
+                "summary": summary,
+                "filters": {
+                    "file_path": file_path,
+                    "project_name": project_name,
+                    "severity_threshold": severity_threshold,
+                },
+            }
+
+        except Exception as e:
+            logger.error(f"Error suggesting refactorings: {e}")
+            raise ValidationError(f"Failed to suggest refactorings: {str(e)}")
+
     async def close(self) -> None:
         """Clean up resources."""
         # Stop conversation tracker
