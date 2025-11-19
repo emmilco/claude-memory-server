@@ -282,6 +282,242 @@ python -c "import rust_core; print('Rust parser available')"
 
 ---
 
+## Code Parsing Issues
+
+### File Fails to Parse (Syntax Errors)
+
+**Symptom:** File skipped during indexing with "Parse error" message
+
+**Common Causes:**
+1. **Syntax errors in source code**
+   - Incomplete functions, missing braces, etc.
+   - Mixed Python 2/3 syntax
+   - Invalid language-specific constructs
+
+2. **File encoding issues**
+   - Non-UTF-8 encoding (Latin-1, Windows-1252, etc.)
+   - Binary data in text files
+   - Invalid UTF-8 sequences
+
+3. **Unsupported language features**
+   - Experimental syntax not in tree-sitter grammar
+   - Language-specific macros or preprocessor directives
+
+**Solutions:**
+
+**Check file syntax:**
+```bash
+# Python
+python -m py_compile problematic_file.py
+
+# JavaScript/TypeScript
+npx eslint problematic_file.js
+
+# Java
+javac -Xlint problematic_file.java
+```
+
+**Check file encoding:**
+```bash
+# Detect encoding
+file -I problematic_file.py
+# Output: text/x-python; charset=utf-8
+
+# Convert to UTF-8 if needed
+iconv -f ISO-8859-1 -t UTF-8 file.py > file_utf8.py
+```
+
+**Workaround for unparseable files:**
+```bash
+# Option 1: Fix syntax errors in the file
+# Option 2: Exclude from indexing (.ragignore)
+echo "path/to/problematic/files/*" >> .ragignore
+
+# Option 3: Skip and index rest of project
+python -m src.cli index ./project  # Continues despite parse errors
+```
+
+---
+
+### Slow Parsing Performance
+
+**Symptom:** Indexing takes minutes for small projects
+
+**Check parser mode:**
+```bash
+python -m src.cli status
+# Look for: "Parser: Python (fallback)" vs "Parser: Rust"
+```
+
+**Solutions:**
+
+**1. Install Rust parser (10-20x faster):**
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source $HOME/.cargo/env
+cd rust_core && maturin develop && cd ..
+```
+
+**2. Enable parallel embeddings:**
+```bash
+# Add to .env
+CLAUDE_RAG_ENABLE_PARALLEL_EMBEDDINGS=true
+CLAUDE_RAG_EMBEDDING_PARALLEL_WORKERS=auto
+```
+
+**3. Use incremental indexing:**
+```bash
+# First index (slow)
+python -m src.cli index ./project
+
+# Re-index (5-10x faster, only changed files)
+python -m src.cli index ./project
+```
+
+---
+
+### Large Files Cause Memory Issues
+
+**Symptom:** Out of memory errors or system slowdown during indexing
+
+**Check file sizes:**
+```bash
+find ./project -type f -size +1M | head -10
+```
+
+**Solutions:**
+
+**1. Exclude large files:**
+```bash
+# Add to .ragignore
+*.min.js
+*.bundle.js
+**/dist/**
+**/build/**
+**/node_modules/**
+```
+
+**2. Reduce batch size:**
+```bash
+# Add to .env
+CLAUDE_RAG_EMBEDDING_BATCH_SIZE=16  # Default: 32
+```
+
+**3. Increase system memory:**
+```bash
+# Allocate more memory to Python process
+ulimit -v 8388608  # 8GB limit
+```
+
+---
+
+### Unicode/Encoding Errors
+
+**Error:** `UnicodeDecodeError: 'utf-8' codec can't decode byte`
+
+**Solutions:**
+
+**1. Identify problematic files:**
+```bash
+# Find non-UTF-8 files
+find ./project -type f -exec file -I {} \; | grep -v utf-8
+```
+
+**2. Convert files to UTF-8:**
+```bash
+# Batch convert
+for file in $(find . -name "*.py"); do
+    iconv -f ISO-8859-1 -t UTF-8 "$file" > "${file}.utf8"
+    mv "${file}.utf8" "$file"
+done
+```
+
+**3. Configure parser to handle errors:**
+The parser automatically uses `errors='ignore'` when reading files, so most encoding issues are handled gracefully. Files with encoding errors will be skipped with a warning.
+
+---
+
+### Unsupported Language
+
+**Symptom:** Files indexed but no semantic units extracted
+
+**Check supported languages:**
+```bash
+python -m src.cli status
+# Shows: 15 supported file formats
+```
+
+**Supported languages:** Python, JavaScript, TypeScript, Java, Go, Rust, C, C++, C#, Ruby, Swift, Kotlin, SQL, JSON, YAML, TOML
+
+**Solutions:**
+
+**1. Verify file extension:**
+```bash
+# Correct extensions
+.py   → Python
+.js   → JavaScript
+.ts   → TypeScript
+.java → Java
+.go   → Go
+.rs   → Rust
+.c, .h    → C
+.cpp, .hpp → C++
+.cs   → C#
+.rb   → Ruby
+.swift → Swift
+.kt   → Kotlin
+.sql  → SQL
+```
+
+**2. For unsupported languages:**
+- Request language support (create GitHub issue)
+- Files will be skipped during indexing
+- No semantic search for those files
+
+---
+
+### Files Skipped Silently
+
+**Symptom:** Expected files not appearing in index
+
+**Debug indexing:**
+```bash
+# Enable debug logging
+export CLAUDE_RAG_LOG_LEVEL=DEBUG
+python -m src.cli index ./project
+
+# Check which files were processed
+python -m src.cli list-indexed-files --project myproject
+```
+
+**Common reasons:**
+
+1. **File in .ragignore or .gitignore**
+   ```bash
+   cat .ragignore
+   cat .gitignore
+   ```
+
+2. **Unsupported extension**
+   - Only processes known file extensions
+   - See "Supported languages" above
+
+3. **File too large**
+   - Default max: No hard limit, but very large files (>10MB) may timeout
+   - Check logs for timeout errors
+
+4. **Binary file**
+   - Binary files are automatically skipped
+   - Check with: `file filename`
+
+**Solution:**
+```bash
+# Force re-index with verbose output
+python -m src.cli index ./project --verbose
+```
+
+---
+
 ### Git Not Installed (Recommended)
 
 **Error:** `git: command not found`

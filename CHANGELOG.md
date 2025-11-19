@@ -121,6 +121,11 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-18
 
+- **DOC-006: Parser Troubleshooting Guide**
+  - Added comprehensive "Code Parsing Issues" section to `docs/TROUBLESHOOTING.md`
+  - Covers 6 common scenarios: syntax errors, performance, memory, encoding, unsupported languages, skipped files
+  - Includes practical solutions, debug commands, and workarounds
+
 - **FEAT-048: Dependency Graph Visualization**
   - Added `get_dependency_graph()` MCP tool for exporting code dependency graphs
   - Created `src/graph/dependency_graph.py` with DependencyGraph class (circular dependency detection, filtering)
