@@ -81,6 +81,15 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Improved - 2025-11-18
 
+- **REF-002: Add Structured Logging**
+  - Created `src/logging/structured_logger.py` with JSON formatter and context support
+  - Added StructuredLogger class with convenience methods (info_ctx, error_ctx, etc.)
+  - Backward compatible with existing f-string logging patterns
+  - 19 comprehensive tests covering JSON formatting, context, exceptions, performance
+  - Enables log aggregation tools (ELK, Datadog, Splunk) and structured querying
+  - Files: `src/logging/structured_logger.py`, `src/logging/__init__.py`, `tests/unit/test_structured_logger.py`
+  - Planning: `planning_docs/REF-002_structured_logging.md`
+
 - **REF-001: Async/Await Pattern Optimization**
   - Fixed 7 async cache methods to use `asyncio.to_thread()` for blocking SQLite operations
   - Fixed 2 generator close() methods to properly handle blocking executor shutdown
