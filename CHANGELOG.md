@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2025-11-18
+
+- **UX-016: Memory Migration Tools (Phase 2)** - MCP tools for memory migration and transformation
+  - Added `migrate_memory_scope(memory_id, new_project_name)` to `src/core/server.py`
+  - Added `bulk_reclassify(new_context_level, filters...)` to `src/core/server.py`
+  - Added `find_duplicate_memories(project_name, similarity_threshold)` to `src/core/server.py`
+  - Added `merge_memories(memory_ids, keep_id)` to `src/core/server.py`
+  - Created `tests/unit/test_memory_migration.py` with 18 tests (all passing)
+  - MCP tools support read-only mode protection and error handling
+
 ### Added - 2025-11-17
 
 - **UX-016: Memory Migration Tools (Phase 1)** - Storage backend methods for memory migration and transformation

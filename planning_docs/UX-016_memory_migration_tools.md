@@ -140,6 +140,15 @@ Implement memory migration and transformation tools to allow users to:
   - Added `bulk_update_context_level()` to SQLite and Qdrant
   - Added `find_duplicate_memories()` to SQLite and Qdrant
   - Added `merge_memories()` to SQLite and Qdrant
-- [ ] Phase 2: MCP Tools (DEFERRED - can be added later)
-- [ ] Phase 3: CLI Commands (DEFERRED - can be added later)
-- [ ] Phase 4: Testing (DEFERRED)
+- [x] Phase 2: MCP Tools (COMPLETE - 2025-11-18)
+  - Added `migrate_memory_scope()` to server.py
+  - Added `bulk_reclassify()` to server.py
+  - Added `find_duplicate_memories()` to server.py
+  - Added `merge_memories()` to server.py
+  - All methods include read-only mode protection
+  - Proper error handling and logging
+- [x] Phase 4: Testing (COMPLETE - 2025-11-18)
+  - Created `tests/unit/test_memory_migration.py` with 18 tests
+  - All tests passing (5 migrate, 4 reclassify, 3 find duplicates, 5 merge, 1 integration)
+  - Tests cover success paths, error handling, read-only mode, and edge cases
+- [ ] Phase 3: CLI Commands (DEFERRED - can be added later if needed)
