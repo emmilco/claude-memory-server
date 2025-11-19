@@ -17,6 +17,7 @@ pub enum SupportedLanguage {
     Cpp,
     CSharp,
     Sql,
+    Php,
 }
 
 impl SupportedLanguage {
@@ -32,6 +33,7 @@ impl SupportedLanguage {
             "cpp" | "cc" | "cxx" | "hpp" | "h" | "hxx" | "hh" => Some(SupportedLanguage::Cpp),
             "cs" => Some(SupportedLanguage::CSharp),
             "sql" => Some(SupportedLanguage::Sql),
+            "php" => Some(SupportedLanguage::Php),
             _ => None,
         }
     }
@@ -48,6 +50,7 @@ impl SupportedLanguage {
             SupportedLanguage::Cpp => tree_sitter_cpp::LANGUAGE.into(),
             SupportedLanguage::CSharp => tree_sitter_c_sharp::LANGUAGE.into(),
             SupportedLanguage::Sql => tree_sitter_sequel::LANGUAGE.into(),
+            SupportedLanguage::Php => tree_sitter_php::LANGUAGE_PHP.into(),
         }
     }
 
@@ -120,6 +123,14 @@ impl SupportedLanguage {
                 // SQL functions and procedures
                 r#"
                 (create_function) @function
+                "#
+            }
+            SupportedLanguage::Php => {
+                r#"
+                (function_definition
+                  name: (name) @name
+                  parameters: (formal_parameters) @params
+                  body: (compound_statement) @body) @function
                 "#
             }
         }
@@ -209,6 +220,20 @@ impl SupportedLanguage {
                 ]
                 "#
             }
+            SupportedLanguage::Php => {
+                // PHP classes, interfaces, and traits
+                r#"
+                [(class_declaration
+                  name: (name) @name
+                  body: (declaration_list) @body)
+                 (interface_declaration
+                  name: (name) @name
+                  body: (declaration_list) @body)
+                 (trait_declaration
+                  name: (name) @name
+                  body: (declaration_list) @body)] @class
+                "#
+            }
         }
     }
 }
@@ -295,6 +320,7 @@ impl CodeParser {
             SupportedLanguage::Cpp,
             SupportedLanguage::CSharp,
             SupportedLanguage::Sql,
+            SupportedLanguage::Php,
         ] {
             let mut parser = Parser::new();
             parser
