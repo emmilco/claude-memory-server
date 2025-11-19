@@ -81,6 +81,10 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Fixed - 2025-11-18
 
+- **BUG-015: Fix Test Data Invalid Categories**
+  - Fixed invalid test category 'technical' → 'fact' in `tests/unit/test_export_import.py`
+  - Test pass rate: 97.2% → 98.9% (60 failures → 26 failures)
+
 - **BUG-014: Restore Missing Memory Operation Methods**
   - Restored `get_memory_by_id()`, `update_memory()`, `list_memories()`, `export_memories()`, `import_memories()` methods in `src/core/server.py`
   - Fixed merge conflicts in `src/cli/__init__.py` (validate-install, repository, workspace commands)

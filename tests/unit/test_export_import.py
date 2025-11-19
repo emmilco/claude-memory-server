@@ -45,7 +45,7 @@ async def server(mock_config):
             {
                 "memory_id": "mem_1",
                 "content": "Test memory 1",
-                "category": "technical",
+                "category": "fact",
                 "context_level": "SESSION_STATE",
                 "scope": "global",
                 "importance": 0.8,
@@ -167,7 +167,7 @@ class TestExportMemories:
         result = await server.export_memories(
             output_path=None,
             format="json",
-            category="technical",
+            category="fact",
             min_importance=0.7
         )
 
@@ -176,7 +176,7 @@ class TestExportMemories:
         # Verify list_memories was called with correct filters
         server.list_memories.assert_called_once()
         call_args = server.list_memories.call_args[1]
-        assert call_args["category"] == "technical"
+        assert call_args["category"] == "fact"
         assert call_args["min_importance"] == 0.7
 
     @pytest.mark.asyncio
@@ -218,7 +218,7 @@ class TestImportMemories:
                 {
                     "memory_id": "mem_new_1",
                     "content": "New memory 1",
-                    "category": "technical",
+                    "category": "fact",
                     "context_level": "SESSION_STATE",
                     "scope": "global",
                     "importance": 0.7,
@@ -424,12 +424,12 @@ class TestImportMemories:
                 {
                     # Missing memory_id - should cause error
                     "content": "Test",
-                    "category": "technical"
+                    "category": "fact"
                 },
                 {
                     "memory_id": "mem_valid",
                     "content": "Valid memory",
-                    "category": "technical"
+                    "category": "fact"
                 }
             ]
         }
