@@ -143,10 +143,6 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - Update to latest Qdrant APIs
   - Update to latest MCP SDK
 
-- [ ] **REF-001**: Fix Async/Await Patterns (~1 hour)
-  - Requires profiling first
-  - Optimize async patterns for better performance
-
 - [ ] **REF-002**: Add Structured Logging (~1.5 hours)
   - Requires logging format decision
   - Implement consistent logging across modules
