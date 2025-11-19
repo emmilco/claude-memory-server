@@ -35,7 +35,7 @@ class CrossProjectConsentManager:
         if db_path is None:
             db_path = Path.home() / ".claude-rag" / "consent.db"
 
-        self.db_path = Path(db_path)
+        self.db_path = Path(db_path).expanduser()
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_db()
 

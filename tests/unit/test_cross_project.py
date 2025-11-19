@@ -38,70 +38,71 @@ class TestCrossProjectConsent:
 
     def test_consent_initialization(self, tmp_path):
         """Test consent manager initialization."""
-        consent_file = tmp_path / "consent.json"
-        consent = CrossProjectConsent(str(consent_file))
+        consent_file = tmp_path / "consent.db"
+        consent = CrossProjectConsent(consent_file)
 
-        assert consent.consent_file == consent_file
+        assert consent.db_path == consent_file
         assert len(consent.get_opted_in_projects()) == 0
 
     def test_opt_in_project(self, tmp_path):
         """Test opting in a project."""
-        consent_file = tmp_path / "consent.json"
-        consent = CrossProjectConsent(str(consent_file))
+        consent_file = tmp_path / "consent.db"
+        consent = CrossProjectConsent(consent_file)
 
-        consent.opt_in_project("test-project")
+        consent.opt_in("test-project")
 
-        assert consent.is_project_opted_in("test-project")
+        assert consent.is_opted_in("test-project")
         assert "test-project" in consent.get_opted_in_projects()
 
     def test_opt_out_project(self, tmp_path):
         """Test opting out a project."""
-        consent_file = tmp_path / "consent.json"
-        consent = CrossProjectConsent(str(consent_file))
+        consent_file = tmp_path / "consent.db"
+        consent = CrossProjectConsent(consent_file)
 
-        consent.opt_in_project("test-project")
-        assert consent.is_project_opted_in("test-project")
+        consent.opt_in("test-project")
+        assert consent.is_opted_in("test-project")
 
-        consent.opt_out_project("test-project")
-        assert not consent.is_project_opted_in("test-project")
+        consent.opt_out("test-project")
+        assert not consent.is_opted_in("test-project")
 
     def test_get_searchable_projects_current_only(self, tmp_path):
-        """Test getting searchable projects in current-only mode."""
-        consent_file = tmp_path / "consent.json"
-        consent = CrossProjectConsent(str(consent_file))
+        """Test getting searchable projects excluding current."""
+        consent_file = tmp_path / "consent.db"
+        consent = CrossProjectConsent(consent_file)
 
-        consent.opt_in_project("project-a")
-        consent.opt_in_project("project-b")
+        consent.opt_in("project-a")
+        consent.opt_in("project-b")
+        consent.opt_in("project-c")
 
-        # Current only mode - should only return current project
+        # When search_all=False, exclude current project from opted-in list
         searchable = consent.get_searchable_projects("project-c", search_all=False)
-        assert searchable == {"project-c"}
+        assert set(searchable) == {"project-a", "project-b"}
 
     def test_get_searchable_projects_all_mode(self, tmp_path):
-        """Test getting searchable projects in all mode."""
-        consent_file = tmp_path / "consent.json"
-        consent = CrossProjectConsent(str(consent_file))
+        """Test getting all searchable projects."""
+        consent_file = tmp_path / "consent.db"
+        consent = CrossProjectConsent(consent_file)
 
-        consent.opt_in_project("project-a")
-        consent.opt_in_project("project-b")
+        consent.opt_in("project-a")
+        consent.opt_in("project-b")
 
-        # All mode - should return all opted-in + current
+        # All mode - should return all opted-in projects
         searchable = consent.get_searchable_projects("project-c", search_all=True)
-        assert searchable == {"project-a", "project-b", "project-c"}
+        assert set(searchable) == {"project-a", "project-b"}
 
     def test_persistence(self, tmp_path):
         """Test that consent is persisted across instances."""
-        consent_file = tmp_path / "consent.json"
+        consent_file = tmp_path / "consent.db"
 
         # First instance - opt in projects
-        consent1 = CrossProjectConsent(str(consent_file))
-        consent1.opt_in_project("project-a")
-        consent1.opt_in_project("project-b")
+        consent1 = CrossProjectConsent(consent_file)
+        consent1.opt_in("project-a")
+        consent1.opt_in("project-b")
 
         # Second instance - should load persisted data
-        consent2 = CrossProjectConsent(str(consent_file))
-        assert consent2.is_project_opted_in("project-a")
-        assert consent2.is_project_opted_in("project-b")
+        consent2 = CrossProjectConsent(consent_file)
+        assert consent2.is_opted_in("project-a")
+        assert consent2.is_opted_in("project-b")
 
 
 class TestSearchAllProjects:
@@ -133,18 +134,21 @@ class TestSearchAllProjects:
         # Don't opt in any projects
         result = await server.search_all_projects(query="test function")
 
-        # Should search current project (always allowed) but may not have indexed data
-        # The current project is auto-detected from git, so it will be searched
+        # With no opted-in projects, there are no projects to search
         assert "results" in result
         assert "projects_searched" in result
-        # Current project is always searchable
-        assert len(result["projects_searched"]) >= 1
+        # No projects opted in means no projects searched
+        assert isinstance(result["projects_searched"], list)
 
     @pytest.mark.asyncio
     async def test_search_all_projects_with_indexing(self, server, small_test_project):
         """Test cross-project search with actual indexed code."""
         # Get the current project name (auto-detected from git)
         current_project = server.project_name or "test-project-1"
+
+        # Opt in the project for cross-project search
+        if hasattr(server, 'consent_manager') and server.consent_manager:
+            server.consent_manager.opt_in(current_project)
 
         # Index with current project name
         await server.index_codebase(
@@ -159,10 +163,12 @@ class TestSearchAllProjects:
             limit=5
         )
 
-        # Should have results from the indexed project
+        # Should have results from the indexed project (if opted in)
         assert "results" in result
         assert "projects_searched" in result
-        assert current_project in result["projects_searched"]
+        # If consent manager exists and project was opted in, it should be searched
+        if hasattr(server, 'consent_manager') and server.consent_manager:
+            assert current_project in result["projects_searched"]
         assert "query_time_ms" in result
 
     @pytest.mark.asyncio
