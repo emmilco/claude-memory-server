@@ -90,6 +90,15 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-18
 
+- **FEAT-022: Performance Monitoring Dashboard (Core Implementation)**
+  - Created `src/monitoring/capacity_planner.py` for predictive capacity planning
+  - Linear regression-based forecasting for database growth, memory capacity, and project count
+  - Added 15 Pydantic models for monitoring MCP tools in `src/core/models.py`
+  - Integrated MetricsCollector, AlertEngine, HealthReporter, and CapacityPlanner into server
+  - Added 6 MCP tool methods: get_performance_metrics, get_active_alerts, get_health_score, get_capacity_forecast, resolve_alert, get_weekly_report
+  - Monitoring metrics stored in `~/.claude-rag/monitoring.db`
+  - **Note:** MCP tool registration and comprehensive tests pending completion
+
 - **FEAT-017: Multi-Repository Support (Foundation)**
   - Created `src/memory/git_detector.py` for git repository detection and metadata extraction
   - Functions: `is_git_repository()`, `get_git_root()`, `get_git_metadata()`, `get_repository_name()`

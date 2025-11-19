@@ -3,6 +3,7 @@
 import logging
 import asyncio
 import json
+import os
 from typing import Optional, Dict, Any, List
 from datetime import datetime, UTC
 from pathlib import Path
@@ -38,6 +39,10 @@ from src.memory.conversation_tracker import ConversationTracker
 from src.memory.query_expander import QueryExpander
 from src.memory.suggestion_engine import SuggestionEngine
 from src.search.hybrid_search import HybridSearcher, FusionMethod
+from src.monitoring.metrics_collector import MetricsCollector
+from src.monitoring.alert_engine import AlertEngine
+from src.monitoring.health_reporter import HealthReporter
+from src.monitoring.capacity_planner import CapacityPlanner
 
 logger = logging.getLogger(__name__)
 
@@ -243,6 +248,21 @@ class MemoryRAGServer:
             else:
                 self.suggestion_engine = None
                 logger.info("Proactive suggestions disabled")
+
+            # Initialize performance monitoring (FEAT-022)
+            # Determine monitoring database path (same directory as sqlite memory db)
+            sqlite_dir = os.path.dirname(os.path.expanduser(self.config.sqlite_path))
+            monitoring_db_path = os.path.join(sqlite_dir, "monitoring.db")
+
+            self.metrics_collector = MetricsCollector(
+                db_path=monitoring_db_path,
+                store=self.store
+            )
+            self.alert_engine = AlertEngine(db_path=monitoring_db_path)
+            self.health_reporter = HealthReporter()
+            self.capacity_planner = CapacityPlanner(self.metrics_collector)
+
+            logger.info(f"Performance monitoring enabled (metrics DB: {monitoring_db_path})")
 
             logger.info("Server initialized successfully")
 
@@ -3812,6 +3832,298 @@ class MemoryRAGServer:
         except Exception as e:
             logger.error(f"Error setting suggestion mode: {e}")
             raise ValidationError(f"Failed to set suggestion mode: {str(e)}")
+
+    # ========================================================================
+    # Performance Monitoring Methods (FEAT-022)
+    # ========================================================================
+
+    async def get_performance_metrics(
+        self, include_history_days: int = 1
+    ) -> Dict[str, Any]:
+        """
+        Get current performance metrics.
+
+        Args:
+            include_history_days: Include historical average over N days
+
+        Returns:
+            Dictionary with current and historical metrics
+        """
+        try:
+            # Collect current metrics
+            current = await self.metrics_collector.collect_metrics()
+
+            # Convert to response format
+            current_data = {
+                "avg_search_latency_ms": current.avg_search_latency_ms,
+                "p95_search_latency_ms": current.p95_search_latency_ms,
+                "cache_hit_rate": current.cache_hit_rate,
+                "index_staleness_ratio": current.index_staleness_ratio,
+                "queries_per_day": current.queries_per_day,
+                "avg_results_per_query": current.avg_results_per_query,
+                "timestamp": current.timestamp.isoformat(),
+            }
+
+            result = {
+                "current_metrics": current_data
+            }
+
+            # Add historical average if requested
+            if include_history_days > 0:
+                history = self.metrics_collector.get_metrics_history(days=include_history_days)
+                if history:
+                    # Calculate averages
+                    avg_latency = sum(m.avg_search_latency_ms for m in history) / len(history)
+                    avg_p95 = sum(m.p95_search_latency_ms for m in history) / len(history)
+                    avg_cache = sum(m.cache_hit_rate for m in history) / len(history)
+                    avg_staleness = sum(m.index_staleness_ratio for m in history) / len(history)
+                    avg_queries = sum(m.queries_per_day for m in history) / len(history)
+                    avg_results = sum(m.avg_results_per_query for m in history) / len(history)
+
+                    result["historical_average"] = {
+                        "avg_search_latency_ms": avg_latency,
+                        "p95_search_latency_ms": avg_p95,
+                        "cache_hit_rate": avg_cache,
+                        "index_staleness_ratio": avg_staleness,
+                        "queries_per_day": avg_queries,
+                        "avg_results_per_query": avg_results,
+                        "timestamp": "",  # Historical average has no specific timestamp
+                    }
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Error getting performance metrics: {e}")
+            raise StorageError(f"Failed to get performance metrics: {str(e)}")
+
+    async def get_active_alerts(
+        self,
+        severity_filter: Optional[str] = None,
+        include_snoozed: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        Get active system alerts.
+
+        Args:
+            severity_filter: Filter by severity (CRITICAL, WARNING, INFO)
+            include_snoozed: Include snoozed alerts
+
+        Returns:
+            Dictionary with active alerts and counts
+        """
+        try:
+            # Get active alerts
+            if severity_filter:
+                from src.monitoring.alert_engine import AlertSeverity
+                severity = AlertSeverity(severity_filter.upper())
+                alerts = self.alert_engine.get_alerts_by_severity(severity)
+            else:
+                alerts = self.alert_engine.get_active_alerts(include_snoozed=include_snoozed)
+
+            # Convert to response format
+            alert_data = []
+            critical_count = 0
+            warning_count = 0
+            info_count = 0
+
+            for alert in alerts:
+                alert_data.append({
+                    "id": alert.id,
+                    "severity": alert.severity.value,
+                    "metric_name": alert.metric_name,
+                    "current_value": alert.current_value,
+                    "threshold_value": alert.threshold_value,
+                    "message": alert.message,
+                    "recommendations": alert.recommendations,
+                    "timestamp": alert.timestamp.isoformat(),
+                })
+
+                # Count by severity
+                if alert.severity.value == "CRITICAL":
+                    critical_count += 1
+                elif alert.severity.value == "WARNING":
+                    warning_count += 1
+                elif alert.severity.value == "INFO":
+                    info_count += 1
+
+            return {
+                "alerts": alert_data,
+                "total_alerts": len(alerts),
+                "critical_count": critical_count,
+                "warning_count": warning_count,
+                "info_count": info_count,
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting active alerts: {e}")
+            raise StorageError(f"Failed to get active alerts: {str(e)}")
+
+    async def get_health_score(self) -> Dict[str, Any]:
+        """
+        Get system health score with component breakdown.
+
+        Returns:
+            Dictionary with health score and recommendations
+        """
+        try:
+            # Collect current metrics
+            metrics = await self.metrics_collector.collect_metrics()
+
+            # Evaluate alerts
+            alerts = self.alert_engine.evaluate_metrics(metrics)
+
+            # Calculate health score
+            health_score = self.health_reporter.calculate_health_score(metrics, alerts)
+
+            # Generate recommendations
+            trends = []  # No trend analysis for single snapshot
+            recommendations = self.health_reporter._generate_recommendations(
+                metrics, alerts, trends
+            )
+
+            return {
+                "health_score": {
+                    "overall_score": health_score.overall_score,
+                    "status": health_score.status.value,
+                    "performance_score": health_score.performance_score,
+                    "quality_score": health_score.quality_score,
+                    "database_health_score": health_score.database_health_score,
+                    "usage_efficiency_score": health_score.usage_efficiency_score,
+                    "total_alerts": health_score.total_alerts,
+                    "critical_alerts": health_score.critical_alerts,
+                    "warning_alerts": health_score.warning_alerts,
+                    "timestamp": health_score.timestamp.isoformat(),
+                },
+                "recommendations": recommendations,
+            }
+
+        except Exception as e:
+            logger.error(f"Error calculating health score: {e}")
+            raise StorageError(f"Failed to calculate health score: {str(e)}")
+
+    async def get_capacity_forecast(self, days_ahead: int = 30) -> Dict[str, Any]:
+        """
+        Get capacity planning forecast.
+
+        Args:
+            days_ahead: Number of days to forecast ahead (7-90)
+
+        Returns:
+            Dictionary with capacity forecast and recommendations
+        """
+        try:
+            # Get capacity forecast
+            forecast = await self.capacity_planner.get_capacity_forecast(days_ahead)
+
+            return forecast.to_dict()
+
+        except Exception as e:
+            logger.error(f"Error getting capacity forecast: {e}")
+            raise StorageError(f"Failed to get capacity forecast: {str(e)}")
+
+    async def resolve_alert(self, alert_id: str) -> Dict[str, Any]:
+        """
+        Mark an alert as resolved.
+
+        Args:
+            alert_id: ID of alert to resolve
+
+        Returns:
+            Dictionary with success status
+        """
+        try:
+            success = self.alert_engine.resolve_alert(alert_id)
+
+            return {
+                "success": success,
+                "alert_id": alert_id,
+                "message": "Alert resolved successfully" if success else "Alert not found",
+            }
+
+        except Exception as e:
+            logger.error(f"Error resolving alert: {e}")
+            raise StorageError(f"Failed to resolve alert: {str(e)}")
+
+    async def get_weekly_report(self) -> Dict[str, Any]:
+        """
+        Get comprehensive weekly health report.
+
+        Returns:
+            Dictionary with weekly report data
+        """
+        try:
+            # Collect current metrics
+            current_metrics = await self.metrics_collector.collect_metrics()
+
+            # Get historical metrics (7 days)
+            historical_metrics = self.metrics_collector.get_metrics_history(days=7)
+
+            # Evaluate current alerts
+            current_alerts = self.alert_engine.get_active_alerts()
+
+            # Generate weekly report
+            report = self.health_reporter.generate_weekly_report(
+                current_metrics=current_metrics,
+                current_alerts=current_alerts,
+                historical_metrics=historical_metrics,
+            )
+
+            # Convert to response format
+            result = {
+                "period_start": report.period_start.isoformat(),
+                "period_end": report.period_end.isoformat(),
+                "current_health": {
+                    "overall_score": report.current_health.overall_score,
+                    "status": report.current_health.status.value,
+                    "performance_score": report.current_health.performance_score,
+                    "quality_score": report.current_health.quality_score,
+                    "database_health_score": report.current_health.database_health_score,
+                    "usage_efficiency_score": report.current_health.usage_efficiency_score,
+                    "total_alerts": report.current_health.total_alerts,
+                    "critical_alerts": report.current_health.critical_alerts,
+                    "warning_alerts": report.current_health.warning_alerts,
+                    "timestamp": report.current_health.timestamp.isoformat(),
+                },
+                "trends": [
+                    {
+                        "metric_name": trend.metric_name,
+                        "current_value": trend.current_value,
+                        "previous_value": trend.previous_value,
+                        "change_percent": trend.change_percent,
+                        "direction": trend.direction,
+                        "is_significant": trend.is_significant,
+                    }
+                    for trend in report.trends
+                ],
+                "improvements": report.improvements,
+                "concerns": report.concerns,
+                "recommendations": report.recommendations,
+                "usage_summary": report.usage_summary,
+                "alert_summary": report.alert_summary,
+            }
+
+            # Add previous health if available
+            if report.previous_health:
+                result["previous_health"] = {
+                    "overall_score": report.previous_health.overall_score,
+                    "status": report.previous_health.status.value,
+                    "performance_score": report.previous_health.performance_score,
+                    "quality_score": report.previous_health.quality_score,
+                    "database_health_score": report.previous_health.database_health_score,
+                    "usage_efficiency_score": report.previous_health.usage_efficiency_score,
+                    "total_alerts": report.previous_health.total_alerts,
+                    "critical_alerts": report.previous_health.critical_alerts,
+                    "warning_alerts": report.previous_health.warning_alerts,
+                    "timestamp": report.previous_health.timestamp.isoformat(),
+                }
+            else:
+                result["previous_health"] = None
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Error generating weekly report: {e}")
+            raise StorageError(f"Failed to generate weekly report: {str(e)}")
 
     async def close(self) -> None:
         """Clean up resources."""
