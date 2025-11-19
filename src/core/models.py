@@ -533,3 +533,56 @@ class SuggestionResponse(BaseModel):
     session_id: str = Field(..., description="Conversation session ID")
 
     model_config = ConfigDict(use_enum_values=False)
+
+
+class FeedbackRating(str, Enum):
+    """User feedback rating for search results."""
+
+    HELPFUL = "helpful"
+    NOT_HELPFUL = "not_helpful"
+
+
+class SearchFeedback(BaseModel):
+    """User feedback for a search query and its results."""
+
+    id: str = Field(default_factory=lambda: str(uuid4()))
+    search_id: str = Field(..., description="Unique ID of the search this feedback relates to")
+    query: str = Field(..., description="Original search query")
+    result_ids: List[str] = Field(default_factory=list, description="IDs of results returned")
+    rating: FeedbackRating = Field(..., description="User rating: helpful or not_helpful")
+    comment: Optional[str] = Field(None, description="Optional user comment")
+    project_name: Optional[str] = Field(None, description="Project context")
+    timestamp: str = Field(
+        default_factory=lambda: datetime.now(UTC).isoformat(),
+        description="When feedback was submitted"
+    )
+    user_id: Optional[str] = Field(None, description="Optional user identifier")
+
+    model_config = ConfigDict(use_enum_values=False)
+
+
+class QualityMetrics(BaseModel):
+    """Aggregated quality metrics for search results."""
+
+    id: str = Field(default_factory=lambda: str(uuid4()))
+    time_window: str = Field(..., description="Time window: hour, day, or week")
+    window_start: str = Field(..., description="Start of time window (ISO format)")
+    total_searches: int = Field(default=0, description="Total number of searches")
+    helpful_count: int = Field(default=0, description="Number of helpful ratings")
+    not_helpful_count: int = Field(default=0, description="Number of not helpful ratings")
+    avg_result_count: float = Field(default=0.0, description="Average number of results returned")
+    project_name: Optional[str] = Field(None, description="Project filter")
+    updated_at: str = Field(
+        default_factory=lambda: datetime.now(UTC).isoformat(),
+        description="Last update timestamp"
+    )
+
+    @property
+    def helpfulness_rate(self) -> float:
+        """Calculate helpfulness rate (0.0 to 1.0)."""
+        total_rated = self.helpful_count + self.not_helpful_count
+        if total_rated == 0:
+            return 0.0
+        return self.helpful_count / total_rated
+
+    model_config = ConfigDict(use_enum_values=False)
