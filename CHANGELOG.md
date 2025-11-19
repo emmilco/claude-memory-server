@@ -102,6 +102,15 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-18
 
+- **UX-033: Memory Tagging & Organization System**
+  - Created `src/tagging/auto_tagger.py` for automatic tag extraction and inference
+  - Created `src/tagging/tag_manager.py` for hierarchical tag management (4-level hierarchies)
+  - Created `src/tagging/collection_manager.py` for smart collection management
+  - Added 3 CLI commands: tags, collections, auto-tag
+  - Extended SQLite store with tag-based search filtering
+  - Auto-tagging detects languages, frameworks, patterns, and domains
+  - Added 4 database tables for tags, memory_tags, collections, collection_memories
+
 - **FEAT-028: Proactive Context Suggestions**
   - Created `src/memory/pattern_detector.py` for conversation pattern detection (4 types: implementation, debugging, questions, refactoring)
   - Created `src/memory/feedback_tracker.py` for tracking suggestion acceptance with SQLite persistence
