@@ -26,6 +26,9 @@ try:
     import tree_sitter_go
     import tree_sitter_rust as tree_sitter_rust_lang
     import tree_sitter_php
+    import tree_sitter_ruby
+    import tree_sitter_swift
+    import tree_sitter_kotlin
     TREE_SITTER_AVAILABLE = True
 except ImportError:
     TREE_SITTER_AVAILABLE = False
@@ -47,6 +50,9 @@ class PythonParser:
         "go": (tree_sitter_go, "language") if TREE_SITTER_AVAILABLE else None,
         "rust": (tree_sitter_rust_lang, "language") if TREE_SITTER_AVAILABLE else None,
         "php": (tree_sitter_php, "language") if TREE_SITTER_AVAILABLE else None,
+        "ruby": (tree_sitter_ruby, "language") if TREE_SITTER_AVAILABLE else None,
+        "swift": (tree_sitter_swift, "language") if TREE_SITTER_AVAILABLE else None,
+        "kotlin": (tree_sitter_kotlin, "language") if TREE_SITTER_AVAILABLE else None,
     }
 
     # Node types to extract by language
@@ -58,6 +64,9 @@ class PythonParser:
         "go": ["function_declaration", "method_declaration"],
         "rust": ["function_item"],
         "php": ["function_definition", "method_declaration"],
+        "ruby": ["method", "singleton_method"],
+        "swift": ["function_declaration"],
+        "kotlin": ["function_declaration"],
     }
 
     CLASS_NODES = {
@@ -68,6 +77,9 @@ class PythonParser:
         "go": ["type_declaration"],
         "rust": ["struct_item", "impl_item", "trait_item"],
         "php": ["class_declaration", "interface_declaration", "trait_declaration"],
+        "ruby": ["class", "module"],
+        "swift": ["class_declaration", "struct_declaration", "protocol_declaration"],
+        "kotlin": ["class_declaration", "object_declaration", "interface_declaration"],
     }
 
     def __init__(self):

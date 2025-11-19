@@ -148,6 +148,14 @@ A pre-commit hook enforces CHANGELOG updates:
   - Updated supported languages count: 13 → 15 file formats
   - Added Ruby, Swift, Kotlin to language list
 
+- **FEAT-009: Ruby/Swift/Kotlin Language Support**
+  - Added Swift, Ruby, and Kotlin parsing via Python fallback parser
+  - Added extension mappings for .rb, .swift, .kt, .kts in `src/memory/incremental_indexer.py`
+  - Updated `src/memory/python_parser.py` with Swift, Ruby, Kotlin support
+  - Added tree-sitter-swift, tree-sitter-ruby, tree-sitter-kotlin to requirements.txt
+  - Note: Rust parser limited to existing languages due to tree-sitter version conflicts
+  - Python fallback provides full functionality for all 3 languages (10-20ms per file)
+
 - **FEAT-046: Indexed Content Visibility**
   - Added `get_indexed_files()` MCP tool to list indexed files with metadata (file_path, language, last_indexed, unit_count)
   - Added `list_indexed_units()` MCP tool to list code units (functions, classes, methods) with filtering
