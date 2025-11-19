@@ -18,13 +18,13 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
 
 #### Code Intelligence Enhancements
 
-- [ ] **FEAT-046**: Indexed Content Visibility (~2-3 days) 🔥🔥
-  - [ ] Implement `get_indexed_files` MCP tool
-  - [ ] Implement `list_indexed_units` MCP tool (functions, classes, etc.)
-  - [ ] Filter by project, language, file pattern
-  - [ ] Show indexing metadata: last indexed, hash, unit count
-  - [ ] Pagination for large projects
-  - [ ] Tests: listing, filtering, pagination
+- [x] **FEAT-046**: Indexed Content Visibility ✅ **COMPLETE**
+  - [x] Implement `get_indexed_files` MCP tool
+  - [x] Implement `list_indexed_units` MCP tool (functions, classes, etc.)
+  - [x] Filter by project, language, file_pattern, unit_type
+  - [x] Show indexing metadata: last indexed, unit count
+  - [x] Pagination with auto-capped limits (1-500)
+  - [x] Tests: 17 tests, all passing
   - **Impact:** Transparency into what's indexed, debugging aid
   - **Use case:** "What files are indexed in this project?" or "Show all Python functions indexed"
   - **Enhances:** `get_status` (which only shows counts)
