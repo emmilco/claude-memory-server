@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Memory Dashboard</title>
+    <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🧠 Claude Memory Dashboard</h1>
+            <p class="subtitle">Memory system statistics and recent activity</p>
+        </header>
+
+        <main>
+            <!-- Overview Section -->
+            <section class="card">
+                <h2>📊 Overview</h2>
+                <div id="overview" class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="total-memories">-</div>
+                        <div class="stat-label">Total Memories</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="num-projects">-</div>
+                        <div class="stat-label">Projects</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="global-memories">-</div>
+                        <div class="stat-label">Global Memories</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Projects Section -->
+            <section class="card">
+                <h2>📁 Projects</h2>
+                <div id="projects-list" class="list">
+                    <p class="loading">Loading...</p>
+                </div>
+            </section>
+
+            <!-- Categories Section -->
+            <section class="card">
+                <h2>🏷️ Categories</h2>
+                <div id="categories-chart" class="chart">
+                    <p class="loading">Loading...</p>
+                </div>
+            </section>
+
+            <!-- Lifecycle States Section -->
+            <section class="card">
+                <h2>♻️ Lifecycle States</h2>
+                <div id="lifecycle-chart" class="chart">
+                    <p class="loading">Loading...</p>
+                </div>
+            </section>
+
+            <!-- Recent Activity Section -->
+            <section class="card">
+                <h2>⚡ Recent Activity</h2>
+
+                <h3>Recent Searches</h3>
+                <div id="recent-searches" class="activity-list">
+                    <p class="loading">Loading...</p>
+                </div>
+
+                <h3>Recent Additions</h3>
+                <div id="recent-additions" class="activity-list">
+                    <p class="loading">Loading...</p>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>Claude Memory RAG Server Dashboard v1.0 | <a href="#" onclick="loadData(); return false;">Refresh</a></p>
+        </footer>
+    </div>
+
+    <script src="dashboard.js"></script>
+</body>
+</html>

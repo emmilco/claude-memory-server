@@ -81,6 +81,14 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-18
 
+- **UX-026: Web Dashboard MVP (Complete)**
+  - **Phase 1**: Dashboard API endpoints - `get_dashboard_stats()` and `get_recent_activity()` in server.py
+  - **Phase 2**: Web server - `src/dashboard/web_server.py` with HTTP server and API proxying
+  - **Phase 3**: Static dashboard UI - HTML/CSS/JS with responsive design, charts, auto-refresh
+  - Created `tests/unit/test_dashboard_api.py` with 14 comprehensive tests
+  - Run with: `python -m src.dashboard.web_server --port 8080`
+  - Features: Memory overview, project breakdown, category/lifecycle charts, recent activity feed
+
 - **FEAT-039: Cross-Project Consent Tools**
   - Implemented `CrossProjectConsentManager` for privacy-controlled cross-project search
   - Added 3 MCP tools: `opt_in_cross_project()`, `opt_out_cross_project()`, `list_opted_in_projects()`
