@@ -90,6 +90,16 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-18
 
+- **FEAT-015: Code Review Features**
+  - Created `src/review/patterns.py` with 14 code smell patterns across 4 categories
+  - Categories: security (4 patterns), performance (3), maintainability (4), best_practice (3)
+  - Created `src/review/pattern_matcher.py` for semantic pattern matching using embeddings
+  - Created `src/review/comment_generator.py` for generating review comments with markdown formatting
+  - Added `review_code()` MCP tool for automated code review
+  - Pattern matching uses 75% similarity threshold with confidence scoring (low/medium/high)
+  - Detects: SQL injection, hardcoded secrets, N+1 queries, magic numbers, missing error handling, etc.
+  - Created `tests/unit/test_pattern_matcher.py` with 10 comprehensive tests (all passing)
+
 - **FEAT-014: Semantic Refactoring**
   - Created `src/refactoring/code_analyzer.py` for code quality analysis and refactoring suggestions
   - Added `find_usages()` MCP tool for semantic code usage detection across codebase

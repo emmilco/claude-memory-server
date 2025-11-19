@@ -4019,6 +4019,173 @@ class MemoryRAGServer:
             logger.error(f"Error suggesting refactorings: {e}")
             raise ValidationError(f"Failed to suggest refactorings: {str(e)}")
 
+    async def review_code(
+        self,
+        file_path: Optional[str] = None,
+        project_name: Optional[str] = None,
+        severity_threshold: str = "medium",
+        categories: Optional[List[str]] = None,
+        limit: int = 50,
+    ) -> Dict[str, Any]:
+        """
+        Review code for common smells and anti-patterns.
+
+        Uses semantic pattern matching to detect:
+        - Security issues (SQL injection, hardcoded secrets, etc.)
+        - Performance problems (N+1 queries, inefficient loops, etc.)
+        - Maintainability issues (magic numbers, god classes, etc.)
+        - Best practice violations (missing error handling, etc.)
+
+        Args:
+            file_path: Optional specific file to review
+            project_name: Optional project to review
+            severity_threshold: Minimum severity ('low', 'medium', 'high', 'critical')
+            categories: Optional list of categories to check
+            limit: Maximum number of issues to return
+
+        Returns:
+            Dict with:
+                - reviews: List of review comments
+                - count: Total issues found
+                - summary: Breakdown by severity and category
+
+        Example:
+            review_code(
+                project_name="my-project",
+                severity_threshold="high",
+                categories=["security", "performance"]
+            )
+        """
+        from ..review.patterns import ALL_PATTERNS, get_patterns_by_category
+        from ..review.pattern_matcher import PatternMatcher
+        from ..review.comment_generator import ReviewCommentGenerator
+
+        try:
+            # Filter patterns by category if specified
+            if categories:
+                patterns = []
+                for category in categories:
+                    patterns.extend(get_patterns_by_category(category))
+            else:
+                patterns = ALL_PATTERNS
+
+            if not patterns:
+                return {
+                    "reviews": [],
+                    "count": 0,
+                    "summary": {},
+                    "message": "No patterns selected for review",
+                }
+
+            # Initialize pattern matcher and comment generator
+            matcher = PatternMatcher(self.embedding_generator)
+            comment_gen = ReviewCommentGenerator()
+
+            # Get code units from the store
+            from .code_search import search_code
+
+            # Use broad query to get code units
+            results = await search_code(
+                store=self.store,
+                query="function class method code",  # Broad query
+                limit=limit * 2,  # Get more, filter later
+                project_name=project_name,
+            )
+
+            all_comments = []
+
+            # Review each code unit
+            for result in results[:limit]:
+                metadata = result.get("metadata", {})
+                code = result.get("text", "")
+                language = metadata.get("language", "python")
+                current_file_path = metadata.get("file_path", "unknown")
+                line_number = metadata.get("start_line", 1)
+
+                # Skip if file_path filter doesn't match
+                if file_path and current_file_path != file_path:
+                    continue
+
+                # Find pattern matches
+                matches = await matcher.find_matches(
+                    code=code,
+                    language=language,
+                    patterns=patterns,
+                    threshold=0.75,  # 75% similarity threshold
+                )
+
+                # Generate review comments for matches
+                for match in matches:
+                    # Check severity threshold
+                    severity_order = {"low": 0, "medium": 1, "high": 2, "critical": 3}
+                    min_severity = severity_order.get(severity_threshold.lower(), 1)
+                    match_severity = severity_order.get(match.pattern.severity.lower(), 0)
+
+                    if match_severity >= min_severity:
+                        comment = comment_gen.generate_comment(
+                            match=match,
+                            file_path=current_file_path,
+                            line_number=line_number,
+                            code_excerpt=code[:200],  # First 200 chars
+                        )
+
+                        all_comments.append({
+                            "pattern_id": comment.pattern_id,
+                            "pattern_name": comment.pattern_name,
+                            "category": comment.category,
+                            "severity": comment.severity,
+                            "file_path": comment.file_path,
+                            "line_number": comment.line_number,
+                            "description": comment.description,
+                            "suggested_fix": comment.suggested_fix,
+                            "confidence": comment.confidence,
+                            "similarity_score": comment.similarity_score,
+                            "code_excerpt": comment.code_excerpt,
+                            "markdown": comment_gen.format_as_markdown(comment),
+                        })
+
+            # Limit to requested number
+            all_comments = all_comments[:limit]
+
+            # Generate summary
+            from ..review.comment_generator import ReviewComment
+
+            # Convert back to ReviewComment objects for summary
+            comment_objects = [
+                ReviewComment(
+                    pattern_id=c["pattern_id"],
+                    pattern_name=c["pattern_name"],
+                    category=c["category"],
+                    severity=c["severity"],
+                    file_path=c["file_path"],
+                    line_number=c["line_number"],
+                    description=c["description"],
+                    suggested_fix=c["suggested_fix"],
+                    confidence=c["confidence"],
+                    similarity_score=c["similarity_score"],
+                    code_excerpt=c["code_excerpt"],
+                )
+                for c in all_comments
+            ]
+
+            summary = comment_gen.generate_summary(comment_objects)
+
+            return {
+                "reviews": all_comments,
+                "count": len(all_comments),
+                "summary": summary,
+                "filters": {
+                    "file_path": file_path,
+                    "project_name": project_name,
+                    "severity_threshold": severity_threshold,
+                    "categories": categories,
+                },
+            }
+
+        except Exception as e:
+            logger.error(f"Error reviewing code: {e}")
+            raise ValidationError(f"Failed to review code: {str(e)}")
+
     async def close(self) -> None:
         """Clean up resources."""
         # Stop conversation tracker
