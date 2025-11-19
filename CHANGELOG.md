@@ -113,6 +113,18 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Documentation - 2025-11-18
 
+- **DOC-009: Error Recovery Workflows Documentation**
+  - Created comprehensive `docs/ERROR_RECOVERY.md` with recovery procedures for all common failure scenarios
+  - Decision tree for quick problem identification
+  - Section 1: Qdrant connection and corruption recovery
+  - Section 2: Indexing failure recovery with incremental resume
+  - Section 3: Database corruption and pollution cleanup
+  - Section 4: Installation and setup failure troubleshooting
+  - Section 5: Performance and search issues
+  - Section 6: Complete system reset procedures
+  - Backup and prevention best practices
+  - Appendix with common error messages and quick fixes
+
 - **FEAT-040 & FEAT-041: Memory CRUD Operations API Documentation**
   - Added comprehensive API documentation for `list_memories`, `update_memory`, and `get_memory_by_id` tools in `docs/API.md`
   - Updated MCP tool count from 14 to 17 tools
