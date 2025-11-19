@@ -102,6 +102,14 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-18
 
+- **UX-017: Indexing Time Estimates**
+  - Created `src/memory/time_estimator.py` for intelligent time estimation with historical tracking
+  - Created `src/memory/indexing_metrics.py` for indexing performance metrics storage
+  - Added real-time ETA calculations during indexing operations
+  - Added performance optimization suggestions (detect slow patterns, suggest exclusions)
+  - Time estimates based on historical data (rolling 10-run average per project)
+  - Automatic metrics cleanup for entries older than 30 days
+
 - **UX-033: Memory Tagging & Organization System**
   - Created `src/tagging/auto_tagger.py` for automatic tag extraction and inference
   - Created `src/tagging/tag_manager.py` for hierarchical tag management (4-level hierarchies)
