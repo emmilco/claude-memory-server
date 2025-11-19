@@ -25,6 +25,7 @@ try:
     import tree_sitter_java
     import tree_sitter_go
     import tree_sitter_rust as tree_sitter_rust_lang
+    import tree_sitter_php
     TREE_SITTER_AVAILABLE = True
 except ImportError:
     TREE_SITTER_AVAILABLE = False
@@ -45,6 +46,7 @@ class PythonParser:
         "java": (tree_sitter_java, "language") if TREE_SITTER_AVAILABLE else None,
         "go": (tree_sitter_go, "language") if TREE_SITTER_AVAILABLE else None,
         "rust": (tree_sitter_rust_lang, "language") if TREE_SITTER_AVAILABLE else None,
+        "php": (tree_sitter_php, "language") if TREE_SITTER_AVAILABLE else None,
     }
 
     # Node types to extract by language
@@ -55,6 +57,7 @@ class PythonParser:
         "java": ["method_declaration"],
         "go": ["function_declaration", "method_declaration"],
         "rust": ["function_item"],
+        "php": ["function_definition", "method_declaration"],
     }
 
     CLASS_NODES = {
@@ -64,6 +67,7 @@ class PythonParser:
         "java": ["class_declaration", "interface_declaration"],
         "go": ["type_declaration"],
         "rust": ["struct_item", "impl_item", "trait_item"],
+        "php": ["class_declaration", "interface_declaration", "trait_declaration"],
     }
 
     def __init__(self):

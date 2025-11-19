@@ -104,6 +104,14 @@ A pre-commit hook enforces CHANGELOG updates:
   - Detects: SQL injection, hardcoded secrets, N+1 queries, magic numbers, missing error handling, etc.
   - Created `tests/unit/test_pattern_matcher.py` with 10 comprehensive tests (all passing)
 
+- **FEAT-008: PHP Language Support**
+  - Added PHP parsing with function, class, interface, and trait extraction
+  - Added tree-sitter-php to Rust parser (`rust_core/src/parsing.rs`)
+  - Added PHP support to Python fallback parser (`src/memory/python_parser.py`)
+  - Added `.php` extension mapping in `src/memory/incremental_indexer.py`
+  - Added `tree-sitter-php>=0.20.0` to requirements.txt
+  - Created `tests/unit/test_php_parsing.py` with 24 tests (all passing)
+
 - **FEAT-014: Semantic Refactoring**
   - Created `src/refactoring/code_analyzer.py` for code quality analysis and refactoring suggestions
   - Added `find_usages()` MCP tool for semantic code usage detection across codebase

@@ -91,6 +91,7 @@ except ImportError:
             ".hh": "cpp",
             ".cs": "csharp",
             ".sql": "sql",
+            ".php": "php",
         }
         language = language_map.get(ext, "unknown")
 
