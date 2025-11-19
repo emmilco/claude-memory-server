@@ -18,12 +18,9 @@ from src.cli.session_summary_command import run_session_summary_command
 from src.cli.health_monitor_command import HealthMonitorCommand
 from src.cli.verify_command import verify_command
 from src.cli.consolidate_command import consolidate_command
-<<<<<<< HEAD
 from src.cli.validate_install import validate_installation
-=======
 from src.cli.repository_command import add_repository_parser, RepositoryCommand
 from src.cli.workspace_command import add_workspace_parser, WorkspaceCommand
->>>>>>> origin/main
 
 
 def setup_logging(level: str = "INFO"):
