@@ -94,6 +94,15 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-18
 
+- **FEAT-009: Swift Language Support**
+  - Added tree-sitter-swift = "0.7" to rust_core/Cargo.toml
+  - Updated rust_core/src/parsing.rs with Swift support
+  - Swift file extension .swift now recognized
+  - Extracts Swift functions, classes, structs, and protocols
+  - Created tests/unit/test_swift_parsing.py with comprehensive tests
+  - Created tests/test_data/sample_swift.swift
+  - Total supported file formats: 13 → 14
+
 - **FEAT-015: Code Review Features**
   - Created `src/review/patterns.py` with 14 code smell patterns across 4 categories
   - Categories: security (4 patterns), performance (3), maintainability (4), best_practice (3)
