@@ -15,6 +15,7 @@ pub enum SupportedLanguage {
     Rust,
     Ruby,
     Swift,
+    Kotlin,
     C,
     Cpp,
     CSharp,
@@ -33,6 +34,7 @@ impl SupportedLanguage {
             "rs" => Some(SupportedLanguage::Rust),
             "rb" => Some(SupportedLanguage::Ruby),
             "swift" => Some(SupportedLanguage::Swift),
+            "kt" | "kts" => Some(SupportedLanguage::Kotlin),
             "c" => Some(SupportedLanguage::C),
             "cpp" | "cc" | "cxx" | "hpp" | "h" | "hxx" | "hh" => Some(SupportedLanguage::Cpp),
             "cs" => Some(SupportedLanguage::CSharp),
@@ -52,6 +54,7 @@ impl SupportedLanguage {
             SupportedLanguage::Rust => tree_sitter_rust::LANGUAGE.into(),
             SupportedLanguage::Ruby => tree_sitter_ruby::LANGUAGE.into(),
             SupportedLanguage::Swift => tree_sitter_swift::LANGUAGE.into(),
+            SupportedLanguage::Kotlin => tree_sitter_kotlin::LANGUAGE.into(),
             SupportedLanguage::C => tree_sitter_cpp::LANGUAGE.into(),
             SupportedLanguage::Cpp => tree_sitter_cpp::LANGUAGE.into(),
             SupportedLanguage::CSharp => tree_sitter_c_sharp::LANGUAGE.into(),
@@ -123,6 +126,13 @@ impl SupportedLanguage {
                 (function_declaration
                   name: (simple_identifier) @name
                   parameters: (parameter)? @params) @function
+                "#
+            }
+            SupportedLanguage::Kotlin => {
+                r#"
+                (function_declaration
+                  (simple_identifier) @name
+                  (function_value_parameters)? @params) @function
                 "#
             }
             SupportedLanguage::C | SupportedLanguage::Cpp => {
@@ -220,6 +230,17 @@ impl SupportedLanguage {
                   name: (type_identifier) @name)
                  (protocol_declaration
                   name: (type_identifier) @name)] @class
+                "#
+            }
+            SupportedLanguage::Kotlin => {
+                // Kotlin has classes, interfaces, and objects
+                r#"
+                [(class_declaration
+                  (type_identifier) @name)
+                 (object_declaration
+                  (type_identifier) @name)
+                 (interface_declaration
+                  (type_identifier) @name)] @class
                 "#
             }
             SupportedLanguage::C => {
