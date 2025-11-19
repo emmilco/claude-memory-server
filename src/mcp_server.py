@@ -884,6 +884,88 @@ async def list_tools() -> List[Tool]:
                 "type": "object",
                 "properties": {}
             }
+        ),
+        # Performance Monitoring Tools (FEAT-022)
+        Tool(
+            name="get_performance_metrics",
+            description="Get current performance metrics including search latency, cache hit rate, and query volume. Optionally includes historical averages for comparison.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "include_history_days": {
+                        "type": "integer",
+                        "description": "Number of days to include in historical average (1-30)",
+                        "default": 1,
+                        "minimum": 1,
+                        "maximum": 30
+                    }
+                }
+            }
+        ),
+        Tool(
+            name="get_active_alerts",
+            description="Get active system alerts for performance degradation, quality issues, or capacity concerns. Includes severity levels and actionable recommendations.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "severity_filter": {
+                        "type": "string",
+                        "description": "Filter by severity: CRITICAL, WARNING, or INFO",
+                        "enum": ["CRITICAL", "WARNING", "INFO"]
+                    },
+                    "include_snoozed": {
+                        "type": "boolean",
+                        "description": "Include snoozed alerts",
+                        "default": False
+                    }
+                }
+            }
+        ),
+        Tool(
+            name="get_health_score",
+            description="Get overall system health score (0-100) with breakdown by component: performance, quality, database health, and usage efficiency. Includes recommendations for improvement.",
+            inputSchema={
+                "type": "object",
+                "properties": {}
+            }
+        ),
+        Tool(
+            name="get_capacity_forecast",
+            description="Get capacity planning forecast with predictions for database growth, memory count, and project count. Uses linear regression to predict when thresholds will be reached.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "days_ahead": {
+                        "type": "integer",
+                        "description": "Number of days to forecast ahead (7-90)",
+                        "default": 30,
+                        "minimum": 7,
+                        "maximum": 90
+                    }
+                }
+            }
+        ),
+        Tool(
+            name="resolve_alert",
+            description="Mark an alert as resolved. Use after taking action to address an alert.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "alert_id": {
+                        "type": "string",
+                        "description": "ID of the alert to resolve"
+                    }
+                },
+                "required": ["alert_id"]
+            }
+        ),
+        Tool(
+            name="get_weekly_report",
+            description="Get comprehensive weekly health report with trend analysis, improvements, concerns, and recommendations. Compares current week to previous week.",
+            inputSchema={
+                "type": "object",
+                "properties": {}
+            }
         )
     ]
 
@@ -1339,6 +1421,219 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
                     output += "Use opt_in_cross_project to enable cross-project search for your projects."
             else:
                 output = f"⚠️ {result['message']}"
+
+            return [TextContent(type="text", text=output)]
+
+        # Performance Monitoring Handlers (FEAT-022)
+        elif name == "get_performance_metrics":
+            include_history_days = arguments.get("include_history_days", 1)
+            result = await memory_rag_server.get_performance_metrics(
+                include_history_days=include_history_days
+            )
+
+            output = f"📊 Performance Metrics\n\n"
+
+            # Current metrics
+            current = result["current_metrics"]
+            output += f"**Current Snapshot** ({current['timestamp'][:19]})\n"
+            output += f"  • Avg Search Latency: {current['avg_search_latency_ms']:.2f}ms\n"
+            output += f"  • P95 Search Latency: {current['p95_search_latency_ms']:.2f}ms\n"
+            output += f"  • Cache Hit Rate: {current['cache_hit_rate']:.1%}\n"
+            output += f"  • Index Staleness: {current['index_staleness_ratio']:.1%}\n"
+            output += f"  • Queries/Day: {current['queries_per_day']:.1f}\n"
+            output += f"  • Avg Results/Query: {current['avg_results_per_query']:.1f}\n\n"
+
+            # Historical average if available
+            if result.get("historical_average"):
+                hist = result["historical_average"]
+                output += f"**{include_history_days}-Day Average**\n"
+                output += f"  • Avg Search Latency: {hist['avg_search_latency_ms']:.2f}ms\n"
+                output += f"  • P95 Search Latency: {hist['p95_search_latency_ms']:.2f}ms\n"
+                output += f"  • Cache Hit Rate: {hist['cache_hit_rate']:.1%}\n"
+
+            return [TextContent(type="text", text=output)]
+
+        elif name == "get_active_alerts":
+            severity_filter = arguments.get("severity_filter")
+            include_snoozed = arguments.get("include_snoozed", False)
+            result = await memory_rag_server.get_active_alerts(
+                severity_filter=severity_filter,
+                include_snoozed=include_snoozed
+            )
+
+            if result["total_alerts"] == 0:
+                output = "✅ No Active Alerts\n\nAll systems operating within normal parameters."
+                return [TextContent(type="text", text=output)]
+
+            output = f"🚨 Active Alerts ({result['total_alerts']})\n\n"
+            output += f"Critical: {result['critical_count']} | "
+            output += f"Warning: {result['warning_count']} | "
+            output += f"Info: {result['info_count']}\n\n"
+
+            for alert in result["alerts"]:
+                severity_icon = {"CRITICAL": "🔴", "WARNING": "⚠️", "INFO": "ℹ️"}.get(
+                    alert["severity"], "•"
+                )
+                output += f"{severity_icon} **{alert['severity']}**: {alert['message']}\n"
+                output += f"  • Metric: {alert['metric_name']}\n"
+                output += f"  • Current Value: {alert['current_value']:.2f}\n"
+                output += f"  • Threshold: {alert['threshold_value']:.2f}\n"
+                output += f"  • Alert ID: {alert['id']}\n"
+
+                if alert["recommendations"]:
+                    output += f"  • Recommendations:\n"
+                    for rec in alert["recommendations"][:2]:  # Show top 2 recommendations
+                        output += f"    - {rec}\n"
+                output += "\n"
+
+            return [TextContent(type="text", text=output)]
+
+        elif name == "get_health_score":
+            result = await memory_rag_server.get_health_score()
+
+            health = result["health_score"]
+            status_icons = {
+                "EXCELLENT": "🟢", "GOOD": "🟡", "FAIR": "🟠",
+                "POOR": "🔴", "CRITICAL": "⛔"
+            }
+            status_icon = status_icons.get(health["status"], "•")
+
+            output = f"💚 System Health Score\n\n"
+            output += f"{status_icon} **Overall: {health['overall_score']}/100** ({health['status']})\n\n"
+
+            output += f"**Component Scores:**\n"
+            output += f"  • Performance: {health['performance_score']}/100\n"
+            output += f"  • Quality: {health['quality_score']}/100\n"
+            output += f"  • Database Health: {health['database_health_score']}/100\n"
+            output += f"  • Usage Efficiency: {health['usage_efficiency_score']}/100\n\n"
+
+            if health["total_alerts"] > 0:
+                output += f"**Active Alerts:** {health['total_alerts']} "
+                output += f"({health['critical_alerts']} critical, {health['warning_alerts']} warning)\n\n"
+
+            if result.get("recommendations"):
+                output += f"**Recommendations:**\n"
+                for rec in result["recommendations"][:5]:  # Show top 5 recommendations
+                    output += f"  • {rec}\n"
+
+            return [TextContent(type="text", text=output)]
+
+        elif name == "get_capacity_forecast":
+            days_ahead = arguments.get("days_ahead", 30)
+            result = await memory_rag_server.get_capacity_forecast(days_ahead=days_ahead)
+
+            status_icons = {"HEALTHY": "✅", "WARNING": "⚠️", "CRITICAL": "🔴"}
+            overall_icon = status_icons.get(result["overall_status"], "•")
+
+            output = f"📈 Capacity Forecast ({days_ahead} days)\n\n"
+            output += f"{overall_icon} **Overall Status:** {result['overall_status']}\n\n"
+
+            # Database growth
+            db = result["database_growth"]
+            output += f"**Database Growth**\n"
+            output += f"  • Current: {db['current_size_mb']:.1f} MB\n"
+            output += f"  • Projected: {db['projected_size_mb']:.1f} MB\n"
+            output += f"  • Growth Rate: {db['growth_rate_mb_per_day']:.2f} MB/day\n"
+            output += f"  • Trend: {db['trend']}\n"
+            if db.get('days_until_limit'):
+                output += f"  • Days Until Limit: {db['days_until_limit']}\n"
+            output += f"  • Status: {db['status']}\n\n"
+
+            # Memory capacity
+            mem = result["memory_capacity"]
+            output += f"**Memory Capacity**\n"
+            output += f"  • Current: {mem['current_memories']:,} memories\n"
+            output += f"  • Projected: {mem['projected_memories']:,} memories\n"
+            output += f"  • Creation Rate: {mem['creation_rate_per_day']:.1f}/day\n"
+            output += f"  • Trend: {mem['trend']}\n"
+            if mem.get('days_until_limit'):
+                output += f"  • Days Until Limit: {mem['days_until_limit']}\n"
+            output += f"  • Status: {mem['status']}\n\n"
+
+            # Project capacity
+            proj = result["project_capacity"]
+            output += f"**Project Capacity**\n"
+            output += f"  • Current Active: {proj['current_active_projects']}\n"
+            output += f"  • Projected Active: {proj['projected_active_projects']}\n"
+            output += f"  • Addition Rate: {proj['project_addition_rate_per_week']:.2f}/week\n"
+            if proj.get('days_until_limit'):
+                output += f"  • Days Until Limit: {proj['days_until_limit']}\n"
+            output += f"  • Status: {proj['status']}\n\n"
+
+            # Recommendations
+            if result.get("recommendations"):
+                output += f"**Recommendations:**\n"
+                for rec in result["recommendations"]:
+                    output += f"  • {rec}\n"
+
+            return [TextContent(type="text", text=output)]
+
+        elif name == "resolve_alert":
+            alert_id = arguments["alert_id"]
+            result = await memory_rag_server.resolve_alert(alert_id=alert_id)
+
+            if result["success"]:
+                output = f"✅ Alert Resolved\n\n"
+                output += f"Alert ID: {result['alert_id']}\n"
+                output += result["message"]
+            else:
+                output = f"❌ Failed to Resolve Alert\n\n"
+                output += result["message"]
+
+            return [TextContent(type="text", text=output)]
+
+        elif name == "get_weekly_report":
+            result = await memory_rag_server.get_weekly_report()
+
+            output = f"📊 Weekly Health Report\n\n"
+            output += f"**Period:** {result['period_start'][:10]} to {result['period_end'][:10]}\n\n"
+
+            # Current health
+            current = result["current_health"]
+            status_icons = {
+                "EXCELLENT": "🟢", "GOOD": "🟡", "FAIR": "🟠",
+                "POOR": "🔴", "CRITICAL": "⛔"
+            }
+            status_icon = status_icons.get(current["status"], "•")
+            output += f"**Current Health:** {status_icon} {current['overall_score']}/100 ({current['status']})\n"
+
+            # Previous health comparison
+            if result.get("previous_health"):
+                prev = result["previous_health"]
+                change = current["overall_score"] - prev["overall_score"]
+                change_icon = "📈" if change > 0 else "📉" if change < 0 else "➡️"
+                output += f"**Previous Week:** {prev['overall_score']}/100 {change_icon} ({change:+.0f})\n\n"
+            else:
+                output += "\n"
+
+            # Improvements
+            if result.get("improvements"):
+                output += f"**✅ Improvements ({len(result['improvements'])}):**\n"
+                for improvement in result["improvements"][:3]:
+                    output += f"  • {improvement}\n"
+                output += "\n"
+
+            # Concerns
+            if result.get("concerns"):
+                output += f"**⚠️ Concerns ({len(result['concerns'])}):**\n"
+                for concern in result["concerns"][:3]:
+                    output += f"  • {concern}\n"
+                output += "\n"
+
+            # Recommendations
+            if result.get("recommendations"):
+                output += f"**💡 Recommendations:**\n"
+                for rec in result["recommendations"][:5]:
+                    output += f"  • {rec}\n"
+                output += "\n"
+
+            # Usage summary
+            usage = result.get("usage_summary", {})
+            if usage:
+                output += f"**Usage Statistics:**\n"
+                output += f"  • Queries/Day: {usage.get('queries_per_day', 0):.1f}\n"
+                output += f"  • Memories Created/Day: {usage.get('memories_created_per_day', 0):.1f}\n"
+                output += f"  • Avg Results/Query: {usage.get('avg_results_per_query', 0):.1f}\n"
 
             return [TextContent(type="text", text=output)]
 
