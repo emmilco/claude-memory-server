@@ -98,6 +98,16 @@ A pre-commit hook enforces CHANGELOG updates:
   - Calculates code metrics: lines of code, cyclomatic complexity, parameter count, nesting depth
   - Created `tests/unit/test_code_analyzer.py` with 16 comprehensive tests (all passing)
 
+- **FEAT-022: Performance Monitoring Dashboard**
+  - Created `src/monitoring/capacity_planner.py` for predictive capacity planning with linear regression
+  - Added 15 Pydantic models for monitoring MCP tools in `src/core/models.py`
+  - Integrated MetricsCollector, AlertEngine, HealthReporter, and CapacityPlanner into server initialization
+  - Added 6 MCP tools: get_performance_metrics, get_active_alerts, get_health_score, get_capacity_forecast, resolve_alert, get_weekly_report
+  - Registered all 6 tools in `src/mcp_server.py` with Rich-formatted handlers
+  - Created `tests/unit/test_capacity_planner.py` with 11 comprehensive tests (all passing)
+  - Updated `docs/API.md` with complete documentation for all monitoring tools
+  - Total MCP tools: 17 → 23
+
 - **FEAT-017: Multi-Repository Support (Foundation)**
   - Created `src/memory/git_detector.py` for git repository detection and metadata extraction
   - Functions: `is_git_repository()`, `get_git_root()`, `get_git_metadata()`, `get_repository_name()`

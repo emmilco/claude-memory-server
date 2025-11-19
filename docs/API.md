@@ -9,7 +9,7 @@
 
 The Claude Memory RAG Server exposes tools through the Model Context Protocol (MCP). All tools are accessible to Claude via MCP tool calls.
 
-**Total Tools:** 17 MCP tools + 28 CLI commands
+**Total Tools:** 23 MCP tools + 28 CLI commands
 
 ### Available MCP Tools
 
@@ -32,6 +32,12 @@ The Claude Memory RAG Server exposes tools through the Model Context Protocol (M
 | `opt_out_cross_project` | Disable cross-project search | Multi-Project |
 | `list_opted_in_projects` | List projects with cross-search enabled | Multi-Project |
 | `ingest_docs` | Ingest documentation files | Documentation |
+| `get_performance_metrics` | Get current performance snapshot | Performance Monitoring |
+| `get_active_alerts` | Get active system alerts | Performance Monitoring |
+| `get_health_score` | Get overall health score (0-100) | Performance Monitoring |
+| `get_capacity_forecast` | Get capacity planning forecast | Performance Monitoring |
+| `resolve_alert` | Mark an alert as resolved | Performance Monitoring |
+| `get_weekly_report` | Get comprehensive weekly health report | Performance Monitoring |
 
 **Note:** Additional specialized retrieval tools are available via the SpecializedRetrievalTools class (retrieve_preferences, retrieve_project_context, retrieve_session_state) and dependency tracking tools (get_file_dependencies, get_file_dependents, find_dependency_path, get_dependency_stats) are available via the server API.
 
@@ -857,6 +863,352 @@ Debug tool to show what memories would be retrieved for a query.
 ```
 
 **Note:** Development/debugging only
+
+---
+
+## Performance Monitoring Tools (FEAT-022)
+
+### Overview
+
+The Performance Monitoring Dashboard provides real-time metrics visualization, automated alerting, and capacity planning capabilities. These tools enable proactive monitoring and optimization of the Claude Memory RAG Server.
+
+**Key Features:**
+- Real-time performance metrics (search latency, cache hit rate, query volume)
+- Automated alerting with severity levels (CRITICAL, WARNING, INFO)
+- Health scoring (0-100) with component breakdown
+- Capacity planning with 7-90 day forecasting
+- Weekly health reports with trend analysis
+
+**Use Cases:**
+- Monitor system performance and detect degradation
+- Plan capacity and resource needs
+- Track system health over time
+- Identify and resolve performance issues
+
+---
+
+### get_performance_metrics
+
+Get current performance metrics with optional historical comparison.
+
+**Input Schema:**
+```json
+{
+  "include_history_days": "integer 1-30 (default: 1)"
+}
+```
+
+**Example Request:**
+```json
+{
+  "include_history_days": 7
+}
+```
+
+**Response:**
+```json
+{
+  "current_metrics": {
+    "avg_search_latency_ms": 8.5,
+    "p95_search_latency_ms": 12.3,
+    "cache_hit_rate": 0.98,
+    "index_staleness_ratio": 0.05,
+    "queries_per_day": 245.0,
+    "avg_results_per_query": 7.2,
+    "timestamp": "2025-11-18T10:30:00Z"
+  },
+  "historical_average": {
+    "avg_search_latency_ms": 9.1,
+    "p95_search_latency_ms": 13.2,
+    "cache_hit_rate": 0.96,
+    "index_staleness_ratio": 0.08,
+    "queries_per_day": 230.5,
+    "avg_results_per_query": 6.8,
+    "timestamp": "7-day average"
+  }
+}
+```
+
+**Metrics Explained:**
+- **avg_search_latency_ms**: Average search response time
+- **p95_search_latency_ms**: 95th percentile latency (worst 5% of queries)
+- **cache_hit_rate**: Ratio of cache hits to total requests (0.0-1.0)
+- **index_staleness_ratio**: Ratio of stale indices to total indices
+- **queries_per_day**: Average daily query volume
+- **avg_results_per_query**: Average number of results returned
+
+---
+
+### get_active_alerts
+
+Get active system alerts with optional severity filtering.
+
+**Input Schema:**
+```json
+{
+  "severity_filter": "CRITICAL|WARNING|INFO (optional)",
+  "include_snoozed": "boolean (default: false)"
+}
+```
+
+**Example Request:**
+```json
+{
+  "severity_filter": "CRITICAL"
+}
+```
+
+**Response:**
+```json
+{
+  "alerts": [
+    {
+      "alert_id": "550e8400-e29b-41d4-a716-446655440000",
+      "metric_name": "p95_search_latency_ms",
+      "severity": "CRITICAL",
+      "current_value": 85.5,
+      "threshold_value": 50.0,
+      "message": "P95 search latency exceeded critical threshold",
+      "recommendation": "Check database performance and optimize slow queries",
+      "triggered_at": "2025-11-18T10:25:00Z",
+      "is_snoozed": false
+    }
+  ],
+  "total_alerts": 1,
+  "critical_count": 1,
+  "warning_count": 0,
+  "info_count": 0
+}
+```
+
+**Severity Levels:**
+- **CRITICAL**: Immediate action required
+- **WARNING**: Action recommended soon
+- **INFO**: Informational, monitor
+
+---
+
+### get_health_score
+
+Get overall system health score (0-100) with component breakdown.
+
+**Input Schema:**
+```json
+{}
+```
+
+**Response:**
+```json
+{
+  "health_score": 87,
+  "status": "GOOD",
+  "performance_score": 92,
+  "quality_score": 85,
+  "database_health_score": 88,
+  "usage_efficiency_score": 79,
+  "total_alerts": 2,
+  "critical_alerts": 0,
+  "warning_alerts": 2,
+  "recommendations": [
+    "Consider archiving projects older than 180 days",
+    "Cache hit rate is excellent - no action needed"
+  ],
+  "timestamp": "2025-11-18T10:30:00Z"
+}
+```
+
+**Health Score Interpretation:**
+- **90-100**: Excellent - System performing optimally
+- **75-89**: Good - Minor issues, routine maintenance
+- **60-74**: Fair - Action recommended to prevent degradation
+- **<60**: Poor - Immediate action required
+
+**Component Scores:**
+- **performance_score**: Search latency and throughput
+- **quality_score**: Result relevance and accuracy
+- **database_health_score**: Database size and integrity
+- **usage_efficiency_score**: Resource utilization
+
+---
+
+### get_capacity_forecast
+
+Get capacity planning forecast for 7-90 days ahead.
+
+**Input Schema:**
+```json
+{
+  "days_ahead": "integer 7-90 (default: 30)"
+}
+```
+
+**Example Request:**
+```json
+{
+  "days_ahead": 30
+}
+```
+
+**Response:**
+```json
+{
+  "forecast_days": 30,
+  "database_growth": {
+    "current_size_mb": 245.3,
+    "projected_size_mb": 312.7,
+    "growth_rate_mb_per_day": 2.24,
+    "days_until_warning": 731,
+    "days_until_critical": 1095,
+    "trend": "GROWING",
+    "status": "HEALTHY"
+  },
+  "memory_capacity": {
+    "current_memories": 12453,
+    "projected_memories": 15234,
+    "creation_rate_per_day": 92.7,
+    "days_until_warning": 405,
+    "days_until_critical": 542,
+    "trend": "GROWING",
+    "status": "HEALTHY"
+  },
+  "project_capacity": {
+    "current_active_projects": 8,
+    "projected_active_projects": 11,
+    "project_addition_rate_per_week": 0.75,
+    "days_until_warning": 120,
+    "days_until_critical": 180,
+    "trend": "GROWING",
+    "status": "HEALTHY"
+  },
+  "recommendations": [
+    "Database growth is steady - no action needed",
+    "Consider archiving projects older than 180 days to optimize"
+  ],
+  "overall_status": "HEALTHY",
+  "timestamp": "2025-11-18T10:30:00Z"
+}
+```
+
+**Capacity Thresholds:**
+- **Database**: WARNING at 1.5GB, CRITICAL at 2GB
+- **Memories**: WARNING at 40k, CRITICAL at 50k
+- **Projects**: WARNING at 15 active, CRITICAL at 20 active
+
+**Status Levels:**
+- **HEALTHY**: No concerns, sufficient capacity
+- **WARNING**: Approaching limits, plan action
+- **CRITICAL**: Near capacity, immediate action required
+
+**Trend Indicators:**
+- **GROWING**: Increasing usage over time
+- **STABLE**: Consistent usage
+- **DECLINING**: Decreasing usage
+
+---
+
+### resolve_alert
+
+Mark an alert as resolved.
+
+**Input Schema:**
+```json
+{
+  "alert_id": "string (required, UUID format)"
+}
+```
+
+**Example Request:**
+```json
+{
+  "alert_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Response:**
+```json
+{
+  "alert_id": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "resolved",
+  "resolved_at": "2025-11-18T10:30:00Z",
+  "message": "Alert resolved successfully"
+}
+```
+
+**Use Cases:**
+- Mark alerts as resolved after taking action
+- Clear false positives
+- Acknowledge known issues
+
+---
+
+### get_weekly_report
+
+Get comprehensive weekly health report with trends and analysis.
+
+**Input Schema:**
+```json
+{}
+```
+
+**Response:**
+```json
+{
+  "week_start": "2025-11-11T00:00:00Z",
+  "week_end": "2025-11-18T00:00:00Z",
+  "overall_health_score": 87,
+  "status": "GOOD",
+  "metrics_summary": {
+    "avg_search_latency_ms": 8.5,
+    "p95_search_latency_ms": 12.3,
+    "cache_hit_rate": 0.98,
+    "total_queries": 1715,
+    "total_memories": 12453,
+    "active_projects": 8
+  },
+  "trends": [
+    {
+      "metric": "avg_search_latency_ms",
+      "trend": "IMPROVING",
+      "change_percent": -5.2,
+      "interpretation": "Search latency improved by 5.2%"
+    },
+    {
+      "metric": "cache_hit_rate",
+      "trend": "IMPROVING",
+      "change_percent": 2.1,
+      "interpretation": "Cache efficiency increased"
+    }
+  ],
+  "notable_events": [
+    "No critical alerts this week",
+    "Database growth within normal range",
+    "Cache performance excellent"
+  ],
+  "improvements": [
+    "Search latency reduced by 5.2%",
+    "Cache hit rate improved to 98%"
+  ],
+  "concerns": [
+    "2 projects approaching staleness threshold"
+  ],
+  "recommendations": [
+    "Continue current monitoring practices",
+    "Consider re-indexing stale projects"
+  ],
+  "total_alerts": 2,
+  "critical_alerts": 0,
+  "warning_alerts": 2,
+  "timestamp": "2025-11-18T10:30:00Z"
+}
+```
+
+**Report Sections:**
+- **metrics_summary**: Key metrics for the week
+- **trends**: Week-over-week changes with interpretation
+- **notable_events**: Significant events or milestones
+- **improvements**: Positive changes observed
+- **concerns**: Issues requiring attention
+- **recommendations**: Actionable next steps
 
 ---
 
