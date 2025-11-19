@@ -16,33 +16,7 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
 
 **These extend core capabilities with new features (nice-to-have)**
 
-#### Critical API Gaps (Documented but Missing Implementation)
-
-- [x] ~~**FEAT-039**: Cross-Project Consent Tools~~ ✅ **COMPLETED 2025-11-18**
-  - **COMPLETE:** Privacy-controlled cross-project search implementation
-  - [x] Implemented `CrossProjectConsentManager` for privacy-controlled cross-project search
-  - [x] Added 3 MCP tools: `opt_in_cross_project()`, `opt_out_cross_project()`, `list_opted_in_projects()`
-  - [x] SQLite-based persistent consent storage at `~/.claude-rag/consent.db`
-  - [x] Default opt-in policy with explicit opt-out support
-  - [x] Created comprehensive tests (20 tests, 100% passing)
-
-#### Core Memory Management Gaps
-
-- [x] ~~**FEAT-042**: Advanced Memory Search Filters~~ ✅ **COMPLETED 2025-11-18**
-  - **COMPLETE:** Full advanced filtering support
-  - [x] Created `AdvancedSearchFilters` model with date ranges, tag logic, lifecycle, and provenance filtering
-  - [x] Extended both Qdrant and SQLite stores with advanced filter support
-  - [x] Updated `retrieve_memories()` to accept advanced_filters parameter
-  - [x] Supports date filtering (created/updated/accessed), tag logic (ANY/ALL/NONE), lifecycle states, category/project exclusions, and provenance filtering
-
 #### Code Intelligence Enhancements
-
-- [x] ~~**FEAT-045**: Project Reindexing Control~~ ✅ **COMPLETED 2025-11-18**
-  - **COMPLETE:** Full project reindexing capabilities
-  - [x] Added `reindex_project()` method to MemoryRAGServer with clear_existing and bypass_cache flags
-  - [x] Supports force full re-index, clearing existing index, and cache bypass
-  - [x] Returns detailed statistics including units_deleted, cache_bypassed, and index_cleared
-  - [x] Created comprehensive tests (10 tests, 100% passing)
 
 - [ ] **FEAT-046**: Indexed Content Visibility (~2-3 days) 🔥🔥
   - [ ] Implement `get_indexed_files` MCP tool
@@ -70,19 +44,6 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
 
 **User experience and performance improvements**
 
-#### UX Quick Wins
-
-- [x] ~~**UX-033**: Memory Tagging & Organization System~~ ✅ **COMPLETED 2025-11-18**
-  - **COMPLETE:** Full tagging and organization system with auto-tagging
-  - [x] Created auto_tagger.py for automatic tag extraction and inference
-  - [x] Created tag_manager.py for hierarchical tag management (4-level hierarchies)
-  - [x] Created collection_manager.py for smart collection management
-  - [x] Added 3 CLI commands: tags, collections, auto-tag
-  - [x] Extended SQLite store with tag-based search filtering
-  - [x] Auto-tagging detects languages, frameworks, patterns, and domains
-  - [x] Added 4 database tables: tags, memory_tags, collections, collection_memories
-  - **Result:** Better discovery through smart organization and auto-tagging
-
 #### Error Handling & Graceful Degradation
 
 - [ ] **UX-012**: Graceful degradation (~2 days)
@@ -90,17 +51,6 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - [ ] Auto-fallback: Rust unavailable → Python parser
   - [ ] Warn user about performance implications
   - [ ] Option to upgrade later
-
-- [x] ~~**UX-013**: Better Installation Error Messages~~ ✅ **COMPLETED 2025-11-18**
-  - **COMPLETE:** Comprehensive error messages with actionable solutions
-  - [x] Created system_check.py for system prerequisites detection (Python, pip, Docker, Rust, Git)
-  - [x] Created dependency_checker.py for smart dependency checking with contextual error messages
-  - [x] Created validate-install CLI command for one-step installation validation
-  - [x] Added OS-specific install commands for all prerequisites (macOS/Linux/Windows)
-  - [x] Enhanced exceptions.py with DependencyError, DockerNotRunningError, RustBuildError
-  - [x] Updated docs/TROUBLESHOOTING.md with comprehensive Installation Prerequisites section
-  - [x] All exceptions include actionable solutions and documentation URLs
-  - **Result:** 90% setup success rate (up from 30%)
 
 #### Health & Monitoring
 
@@ -114,35 +64,6 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - [ ] Proactive recommendations: "Consider upgrading to Qdrant"
   - [ ] Show indexed projects count and size
   - **Impact:** Proactive issue detection, optimization guidance
-
-- [x] ~~**UX-016**: Memory Migration Tools (Phase 2)~~ ✅ **COMPLETED 2025-11-18**
-  - **COMPLETE:** MCP tools for memory migration and transformation
-  - [x] Added `migrate_memory_scope(memory_id, new_project_name)` to server
-  - [x] Added `bulk_reclassify(new_context_level, filters...)` to server
-  - [x] Added `find_duplicate_memories(project_name, similarity_threshold)` to server
-  - [x] Added `merge_memories(memory_ids, keep_id)` to server
-  - [x] Created comprehensive tests (18 tests, 100% passing)
-  - [x] MCP tools support read-only mode protection and error handling
-
-- [x] ~~**UX-017**: Indexing Time Estimates~~ ✅ **COMPLETED 2025-11-18**
-  - **COMPLETE:** Intelligent time estimation with historical tracking
-  - [x] Created time_estimator.py for intelligent time estimation with historical tracking
-  - [x] Created indexing_metrics.py for indexing performance metrics storage
-  - [x] Added real-time ETA calculations during indexing operations
-  - [x] Added performance optimization suggestions (detect slow patterns, suggest exclusions)
-  - [x] Time estimates based on historical data (rolling 10-run average per project)
-  - [x] Automatic metrics cleanup for entries older than 30 days
-  - **Result:** Users get accurate time estimates and optimization suggestions before indexing
-
-- [x] ~~**UX-018**: Background Indexing for Large Projects~~ ✅ **COMPLETED 2025-11-18**
-  - **COMPLETE:** Non-blocking indexing with job management
-  - [x] Created `background_indexer.py` for non-blocking indexing with job management
-  - [x] Created `job_state_manager.py` for persistent job state tracking
-  - [x] Created `notification_manager.py` for multi-backend notifications
-  - [x] Added support for pause, resume, and cancel operations on indexing jobs
-  - [x] Added automatic resumption of interrupted jobs with file-level checkpointing
-  - [x] New `indexing_jobs` database table for job persistence
-  - [x] Real-time progress tracking with indexed/total file counts
 
 #### Performance Optimizations
 
@@ -192,14 +113,6 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
 - [ ] **FEAT-015**: Code review features
   - [ ] LLM-powered suggestions based on patterns
   - [ ] Identify code smells
-
-- [x] ~~**UX-024**: Usage Feedback Mechanisms~~ ✅ **COMPLETED 2025-11-18**
-  - **COMPLETE:** "Was this helpful?" feedback collection and quality metrics tracking
-  - [x] Created `FeedbackRating` enum and `SearchFeedback`, `QualityMetrics` models
-  - [x] Added `submit_search_feedback()` and `get_quality_metrics()` methods to SQLite store
-  - [x] Added `submit_search_feedback()` and `get_quality_metrics()` MCP tools to server
-  - [x] Created `search_feedback` database table with indices
-  - [x] Created comprehensive tests (10 tests, 100% passing)
 
 - [ ] **UX-026**: Web dashboard (~1-2 weeks)
   - [ ] Optional web UI for visibility
