@@ -79,6 +79,14 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ## [Unreleased]
 
+### Changed - 2025-11-18
+
+- **REF-006: Update Qdrant API to query_points()**
+  - Replaced deprecated `client.search()` with `client.query_points()` for future Qdrant compatibility
+  - Updated test mocks to use new API
+  - Enhanced error handling to catch both ValueError and KeyError in payload parsing
+  - Files: `src/store/qdrant_store.py`, `tests/unit/test_qdrant_error_paths.py`
+
 ### Improved - 2025-11-18
 
 - **REF-002: Add Structured Logging**

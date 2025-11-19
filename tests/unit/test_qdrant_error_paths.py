@@ -142,7 +142,10 @@ class TestQdrantStoreErrorPaths:
         mock_hit.payload = {"invalid": "data"}  # Missing required fields
         mock_hit.score = 0.95
 
-        store.client.search = MagicMock(return_value=[mock_hit])
+        # Mock query_points response
+        mock_response = MagicMock()
+        mock_response.points = [mock_hit]
+        store.client.query_points = MagicMock(return_value=mock_response)
 
         # Should handle ValueError and skip the bad result
         results = await store.retrieve([0.1] * 384)
