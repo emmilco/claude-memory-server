@@ -100,6 +100,17 @@ A pre-commit hook enforces CHANGELOG updates:
   - Added 4 comprehensive tests for cache hit rate checking in `tests/unit/test_health_command.py`
   - Health check command now works correctly with both SQLite and Qdrant backends
 
+### Added - 2025-11-18
+
+- **TEST-004: Performance Testing Infrastructure (Phase 1)**
+  - Created `scripts/generate_test_data.py` for generating realistic test databases (1K, 10K, 50K memories)
+  - Created `scripts/benchmark_scale.py` for comprehensive performance benchmarking
+  - Established baseline performance metrics: P95 latency 3.96ms (target <50ms) ✅
+  - Concurrent throughput: 55,246 ops/sec on 800-memory database
+  - Benchmarks: search latency, retrieval operations, concurrent load testing
+  - Planning doc: `planning_docs/TEST-004_performance_testing_progress.md`
+  - Status: Infrastructure complete, large-scale testing (10K/50K) pending
+
 ### Documentation - 2025-11-18
 
 - **FEAT-040 & FEAT-041: Memory CRUD Operations API Documentation**
