@@ -14,8 +14,6 @@ pub enum SupportedLanguage {
     Go,
     Rust,
     Ruby,
-    Swift,
-    Kotlin,
     C,
     Cpp,
     CSharp,
@@ -33,8 +31,6 @@ impl SupportedLanguage {
             "go" => Some(SupportedLanguage::Go),
             "rs" => Some(SupportedLanguage::Rust),
             "rb" => Some(SupportedLanguage::Ruby),
-            "swift" => Some(SupportedLanguage::Swift),
-            "kt" | "kts" => Some(SupportedLanguage::Kotlin),
             "c" => Some(SupportedLanguage::C),
             "cpp" | "cc" | "cxx" | "hpp" | "h" | "hxx" | "hh" => Some(SupportedLanguage::Cpp),
             "cs" => Some(SupportedLanguage::CSharp),
@@ -53,8 +49,6 @@ impl SupportedLanguage {
             SupportedLanguage::Go => tree_sitter_go::LANGUAGE.into(),
             SupportedLanguage::Rust => tree_sitter_rust::LANGUAGE.into(),
             SupportedLanguage::Ruby => tree_sitter_ruby::LANGUAGE.into(),
-            SupportedLanguage::Swift => tree_sitter_swift::LANGUAGE.into(),
-            SupportedLanguage::Kotlin => tree_sitter_kotlin::LANGUAGE.into(),
             SupportedLanguage::C => tree_sitter_cpp::LANGUAGE.into(),
             SupportedLanguage::Cpp => tree_sitter_cpp::LANGUAGE.into(),
             SupportedLanguage::CSharp => tree_sitter_c_sharp::LANGUAGE.into(),
@@ -119,20 +113,6 @@ impl SupportedLanguage {
                 (method
                   name: (_) @name
                   parameters: (method_parameters)? @params) @function
-                "#
-            }
-            SupportedLanguage::Swift => {
-                r#"
-                (function_declaration
-                  name: (simple_identifier) @name
-                  parameters: (parameter)? @params) @function
-                "#
-            }
-            SupportedLanguage::Kotlin => {
-                r#"
-                (function_declaration
-                  (simple_identifier) @name
-                  (function_value_parameters)? @params) @function
                 "#
             }
             SupportedLanguage::C | SupportedLanguage::Cpp => {
@@ -219,28 +199,6 @@ impl SupportedLanguage {
                   name: (constant) @name)
                  (module
                   name: (constant) @name)] @class
-                "#
-            }
-            SupportedLanguage::Swift => {
-                // Swift has classes, structs, and protocols
-                r#"
-                [(class_declaration
-                  name: (type_identifier) @name)
-                 (struct_declaration
-                  name: (type_identifier) @name)
-                 (protocol_declaration
-                  name: (type_identifier) @name)] @class
-                "#
-            }
-            SupportedLanguage::Kotlin => {
-                // Kotlin has classes, interfaces, and objects
-                r#"
-                [(class_declaration
-                  (type_identifier) @name)
-                 (object_declaration
-                  (type_identifier) @name)
-                 (interface_declaration
-                  (type_identifier) @name)] @class
                 "#
             }
             SupportedLanguage::C => {
@@ -377,6 +335,7 @@ impl CodeParser {
             SupportedLanguage::Java,
             SupportedLanguage::Go,
             SupportedLanguage::Rust,
+            SupportedLanguage::Ruby,
             SupportedLanguage::C,
             SupportedLanguage::Cpp,
             SupportedLanguage::CSharp,
