@@ -104,6 +104,15 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-18
 
+- **UX-012: Graceful Degradation**
+  - Implemented auto-fallback from Qdrant to SQLite when Qdrant is unavailable
+  - Enhanced `src/store/factory.py` with try-catch fallback logic
+  - Added configuration options: `allow_qdrant_fallback`, `allow_rust_fallback`, `warn_on_degradation`
+  - Created degradation tracking system in `src/core/degradation_warnings.py`
+  - Logs helpful warnings with upgrade paths when running in degraded mode
+  - Created `tests/unit/test_graceful_degradation.py` with 15 comprehensive tests (all passing)
+  - Improves user experience by preventing failures when optional dependencies unavailable
+
 - **DOC-004: Enhanced README with Code Search Examples**
   - Added comprehensive code search examples section showing 4 realistic scenarios
   - Examples: authentication, error handling, API routes, initialization code
