@@ -13,7 +13,7 @@ A Model Context Protocol (MCP) server providing persistent memory, documentation
 - **Memory management** - Store/retrieve memories with 4-tier lifecycle and provenance tracking
 - **Memory intelligence** - Duplicate detection, consolidation, trust scoring, contradiction resolution
 - **Documentation RAG** - Search project documentation semantically
-- **Code indexing** - Parse and index 12 file formats (9 languages + 3 config types) using tree-sitter
+- **Code indexing** - Parse and index 13 file formats (10 languages + 3 config types) using tree-sitter
 - **Parallel embeddings** - 4-8x faster indexing with multi-process architecture
 - **Incremental caching** - 98% cache hit rate, 5-10x faster re-indexing
 - **Real-time watching** - Auto-reindex on file changes with smart batching
@@ -29,7 +29,7 @@ A Model Context Protocol (MCP) server providing persistent memory, documentation
 - **Search:** Hybrid (BM25 + vector) with 3 fusion strategies, query synonyms, reranking
 - **Framework:** MCP (Model Context Protocol) - 14 MCP tools + 28 CLI commands
 - **Testing:** pytest with 1413/1414 tests passing (99.9% pass rate, 67% overall coverage, 80-85% core)
-- **Languages Supported:** Python, JS, TS, Java, Go, Rust, C, C++, C#, SQL, JSON, YAML, TOML (12 total)
+- **Languages Supported:** Python, JS, TS, Java, Go, Rust, Ruby, C, C++, C#, SQL, JSON, YAML, TOML (13 total)
 
 ## Essential Files
 

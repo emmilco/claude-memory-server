@@ -510,6 +510,7 @@ Semantic search across indexed code with hybrid search support (BM25 + vector).
 - Java (.java)
 - Go (.go)
 - Rust (.rs)
+- Ruby (.rb)
 - C (.c, .h)
 - C++ (.cpp, .hpp, .cc, .hh)
 - C# (.cs)
@@ -520,7 +521,7 @@ Semantic search across indexed code with hybrid search support (BM25 + vector).
 - YAML (.yaml, .yml)
 - TOML (.toml)
 
-**Total:** 12 file formats supported
+**Total:** 13 file formats supported
 
 ---
 

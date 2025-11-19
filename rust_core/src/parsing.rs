@@ -13,6 +13,7 @@ pub enum SupportedLanguage {
     Java,
     Go,
     Rust,
+    Ruby,
     C,
     Cpp,
     CSharp,
@@ -28,6 +29,7 @@ impl SupportedLanguage {
             "java" => Some(SupportedLanguage::Java),
             "go" => Some(SupportedLanguage::Go),
             "rs" => Some(SupportedLanguage::Rust),
+            "rb" => Some(SupportedLanguage::Ruby),
             "c" => Some(SupportedLanguage::C),
             "cpp" | "cc" | "cxx" | "hpp" | "h" | "hxx" | "hh" => Some(SupportedLanguage::Cpp),
             "cs" => Some(SupportedLanguage::CSharp),
@@ -44,6 +46,7 @@ impl SupportedLanguage {
             SupportedLanguage::Java => tree_sitter_java::LANGUAGE.into(),
             SupportedLanguage::Go => tree_sitter_go::LANGUAGE.into(),
             SupportedLanguage::Rust => tree_sitter_rust::LANGUAGE.into(),
+            SupportedLanguage::Ruby => tree_sitter_ruby::LANGUAGE.into(),
             SupportedLanguage::C => tree_sitter_cpp::LANGUAGE.into(),
             SupportedLanguage::Cpp => tree_sitter_cpp::LANGUAGE.into(),
             SupportedLanguage::CSharp => tree_sitter_c_sharp::LANGUAGE.into(),
@@ -100,6 +103,13 @@ impl SupportedLanguage {
                   name: (identifier) @name
                   parameters: (parameters) @params
                   body: (block) @body) @function
+                "#
+            }
+            SupportedLanguage::Ruby => {
+                r#"
+                (method
+                  name: (_) @name
+                  parameters: (method_parameters)? @params) @function
                 "#
             }
             SupportedLanguage::C | SupportedLanguage::Cpp => {
@@ -169,6 +179,15 @@ impl SupportedLanguage {
                 (struct_item
                   name: (type_identifier) @name
                   body: (field_declaration_list) @body) @class
+                "#
+            }
+            SupportedLanguage::Ruby => {
+                // Ruby has both classes and modules
+                r#"
+                [(class
+                  name: (constant) @name)
+                 (module
+                  name: (constant) @name)] @class
                 "#
             }
             SupportedLanguage::C => {
