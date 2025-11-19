@@ -81,6 +81,13 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-18
 
+- **FEAT-039: Cross-Project Consent Tools**
+  - Implemented `CrossProjectConsentManager` for privacy-controlled cross-project search
+  - Added 3 MCP tools: `opt_in_cross_project()`, `opt_out_cross_project()`, `list_opted_in_projects()`
+  - SQLite-based persistent consent storage at `~/.claude-rag/consent.db`
+  - Default opt-in policy with explicit opt-out support
+  - Created `tests/unit/test_cross_project_consent.py` with 20 comprehensive tests
+
 - **FEAT-045: Project Reindexing Control**
   - Added `reindex_project()` method to MemoryRAGServer with clear_existing and bypass_cache flags
   - Created `tests/unit/test_project_reindexing.py` with 10 comprehensive tests

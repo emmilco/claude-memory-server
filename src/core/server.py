@@ -1547,6 +1547,86 @@ class MemoryRAGServer:
             logger.error(f"Failed to search across projects: {e}")
             raise RetrievalError(f"Failed to search across projects: {e}")
 
+    async def opt_in_cross_project(self, project_name: str) -> Dict[str, Any]:
+        """
+        Opt-in a project for cross-project search.
+
+        Allows the specified project to be included when searching across
+        multiple projects. By default, all projects are opted-in.
+
+        Args:
+            project_name: Project to opt-in
+
+        Returns:
+            Dict with consent status and timestamps
+        """
+        if not self.config.enable_cross_project_search or not self.cross_project_consent:
+            raise ValidationError(
+                "Cross-project search is disabled. Enable it in config to use this feature."
+            )
+
+        try:
+            result = self.cross_project_consent.opt_in(project_name)
+            logger.info(f"Project '{project_name}' opted-in for cross-project search")
+            return result
+        except Exception as e:
+            logger.error(f"Failed to opt-in project: {e}")
+            raise StorageError(f"Failed to opt-in project: {e}")
+
+    async def opt_out_cross_project(self, project_name: str) -> Dict[str, Any]:
+        """
+        Opt-out a project from cross-project search.
+
+        Prevents the specified project from being included when searching
+        across multiple projects. Useful for privacy or relevance control.
+
+        Args:
+            project_name: Project to opt-out
+
+        Returns:
+            Dict with consent status and timestamps
+        """
+        if not self.config.enable_cross_project_search or not self.cross_project_consent:
+            raise ValidationError(
+                "Cross-project search is disabled. Enable it in config to use this feature."
+            )
+
+        try:
+            result = self.cross_project_consent.opt_out(project_name)
+            logger.info(f"Project '{project_name}' opted-out from cross-project search")
+            return result
+        except Exception as e:
+            logger.error(f"Failed to opt-out project: {e}")
+            raise StorageError(f"Failed to opt-out project: {e}")
+
+    async def list_opted_in_projects(self) -> Dict[str, Any]:
+        """
+        List all projects that are opted-in for cross-project search.
+
+        Returns:
+            Dict with list of opted-in projects and statistics
+        """
+        if not self.config.enable_cross_project_search or not self.cross_project_consent:
+            raise ValidationError(
+                "Cross-project search is disabled. Enable it in config to use this feature."
+            )
+
+        try:
+            opted_in = self.cross_project_consent.list_opted_in_projects()
+            opted_out = self.cross_project_consent.list_opted_out_projects()
+            stats = self.cross_project_consent.get_consent_stats()
+
+            logger.info(f"Retrieved {len(opted_in)} opted-in projects")
+
+            return {
+                "opted_in_projects": opted_in,
+                "opted_out_projects": opted_out,
+                "statistics": stats,
+            }
+        except Exception as e:
+            logger.error(f"Failed to list opted-in projects: {e}")
+            raise RetrievalError(f"Failed to list opted-in projects: {e}")
+
     async def index_codebase(
         self,
         directory_path: str,
