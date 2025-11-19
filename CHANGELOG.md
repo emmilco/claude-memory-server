@@ -102,6 +102,14 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-18
 
+- **UX-024: Usage Feedback Mechanisms**
+  - Created `FeedbackRating` enum and `SearchFeedback`, `QualityMetrics` models in `src/core/models.py`
+  - Added `submit_search_feedback()` and `get_quality_metrics()` methods to `src/store/sqlite_store.py`
+  - Added `submit_search_feedback()` and `get_quality_metrics()` MCP tools to `src/core/server.py`
+  - Created `search_feedback` database table with indices
+  - Created `tests/unit/test_usage_feedback.py` with 10 tests (all passing)
+  - Enables "was this helpful?" feedback collection and quality metrics tracking
+
 - **UX-016: Memory Migration Tools (Phase 2)** - MCP tools for memory migration and transformation
   - Added `migrate_memory_scope(memory_id, new_project_name)` to `src/core/server.py`
   - Added `bulk_reclassify(new_context_level, filters...)` to `src/core/server.py`

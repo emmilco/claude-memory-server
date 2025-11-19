@@ -226,6 +226,31 @@ class SQLiteMemoryStore(MemoryStore):
                 "CREATE INDEX IF NOT EXISTS idx_rel_dismissed ON memory_relationships(dismissed)"
             )
 
+            # Create search feedback table (UX-024)
+            self.conn.execute("""
+                CREATE TABLE IF NOT EXISTS search_feedback (
+                    id TEXT PRIMARY KEY,
+                    search_id TEXT NOT NULL,
+                    query TEXT NOT NULL,
+                    result_ids TEXT,
+                    rating TEXT NOT NULL,
+                    comment TEXT,
+                    project_name TEXT,
+                    timestamp TEXT NOT NULL,
+                    user_id TEXT
+                )
+            """)
+
+            self.conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_feedback_search_id ON search_feedback(search_id)"
+            )
+            self.conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_feedback_rating ON search_feedback(rating)"
+            )
+            self.conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_feedback_timestamp ON search_feedback(timestamp)"
+            )
+
             self.conn.commit()
             logger.info("SQLite store initialized successfully")
 
@@ -2162,3 +2187,143 @@ class SQLiteMemoryStore(MemoryStore):
             logger.error(f"Error merging memories: {e}")
             self.conn.rollback()
             raise StorageError(f"Failed to merge memories: {e}")
+
+    async def submit_search_feedback(
+        self,
+        search_id: str,
+        query: str,
+        result_ids: List[str],
+        rating: str,
+        comment: Optional[str] = None,
+        project_name: Optional[str] = None,
+        user_id: Optional[str] = None,
+    ) -> str:
+        """
+        Submit feedback for a search query and its results.
+
+        Args:
+            search_id: Unique ID of the search
+            query: Search query text
+            result_ids: List of result memory IDs
+            rating: 'helpful' or 'not_helpful'
+            comment: Optional user comment
+            project_name: Optional project context
+            user_id: Optional user identifier
+
+        Returns:
+            Feedback ID
+
+        Raises:
+            StorageError: If submission fails
+        """
+        if not self.conn:
+            raise StorageError("Store not initialized")
+
+        try:
+            import json
+            feedback_id = str(uuid4())
+            timestamp = datetime.now(UTC).isoformat()
+
+            self.conn.execute(
+                """
+                INSERT INTO search_feedback
+                (id, search_id, query, result_ids, rating, comment, project_name, timestamp, user_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    feedback_id,
+                    search_id,
+                    query,
+                    json.dumps(result_ids),
+                    rating,
+                    comment,
+                    project_name,
+                    timestamp,
+                    user_id,
+                )
+            )
+            self.conn.commit()
+
+            logger.info(f"Submitted search feedback: {feedback_id} (rating: {rating})")
+            return feedback_id
+
+        except Exception as e:
+            logger.error(f"Error submitting search feedback: {e}")
+            self.conn.rollback()
+            raise StorageError(f"Failed to submit search feedback: {e}")
+
+    async def get_quality_metrics(
+        self,
+        time_range_hours: int = 24,
+        project_name: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Get aggregated quality metrics for searches.
+
+        Args:
+            time_range_hours: Number of hours to look back (default: 24)
+            project_name: Optional project filter
+
+        Returns:
+            Dict with quality metrics
+
+        Raises:
+            StorageError: If retrieval fails
+        """
+        if not self.conn:
+            raise StorageError("Store not initialized")
+
+        try:
+            # Calculate time threshold
+            now = datetime.now(UTC)
+            threshold = (now - timedelta(hours=time_range_hours)).isoformat()
+
+            # Build query
+            where_clauses = ["timestamp >= ?"]
+            params = [threshold]
+
+            if project_name:
+                where_clauses.append("project_name = ?")
+                params.append(project_name)
+
+            where_clause = " AND ".join(where_clauses)
+
+            # Get aggregated metrics
+            cursor = self.conn.execute(
+                f"""
+                SELECT
+                    COUNT(*) as total_searches,
+                    SUM(CASE WHEN rating = 'helpful' THEN 1 ELSE 0 END) as helpful_count,
+                    SUM(CASE WHEN rating = 'not_helpful' THEN 1 ELSE 0 END) as not_helpful_count
+                FROM search_feedback
+                WHERE {where_clause}
+                """,
+                params
+            )
+
+            row = cursor.fetchone()
+            total_searches = row[0] if row else 0
+            helpful_count = row[1] if row else 0
+            not_helpful_count = row[2] if row else 0
+
+            # Calculate helpfulness rate
+            total_rated = helpful_count + not_helpful_count
+            helpfulness_rate = helpful_count / total_rated if total_rated > 0 else 0.0
+
+            metrics = {
+                "time_range_hours": time_range_hours,
+                "window_start": threshold,
+                "window_end": now.isoformat(),
+                "total_searches": total_searches,
+                "helpful_count": helpful_count,
+                "not_helpful_count": not_helpful_count,
+                "helpfulness_rate": helpfulness_rate,
+                "project_name": project_name,
+            }
+
+            logger.info(f"Retrieved quality metrics: {total_searches} searches, {helpfulness_rate:.2%} helpful")
+            return metrics
+
+        except Exception as e:
+            logger.error(f"Error retrieving quality metrics: {e}")
+            raise StorageError(f"Failed to retrieve quality metrics: {e}")

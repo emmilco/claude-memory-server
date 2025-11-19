@@ -781,6 +781,85 @@ class MemoryRAGServer:
             logger.error(f"Failed to merge memories: {e}")
             raise StorageError(f"Failed to merge memories: {e}")
 
+    async def submit_search_feedback(
+        self,
+        search_id: str,
+        query: str,
+        result_ids: List[str],
+        rating: str,
+        comment: Optional[str] = None,
+        project_name: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Submit user feedback for a search query and its results.
+
+        Args:
+            search_id: Unique ID of the search
+            query: Search query text
+            result_ids: List of result memory IDs
+            rating: 'helpful' or 'not_helpful'
+            comment: Optional user comment
+            project_name: Optional project context
+
+        Returns:
+            Dict with feedback ID and status
+        """
+        try:
+            feedback_id = await self.store.submit_search_feedback(
+                search_id=search_id,
+                query=query,
+                result_ids=result_ids,
+                rating=rating,
+                comment=comment,
+                project_name=project_name,
+            )
+
+            logger.info(f"Submitted feedback {feedback_id} for search {search_id}")
+            return {
+                "status": "success",
+                "feedback_id": feedback_id,
+                "search_id": search_id,
+                "rating": rating,
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to submit search feedback: {e}")
+            raise StorageError(f"Failed to submit search feedback: {e}")
+
+    async def get_quality_metrics(
+        self,
+        time_range_hours: int = 24,
+        project_name: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Get aggregated quality metrics for search results.
+
+        Args:
+            time_range_hours: Number of hours to look back (default: 24)
+            project_name: Optional project filter
+
+        Returns:
+            Dict with quality metrics
+        """
+        try:
+            metrics = await self.store.get_quality_metrics(
+                time_range_hours=time_range_hours,
+                project_name=project_name,
+            )
+
+            logger.info(
+                f"Retrieved quality metrics: {metrics['total_searches']} searches, "
+                f"{metrics['helpfulness_rate']:.2%} helpful"
+            )
+            return {
+                "status": "success",
+                "metrics": metrics,
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to retrieve quality metrics: {e}")
+            raise StorageError(f"Failed to retrieve quality metrics: {e}")
+
     async def retrieve_preferences(
         self,
         query: str,
