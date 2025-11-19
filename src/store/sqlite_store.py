@@ -958,6 +958,233 @@ class SQLiteMemoryStore(MemoryStore):
             logger.error(f"Error getting project stats for {project_name}: {e}")
             raise StorageError(f"Failed to get project stats: {e}")
 
+    async def get_indexed_files(
+        self,
+        project_name: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> Dict[str, Any]:
+        """
+        Get list of indexed files with metadata.
+
+        Args:
+            project_name: Optional project name to filter by
+            limit: Maximum number of files to return (default 50, max 500)
+            offset: Number of files to skip for pagination
+
+        Returns:
+            Dictionary with files list, total count, and pagination info:
+            {
+                "files": [
+                    {
+                        "file_path": str,
+                        "language": str,
+                        "last_indexed": str (ISO timestamp),
+                        "unit_count": int,
+                    }
+                ],
+                "total": int,
+                "limit": int,
+                "offset": int,
+            }
+        """
+        if not self.conn:
+            raise StorageError("Store not initialized")
+
+        # Validate and cap limit
+        limit = min(max(1, limit), 500)
+        offset = max(0, offset)
+
+        try:
+            cursor = self.conn.cursor()
+
+            # Build WHERE clause
+            where_clause = "category = 'code'"
+            params = []
+            if project_name:
+                where_clause += " AND project_name = ?"
+                params.append(project_name)
+
+            # Get total count
+            cursor.execute(f"""
+                SELECT COUNT(DISTINCT json_extract(metadata, '$.file_path'))
+                FROM memories
+                WHERE {where_clause}
+            """, params)
+            total = cursor.fetchone()[0]
+
+            # Get paginated file list with metadata
+            cursor.execute(f"""
+                SELECT
+                    json_extract(metadata, '$.file_path') as file_path,
+                    json_extract(metadata, '$.language') as language,
+                    MAX(updated_at) as last_indexed,
+                    COUNT(*) as unit_count
+                FROM memories
+                WHERE {where_clause}
+                GROUP BY json_extract(metadata, '$.file_path')
+                ORDER BY last_indexed DESC
+                LIMIT ? OFFSET ?
+            """, params + [limit, offset])
+
+            files = []
+            for row in cursor.fetchall():
+                file_path, language, last_indexed, unit_count = row
+                if file_path:  # Skip entries without file_path
+                    files.append({
+                        "file_path": file_path,
+                        "language": language or "unknown",
+                        "last_indexed": last_indexed,
+                        "unit_count": unit_count,
+                    })
+
+            return {
+                "files": files,
+                "total": total,
+                "limit": limit,
+                "offset": offset,
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting indexed files: {e}")
+            raise StorageError(f"Failed to get indexed files: {e}")
+
+    async def list_indexed_units(
+        self,
+        project_name: Optional[str] = None,
+        language: Optional[str] = None,
+        file_pattern: Optional[str] = None,
+        unit_type: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> Dict[str, Any]:
+        """
+        List indexed code units (functions, classes, etc.) with filtering.
+
+        Args:
+            project_name: Optional project name to filter by
+            language: Optional language to filter by (Python, JavaScript, etc.)
+            file_pattern: Optional SQL LIKE pattern for file paths (e.g. "%.py", "src/%")
+            unit_type: Optional unit type to filter by (function, class, method, etc.)
+            limit: Maximum number of units to return (default 50, max 500)
+            offset: Number of units to skip for pagination
+
+        Returns:
+            Dictionary with units list, total count, and pagination info:
+            {
+                "units": [
+                    {
+                        "id": str,
+                        "name": str,
+                        "unit_type": str,
+                        "file_path": str,
+                        "language": str,
+                        "start_line": int,
+                        "end_line": int,
+                        "signature": str,
+                        "last_indexed": str (ISO timestamp),
+                    }
+                ],
+                "total": int,
+                "limit": int,
+                "offset": int,
+            }
+        """
+        if not self.conn:
+            raise StorageError("Store not initialized")
+
+        # Validate and cap limit
+        limit = min(max(1, limit), 500)
+        offset = max(0, offset)
+
+        try:
+            cursor = self.conn.cursor()
+
+            # Build WHERE clause
+            where_clauses = ["category = 'code'"]
+            params = []
+
+            if project_name:
+                where_clauses.append("project_name = ?")
+                params.append(project_name)
+
+            if language:
+                where_clauses.append("json_extract(metadata, '$.language') = ?")
+                params.append(language)
+
+            if file_pattern:
+                where_clauses.append("json_extract(metadata, '$.file_path') LIKE ?")
+                params.append(file_pattern)
+
+            if unit_type:
+                where_clauses.append("json_extract(metadata, '$.unit_type') = ?")
+                params.append(unit_type)
+
+            where_clause = " AND ".join(where_clauses)
+
+            # Get total count
+            cursor.execute(f"""
+                SELECT COUNT(*)
+                FROM memories
+                WHERE {where_clause}
+            """, params)
+            total = cursor.fetchone()[0]
+
+            # Get paginated unit list with metadata
+            cursor.execute(f"""
+                SELECT
+                    id,
+                    json_extract(metadata, '$.name') as name,
+                    json_extract(metadata, '$.unit_type') as unit_type,
+                    json_extract(metadata, '$.file_path') as file_path,
+                    json_extract(metadata, '$.language') as language,
+                    json_extract(metadata, '$.start_line') as start_line,
+                    json_extract(metadata, '$.end_line') as end_line,
+                    json_extract(metadata, '$.signature') as signature,
+                    updated_at as last_indexed
+                FROM memories
+                WHERE {where_clause}
+                ORDER BY updated_at DESC
+                LIMIT ? OFFSET ?
+            """, params + [limit, offset])
+
+            units = []
+            for row in cursor.fetchall():
+                (
+                    unit_id,
+                    name,
+                    unit_type_val,
+                    file_path,
+                    lang,
+                    start_line,
+                    end_line,
+                    signature,
+                    last_indexed,
+                ) = row
+
+                units.append({
+                    "id": unit_id,
+                    "name": name or "unknown",
+                    "unit_type": unit_type_val or "unknown",
+                    "file_path": file_path or "unknown",
+                    "language": lang or "unknown",
+                    "start_line": start_line or 0,
+                    "end_line": end_line or 0,
+                    "signature": signature or "",
+                    "last_indexed": last_indexed,
+                })
+
+            return {
+                "units": units,
+                "total": total,
+                "limit": limit,
+                "offset": offset,
+            }
+
+        except Exception as e:
+            logger.error(f"Error listing indexed units: {e}")
+            raise StorageError(f"Failed to list indexed units: {e}")
+
     async def update_usage(self, usage_data: Dict[str, Any]) -> bool:
         """
         Update usage tracking for a single memory.
