@@ -516,12 +516,18 @@ class IncrementalIndexer(BaseCodeIndexer):
             f"({skipped_files} skipped, {len(failed_files)} failed)"
         )
 
+        # Clean up stale entries for files that no longer exist
+        cleaned_count = await self._cleanup_stale_entries(dir_path, files_to_index)
+        if cleaned_count > 0:
+            logger.info(f"Cleaned up {cleaned_count} stale index entries")
+
         return {
             "total_files": len(files_to_index),
             "indexed_files": indexed_files,
             "total_units": total_units,
             "skipped_files": skipped_files,
             "failed_files": failed_files,
+            "cleaned_entries": cleaned_count,
         }
 
     async def delete_file_index(self, file_path: Path) -> int:
@@ -638,6 +644,144 @@ class IncrementalIndexer(BaseCodeIndexer):
         except Exception as e:
             logger.warning(f"Failed to delete units for {file_path}: {e}")
             return 0
+
+    async def _cleanup_stale_entries(self, dir_path: Path, current_files: List[Path]) -> int:
+        """
+        Remove index entries for files that no longer exist on disk.
+
+        Args:
+            dir_path: Base directory that was indexed
+            current_files: List of files that currently exist in the directory
+
+        Returns:
+            Number of stale entries cleaned up
+        """
+        try:
+            # Get set of current file paths (as strings) for fast lookup
+            current_file_paths = {str(f.resolve()) for f in current_files}
+
+            # Get all indexed files for this project from the store
+            indexed_files = await self._get_indexed_files()
+
+            # Filter to files within the dir_path and check if they still exist
+            stale_files = []
+            for file_path_str in indexed_files:
+                file_path = Path(file_path_str)
+
+                # Check if file is within the indexed directory
+                try:
+                    file_path.relative_to(dir_path)
+                except ValueError:
+                    # File is outside the indexed directory, skip
+                    continue
+
+                # Check if file still exists on disk
+                if file_path_str not in current_file_paths:
+                    stale_files.append(file_path)
+
+            # Delete stale entries
+            total_cleaned = 0
+            for stale_file in stale_files:
+                logger.debug(f"Cleaning up stale index for deleted file: {stale_file.name}")
+                count = await self._delete_file_units(stale_file)
+                total_cleaned += count
+
+            return total_cleaned
+
+        except Exception as e:
+            logger.warning(f"Failed to cleanup stale entries: {e}")
+            return 0
+
+    async def _get_indexed_files(self) -> set:
+        """
+        Get all unique file paths currently in the index for this project.
+
+        Returns:
+            Set of file path strings
+        """
+        try:
+            # Check if store has client attribute (Qdrant) or conn attribute (SQLite)
+            has_client = hasattr(self.store, 'client')
+            has_conn = hasattr(self.store, 'conn')
+
+            if not has_client and not has_conn:
+                logger.warning("Store type not supported for listing files")
+                return set()
+
+            # Handle Qdrant store
+            if has_client:
+                # Initialize store if needed
+                if self.store.client is None:
+                    await self.store.initialize()
+
+                if self.store.client is None:
+                    return set()
+
+                # Build filter for this project
+                from qdrant_client.models import Filter, FieldCondition, MatchValue
+
+                project_filter = Filter(
+                    must=[
+                        FieldCondition(
+                            key="project_name",
+                            match=MatchValue(value=self.project_name),
+                        )
+                    ]
+                )
+
+                # Scroll through all points and collect unique file paths
+                file_paths = set()
+                offset = None
+
+                while True:
+                    points, offset = self.store.client.scroll(
+                        collection_name=self.store.collection_name,
+                        scroll_filter=project_filter,
+                        limit=100,
+                        offset=offset,
+                        with_payload=True,
+                        with_vectors=False,
+                    )
+
+                    for point in points:
+                        if point.payload and "file_path" in point.payload:
+                            file_paths.add(point.payload["file_path"])
+
+                    if offset is None:
+                        break
+
+                return file_paths
+
+            # Handle SQLite store
+            else:
+                from src.core.models import SearchFilters, MemoryCategory
+
+                filters = SearchFilters(
+                    category=MemoryCategory.CONTEXT,
+                    tags=["code"],
+                    scope_filters={"project_name": self.project_name},
+                )
+
+                # Retrieve all memories with dummy embedding
+                dummy_embedding = [0.0] * 384
+                results = await self.store.retrieve(
+                    query_embedding=dummy_embedding,
+                    filters=filters,
+                    limit=10000,
+                )
+
+                # Extract unique file paths
+                file_paths = set()
+                for memory, _ in results:
+                    metadata = memory.metadata or {}
+                    if isinstance(metadata, dict) and "file_path" in metadata:
+                        file_paths.add(metadata["file_path"])
+
+                return file_paths
+
+        except Exception as e:
+            logger.warning(f"Failed to get indexed files: {e}")
+            return set()
 
     def _build_indexable_content(self, file_path: Path, unit: "SemanticUnit") -> str:
         """

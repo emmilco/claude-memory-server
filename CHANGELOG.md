@@ -79,6 +79,35 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ## [Unreleased]
 
+### Changed - 2025-11-19
+
+- **UX-006: Enhanced MCP Tool Descriptions for Proactive Use**
+  - Added comprehensive "PROACTIVE USE" sections to all 16 MCP tools
+  - Included clear "when to use" guidance, advantages over alternatives, and concrete examples
+  - Added comparisons with built-in tools (e.g., search_code vs Grep)
+  - Documented performance characteristics and search modes
+  - Tools updated: store_memory, retrieve_memories, search_code, list_memories, delete_memory,
+    index_codebase, find_similar_code, search_all_projects, opt_in/out_cross_project,
+    list_opted_in_projects, export_memories, import_memories, get_performance_metrics,
+    get_active_alerts, get_health_score
+  - Files: `src/core/server.py`
+
+### Fixed - 2025-11-19
+
+- **BUG-008: File Watcher Async/Threading Bug**
+  - Fixed RuntimeError: no running event loop in file watcher
+  - Added event loop parameter to DebouncedFileWatcher and FileWatcherService
+  - Implemented `_schedule_callback()` using `asyncio.run_coroutine_threadsafe()` for thread-safe async calls
+  - Enhanced `on_deleted()` handler to trigger index cleanup and track statistics
+  - Files: `src/memory/file_watcher.py`, `src/memory/indexing_service.py`
+
+- **BUG-008: Stale Index Entry Cleanup**
+  - Implemented automatic cleanup of stale index entries during reindexing
+  - Added `_cleanup_stale_entries()` method to detect and remove entries for deleted files
+  - Added `_get_indexed_files()` method supporting both Qdrant and SQLite stores
+  - Display cleaned entry count in index command output
+  - Files: `src/memory/incremental_indexer.py`, `src/cli/index_command.py`
+
 ### Added - 2025-11-19
 
 - **DOC-007: Comprehensive Tutorial for macOS + Qdrant Setup**

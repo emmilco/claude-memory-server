@@ -35,6 +35,7 @@ class DebouncedFileWatcher(FileSystemEventHandler):
         patterns: Optional[Set[str]] = None,
         debounce_ms: int = 1000,
         recursive: bool = True,
+        loop: Optional[asyncio.AbstractEventLoop] = None,
     ):
         """
         Initialize file watcher.
@@ -45,6 +46,7 @@ class DebouncedFileWatcher(FileSystemEventHandler):
             patterns: File patterns to watch (e.g., {".py", ".js", ".ts"})
             debounce_ms: Milliseconds to wait before triggering callback
             recursive: Watch subdirectories
+            loop: Event loop for scheduling coroutines from observer thread
         """
         super().__init__()
 
@@ -53,6 +55,7 @@ class DebouncedFileWatcher(FileSystemEventHandler):
         self.patterns = patterns or {".py", ".js", ".ts", ".java", ".go", ".rs", ".md"}
         self.debounce_ms = debounce_ms
         self.recursive = recursive
+        self.loop = loop
 
         # Debouncing state
         self.pending_files: Set[Path] = set()
@@ -174,7 +177,7 @@ class DebouncedFileWatcher(FileSystemEventHandler):
         if self._should_process(file_path) and self._has_changed(file_path):
             logger.debug(f"File modified: {file_path}")
             self.stats["events_processed"] += 1
-            asyncio.create_task(self._debounce_callback(file_path))
+            self._schedule_callback(file_path)
         else:
             self.stats["events_ignored"] += 1
 
@@ -193,21 +196,58 @@ class DebouncedFileWatcher(FileSystemEventHandler):
             # New file - mark as changed
             self._compute_file_hash(file_path)  # Initialize hash
             self.stats["events_processed"] += 1
-            asyncio.create_task(self._debounce_callback(file_path))
+            self._schedule_callback(file_path)
         else:
             self.stats["events_ignored"] += 1
 
+    def _schedule_callback(self, file_path: Path):
+        """
+        Schedule callback coroutine from observer thread to event loop.
+
+        This method is called from the watchdog observer thread, which doesn't have
+        an event loop. We use run_coroutine_threadsafe to schedule the coroutine
+        in the main event loop.
+        """
+        if self.loop is None:
+            # Try to get running loop
+            try:
+                self.loop = asyncio.get_running_loop()
+            except RuntimeError:
+                logger.error("No event loop available for file watcher callbacks")
+                return
+
+        try:
+            asyncio.run_coroutine_threadsafe(
+                self._debounce_callback(file_path),
+                self.loop
+            )
+        except Exception as e:
+            logger.error(f"Failed to schedule callback for {file_path}: {e}")
+
     def on_deleted(self, event: FileSystemEvent):
         """Handle file deletion events."""
+        self.stats["events_received"] += 1
+        self.stats["last_event_at"] = datetime.now(UTC)
+
         if event.is_directory:
+            self.stats["events_ignored"] += 1
             return
 
         file_path = Path(event.src_path)
-        if file_path in self.file_hashes:
+        if self._should_process(file_path):
             logger.debug(f"File deleted: {file_path}")
+            self.stats["events_processed"] += 1
+
             # Remove from hash tracking
-            del self.file_hashes[file_path]
-            # Note: deletion handling could trigger cleanup in vector DB
+            if file_path in self.file_hashes:
+                del self.file_hashes[file_path]
+            if file_path in self.file_mtimes:
+                del self.file_mtimes[file_path]
+
+            # Trigger callback to remove from index
+            self._schedule_callback(file_path)
+        else:
+            self.stats["events_ignored"] += 1
 
     async def _debounce_callback(self, file_path: Path):
         """Add file to pending queue and schedule debounced callback."""
@@ -272,6 +312,7 @@ class FileWatcherService:
         watch_path: Path,
         callback: Callable[[Path], None],
         config: Optional[ServerConfig] = None,
+        loop: Optional[asyncio.AbstractEventLoop] = None,
     ):
         """
         Initialize file watcher service.
@@ -280,6 +321,7 @@ class FileWatcherService:
             watch_path: Directory to watch
             callback: Async callback for file changes
             config: Server configuration
+            loop: Event loop for scheduling callbacks from observer thread
         """
         if config is None:
             config = get_config()
@@ -287,6 +329,7 @@ class FileWatcherService:
         self.config = config
         self.watch_path = Path(watch_path).resolve()
         self.callback = callback
+        self.loop = loop
 
         # Create event handler
         self.event_handler = DebouncedFileWatcher(
@@ -294,6 +337,7 @@ class FileWatcherService:
             callback=self.callback,
             debounce_ms=self.config.watch_debounce_ms,
             recursive=True,
+            loop=self.loop,
         )
 
         # Create observer

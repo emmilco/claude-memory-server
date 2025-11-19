@@ -306,20 +306,46 @@ class MemoryRAGServer:
         context_level: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        Store a memory with its embedding.
+        Store a memory with automatic context-level classification and deduplication.
+
+        **PROACTIVE USE - Store memories immediately when you discover:**
+        1. **Architectural patterns or design decisions** - "Uses event sourcing for order processing"
+        2. **User preferences or requirements** - "User prefers functional style over OOP"
+        3. **Important facts about the codebase** - "Authentication uses Auth0 with JWT tokens"
+        4. **Workflows or processes** - "Deploy via CI/CD pipeline triggers on main branch"
+        5. **"Why" behind unusual code** - "Duplicate code necessary for performance"
+        6. **Completed features or major changes** - "Implemented rate limiting using Redis"
+
+        **When to use:**
+        - ✅ After answering important architecture questions
+        - ✅ When user shares critical context or decisions
+        - ✅ After completing major features (store what was built)
+        - ✅ When discovering non-obvious patterns or conventions
+
+        **When NOT to use:**
+        - ❌ For temporary session state (logs, intermediate results)
+        - ❌ For information already in code comments or docs
+        - ❌ For trivial facts easily re-discovered
+
+        **Categories:**
+        - `preference`: User/team preferences (code style, tools, approaches)
+        - `fact`: Objective information about codebase or project
+        - `event`: Significant events or milestones (releases, migrations)
+        - `workflow`: Processes, procedures, or step-by-step guides
+        - `context`: Background information or situational context
 
         Args:
-            content: Memory content
+            content: Memory content (clear, concise description)
             category: Memory category (preference, fact, event, workflow, context)
-            scope: Memory scope (global or project)
-            project_name: Project name if scope is project
-            importance: Importance score (0.0-1.0)
-            tags: Optional tags
-            metadata: Optional metadata
-            context_level: Optional context level (auto-classified if not provided)
+            scope: Memory scope - "global" for all projects, "project" for specific project
+            project_name: Required if scope is "project"
+            importance: Importance score 0.0-1.0 (default: 0.5, high: 0.8+, critical: 1.0)
+            tags: Optional tags for categorization (e.g., ["auth", "security"])
+            metadata: Optional structured metadata (e.g., {"version": "2.0"})
+            context_level: Auto-classified if not provided (USER_PREFERENCE, PROJECT_CONTEXT, SESSION_STATE)
 
         Returns:
-            Dict with memory_id and status
+            Dict with memory_id, status, and auto-classified context_level
         """
         if self.config.read_only_mode:
             raise ReadOnlyError("Cannot store memory in read-only mode")
@@ -407,22 +433,53 @@ class MemoryRAGServer:
         advanced_filters: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
-        Retrieve memories similar to the query with conversation awareness.
+        Retrieve relevant memories using semantic search with smart routing.
+
+        **PROACTIVE USE - Check memories automatically in these situations:**
+        1. **At session start** - retrieve("project architecture patterns conventions")
+        2. **Before major changes** - retrieve("previous decisions about authentication")
+        3. **When user mentions past work** - retrieve("user preferences for error handling")
+        4. **Before refactoring** - retrieve("why was X implemented this way")
+        5. **When exploring unfamiliar code** - retrieve("design patterns used in codebase")
+        6. **After user shares context** - retrieve related memories to build on existing knowledge
+
+        **Use cases:**
+        - ✅ Recall architectural decisions before making changes
+        - ✅ Find user preferences to maintain consistency
+        - ✅ Discover "why" behind unusual patterns
+        - ✅ Build on previous work instead of starting fresh
+        - ✅ Maintain context across multiple sessions
+
+        **When NOT to use:**
+        - ❌ For searching code (use search_code instead)
+        - ❌ For finding files (use Glob/Grep instead)
+        - ❌ When information is clearly visible in current context
+
+        **Smart retrieval gate:**
+        - Automatically filters low-value queries to save tokens
+        - Returns empty results for queries unlikely to be useful
+        - Tracks utility scores and estimated token savings
+
+        **Example queries:**
+        - "authentication patterns and security decisions"
+        - "user preferences for code organization"
+        - "database migration workflows and procedures"
+        - "why we chose GraphQL over REST"
 
         Args:
-            query: Search query
-            limit: Maximum results to return
-            context_level: Filter by context level
-            scope: Filter by scope
-            project_name: Filter by project name
-            category: Filter by category
-            min_importance: Minimum importance threshold
-            tags: Filter by tags
-            session_id: Optional conversation session ID for context tracking
-            advanced_filters: Advanced filtering options (dates, tag logic, exclusions, etc.)
+            query: Natural language search query describing what to find
+            limit: Maximum results to return (default: 5, recommended: 5-10)
+            context_level: Filter by USER_PREFERENCE, PROJECT_CONTEXT, or SESSION_STATE
+            scope: Filter by "global" (all projects) or "project" (specific project)
+            project_name: Required if scope is "project"
+            category: Filter by preference, fact, event, workflow, or context
+            min_importance: Minimum importance 0.0-1.0 (0.0=all, 0.5=important, 0.8=critical)
+            tags: Filter by tags (e.g., ["auth", "security"])
+            session_id: Optional session ID for conversation-aware context tracking
+            advanced_filters: Advanced options (date ranges, tag logic, exclusions)
 
         Returns:
-            Dict with results and metadata
+            Dict with results, relevance scores, total_found, query_time_ms, and used_cache
         """
         try:
             import time
@@ -622,11 +679,14 @@ class MemoryRAGServer:
         """
         Delete a memory by ID.
 
+        **Use when:** Removing outdated, incorrect, or duplicate memories.
+        Use `list_memories` first to find memory_id.
+
         Args:
-            memory_id: Memory ID to delete
+            memory_id: Memory ID to delete (from list_memories or retrieve_memories)
 
         Returns:
-            Dict with status
+            Dict with status ("success" or "not_found")
         """
         if self.config.read_only_mode:
             raise ReadOnlyError("Cannot delete memory in read-only mode")
@@ -832,36 +892,37 @@ class MemoryRAGServer:
         offset: int = 0
     ) -> Dict[str, Any]:
         """
-        List memories with filtering, sorting, and pagination.
+        List and browse memories with filtering and pagination.
+
+        **PROACTIVE USE:**
+        - Review stored memories by category or project
+        - Audit recent memories to understand what's been learned
+        - Browse preferences or facts for a specific project
+        - Check SESSION_STATE memories before cleanup
+
+        **Common use cases:**
+        - list_memories(category="preference") - View all user preferences
+        - list_memories(project_name="myapp", category="fact") - Project-specific facts
+        - list_memories(tags=["auth", "security"]) - Security-related memories
+        - list_memories(min_importance=0.8) - Only high-importance memories
 
         Args:
-            category: Filter by category (optional)
-            context_level: Filter by context level (optional)
-            scope: Filter by scope (global/project) (optional)
-            project_name: Filter by project (optional)
-            tags: Filter by tags - matches ANY tag (optional)
-            min_importance: Minimum importance (default 0.0)
-            max_importance: Maximum importance (default 1.0)
-            date_from: Filter by created_at >= date (ISO format) (optional)
-            date_to: Filter by created_at <= date (ISO format) (optional)
-            sort_by: Sort field (created_at, updated_at, importance)
-            sort_order: Sort order (asc, desc)
-            limit: Max results to return (1-100, default 20)
-            offset: Number of results to skip (default 0)
+            category: Filter by preference, fact, event, workflow, or context
+            context_level: Filter by USER_PREFERENCE, PROJECT_CONTEXT, SESSION_STATE
+            scope: Filter by "global" or "project"
+            project_name: Filter by specific project
+            tags: Filter by tags (matches ANY tag)
+            min_importance: Minimum importance 0.0-1.0 (default: 0.0)
+            max_importance: Maximum importance 0.0-1.0 (default: 1.0)
+            date_from: Filter created_at >= date (ISO format: "2025-01-01T00:00:00Z")
+            date_to: Filter created_at <= date (ISO format)
+            sort_by: Sort by "created_at", "updated_at", or "importance"
+            sort_order: "asc" (oldest first) or "desc" (newest first)
+            limit: Results per page (1-100, default: 20)
+            offset: Skip N results (for pagination, default: 0)
 
         Returns:
-            {
-                "memories": List[memory dict],
-                "total_count": int,
-                "returned_count": int,
-                "offset": int,
-                "limit": int,
-                "has_more": bool
-            }
-
-        Raises:
-            ValidationError: If parameters are invalid
-            StorageError: If listing fails
+            Dict with memories list, total_count, returned_count, offset, limit, has_more
         """
         try:
             # Validate parameters
@@ -1256,25 +1317,27 @@ class MemoryRAGServer:
         """
         Export memories to JSON or Markdown format.
 
+        **Use for:**
+        - Backup before major changes
+        - Sharing knowledge across teams
+        - Migrating memories between systems
+        - Creating documentation from stored memories
+
         Args:
-            output_path: Optional file path to write export. If None, returns content as string.
-            format: Export format - "json" or "markdown"
+            output_path: File path to write (if None, returns content as string)
+            format: "json" (structured) or "markdown" (human-readable)
             category: Filter by category
             context_level: Filter by context level
-            scope: Filter by scope
+            scope: Filter by "global" or "project"
             project_name: Filter by project
-            tags: Filter by tags (must have all)
-            min_importance: Minimum importance (0.0-1.0)
-            max_importance: Maximum importance (0.0-1.0)
-            date_from: Filter memories created after this date (ISO format)
-            date_to: Filter memories created before this date (ISO format)
+            tags: Filter by tags
+            min_importance: Minimum importance 0.0-1.0
+            max_importance: Maximum importance 0.0-1.0
+            date_from: Filter created >= date (ISO format)
+            date_to: Filter created <= date (ISO format)
 
         Returns:
-            Dict with status, file_path/content, and count
-
-        Raises:
-            ValidationError: If format is invalid
-            StorageError: If export fails
+            Dict with status, file_path (or content), memory_count
         """
         # Validate format
         if format not in ["json", "markdown"]:
@@ -1409,20 +1472,22 @@ class MemoryRAGServer:
         format: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        Import memories from JSON file or content.
+        Import memories from JSON file with conflict resolution.
+
+        **Use for:**
+        - Restoring from backups
+        - Sharing knowledge across teams
+        - Migrating from another system
+        - Batch loading initial memories
 
         Args:
-            file_path: Path to import file (JSON format)
-            content: Direct JSON content string (alternative to file_path)
-            conflict_mode: How to handle existing memories - "skip", "overwrite", or "merge"
-            format: File format - "json" (auto-detected from extension if not provided)
+            file_path: Path to JSON file (e.g., "memories.json")
+            content: Direct JSON string (alternative to file_path)
+            conflict_mode: "skip" (ignore duplicates), "overwrite" (replace), or "merge" (combine)
+            format: "json" (auto-detected from extension if file_path provided)
 
         Returns:
-            Dict with import summary (created, updated, skipped, errors)
-
-        Raises:
-            ValidationError: If file doesn't exist, format invalid, or conflict_mode invalid
-            StorageError: If import fails
+            Dict with memories_created, memories_updated, memories_skipped, errors list
         """
         # Validate conflict mode
         if conflict_mode not in ["skip", "overwrite", "merge"]:
@@ -2140,21 +2205,52 @@ class MemoryRAGServer:
         search_mode: str = "semantic",
     ) -> Dict[str, Any]:
         """
-        Search indexed code semantically, with keyword search, or hybrid.
+        Search indexed code semantically across functions and classes.
 
-        This searches through indexed code semantic units (functions, classes)
-        and returns relevant code snippets with file locations.
+        **PROACTIVE USE - Use this BEFORE Grep/Read when:**
+        1. **User asks "where is X?"** - search_code("where is authentication handled")
+        2. **User asks "how does Y work?"** - search_code("how does rate limiting work")
+        3. **Exploring unfamiliar code** - search_code("database connection pooling")
+        4. **Finding implementations by description** - search_code("JWT token validation logic")
+        5. **Understanding architecture** - search_code("API middleware error handling")
+        6. **Before making changes** - search_code("existing payment processing flow")
+
+        **Advantages over Grep:**
+        - ✅ Finds code by **meaning**, not just keywords
+        - ✅ Returns **full function/class context** with line numbers
+        - ✅ Works when you don't know exact function names
+        - ✅ Searches across **multiple files** simultaneously
+        - ✅ Provides **relevance scores** to rank results
+
+        **When to use Grep instead:**
+        - ❌ Finding exact text strings or error messages
+        - ❌ Code hasn't been indexed yet
+        - ❌ Searching for variable names or imports
+
+        **Search modes:**
+        - `semantic` (default): Find by meaning - best for "what does X" questions
+        - `keyword`: Find by exact text - faster, good for known function names
+        - `hybrid`: Combines both - best balance of accuracy and recall
+
+        **Example queries:**
+        - "authentication middleware that validates JWT tokens"
+        - "database migration functions"
+        - "error handling for API requests"
+        - "user permission checking logic"
+
+        **Performance:** 7-13ms semantic, 3-7ms keyword, 10-18ms hybrid
 
         Args:
-            query: Search query (e.g., "authentication logic", "database connection")
-            project_name: Optional project name filter (uses current project if not specified)
-            limit: Maximum number of results (default 5)
-            file_pattern: Optional file path pattern filter (e.g., "*/auth/*")
-            language: Optional language filter (e.g., "python", "javascript")
-            search_mode: Search mode - "semantic" (default), "keyword", or "hybrid"
+            query: Natural language description of what to find (be specific!)
+            project_name: Optional project filter (defaults to current project if available)
+            limit: Maximum results (default: 5, increase to 10-20 for broad searches)
+            file_pattern: Optional path filter (e.g., "*/auth/*", "**/services/*.py")
+            language: Optional language filter ("python", "javascript", "typescript", etc.)
+            search_mode: "semantic" (meaning), "keyword" (exact), or "hybrid" (both)
 
         Returns:
-            Dict with code search results including file paths, line numbers, and code snippets
+            Dict with results containing file_path, start_line, end_line, code snippets,
+            relevance_score, quality assessment, and matched keywords
         """
         try:
             import time
@@ -2330,19 +2426,27 @@ class MemoryRAGServer:
         """
         Find similar code snippets in the indexed codebase.
 
-        This generates an embedding for the provided code snippet and searches
-        for similar code in the index. Great for finding duplicates, similar
-        implementations, or code patterns.
+        **PROACTIVE USE:**
+        - Find duplicate code for refactoring opportunities
+        - Discover similar implementations across the codebase
+        - Identify code patterns and conventions
+        - Locate existing logic before implementing new features
+
+        **Use cases:**
+        - Check if similar logic already exists before writing new code
+        - Find all implementations of a pattern for consistency updates
+        - Discover duplicates during code review
+        - Learn coding patterns from existing codebase
 
         Args:
-            code_snippet: The code snippet to find similar matches for
-            project_name: Optional project name filter (uses current project if not specified)
-            limit: Maximum number of results (default 10)
-            file_pattern: Optional file path pattern filter (e.g., "*/auth/*")
-            language: Optional language filter (e.g., "python", "javascript")
+            code_snippet: Code to find matches for (function, class, or code block)
+            project_name: Optional project filter (defaults to current project)
+            limit: Maximum results (default: 10, increase for comprehensive search)
+            file_pattern: Optional path filter (e.g., "*/services/*")
+            language: Optional language filter ("python", "javascript", etc.)
 
         Returns:
-            Dict with similar code results including file paths, line numbers, and similarity scores
+            Dict with similar code results, file paths, line numbers, similarity scores
         """
         # Validate input first (before try block to let ValidationError propagate)
         if not code_snippet or not code_snippet.strip():
@@ -2469,19 +2573,29 @@ class MemoryRAGServer:
         """
         Search code across all opted-in projects.
 
-        Implements cross-project learning by searching across multiple
-        indexed projects. Respects privacy settings - projects must be
-        explicitly opted in via consent manager.
+        **PROACTIVE USE:**
+        - Learn from patterns across multiple projects
+        - Find best practices implemented in other codebases
+        - Discover existing solutions before building new features
+        - Understand consistent patterns across team's work
+
+        **Privacy:** Projects must explicitly opt-in via `opt_in_cross_project`.
+        Use `list_opted_in_projects` to see which projects are searchable.
+
+        **When to use:**
+        - ✅ Looking for implementations across team's projects
+        - ✅ Finding best practices from previous work
+        - ✅ Learning patterns used in similar projects
 
         Args:
-            query: Search query (e.g., "authentication logic", "database connection")
-            limit: Maximum number of results across all projects (default 10)
-            file_pattern: Optional file path pattern filter (e.g., "*/auth/*")
-            language: Optional language filter (e.g., "python", "javascript")
-            search_mode: Search mode - "semantic" (default), "keyword", or "hybrid"
+            query: Natural language search query
+            limit: Maximum total results across all projects (default: 10)
+            file_pattern: Optional path filter (e.g., "*/auth/*")
+            language: Optional language filter
+            search_mode: "semantic", "keyword", or "hybrid"
 
         Returns:
-            Dict with code search results from all projects, grouped by project
+            Dict with results grouped by project, total_found, projects_searched
         """
         # Check if cross-project search is enabled
         if not self.config.enable_cross_project_search or not self.cross_project_consent:
@@ -2603,21 +2717,16 @@ class MemoryRAGServer:
 
     async def opt_in_cross_project(self, project_name: str) -> Dict[str, Any]:
         """
-        Opt-in a project for cross-project search.
+        Opt in a project for cross-project search.
 
-        Allows the specified project to be included when searching across
-        multiple projects. By default, all projects are opted-in.
+        **Use when:** Enabling cross-project learning for a specific project.
+        Projects are opted-in by default, use this to re-enable after opt-out.
 
         Args:
-            project_name: Project to opt-in
+            project_name: Project to make searchable across projects
 
         Returns:
-            Dict with consent status and timestamps
-        
-
-        Note: This function is async for MCP protocol compatibility, even though it
-        doesn't currently use await. The MCP framework requires handler functions to
-        be async, and future changes may add async operations.
+            Dict with project_name, opted_in status, granted_at timestamp
         """
         if not self.config.enable_cross_project_search or not self.cross_project_consent:
             raise ValidationError(
@@ -2634,21 +2743,16 @@ class MemoryRAGServer:
 
     async def opt_out_cross_project(self, project_name: str) -> Dict[str, Any]:
         """
-        Opt-out a project from cross-project search.
+        Opt out a project from cross-project search.
 
-        Prevents the specified project from being included when searching
-        across multiple projects. Useful for privacy or relevance control.
+        **Use when:** Protecting sensitive/private project code from cross-project
+        learning or excluding irrelevant projects from search results.
 
         Args:
-            project_name: Project to opt-out
+            project_name: Project to exclude from cross-project search
 
         Returns:
-            Dict with consent status and timestamps
-        
-
-        Note: This function is async for MCP protocol compatibility, even though it
-        doesn't currently use await. The MCP framework requires handler functions to
-        be async, and future changes may add async operations.
+            Dict with project_name, opted_in=false status, revoked_at timestamp
         """
         if not self.config.enable_cross_project_search or not self.cross_project_consent:
             raise ValidationError(
@@ -2665,15 +2769,12 @@ class MemoryRAGServer:
 
     async def list_opted_in_projects(self) -> Dict[str, Any]:
         """
-        List all projects that are opted-in for cross-project search.
+        List all projects opted in for cross-project search.
+
+        **Use before** `search_all_projects` to understand which projects are searchable.
 
         Returns:
-            Dict with list of opted-in projects and statistics
-        
-
-        Note: This function is async for MCP protocol compatibility, even though it
-        doesn't currently use await. The MCP framework requires handler functions to
-        be async, and future changes may add async operations.
+            Dict with opted_in_projects list, opted_out_projects list, and statistics
         """
         if not self.config.enable_cross_project_search or not self.cross_project_consent:
             raise ValidationError(
@@ -2705,17 +2806,26 @@ class MemoryRAGServer:
         """
         Index a codebase directory for semantic code search.
 
-        This will parse all supported source files in the directory,
-        extract semantic units (functions, classes), and store them
-        with embeddings for semantic search.
+        **PROACTIVE USE:**
+        - Index new projects when user starts working on them
+        - Re-index after major changes to update search results
+        - Index before extensive code exploration tasks
+
+        **Supported languages:** Python, JavaScript, TypeScript, Java, Go, Rust, Ruby,
+        Swift, Kotlin, C, C++, C#, SQL, JSON, YAML, TOML (15 formats)
+
+        **Performance:** 10-20 files/sec with parallel processing, incremental cache
+        provides 5-10x speedup on re-indexing
+
+        **Use CLI instead** for large codebases: `python -m src.cli index ./path`
 
         Args:
-            directory_path: Path to directory to index
-            project_name: Project name for scoping (uses directory name if not specified)
-            recursive: Whether to recursively index subdirectories (default True)
+            directory_path: Absolute path to directory to index (e.g., "/path/to/project")
+            project_name: Project name for scoping (defaults to directory name)
+            recursive: Recursively index subdirectories (default: True)
 
         Returns:
-            Dict with indexing statistics
+            Dict with status, project_name, files_indexed, units_indexed, total_time_s
         """
         if self.config.read_only_mode:
             raise ReadOnlyError("Cannot index codebase in read-only mode")
@@ -4199,13 +4309,16 @@ class MemoryRAGServer:
         self, include_history_days: int = 1
     ) -> Dict[str, Any]:
         """
-        Get current performance metrics.
+        Get current performance metrics and historical averages.
+
+        **Use when:** Monitoring system performance, debugging slow searches,
+        or understanding usage patterns.
 
         Args:
-            include_history_days: Include historical average over N days
+            include_history_days: Include historical average over N days (default: 1)
 
         Returns:
-            Dictionary with current and historical metrics
+            Dict with current_metrics (latency, cache, staleness, queries) and historical_average
         """
         try:
             # Collect current metrics
@@ -4260,19 +4373,17 @@ class MemoryRAGServer:
         include_snoozed: bool = False,
     ) -> Dict[str, Any]:
         """
-        Get active system alerts.
+        Get active system alerts with severity levels.
+
+        **Use when:** Checking for system issues, investigating performance problems,
+        or monitoring system health.
 
         Args:
-            severity_filter: Filter by severity (CRITICAL, WARNING, INFO)
-            include_snoozed: Include snoozed alerts
+            severity_filter: Filter by "CRITICAL", "WARNING", or "INFO" (optional)
+            include_snoozed: Include temporarily snoozed alerts (default: False)
 
         Returns:
-            Dictionary with active alerts and counts
-        
-
-        Note: This function is async for MCP protocol compatibility, even though it
-        doesn't currently use await. The MCP framework requires handler functions to
-        be async, and future changes may add async operations.
+            Dict with alerts list, total_alerts, critical_count, warning_count, info_count
         """
         try:
             # Get active alerts
@@ -4323,10 +4434,13 @@ class MemoryRAGServer:
 
     async def get_health_score(self) -> Dict[str, Any]:
         """
-        Get system health score with component breakdown.
+        Get overall system health score with component breakdown.
+
+        **Use when:** Quick health check, investigating issues, or periodic monitoring.
+        Returns 0-100 score with component scores and actionable recommendations.
 
         Returns:
-            Dictionary with health score and recommendations
+            Dict with health_score (0-100), component_scores, status, recommendations
         """
         try:
             # Collect current metrics

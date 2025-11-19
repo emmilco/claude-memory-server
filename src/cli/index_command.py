@@ -47,6 +47,8 @@ class IndexCommand:
         table.add_row("Files skipped", f"[yellow]{result['skipped_files']:,}[/yellow]")
         if result['failed_files']:
             table.add_row("Files failed", f"[red]{len(result['failed_files']):,}[/red]")
+        if result.get('cleaned_entries', 0) > 0:
+            table.add_row("Stale entries cleaned", f"[dim]{result['cleaned_entries']:,}[/dim]")
         table.add_row("", "")  # Spacer
         table.add_row("Semantic units", f"[bold]{result['total_units']:,}[/bold]")
         table.add_row("", "")  # Spacer

@@ -48,12 +48,8 @@ class IndexingService:
             config=config,
         )
 
-        # Create file watcher with callback
-        self.watcher = FileWatcherService(
-            watch_path=self.watch_path,
-            callback=self._on_file_change,
-            config=config,
-        )
+        # File watcher will be created when starting (needs event loop)
+        self.watcher = None
 
         self.is_initialized = False
         logger.info(f"Indexing service created for {self.watch_path}")
@@ -72,13 +68,24 @@ class IndexingService:
         if not self.is_initialized:
             await self.initialize()
 
+        # Create watcher with current event loop if not already created
+        if self.watcher is None:
+            loop = asyncio.get_running_loop()
+            self.watcher = FileWatcherService(
+                watch_path=self.watch_path,
+                callback=self._on_file_change,
+                config=self.config,
+                loop=loop,
+            )
+
         logger.info(f"Starting file watcher for {self.watch_path}")
         self.watcher.start()
 
     async def stop(self) -> None:
         """Stop watching for file changes."""
         logger.info("Stopping indexing service")
-        self.watcher.stop()
+        if self.watcher is not None:
+            self.watcher.stop()
 
     async def _on_file_change(self, file_path: Path) -> None:
         """
