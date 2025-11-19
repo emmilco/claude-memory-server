@@ -203,6 +203,7 @@ class QueryRequest(BaseModel):
     category: Optional[MemoryCategory] = None
     min_importance: float = Field(default=0.0, ge=0.0, le=1.0)
     tags: List[str] = Field(default_factory=list)
+    advanced_filters: Optional['AdvancedSearchFilters'] = None  # Forward reference
 
     @field_validator("query")
     @classmethod
@@ -212,6 +213,44 @@ class QueryRequest(BaseModel):
         if not v:
             raise ValueError("Query cannot be empty")
         return v
+
+
+class AdvancedSearchFilters(BaseModel):
+    """Advanced filtering options for memory search."""
+
+    # Date filtering
+    created_after: Optional[datetime] = None
+    created_before: Optional[datetime] = None
+    updated_after: Optional[datetime] = None
+    updated_before: Optional[datetime] = None
+    accessed_after: Optional[datetime] = None
+    accessed_before: Optional[datetime] = None
+
+    # Tag logic
+    tags_any: Optional[List[str]] = None  # Match ANY of these tags (OR)
+    tags_all: Optional[List[str]] = None  # Match ALL of these tags (AND)
+    tags_none: Optional[List[str]] = None  # Exclude these tags (NOT)
+
+    # Lifecycle filtering
+    lifecycle_states: Optional[List[LifecycleState]] = None
+
+    # Exclusions
+    exclude_categories: Optional[List[MemoryCategory]] = None
+    exclude_projects: Optional[List[str]] = None
+
+    # Provenance filtering
+    min_trust_score: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    source: Optional[ProvenanceSource] = None
+
+    model_config = ConfigDict(use_enum_values=False)
+
+    @field_validator("tags_any", "tags_all", "tags_none")
+    @classmethod
+    def validate_tags(cls, v: Optional[List[str]]) -> Optional[List[str]]:
+        """Validate and normalize tag lists."""
+        if v is None:
+            return None
+        return [tag.strip().lower() for tag in v if tag.strip()]
 
 
 class TrustSignals(BaseModel):
@@ -296,6 +335,7 @@ class SearchFilters(BaseModel):
     category: Optional[MemoryCategory] = None
     min_importance: float = Field(default=0.0, ge=0.0, le=1.0)
     tags: List[str] = Field(default_factory=list)
+    advanced_filters: Optional[AdvancedSearchFilters] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for Qdrant filtering."""
@@ -312,6 +352,8 @@ class SearchFilters(BaseModel):
             filters["min_importance"] = self.min_importance
         if self.tags:
             filters["tags"] = self.tags
+        if self.advanced_filters:
+            filters["advanced_filters"] = self.advanced_filters
         return filters
 
 

@@ -102,6 +102,13 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-18
 
+- **FEAT-042: Advanced Memory Search Filters**
+  - Created `AdvancedSearchFilters` model in `src/core/models.py` with date ranges, tag logic, lifecycle, and provenance filtering
+  - Extended `src/store/qdrant_store.py::_build_filter()` to handle advanced filter types
+  - Extended `src/store/sqlite_store.py::retrieve()` with advanced filter support
+  - Updated `src/core/server.py::retrieve_memories()` to accept advanced_filters parameter
+  - Supports date filtering (created/updated/accessed), tag logic (ANY/ALL/NONE), lifecycle states, category/project exclusions, and provenance filtering
+
 - **UX-018: Background Indexing for Large Projects**
   - Created `src/memory/background_indexer.py` for non-blocking indexing with job management
   - Created `src/memory/job_state_manager.py` for persistent job state tracking

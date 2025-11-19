@@ -685,6 +685,135 @@ class QdrantMemoryStore(MemoryStore):
                 if tag_condition:
                     conditions.append(tag_condition)
 
+        # Handle advanced filters if present
+        if filters.advanced_filters:
+            adv = filters.advanced_filters
+
+            # Date range filtering
+            if adv.created_after:
+                conditions.append(
+                    FieldCondition(
+                        key="created_at",
+                        range=Range(gte=adv.created_after.isoformat())
+                    )
+                )
+            if adv.created_before:
+                conditions.append(
+                    FieldCondition(
+                        key="created_at",
+                        range=Range(lte=adv.created_before.isoformat())
+                    )
+                )
+            if adv.updated_after:
+                conditions.append(
+                    FieldCondition(
+                        key="updated_at",
+                        range=Range(gte=adv.updated_after.isoformat())
+                    )
+                )
+            if adv.updated_before:
+                conditions.append(
+                    FieldCondition(
+                        key="updated_at",
+                        range=Range(lte=adv.updated_before.isoformat())
+                    )
+                )
+            if adv.accessed_after:
+                conditions.append(
+                    FieldCondition(
+                        key="last_accessed",
+                        range=Range(gte=adv.accessed_after.isoformat())
+                    )
+                )
+            if adv.accessed_before:
+                conditions.append(
+                    FieldCondition(
+                        key="last_accessed",
+                        range=Range(lte=adv.accessed_before.isoformat())
+                    )
+                )
+
+            # Tag logic - ANY (OR)
+            if adv.tags_any:
+                tag_any_conditions = []
+                for tag in adv.tags_any:
+                    tag_any_conditions.append(
+                        FieldCondition(key="tags", match=MatchValue(value=tag))
+                    )
+                if tag_any_conditions:
+                    conditions.append(Filter(should=tag_any_conditions))
+
+            # Tag logic - ALL (AND)
+            if adv.tags_all:
+                for tag in adv.tags_all:
+                    conditions.append(
+                        FieldCondition(key="tags", match=MatchValue(value=tag))
+                    )
+
+            # Tag logic - NONE (NOT)
+            if adv.tags_none:
+                tag_none_conditions = []
+                for tag in adv.tags_none:
+                    tag_none_conditions.append(
+                        FieldCondition(key="tags", match=MatchValue(value=tag))
+                    )
+                if tag_none_conditions:
+                    conditions.append(Filter(must_not=tag_none_conditions))
+
+            # Lifecycle filtering
+            if adv.lifecycle_states:
+                lifecycle_conditions = []
+                for state in adv.lifecycle_states:
+                    lifecycle_conditions.append(
+                        FieldCondition(
+                            key="lifecycle_state",
+                            match=MatchValue(value=state.value if hasattr(state, 'value') else state)
+                        )
+                    )
+                if lifecycle_conditions:
+                    conditions.append(Filter(should=lifecycle_conditions))
+
+            # Exclusions - categories
+            if adv.exclude_categories:
+                exclude_cat_conditions = []
+                for cat in adv.exclude_categories:
+                    exclude_cat_conditions.append(
+                        FieldCondition(
+                            key="category",
+                            match=MatchValue(value=cat.value if hasattr(cat, 'value') else cat)
+                        )
+                    )
+                if exclude_cat_conditions:
+                    conditions.append(Filter(must_not=exclude_cat_conditions))
+
+            # Exclusions - projects
+            if adv.exclude_projects:
+                exclude_proj_conditions = []
+                for proj in adv.exclude_projects:
+                    exclude_proj_conditions.append(
+                        FieldCondition(key="project_name", match=MatchValue(value=proj))
+                    )
+                if exclude_proj_conditions:
+                    conditions.append(Filter(must_not=exclude_proj_conditions))
+
+            # Provenance filtering - min trust score
+            if adv.min_trust_score is not None:
+                conditions.append(
+                    FieldCondition(
+                        key="provenance.confidence",
+                        range=Range(gte=adv.min_trust_score)
+                    )
+                )
+
+            # Provenance filtering - source
+            if adv.source:
+                conditions.append(
+                    FieldCondition(
+                        key="provenance.source",
+                        match=MatchValue(value=adv.source.value if hasattr(adv.source, 'value') else adv.source)
+                    )
+                )
+
         if not conditions:
             return None
 

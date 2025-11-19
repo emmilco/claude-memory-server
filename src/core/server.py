@@ -381,6 +381,7 @@ class MemoryRAGServer:
         min_importance: float = 0.0,
         tags: Optional[List[str]] = None,
         session_id: Optional[str] = None,
+        advanced_filters: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Retrieve memories similar to the query with conversation awareness.
@@ -395,6 +396,7 @@ class MemoryRAGServer:
             min_importance: Minimum importance threshold
             tags: Filter by tags
             session_id: Optional conversation session ID for context tracking
+            advanced_filters: Advanced filtering options (dates, tag logic, exclusions, etc.)
 
         Returns:
             Dict with results and metadata
@@ -402,6 +404,12 @@ class MemoryRAGServer:
         try:
             import time
             start_time = time.time()
+
+            # Construct advanced_filters if provided
+            adv_filters_obj = None
+            if advanced_filters:
+                from src.core.models import AdvancedSearchFilters
+                adv_filters_obj = AdvancedSearchFilters(**advanced_filters)
 
             # Validate request
             request = QueryRequest(
@@ -413,6 +421,7 @@ class MemoryRAGServer:
                 category=MemoryCategory(category) if category else None,
                 min_importance=min_importance,
                 tags=tags or [],
+                advanced_filters=adv_filters_obj,
             )
 
             # Check retrieval gate first (if enabled)
@@ -471,6 +480,7 @@ class MemoryRAGServer:
                 category=request.category,
                 min_importance=request.min_importance,
                 tags=request.tags,
+                advanced_filters=request.advanced_filters,
             )
 
             # Determine fetch limit (with deduplication multiplier if needed)
