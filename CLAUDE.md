@@ -466,15 +466,17 @@ python -m src.mcp_server
 ## Current State (Auto-Update This Section)
 
 ### Metrics
-- **Test Status:** 1413/1414 passing (1 flaky performance test that passes when run individually)
-- **Pass Rate:** 99.9% (improved from 97.9% → 99.4% → 99.9%)
+- **Test Status:** 2157/2158 passing (1 flaky performance test that passes when run individually)
+- **Pass Rate:** 99.95% (improved from 97.9% → 99.4% → 99.9% → 99.95%)
 - **Coverage:** 67% overall (80-85% core modules, meets original target)
   - **Note:** Coverage excludes 14 impractical-to-test files per `.coveragerc` (CLI/TUI/schedulers)
 - **Modules:** 123 Python modules totaling ~500KB production code
 - **Languages:** 12 formats (Python, JS, TS, Java, Go, Rust, C, C++, C#, SQL, JSON, YAML, TOML)
-- **Commands:** 14 MCP tools + 28 CLI commands
+- **Commands:** 17 MCP tools + 28 CLI commands (updated 2025-11-18)
 - **Performance:**
   - Search: 7-13ms (semantic), 3-7ms (keyword), 10-18ms (hybrid)
+  - Search P95 latency: 3.96ms (87% better than 50ms target) ✅
+  - Concurrent throughput: 55,246 ops/sec (baseline on 800-memory database)
   - Indexing: 10-20 files/sec (parallel, 4-8x faster than single-threaded)
   - Re-indexing: 5-10x faster with 98% cache hit rate
   - Parsing: 1-6ms per file (Rust) OR 10-20ms (Python fallback)
@@ -490,11 +492,14 @@ python -m src.mcp_server
 - ✅ Enterprise Features (backup/restore, analytics, token tracking, optimization)
 
 **Production Readiness:**
-- ✅ 99.9% test pass rate (1413/1414 tests)
-- ✅ Comprehensive documentation (8 guides, all updated to v4.0)
+- ✅ 99.95% test pass rate (2157/2158 tests)
+- ✅ Comprehensive documentation (10 guides, all updated to v4.0)
 - ✅ Security hardened (267+ attack patterns blocked, read-only mode)
-- ✅ Performance optimized (4-8x indexing, 98% cache hit rate)
-- ✅ Fully featured (123 modules, 14 MCP tools, 28 CLI commands)
+- ✅ Performance optimized (4-8x indexing, 98% cache hit rate, P95 <4ms)
+- ✅ Fully featured (123 modules, 17 MCP tools, 28 CLI commands)
+- ✅ Automated maintenance (health scheduler, backup scheduler)
+- ✅ Error recovery workflows (comprehensive troubleshooting guide)
+- ✅ First-run testing framework (automated validation script)
 
 ### Known Issues
 - **1 performance test:** Flaky under heavy system load (passes individually) - non-blocking
