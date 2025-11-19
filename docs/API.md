@@ -735,6 +735,74 @@ Get dependency statistics and detect circular dependencies.
 
 ---
 
+### get_dependency_graph
+
+Generate a dependency graph visualization in multiple export formats (DOT/Graphviz, JSON/D3.js, or Mermaid).
+
+**Input Schema:**
+```json
+{
+  "project_name": "string (required)",
+  "format": "string (optional, default: 'dot', options: 'dot', 'json', 'mermaid')",
+  "max_depth": "number (optional, default: unlimited)",
+  "file_pattern": "string (optional, glob pattern like '*.py' or 'src/**/*.ts')",
+  "language": "string (optional, filter by language like 'python' or 'javascript')",
+  "include_metadata": "boolean (optional, default: true)",
+  "highlight_circular": "boolean (optional, default: true)"
+}
+```
+
+**Response:**
+```json
+{
+  "format": "dot",
+  "graph_data": "digraph dependencies { ... }",
+  "stats": {
+    "node_count": 45,
+    "edge_count": 127,
+    "circular_dependency_count": 2
+  },
+  "circular_dependencies": [
+    ["src/module_a.py", "src/module_b.py", "src/module_a.py"],
+    ["src/utils/helper.py", "src/utils/validator.py", "src/utils/helper.py"]
+  ]
+}
+```
+
+**Supported Formats:**
+
+1. **DOT (Graphviz)**: Industry-standard format for graph visualization
+   - Renders with Graphviz tools: `dot -Tpng graph.dot -o graph.png`
+   - Includes node metadata (file size), circular dependency highlighting (red edges)
+
+2. **JSON (D3.js)**: Web-friendly format compatible with D3.js and other visualization libraries
+   - Includes nodes array with metadata (id, label, size, language, last_modified)
+   - Includes links array with source/target references
+   - Circular dependencies grouped separately
+
+3. **Mermaid**: Modern diagram format that renders in GitHub/GitLab markdown
+   - Automatic node labeling with metadata
+   - Dashed arrows for circular dependencies
+   - Styled nodes for circular dependency highlighting
+
+**Filtering Options:**
+- `max_depth`: Limit graph to N levels of dependencies (e.g., 2 = direct + 1 level deep)
+- `file_pattern`: Glob pattern to include only matching files (e.g., "src/**/*.py" for Python files in src/)
+- `language`: Filter by file extension/language (e.g., "python", "typescript")
+
+**Example Usage:**
+```json
+{
+  "project_name": "my-project",
+  "format": "mermaid",
+  "max_depth": 3,
+  "file_pattern": "src/**/*.py",
+  "highlight_circular": true
+}
+```
+
+---
+
 ## Session Management Tools
 
 ### start_conversation_session

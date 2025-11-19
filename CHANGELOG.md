@@ -113,6 +113,17 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-18
 
+- **FEAT-048: Dependency Graph Visualization**
+  - Added `get_dependency_graph()` MCP tool for exporting code dependency graphs
+  - Created `src/graph/dependency_graph.py` with DependencyGraph class (circular dependency detection, filtering)
+  - Created `src/graph/formatters/dot_formatter.py` for Graphviz DOT export
+  - Created `src/graph/formatters/json_formatter.py` for D3.js-compatible JSON export
+  - Created `src/graph/formatters/mermaid_formatter.py` for Mermaid diagram export
+  - Supports filtering by depth, file pattern, and language
+  - Detects and highlights circular dependencies
+  - Includes graph statistics (node count, edge count, max depth)
+  - Added 84 comprehensive tests (100% passing)
+
 - **UX-012: Graceful Degradation**
   - Implemented auto-fallback from Qdrant to SQLite when Qdrant is unavailable
   - Enhanced `src/store/factory.py` with try-catch fallback logic

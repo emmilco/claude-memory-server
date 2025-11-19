@@ -43,6 +43,8 @@ from src.monitoring.metrics_collector import MetricsCollector
 from src.monitoring.alert_engine import AlertEngine
 from src.monitoring.health_reporter import HealthReporter
 from src.monitoring.capacity_planner import CapacityPlanner
+from src.graph import DependencyGraph, GraphNode, GraphEdge
+from src.graph.formatters import DOTFormatter, JSONFormatter, MermaidFormatter
 
 logger = logging.getLogger(__name__)
 
@@ -4621,6 +4623,222 @@ class MemoryRAGServer:
             logger.error(f"Error reviewing code: {e}")
             raise ValidationError(f"Failed to review code: {str(e)}")
 
+    # ========================================================================
+    # Dependency Graph Visualization Methods (FEAT-048)
+    # ========================================================================
+
+    async def get_dependency_graph(
+        self,
+        project_name: Optional[str] = None,
+        root_file: Optional[str] = None,
+        max_depth: Optional[int] = None,
+        file_pattern: Optional[str] = None,
+        language: Optional[str] = None,
+        format: str = "json",
+        include_metadata: bool = True,
+    ) -> Dict[str, Any]:
+        """
+        Export dependency graph in specified format.
+
+        Provides architecture visualization by exporting code dependencies
+        in various formats suitable for visualization tools.
+
+        Args:
+            project_name: Optional project name to filter by
+            root_file: Optional starting file (for subgraph generation)
+            max_depth: Maximum traversal depth from root (default: None = unlimited)
+            file_pattern: Optional file filter pattern (e.g., "*.py", "src/*")
+            language: Optional language filter (Python, JavaScript, etc.)
+            format: Export format - 'json', 'dot', or 'mermaid' (default: 'json')
+            include_metadata: Include node metadata like file size, unit count (default: True)
+
+        Returns:
+            {
+                "format": str,
+                "graph": str,  # Formatted graph string
+                "stats": {
+                    "node_count": int,
+                    "edge_count": int,
+                    "circular_dependency_count": int,
+                    "max_depth": int
+                },
+                "circular_dependencies": [
+                    {
+                        "cycle": [file paths],
+                        "length": int
+                    }
+                ]
+            }
+
+        Raises:
+            ValidationError: If parameters are invalid
+            StorageError: If operation fails
+        """
+        try:
+            # Validate format
+            valid_formats = ["json", "dot", "mermaid"]
+            if format.lower() not in valid_formats:
+                raise ValidationError(
+                    f"Invalid format '{format}'. Must be one of: {', '.join(valid_formats)}"
+                )
+
+            # Build graph from store
+            logger.info(
+                f"Building dependency graph for project='{project_name or 'all'}', "
+                f"root='{root_file or 'all'}', format='{format}'"
+            )
+
+            graph = await self._build_dependency_graph_from_store(project_name)
+
+            # Apply filters
+            if root_file and max_depth is not None:
+                logger.debug(f"Filtering by depth: root='{root_file}', max_depth={max_depth}")
+                graph = graph.filter_by_depth(root_file, max_depth)
+
+            if file_pattern:
+                logger.debug(f"Filtering by pattern: '{file_pattern}'")
+                graph = graph.filter_by_pattern(file_pattern)
+
+            if language:
+                logger.debug(f"Filtering by language: '{language}'")
+                graph = graph.filter_by_language(language)
+
+            # Detect circular dependencies
+            circular_deps = graph.find_circular_dependencies()
+            logger.info(f"Found {len(circular_deps)} circular dependencies")
+
+            # Get statistics
+            stats = graph.get_stats()
+
+            # Format graph
+            formatted_graph = self._format_dependency_graph(
+                graph, format.lower(), include_metadata
+            )
+
+            logger.info(
+                f"Generated {format} graph: {stats['node_count']} nodes, "
+                f"{stats['edge_count']} edges, {len(circular_deps)} cycles"
+            )
+
+            return {
+                "format": format.lower(),
+                "graph": formatted_graph,
+                "stats": stats,
+                "circular_dependencies": [
+                    {"cycle": dep.cycle, "length": dep.length}
+                    for dep in circular_deps
+                ],
+            }
+
+        except ValidationError:
+            # Re-raise validation errors as-is
+            raise
+        except ValueError as e:
+            # Handle validation errors from graph operations
+            logger.error(f"Validation error in dependency graph: {e}")
+            raise ValidationError(f"Invalid graph operation: {str(e)}")
+        except Exception as e:
+            logger.error(f"Failed to generate dependency graph: {e}")
+            raise StorageError(f"Failed to generate dependency graph: {str(e)}")
+
+    async def _build_dependency_graph_from_store(
+        self, project_name: Optional[str] = None
+    ) -> DependencyGraph:
+        """
+        Build dependency graph from stored code units.
+
+        Args:
+            project_name: Optional project filter
+
+        Returns:
+            DependencyGraph with nodes and edges
+        """
+        graph = DependencyGraph()
+
+        # Query all code units with dependencies
+        filters = SearchFilters(category=MemoryCategory.CONTEXT)
+        if project_name:
+            filters.project_name = project_name
+
+        # Get all code memories (need to retrieve many to build full graph)
+        # Use a large limit since we need all code units for graph
+        memories = await self.store.retrieve(
+            query_embedding=[0.0] * 384,  # Dummy embedding, not used for filtering
+            filters=filters,
+            limit=10000,  # Large limit to get all code units
+        )
+
+        # Build graph from memories
+        nodes_added = set()
+        for memory, _ in memories:
+            if not memory.metadata:
+                continue
+
+            # Extract file path and dependencies from metadata
+            file_path = memory.metadata.get("file_path")
+            if not file_path:
+                continue
+
+            # Add node if not already added
+            if file_path not in nodes_added:
+                node = GraphNode(
+                    file_path=file_path,
+                    language=memory.metadata.get("language", "unknown"),
+                    unit_count=0,  # Will be counted as we add units
+                    file_size=memory.metadata.get("file_size", 0),
+                    last_modified=memory.metadata.get("last_modified", memory.updated_at.isoformat() if memory.updated_at else ""),
+                )
+                graph.add_node(node)
+                nodes_added.add(file_path)
+
+            # Increment unit count for this file
+            if file_path in graph.nodes:
+                graph.nodes[file_path].unit_count += 1
+
+            # Add edges from dependencies
+            dependencies = memory.metadata.get("dependencies", [])
+            for dep in dependencies:
+                # Ensure dependency node exists
+                if dep not in nodes_added:
+                    dep_node = GraphNode(
+                        file_path=dep,
+                        language="unknown",  # Will be updated if we find actual unit
+                        unit_count=0,
+                        file_size=0,
+                        last_modified="",
+                    )
+                    graph.add_node(dep_node)
+                    nodes_added.add(dep)
+
+                # Add edge
+                edge = GraphEdge(source=file_path, target=dep)
+                graph.add_edge(edge)
+
+        logger.debug(
+            f"Built graph with {len(graph.nodes)} nodes and {len(graph.edges)} edges"
+        )
+
+        return graph
+
+    def _format_dependency_graph(
+        self, graph: DependencyGraph, format: str, include_metadata: bool
+    ) -> str:
+        """
+        Format graph using appropriate formatter.
+
+        Args:
+            graph: DependencyGraph to format
+            format: Output format ('json', 'dot', 'mermaid')
+            include_metadata: Include node metadata
+
+        Returns:
+            Formatted graph string
+        """
+        if format == "dot":
+            formatter = DOTFormatter(include_metadata=include_metadata)
+            return formatter.format(graph, title="Dependency Graph")
+        elif format == "json":
+            formatter = JSONFormatter(include_metadata=include_metadata)
     async def close(self) -> None:
         """Clean up resources."""
         # Stop conversation tracker
