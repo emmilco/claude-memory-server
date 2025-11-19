@@ -385,19 +385,17 @@ def create_parser() -> argparse.ArgumentParser:
         help="Filter by category (preference, fact, event, workflow, context)",
     )
 
-<<<<<<< HEAD
     # Validate-install command
     validate_parser = subparsers.add_parser(
         "validate-install",
         help="Validate installation and check prerequisites",
     )
-=======
+
     # Repository command
     add_repository_parser(subparsers)
 
     # Workspace command
     add_workspace_parser(subparsers)
->>>>>>> origin/main
 
     return parser
 
@@ -466,18 +464,15 @@ async def main_async(args):
             dry_run=dry_run,
             category=args.category,
         )
-<<<<<<< HEAD
     elif args.command == "validate-install":
         result = await validate_installation()
         sys.exit(0 if result else 1)
-=======
     elif args.command in ("repository", "repo"):
         cmd = RepositoryCommand()
         await cmd.run(args)
     elif args.command in ("workspace", "ws"):
         cmd = WorkspaceCommand()
         await cmd.run(args)
->>>>>>> origin/main
     else:
         print("No command specified. Use --help for usage information.")
         sys.exit(1)

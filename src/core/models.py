@@ -586,3 +586,123 @@ class QualityMetrics(BaseModel):
         return self.helpful_count / total_rated
 
     model_config = ConfigDict(use_enum_values=False)
+
+
+# FEAT-020: Usage Patterns Tracking Models
+
+
+class GetUsageStatisticsRequest(BaseModel):
+    """Request for overall usage statistics."""
+
+    days: int = Field(
+        default=30,
+        ge=1,
+        le=365,
+        description="Number of days to look back for statistics"
+    )
+
+    model_config = ConfigDict(use_enum_values=False)
+
+
+class GetUsageStatisticsResponse(BaseModel):
+    """Response with overall usage statistics."""
+
+    period_days: int = Field(..., description="Number of days covered")
+    total_queries: int = Field(default=0, description="Total number of queries")
+    unique_queries: int = Field(default=0, description="Number of unique query texts")
+    avg_query_time_ms: float = Field(default=0.0, description="Average query execution time")
+    avg_result_count: float = Field(default=0.0, description="Average number of results per query")
+    total_code_accesses: int = Field(default=0, description="Total code file/function accesses")
+    unique_files: int = Field(default=0, description="Number of unique files accessed")
+    unique_functions: int = Field(default=0, description="Number of unique functions accessed")
+    most_active_day: Optional[str] = Field(None, description="Date of most activity")
+    most_active_day_count: int = Field(default=0, description="Query count on most active day")
+
+    model_config = ConfigDict(use_enum_values=False)
+
+
+class GetTopQueriesRequest(BaseModel):
+    """Request for most frequent queries."""
+
+    limit: int = Field(
+        default=10,
+        ge=1,
+        le=100,
+        description="Maximum number of queries to return"
+    )
+    days: int = Field(
+        default=30,
+        ge=1,
+        le=365,
+        description="Number of days to look back"
+    )
+
+    model_config = ConfigDict(use_enum_values=False)
+
+
+class QueryStatistics(BaseModel):
+    """Statistics for a single query."""
+
+    query: str = Field(..., description="The query text")
+    count: int = Field(..., description="Number of times queried")
+    avg_result_count: float = Field(default=0.0, description="Average number of results")
+    avg_execution_time_ms: float = Field(default=0.0, description="Average execution time")
+    last_used: str = Field(..., description="ISO timestamp of last use")
+
+    model_config = ConfigDict(use_enum_values=False)
+
+
+class GetTopQueriesResponse(BaseModel):
+    """Response with most frequent queries."""
+
+    queries: List[QueryStatistics] = Field(
+        default_factory=list,
+        description="List of query statistics ordered by frequency"
+    )
+    period_days: int = Field(..., description="Number of days covered")
+    total_returned: int = Field(..., description="Number of queries returned")
+
+    model_config = ConfigDict(use_enum_values=False)
+
+
+class GetFrequentlyAccessedCodeRequest(BaseModel):
+    """Request for most frequently accessed code."""
+
+    limit: int = Field(
+        default=10,
+        ge=1,
+        le=100,
+        description="Maximum number of items to return"
+    )
+    days: int = Field(
+        default=30,
+        ge=1,
+        le=365,
+        description="Number of days to look back"
+    )
+
+    model_config = ConfigDict(use_enum_values=False)
+
+
+class CodeAccessStatistics(BaseModel):
+    """Statistics for accessed code files/functions."""
+
+    file_path: str = Field(..., description="Path to the code file")
+    function_name: Optional[str] = Field(None, description="Function/method name if applicable")
+    access_count: int = Field(..., description="Number of times accessed")
+    last_accessed: str = Field(..., description="ISO timestamp of last access")
+
+    model_config = ConfigDict(use_enum_values=False)
+
+
+class GetFrequentlyAccessedCodeResponse(BaseModel):
+    """Response with most frequently accessed code."""
+
+    code_items: List[CodeAccessStatistics] = Field(
+        default_factory=list,
+        description="List of code access statistics ordered by frequency"
+    )
+    period_days: int = Field(..., description="Number of days covered")
+    total_returned: int = Field(..., description="Number of items returned")
+
+    model_config = ConfigDict(use_enum_values=False)

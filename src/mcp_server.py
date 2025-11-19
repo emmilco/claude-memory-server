@@ -884,6 +884,64 @@ async def list_tools() -> List[Tool]:
                 "type": "object",
                 "properties": {}
             }
+        ),
+        # FEAT-020: Usage Pattern Analytics Tools
+        Tool(
+            name="get_usage_statistics",
+            description="Get overall usage statistics including query counts, execution times, and code access patterns over a specified time period.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "days": {
+                        "type": "number",
+                        "description": "Number of days to look back (1-365, default: 30)",
+                        "minimum": 1,
+                        "maximum": 365
+                    }
+                }
+            }
+        ),
+        Tool(
+            name="get_top_queries",
+            description="Get most frequently executed queries with statistics including average results and execution time.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "limit": {
+                        "type": "number",
+                        "description": "Maximum number of queries to return (1-100, default: 10)",
+                        "minimum": 1,
+                        "maximum": 100
+                    },
+                    "days": {
+                        "type": "number",
+                        "description": "Number of days to look back (1-365, default: 30)",
+                        "minimum": 1,
+                        "maximum": 365
+                    }
+                }
+            }
+        ),
+        Tool(
+            name="get_frequently_accessed_code",
+            description="Get most frequently accessed code files and functions with access counts and timestamps.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "limit": {
+                        "type": "number",
+                        "description": "Maximum number of items to return (1-100, default: 10)",
+                        "minimum": 1,
+                        "maximum": 100
+                    },
+                    "days": {
+                        "type": "number",
+                        "description": "Number of days to look back (1-365, default: 30)",
+                        "minimum": 1,
+                        "maximum": 365
+                    }
+                }
+            }
         )
     ]
 
@@ -1339,6 +1397,68 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
                     output += "Use opt_in_cross_project to enable cross-project search for your projects."
             else:
                 output = f"⚠️ {result['message']}"
+
+            return [TextContent(type="text", text=output)]
+
+        # FEAT-020: Usage Pattern Analytics Handlers
+        elif name == "get_usage_statistics":
+            days = arguments.get("days", 30)
+            result = await memory_rag_server.get_usage_statistics(days=days)
+
+            output = f"📊 Usage Statistics (Last {result['period_days']} days)\n\n"
+            output += f"**Query Metrics:**\n"
+            output += f"  • Total Queries: {result['total_queries']}\n"
+            output += f"  • Unique Queries: {result['unique_queries']}\n"
+            output += f"  • Avg Query Time: {result['avg_query_time_ms']:.2f}ms\n"
+            output += f"  • Avg Results: {result['avg_result_count']:.1f}\n\n"
+            output += f"**Code Access Metrics:**\n"
+            output += f"  • Total Accesses: {result['total_code_accesses']}\n"
+            output += f"  • Unique Files: {result['unique_files']}\n"
+            output += f"  • Unique Functions: {result['unique_functions']}\n\n"
+            if result['most_active_day']:
+                output += f"**Most Active Day:** {result['most_active_day']} "
+                output += f"({result['most_active_day_count']} queries)\n"
+
+            return [TextContent(type="text", text=output)]
+
+        elif name == "get_top_queries":
+            limit = arguments.get("limit", 10)
+            days = arguments.get("days", 30)
+            result = await memory_rag_server.get_top_queries(limit=limit, days=days)
+
+            output = f"🔍 Top {result['total_returned']} Queries (Last {result['period_days']} days)\n\n"
+
+            if result['queries']:
+                for i, query_stat in enumerate(result['queries'], 1):
+                    output += f"{i}. **{query_stat['query']}**\n"
+                    output += f"   • Count: {query_stat['count']}\n"
+                    output += f"   • Avg Results: {query_stat['avg_result_count']:.1f}\n"
+                    output += f"   • Avg Time: {query_stat['avg_execution_time_ms']:.2f}ms\n"
+                    output += f"   • Last Used: {query_stat['last_used']}\n\n"
+            else:
+                output += "No queries found in the specified time period.\n"
+
+            return [TextContent(type="text", text=output)]
+
+        elif name == "get_frequently_accessed_code":
+            limit = arguments.get("limit", 10)
+            days = arguments.get("days", 30)
+            result = await memory_rag_server.get_frequently_accessed_code(
+                limit=limit, days=days
+            )
+
+            output = f"💻 Top {result['total_returned']} Accessed Code (Last {result['period_days']} days)\n\n"
+
+            if result['code_items']:
+                for i, code_stat in enumerate(result['code_items'], 1):
+                    output += f"{i}. **{code_stat['file_path']}**"
+                    if code_stat['function_name']:
+                        output += f" :: {code_stat['function_name']}"
+                    output += f"\n"
+                    output += f"   • Access Count: {code_stat['access_count']}\n"
+                    output += f"   • Last Accessed: {code_stat['last_accessed']}\n\n"
+            else:
+                output += "No code access records found in the specified time period.\n"
 
             return [TextContent(type="text", text=output)]
 

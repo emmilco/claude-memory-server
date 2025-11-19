@@ -23,6 +23,12 @@ from src.core.models import (
     ContextLevel,
     MemoryCategory,
     MemoryScope,
+    GetUsageStatisticsRequest,
+    GetUsageStatisticsResponse,
+    GetTopQueriesRequest,
+    GetTopQueriesResponse,
+    GetFrequentlyAccessedCodeRequest,
+    GetFrequentlyAccessedCodeResponse,
 )
 from src.core.exceptions import (
     StorageError,
@@ -37,6 +43,7 @@ from src.memory.conversation_tracker import ConversationTracker
 from src.memory.query_expander import QueryExpander
 from src.memory.suggestion_engine import SuggestionEngine
 from src.search.hybrid_search import HybridSearcher, FusionMethod
+from src.analytics.usage_tracker import UsagePatternTracker
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +91,7 @@ class MemoryRAGServer:
         self.hybrid_searcher: Optional[HybridSearcher] = None
         self.cross_project_consent: Optional = None  # Cross-project consent manager
         self.suggestion_engine: Optional[SuggestionEngine] = None  # Proactive suggestions
+        self.pattern_tracker: Optional[UsagePatternTracker] = None  # Usage pattern analytics
         self.scheduler = None  # APScheduler instance
 
         # Statistics
@@ -242,6 +250,21 @@ class MemoryRAGServer:
             else:
                 self.suggestion_engine = None
                 logger.info("Proactive suggestions disabled")
+
+            # Initialize usage pattern analytics (FEAT-020)
+            if self.config.enable_usage_pattern_analytics:
+                import os
+                # Store analytics DB in same directory as SQLite memory DB
+                sqlite_dir = os.path.dirname(os.path.expanduser(self.config.sqlite_path))
+                analytics_db_path = os.path.join(sqlite_dir, "usage_analytics.db")
+                self.pattern_tracker = UsagePatternTracker(db_path=analytics_db_path)
+                logger.info(
+                    f"Usage pattern analytics enabled "
+                    f"(retention: {self.config.usage_analytics_retention_days} days)"
+                )
+            else:
+                self.pattern_tracker = None
+                logger.info("Usage pattern analytics disabled")
 
             logger.info("Server initialized successfully")
 
@@ -3052,6 +3075,153 @@ class MemoryRAGServer:
         except Exception as e:
             logger.error(f"Error setting suggestion mode: {e}")
             raise ValidationError(f"Failed to set suggestion mode: {str(e)}")
+
+    # FEAT-020: Usage Pattern Analytics MCP Tools
+
+    async def get_usage_statistics(self, days: int = 30) -> Dict[str, Any]:
+        """
+        Get overall usage statistics for the specified time period.
+
+        Args:
+            days: Number of days to look back (1-365)
+
+        Returns:
+            Dictionary with usage statistics
+
+        Raises:
+            ValidationError: If pattern tracker is not enabled or inputs invalid
+        """
+        try:
+            if not self.pattern_tracker:
+                raise ValidationError(
+                    "Usage pattern analytics not enabled",
+                    solution="Enable via config: enable_usage_pattern_analytics = true"
+                )
+
+            if not 1 <= days <= 365:
+                raise ValidationError(
+                    f"Invalid days value: {days}",
+                    solution="Days must be between 1 and 365"
+                )
+
+            stats = await self.pattern_tracker.get_usage_stats(days=days)
+
+            return {
+                "period_days": days,
+                "total_queries": stats.get("total_queries", 0),
+                "unique_queries": stats.get("unique_queries", 0),
+                "avg_query_time_ms": stats.get("avg_query_time", 0.0),
+                "avg_result_count": stats.get("avg_result_count", 0.0),
+                "total_code_accesses": stats.get("total_code_accesses", 0),
+                "unique_files": stats.get("unique_files", 0),
+                "unique_functions": stats.get("unique_functions", 0),
+                "most_active_day": stats.get("most_active_day"),
+                "most_active_day_count": stats.get("most_active_day_count", 0),
+            }
+
+        except ValidationError:
+            raise
+        except Exception as e:
+            logger.error(f"Error getting usage statistics: {e}")
+            raise ValidationError(f"Failed to get usage statistics: {str(e)}")
+
+    async def get_top_queries(self, limit: int = 10, days: int = 30) -> Dict[str, Any]:
+        """
+        Get most frequently executed queries.
+
+        Args:
+            limit: Maximum number of queries to return (1-100)
+            days: Number of days to look back (1-365)
+
+        Returns:
+            Dictionary with top queries and their statistics
+
+        Raises:
+            ValidationError: If pattern tracker is not enabled or inputs invalid
+        """
+        try:
+            if not self.pattern_tracker:
+                raise ValidationError(
+                    "Usage pattern analytics not enabled",
+                    solution="Enable via config: enable_usage_pattern_analytics = true"
+                )
+
+            if not 1 <= limit <= 100:
+                raise ValidationError(
+                    f"Invalid limit value: {limit}",
+                    solution="Limit must be between 1 and 100"
+                )
+
+            if not 1 <= days <= 365:
+                raise ValidationError(
+                    f"Invalid days value: {days}",
+                    solution="Days must be between 1 and 365"
+                )
+
+            queries = await self.pattern_tracker.get_top_queries(limit=limit, days=days)
+
+            return {
+                "queries": queries,
+                "period_days": days,
+                "total_returned": len(queries),
+            }
+
+        except ValidationError:
+            raise
+        except Exception as e:
+            logger.error(f"Error getting top queries: {e}")
+            raise ValidationError(f"Failed to get top queries: {str(e)}")
+
+    async def get_frequently_accessed_code(
+        self, limit: int = 10, days: int = 30
+    ) -> Dict[str, Any]:
+        """
+        Get most frequently accessed code files and functions.
+
+        Args:
+            limit: Maximum number of items to return (1-100)
+            days: Number of days to look back (1-365)
+
+        Returns:
+            Dictionary with frequently accessed code and statistics
+
+        Raises:
+            ValidationError: If pattern tracker is not enabled or inputs invalid
+        """
+        try:
+            if not self.pattern_tracker:
+                raise ValidationError(
+                    "Usage pattern analytics not enabled",
+                    solution="Enable via config: enable_usage_pattern_analytics = true"
+                )
+
+            if not 1 <= limit <= 100:
+                raise ValidationError(
+                    f"Invalid limit value: {limit}",
+                    solution="Limit must be between 1 and 100"
+                )
+
+            if not 1 <= days <= 365:
+                raise ValidationError(
+                    f"Invalid days value: {days}",
+                    solution="Days must be between 1 and 365"
+                )
+
+            code_items = await self.pattern_tracker.get_frequently_accessed_code(
+                limit=limit, days=days
+            )
+
+            return {
+                "code_items": code_items,
+                "period_days": days,
+                "total_returned": len(code_items),
+            }
+
+        except ValidationError:
+            raise
+        except Exception as e:
+            logger.error(f"Error getting frequently accessed code: {e}")
+            raise ValidationError(f"Failed to get frequently accessed code: {str(e)}")
 
     async def close(self) -> None:
         """Clean up resources."""

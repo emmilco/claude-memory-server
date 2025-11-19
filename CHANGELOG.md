@@ -94,6 +94,15 @@ A pre-commit hook enforces CHANGELOG updates:
   - Supports force full re-index, clearing existing index, and cache bypass
   - Returns detailed statistics including units_deleted, cache_bypassed, and index_cleared
 
+- **FEAT-020: Usage Patterns Tracking**
+  - Implemented `UsagePatternTracker` in `src/analytics/usage_tracker.py` for query and code access analytics
+  - Added 3 MCP tools: `get_usage_statistics()`, `get_top_queries()`, `get_frequently_accessed_code()`
+  - SQLite-based persistent tracking at `~/.claude-rag/usage_analytics.db`
+  - Tracks query counts, execution times, result counts, and code file/function access patterns
+  - Automatic cleanup of data older than 90 days (configurable via `usage_analytics_retention_days`)
+  - Config options: `enable_usage_pattern_analytics` (default: true)
+  - Created `tests/unit/test_usage_pattern_tracker.py` with 29 comprehensive tests
+
 ### Fixed - 2025-11-18
 
 - **BUG-013: Query Synonym Test Failure**
