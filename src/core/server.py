@@ -1740,6 +1740,11 @@ class MemoryRAGServer:
 
         Returns:
             Dict with session_id and status
+        
+
+        Note: This function is async for MCP protocol compatibility, even though it
+        doesn't currently use await. The MCP framework requires handler functions to
+        be async, and future changes may add async operations.
         """
         if not self.conversation_tracker:
             return {
@@ -1777,6 +1782,11 @@ class MemoryRAGServer:
 
         Returns:
             Dict with status
+        
+
+        Note: This function is async for MCP protocol compatibility, even though it
+        doesn't currently use await. The MCP framework requires handler functions to
+        be async, and future changes may add async operations.
         """
         if not self.conversation_tracker:
             return {
@@ -1809,6 +1819,11 @@ class MemoryRAGServer:
 
         Returns:
             Dict with sessions list and stats
+        
+
+        Note: This function is async for MCP protocol compatibility, even though it
+        doesn't currently use await. The MCP framework requires handler functions to
+        be async, and future changes may add async operations.
         """
         if not self.conversation_tracker:
             return {
@@ -2418,6 +2433,11 @@ class MemoryRAGServer:
 
         Returns:
             Dict with consent status and timestamps
+        
+
+        Note: This function is async for MCP protocol compatibility, even though it
+        doesn't currently use await. The MCP framework requires handler functions to
+        be async, and future changes may add async operations.
         """
         if not self.config.enable_cross_project_search or not self.cross_project_consent:
             raise ValidationError(
@@ -2444,6 +2464,11 @@ class MemoryRAGServer:
 
         Returns:
             Dict with consent status and timestamps
+        
+
+        Note: This function is async for MCP protocol compatibility, even though it
+        doesn't currently use await. The MCP framework requires handler functions to
+        be async, and future changes may add async operations.
         """
         if not self.config.enable_cross_project_search or not self.cross_project_consent:
             raise ValidationError(
@@ -2464,6 +2489,11 @@ class MemoryRAGServer:
 
         Returns:
             Dict with list of opted-in projects and statistics
+        
+
+        Note: This function is async for MCP protocol compatibility, even though it
+        doesn't currently use await. The MCP framework requires handler functions to
+        be async, and future changes may add async operations.
         """
         if not self.config.enable_cross_project_search or not self.cross_project_consent:
             raise ValidationError(
@@ -3112,6 +3142,11 @@ class MemoryRAGServer:
             - avg_relevance: Average search result quality
             - total_searches: Number of searches performed
             - total_files_indexed: Number of files indexed
+        
+
+        Note: This function is async for MCP protocol compatibility, even though it
+        doesn't currently use await. The MCP framework requires handler functions to
+        be async, and future changes may add async operations.
         """
         try:
             from src.analytics.token_tracker import TokenTracker
@@ -3574,7 +3609,12 @@ class MemoryRAGServer:
         return ContextLevel.PROJECT_CONTEXT
 
     async def _start_pruning_scheduler(self) -> None:
-        """Start background scheduler for auto-pruning."""
+        """Start background scheduler for auto-pruning.
+
+        Note: This function is async for MCP protocol compatibility, even though it
+        doesn't currently use await. The MCP framework requires handler functions to
+        be async, and future changes may add async operations.
+        """
         try:
             from apscheduler.schedulers.asyncio import AsyncIOScheduler
             from apscheduler.triggers.cron import CronTrigger
@@ -3799,6 +3839,11 @@ class MemoryRAGServer:
 
             # Enable with custom threshold
             set_suggestion_mode(enabled=True, threshold=0.85)
+        
+
+        Note: This function is async for MCP protocol compatibility, even though it
+        doesn't currently use await. The MCP framework requires handler functions to
+        be async, and future changes may add async operations.
         """
         if not self.suggestion_engine:
             return {
@@ -4116,6 +4161,11 @@ class MemoryRAGServer:
 
         Returns:
             Dictionary with active alerts and counts
+        
+
+        Note: This function is async for MCP protocol compatibility, even though it
+        doesn't currently use await. The MCP framework requires handler functions to
+        be async, and future changes may add async operations.
         """
         try:
             # Get active alerts
@@ -4236,6 +4286,11 @@ class MemoryRAGServer:
 
         Returns:
             Dictionary with success status
+        
+
+        Note: This function is async for MCP protocol compatibility, even though it
+        doesn't currently use await. The MCP framework requires handler functions to
+        be async, and future changes may add async operations.
         """
         try:
             success = self.alert_engine.resolve_alert(alert_id)

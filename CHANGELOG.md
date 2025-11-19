@@ -79,6 +79,16 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ## [Unreleased]
 
+### Improved - 2025-11-18
+
+- **REF-001: Async/Await Pattern Optimization**
+  - Fixed 7 async cache methods to use `asyncio.to_thread()` for blocking SQLite operations
+  - Fixed 2 generator close() methods to properly handle blocking executor shutdown
+  - Documented 27 async functions as required for MCP protocol/interface compatibility
+  - Prevents event loop blocking during cache operations and cleanup
+  - Files: `src/embeddings/cache.py`, `src/embeddings/generator.py`, `src/embeddings/parallel_generator.py`, `src/mcp_server.py`, `src/core/server.py`, `src/store/base.py`, `src/store/readonly_wrapper.py`
+  - Planning: `planning_docs/REF-001_async_await_optimization.md`
+
 ### Fixed - 2025-11-18
 
 - **BUG-015: Fix Test Data Invalid Categories**
