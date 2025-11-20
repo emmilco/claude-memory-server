@@ -87,6 +87,19 @@ A pre-commit hook enforces CHANGELOG updates:
   - Health check now correctly detects running Qdrant instances
   - Modified: `src/cli/health_command.py`
 
+### Added - 2025-11-20
+
+- **FEAT-049: Intelligent Code Importance Scoring (WIP)**
+  - Created `src/analysis/` package with 4 new analyzer modules (950+ lines total)
+  - `ComplexityAnalyzer`: Calculates cyclomatic complexity, line count, nesting depth, parameters, documentation
+  - `UsageAnalyzer`: Builds call graphs, detects public/private APIs, tracks exports
+  - `CriticalityAnalyzer`: Identifies security keywords, error handling, critical decorators
+  - `ImportanceScorer`: Integrates analyzers with configurable weights, batch scoring
+  - Added 4 config options: `enable_importance_scoring`, `importance_complexity_weight`, `importance_usage_weight`, `importance_criticality_weight`
+  - Updated `IncrementalIndexer` to replace fixed importance=0.7 with dynamic calculation
+  - Created 40 unit tests for ComplexityAnalyzer (100% passing)
+  - **Status:** Core implementation complete, additional tests and validation pending
+
 ### Added - 2025-01-XX
 
 - **UX-034-035: Dashboard Core Enhancements (Phase 1 Progress: 2/15 features)**

@@ -414,5 +414,112 @@ metadata = {
 
 ---
 
-**Status**: 🟡 In Progress (Phase 1: Analysis complete, Phase 2: Starting implementation)
-**Next Steps**: Implement complexity_analyzer.py with unit tests
+## Implementation Status
+
+**Status**: 🟢 Core Implementation Complete, Testing In Progress
+
+### Completed (2025-11-20)
+
+#### Phase 1: Analysis & Design ✅
+- [x] Reviewed existing code infrastructure
+- [x] Designed three-factor scoring algorithm
+- [x] Created comprehensive planning document
+
+#### Phase 2: Core Analyzers ✅
+- [x] ComplexityAnalyzer (300+ lines)
+  - Cyclomatic complexity calculation
+  - Line count (excluding comments/blank lines)
+  - Nesting depth calculation
+  - Parameter counting
+  - Documentation detection
+  - Normalized scoring (0.3-0.7 range)
+
+- [x] UsageAnalyzer (250+ lines)
+  - Lightweight call graph construction
+  - Centrality/caller counting
+  - Public/private API detection
+  - Export status detection
+  - Usage boost calculation (0.0-0.2 range)
+
+- [x] CriticalityAnalyzer (230+ lines)
+  - Security keyword detection (60+ keywords)
+  - Error handling pattern detection
+  - Critical decorator detection
+  - File proximity scoring
+  - Criticality boost calculation (0.0-0.2 range)
+
+#### Phase 3: Integration Module ✅
+- [x] ImportanceScorer (170+ lines)
+  - Integrates all three analyzers
+  - Configurable weights (0.0-2.0 for each factor)
+  - Batch scoring for efficiency
+  - Summary statistics generation
+  - Error handling with graceful fallback
+
+#### Phase 4: Configuration ✅
+- [x] Added 4 new config options to src/config.py:
+  - `enable_importance_scoring` (default: True)
+  - `importance_complexity_weight` (default: 1.0)
+  - `importance_usage_weight` (default: 1.0)
+  - `importance_criticality_weight` (default: 1.0)
+- [x] Added validation (0.0-2.0 range enforcement)
+
+#### Phase 5: Indexer Integration ✅
+- [x] Updated IncrementalIndexer.__init__ to create scorer
+- [x] Modified _store_units to use batch scoring
+- [x] Replaced fixed importance=0.7 with dynamic calculation
+- [x] Added graceful fallback (0.5 on error, 0.7 if disabled)
+- [x] Maintained full backward compatibility
+
+#### Phase 6: Testing (In Progress) 🟡
+- [x] test_complexity_analyzer.py: 40 tests, 100% passing
+  - 8 cyclomatic complexity tests
+  - 5 line count tests
+  - 4 nesting depth tests
+  - 7 parameter count tests
+  - 5 documentation detection tests
+  - 4 overall scoring tests
+  - 4 multi-language tests
+  - 3 edge case tests
+- [ ] test_usage_analyzer.py: Not yet created
+- [ ] test_criticality_analyzer.py: Not yet created
+- [ ] test_importance_scorer.py: Not yet created
+- [ ] test_indexer_integration.py: Not yet created
+
+### Remaining Work
+
+#### Phase 7: Additional Tests (Est: 3-4 hours)
+- [ ] Create test_usage_analyzer.py (~30 tests)
+- [ ] Create test_criticality_analyzer.py (~25 tests)
+- [ ] Create test_importance_scorer.py (~20 tests)
+- [ ] Create integration tests with incremental_indexer
+- [ ] Verify >85% coverage for all new modules
+
+#### Phase 8: Validation (Est: 2-3 hours)
+- [ ] Index this codebase (claude-memory-server)
+- [ ] Generate score distribution report
+- [ ] Verify non-uniform distribution (not all 0.7)
+- [ ] Spot-check 10-20 functions:
+  - Security functions should score high (>0.7)
+  - Simple utilities should score low (<0.5)
+- [ ] Measure performance impact (<10% target)
+
+#### Phase 9: Documentation (Est: 1-2 hours)
+- [ ] Update CHANGELOG.md with FEAT-049 entry
+- [ ] Update TODO.md (mark FEAT-049 complete)
+- [ ] Update README.md (mention intelligent scoring)
+- [ ] Update USAGE.md (explain scoring system)
+
+#### Phase 10: Completion
+- [ ] Add completion summary to this document
+- [ ] Commit final changes
+- [ ] Merge FEAT-049 to main
+- [ ] Clean up worktree
+
+**Next Steps**: Create remaining test files (usage, criticality, scorer, integration)
+**Estimated Time Remaining**: 6-9 hours
+
+---
+
+**Status**: 🟡 In Progress (Phase 1-6 complete, Phase 7-10 remaining)
+**Next Steps**: Create test_usage_analyzer.py, test_criticality_analyzer.py

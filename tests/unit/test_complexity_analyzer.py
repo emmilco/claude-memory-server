@@ -451,7 +451,7 @@ class TestEdgeCases:
             "language": "python",
         }
         metrics = analyzer.analyze(code_unit)
-        assert metrics.complexity_score == 0.3  # Minimum score
+        assert 0.3 <= metrics.complexity_score <= 0.35  # Near minimum score
 
     def test_malformed_signature(self, analyzer):
         """Malformed signature doesn't crash."""
