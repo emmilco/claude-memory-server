@@ -667,7 +667,8 @@ async function loadData() {
             loadDashboardStats(),
             loadRecentActivity(),
             loadHealthData(),
-            loadInsights()
+            loadInsights(),
+            loadTrends()
         ]);
     } catch (error) {
         console.error('Error loading dashboard data:', error);
@@ -1367,4 +1368,127 @@ async function runHealthCheck() {
     } catch (error) {
         showToast(`Health check failed: ${error.message}`, 'error');
     }
+}
+
+/**
+ * Trend Charts Functions (UX-038)
+ */
+
+// Global chart instances
+let memoryTrendChart = null;
+let searchTrendChart = null;
+let latencyTrendChart = null;
+
+// Load trend data and render charts
+async function loadTrends() {
+    try {
+        const period = document.getElementById('trend-period').value;
+        const data = await fetchWithRetry(`${API_BASE}/api/trends?period=${period}`);
+
+        renderTrendCharts(data);
+    } catch (error) {
+        console.error('Error loading trends:', error);
+        showToast(`Failed to load trends: ${error.message}`, 'error');
+    }
+}
+
+// Render all trend charts
+function renderTrendCharts(data) {
+    const { dates, metrics } = data;
+
+    // Destroy existing charts
+    if (memoryTrendChart) memoryTrendChart.destroy();
+    if (searchTrendChart) searchTrendChart.destroy();
+    if (latencyTrendChart) latencyTrendChart.destroy();
+
+    // Chart.js default config
+    const commonOptions = {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            x: {
+                grid: {
+                    color: 'rgba(0, 0, 0, 0.05)'
+                }
+            },
+            y: {
+                beginAtZero: true,
+                grid: {
+                    color: 'rgba(0, 0, 0, 0.05)'
+                }
+            }
+        }
+    };
+
+    // Memory Growth Chart
+    const memoryCtx = document.getElementById('memory-trend-chart').getContext('2d');
+    memoryTrendChart = new Chart(memoryCtx, {
+        type: 'line',
+        data: {
+            labels: dates,
+            datasets: [{
+                label: 'Total Memories',
+                data: metrics.memory_count,
+                borderColor: '#2196F3',
+                backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                tension: 0.4,
+                fill: true,
+                borderWidth: 2
+            }]
+        },
+        options: commonOptions
+    });
+
+    // Search Activity Chart
+    const searchCtx = document.getElementById('search-trend-chart').getContext('2d');
+    searchTrendChart = new Chart(searchCtx, {
+        type: 'bar',
+        data: {
+            labels: dates,
+            datasets: [{
+                label: 'Searches',
+                data: metrics.search_volume,
+                backgroundColor: '#4CAF50',
+                borderWidth: 0
+            }]
+        },
+        options: commonOptions
+    });
+
+    // Performance (Latency) Chart
+    const latencyCtx = document.getElementById('latency-trend-chart').getContext('2d');
+    latencyTrendChart = new Chart(latencyCtx, {
+        type: 'line',
+        data: {
+            labels: dates,
+            datasets: [{
+                label: 'Avg Latency (ms)',
+                data: metrics.avg_latency,
+                borderColor: '#FF9800',
+                backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                tension: 0.4,
+                fill: true,
+                borderWidth: 2
+            }]
+        },
+        options: {
+            ...commonOptions,
+            scales: {
+                ...commonOptions.scales,
+                y: {
+                    ...commonOptions.scales.y,
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Milliseconds'
+                    }
+                }
+            }
+        }
+    });
 }

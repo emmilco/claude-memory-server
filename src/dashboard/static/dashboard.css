@@ -400,6 +400,54 @@ header h1 {
     font-style: italic;
 }
 
+/* Trend Charts Styles (UX-038) */
+.trends-card {
+    border-left: 4px solid #FF9800;
+}
+
+.trends-controls {
+    margin: 20px 0;
+}
+
+.trends-controls label {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-right: 10px;
+}
+
+.trends-controls select {
+    padding: 8px 12px;
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--card-bg);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.trends-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 30px;
+    margin-top: 20px;
+}
+
+.trend-chart-wrapper {
+    background: var(--bg-color);
+    padding: 20px;
+    border-radius: 8px;
+}
+
+.trend-chart-wrapper h3 {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+    text-align: center;
+}
+
+.trend-chart-wrapper canvas {
+    max-height: 250px;
+}
+
 /* Project Comparison Styles (UX-040) */
 .comparison-card {
     border-left: 4px solid #9c27b0;
