@@ -448,6 +448,57 @@ header h1 {
     max-height: 250px;
 }
 
+/* Memory Relationships Graph Styles (UX-039) */
+.relationships-card {
+    border-left: 4px solid #4CAF50;
+}
+
+.relationships-graph {
+    height: 500px;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-color);
+    margin: 20px 0;
+}
+
+.graph-legend {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.legend-dot {
+    width: 16px;
+    height: 3px;
+    display: inline-block;
+    border-radius: 2px;
+}
+
+.legend-dot.related {
+    background: #2196F3;
+}
+
+.legend-dot.supersedes {
+    background: #4CAF50;
+}
+
+.legend-dot.contradicts {
+    background: #f44336;
+}
+
+.legend-dot.references {
+    background: #FF9800;
+}
+
 /* Project Comparison Styles (UX-040) */
 .comparison-card {
     border-left: 4px solid #9c27b0;

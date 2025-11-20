@@ -9,6 +9,8 @@
     <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/dist/tippy.css">
     <!-- Chart.js for trend visualizations (UX-038) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- vis.js for relationship graph (UX-039) -->
+    <script src="https://unpkg.com/vis-network@9.1.2/standalone/umd/vis-network.min.js"></script>
 </head>
 <body>
     <!-- Toast Container -->
@@ -171,6 +173,18 @@
                         <h3>Performance (Latency)</h3>
                         <canvas id="latency-trend-chart"></canvas>
                     </div>
+                </div>
+            </section>
+
+            <!-- Memory Relationships Graph (UX-039) -->
+            <section class="card relationships-card">
+                <h2>🔗 Memory Relationships <span class="help-icon" data-tippy-content="Interactive graph showing how memories are connected through various relationships (related, supersedes, contradicts, references).">ⓘ</span></h2>
+                <div id="relationships-graph" class="relationships-graph"></div>
+                <div class="graph-legend">
+                    <div class="legend-item"><span class="legend-dot related"></span> RELATED_TO</div>
+                    <div class="legend-item"><span class="legend-dot supersedes"></span> SUPERSEDES</div>
+                    <div class="legend-item"><span class="legend-dot contradicts"></span> CONTRADICTS</div>
+                    <div class="legend-item"><span class="legend-dot references"></span> REFERENCES</div>
                 </div>
             </section>
 

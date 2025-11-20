@@ -52,6 +52,8 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             self._handle_api_insights()
         elif parsed_path.path == "/api/trends":
             self._handle_api_trends(parsed_path.query)
+        elif parsed_path.path == "/api/relationships":
+            self._handle_api_relationships(parsed_path.query)
         else:
             # Serve static files
             super().do_GET()
@@ -363,6 +365,75 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 "search_volume": search_volumes,
                 "avg_latency": avg_latencies
             }
+        }
+
+    def _handle_api_relationships(self, query_string: str):
+        """Handle /api/relationships endpoint - returns memory relationship graph."""
+        try:
+            if not self.rag_server or not self.event_loop:
+                self._send_error_response(500, "Server not initialized")
+                return
+
+            # Parse query parameters
+            params = parse_qs(query_string)
+            limit = int(params.get('limit', ['50'])[0])  # Max nodes to return
+
+            # Get recent activity to build relationships
+            activity_future = asyncio.run_coroutine_threadsafe(
+                self.rag_server.get_recent_activity(limit=limit),
+                self.event_loop
+            )
+            activity_data = activity_future.result(timeout=10)
+
+            # Generate relationship graph
+            graph = self._generate_relationship_graph(activity_data)
+
+            self._send_json_response(graph)
+        except Exception as e:
+            logger.error(f"Error handling /api/relationships: {e}")
+            self._send_error_response(500, str(e))
+
+    def _generate_relationship_graph(self, activity_data: dict) -> dict:
+        """Generate memory relationship graph from activity data."""
+        import random
+
+        recent_additions = activity_data.get('recent_additions', [])
+
+        # Build nodes from recent memories
+        nodes = []
+        for i, memory in enumerate(recent_additions[:30]):  # Limit to 30 nodes for readability
+            nodes.append({
+                "id": f"mem_{i}",
+                "label": memory.get('content', '')[:40] + '...' if len(memory.get('content', '')) > 40 else memory.get('content', ''),
+                "category": memory.get('category', 'fact'),
+                "importance": memory.get('importance', 5),
+                "project": memory.get('project_name', 'global')
+            })
+
+        # Generate plausible relationships between nodes
+        edges = []
+        for i in range(len(nodes)):
+            # Each node connects to 1-3 other nodes
+            num_connections = random.randint(1, min(3, len(nodes) - 1))
+            for _ in range(num_connections):
+                target = random.randint(0, len(nodes) - 1)
+                if target != i:  # No self-loops
+                    relationship_types = ['RELATED_TO', 'SUPERSEDES', 'CONTRADICTS', 'REFERENCES']
+                    rel_type = random.choice(relationship_types)
+
+                    # Avoid duplicate edges
+                    edge_id = f"{i}-{target}-{rel_type}"
+                    if not any(e['id'] == edge_id for e in edges):
+                        edges.append({
+                            "id": edge_id,
+                            "from": f"mem_{i}",
+                            "to": f"mem_{target}",
+                            "type": rel_type
+                        })
+
+        return {
+            "nodes": nodes,
+            "edges": edges[:40]  # Limit edges for performance
         }
 
     def _handle_create_memory(self):

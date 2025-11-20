@@ -668,7 +668,8 @@ async function loadData() {
             loadRecentActivity(),
             loadHealthData(),
             loadInsights(),
-            loadTrends()
+            loadTrends(),
+            loadRelationships()
         ]);
     } catch (error) {
         console.error('Error loading dashboard data:', error);
@@ -1489,6 +1490,142 @@ function renderTrendCharts(data) {
                     }
                 }
             }
+        }
+    });
+}
+
+/**
+ * Memory Relationships Graph (UX-039)
+ */
+
+let relationshipsNetwork = null;
+
+// Load and render memory relationships graph
+async function loadRelationships() {
+    try {
+        const data = await fetchWithRetry(`${API_BASE}/api/relationships?limit=30`);
+        renderRelationshipGraph(data);
+    } catch (error) {
+        console.error('Error loading relationships:', error);
+        showToast(`Failed to load relationship graph: ${error.message}`, 'error');
+    }
+}
+
+// Render interactive relationship graph with vis.js
+function renderRelationshipGraph(data) {
+    const container = document.getElementById('relationships-graph');
+
+    if (!data.nodes || data.nodes.length === 0) {
+        container.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-secondary); font-style: italic;">No relationships available</div>';
+        return;
+    }
+
+    // Category colors
+    const categoryColors = {
+        preference: '#9c27b0',
+        fact: '#2196F3',
+        event: '#FF9800',
+        workflow: '#4CAF50',
+        context: '#00BCD4',
+        code: '#f44336'
+    };
+
+    // Prepare nodes for vis.js
+    const nodes = new vis.DataSet(data.nodes.map(node => ({
+        id: node.id,
+        label: node.label,
+        title: `${node.label}\n\nCategory: ${node.category}\nImportance: ${node.importance}\nProject: ${node.project}`,
+        color: {
+            background: categoryColors[node.category] || '#2196F3',
+            border: categoryColors[node.category] || '#2196F3',
+            highlight: {
+                background: categoryColors[node.category] || '#2196F3',
+                border: '#000000'
+            }
+        },
+        font: {
+            color: '#ffffff',
+            size: 12
+        },
+        size: 15 + (node.importance * 2)  // Size based on importance
+    })));
+
+    // Edge colors by relationship type
+    const edgeColors = {
+        'RELATED_TO': '#2196F3',
+        'SUPERSEDES': '#4CAF50',
+        'CONTRADICTS': '#f44336',
+        'REFERENCES': '#FF9800'
+    };
+
+    // Prepare edges for vis.js
+    const edges = new vis.DataSet(data.edges.map(edge => ({
+        id: edge.id,
+        from: edge.from,
+        to: edge.to,
+        label: edge.type,
+        color: {
+            color: edgeColors[edge.type] || '#999999',
+            highlight: edgeColors[edge.type] || '#999999'
+        },
+        arrows: {
+            to: {
+                enabled: true,
+                scaleFactor: 0.5
+            }
+        },
+        font: {
+            size: 10,
+            align: 'middle'
+        }
+    })));
+
+    // Network options
+    const options = {
+        nodes: {
+            shape: 'dot',
+            scaling: {
+                min: 10,
+                max: 30
+            }
+        },
+        edges: {
+            smooth: {
+                type: 'continuous'
+            }
+        },
+        physics: {
+            stabilization: {
+                iterations: 100
+            },
+            barnesHut: {
+                gravitationalConstant: -30000,
+                springConstant: 0.001,
+                springLength: 200
+            }
+        },
+        interaction: {
+            hover: true,
+            tooltipDelay: 200,
+            zoomView: true,
+            dragView: true
+        }
+    };
+
+    // Destroy existing network
+    if (relationshipsNetwork) {
+        relationshipsNetwork.destroy();
+    }
+
+    // Create new network
+    relationshipsNetwork = new vis.Network(container, { nodes, edges }, options);
+
+    // Add click handler
+    relationshipsNetwork.on('click', (params) => {
+        if (params.nodes.length > 0) {
+            const nodeId = params.nodes[0];
+            const node = nodes.get(nodeId);
+            showToast(`Memory: ${node.label}`, 'info');
         }
     });
 }
