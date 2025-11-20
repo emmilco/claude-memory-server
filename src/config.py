@@ -5,6 +5,7 @@ from pydantic import model_validator
 from typing import Optional, Literal
 from pathlib import Path
 import os
+import json
 
 
 class ServerConfig(BaseSettings):
@@ -117,8 +118,6 @@ class ServerConfig(BaseSettings):
 
     model_config = SettingsConfigDict(
         env_prefix="CLAUDE_RAG_",
-        env_file=".env",
-        env_file_encoding='utf-8',
         case_sensitive=False
     )
 
@@ -244,12 +243,49 @@ class ServerConfig(BaseSettings):
 # Global config instance
 _config: Optional[ServerConfig] = None
 
+# User config file location
+_USER_CONFIG_PATH = Path.home() / ".claude-rag" / "config.json"
+
+
+def _load_user_config_overrides() -> dict:
+    """
+    Load user configuration overrides from ~/.claude-rag/config.json.
+
+    This allows persistent configuration that survives across all projects
+    and working directories, unlike .env files which are project-specific.
+
+    Returns:
+        Dict of config overrides, or empty dict if no config file exists
+    """
+    if not _USER_CONFIG_PATH.exists():
+        return {}
+
+    try:
+        with open(_USER_CONFIG_PATH, 'r') as f:
+            return json.load(f)
+    except Exception as e:
+        import logging
+        logging.warning(f"Failed to load user config from {_USER_CONFIG_PATH}: {e}")
+        return {}
+
 
 def get_config() -> ServerConfig:
-    """Get or create global configuration instance."""
+    """
+    Get or create global configuration instance.
+
+    Configuration priority (highest to lowest):
+    1. Environment variables (CLAUDE_RAG_*)
+    2. User config file (~/.claude-rag/config.json)
+    3. Built-in defaults
+    """
     global _config
     if _config is None:
-        _config = ServerConfig()
+        # Load user config overrides
+        user_overrides = _load_user_config_overrides()
+
+        # Create config with overrides applied
+        # Pydantic will merge: env vars > init kwargs > defaults
+        _config = ServerConfig(**user_overrides)
     return _config
 
 

@@ -103,7 +103,7 @@ class QdrantConnectionError(StorageError):
         solution = (
             "Options:\n"
             "1. Start Qdrant: docker-compose up -d\n"
-            "2. Use SQLite instead: Set CLAUDE_RAG_STORAGE_BACKEND=sqlite in .env\n"
+            "2. Use SQLite instead: Add {\"storage_backend\": \"sqlite\"} to ~/.claude-rag/config.json\n"
             "3. Check Qdrant is running: curl http://localhost:6333/health"
         )
         docs_url = "https://github.com/anthropics/claude-code/blob/main/docs/setup.md"
@@ -192,7 +192,7 @@ class DockerNotRunningError(MemoryRAGError):
             f"Start Docker:\n\n"
             f"  {start_cmd}\n\n"
             f"Or use SQLite instead:\n\n"
-            f"  Set CLAUDE_RAG_STORAGE_BACKEND=sqlite in .env\n"
+            f"  Add {{\"storage_backend\": \"sqlite\"}} to ~/.claude-rag/config.json\n"
             f"  # The system will automatically fall back to SQLite"
         )
         docs_url = "https://github.com/anthropics/claude-memory-server/blob/main/docs/setup.md#docker-setup"

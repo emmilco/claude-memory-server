@@ -263,7 +263,13 @@ class IncrementalIndexer(BaseCodeIndexer):
             config = get_config()
 
         self.config = config
-        self.store = store or QdrantMemoryStore(config)
+
+        # Use factory function to respect config.storage_backend
+        if store is None:
+            from src.store import create_memory_store
+            store = create_memory_store(config=config)
+
+        self.store = store
 
         # Use parallel embedding generator if enabled, otherwise use standard generator
         if embedding_generator is not None:
@@ -875,7 +881,7 @@ class IncrementalIndexer(BaseCodeIndexer):
 
             metadata = {
                 "id": deterministic_id,  # Deterministic ID prevents duplicates
-                "category": MemoryCategory.CONTEXT.value,
+                "category": MemoryCategory.CODE.value,
                 "context_level": ContextLevel.PROJECT_CONTEXT.value,
                 "scope": MemoryScope.PROJECT.value,
                 "project_name": self.project_name,
