@@ -7,10 +7,23 @@
     <link rel="stylesheet" href="dashboard.css">
 </head>
 <body>
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
     <div class="container">
         <header>
-            <h1>🧠 Claude Memory Dashboard</h1>
-            <p class="subtitle">Memory system statistics and recent activity</p>
+            <div class="header-content">
+                <div>
+                    <h1>🧠 Claude Memory Dashboard</h1>
+                    <p class="subtitle">Memory system statistics and recent activity</p>
+                </div>
+                <div class="theme-toggle">
+                    <button id="dark-mode-toggle" aria-label="Toggle dark mode">
+                        <span class="icon-light">☀️</span>
+                        <span class="icon-dark" style="display:none;">🌙</span>
+                    </button>
+                </div>
+            </div>
         </header>
 
         <!-- Filter Panel -->
@@ -112,6 +125,48 @@
         <footer>
             <p>Claude Memory RAG Server Dashboard v1.0 | <a href="#" onclick="loadData(); return false;">Refresh</a></p>
         </footer>
+    </div>
+
+    <!-- Keyboard Shortcuts Help Modal -->
+    <div id="shortcuts-modal" class="modal" style="display: none;">
+        <div class="modal-overlay" onclick="closeShortcutsModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>⌨️ Keyboard Shortcuts</h2>
+                <button class="modal-close" onclick="closeShortcutsModal()" aria-label="Close modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <table class="shortcuts-table">
+                    <tr>
+                        <td><kbd>/</kbd></td>
+                        <td>Focus search</td>
+                    </tr>
+                    <tr>
+                        <td><kbd>r</kbd></td>
+                        <td>Refresh dashboard data</td>
+                    </tr>
+                    <tr>
+                        <td><kbd>d</kbd></td>
+                        <td>Toggle dark mode</td>
+                    </tr>
+                    <tr>
+                        <td><kbd>c</kbd></td>
+                        <td>Clear all filters</td>
+                    </tr>
+                    <tr>
+                        <td><kbd>Esc</kbd></td>
+                        <td>Close modal/dialog</td>
+                    </tr>
+                    <tr>
+                        <td><kbd>?</kbd></td>
+                        <td>Show this help</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeShortcutsModal()">Close</button>
+            </div>
+        </div>
     </div>
 
     <!-- Memory Detail Modal -->

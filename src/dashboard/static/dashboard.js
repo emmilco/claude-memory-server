@@ -25,12 +25,112 @@ let originalData = {
 
 // Load dashboard data on page load
 document.addEventListener('DOMContentLoaded', () => {
+    initializeTheme();
     initializeFilters();
+    initializeKeyboardShortcuts();
+    initializeOfflineDetection();
     loadFiltersFromURL();
     loadData();
     // Auto-refresh every 30 seconds
     setInterval(loadData, 30000);
 });
+
+/**
+ * Initialize theme on page load
+ */
+function initializeTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    setTheme(savedTheme);
+
+    document.getElementById('dark-mode-toggle').addEventListener('click', toggleTheme);
+}
+
+/**
+ * Toggle between light and dark themes
+ */
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+}
+
+/**
+ * Set theme and persist to localStorage
+ */
+function setTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+
+    // Update icon visibility
+    document.querySelector('.icon-light').style.display = theme === 'dark' ? 'none' : 'inline';
+    document.querySelector('.icon-dark').style.display = theme === 'dark' ? 'inline' : 'none';
+}
+
+/**
+ * Initialize keyboard shortcuts
+ */
+function initializeKeyboardShortcuts() {
+    document.addEventListener('keydown', (e) => {
+        // Ignore if typing in input field or textarea
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+            return;
+        }
+
+        switch (e.key) {
+            case '/':
+                e.preventDefault();
+                document.getElementById('global-search').focus();
+                break;
+            case 'r':
+                e.preventDefault();
+                loadData();
+                break;
+            case 'd':
+                e.preventDefault();
+                toggleTheme();
+                break;
+            case 'c':
+                e.preventDefault();
+                clearFilters();
+                break;
+            case '?':
+                e.preventDefault();
+                showKeyboardShortcutsHelp();
+                break;
+        }
+    });
+}
+
+/**
+ * Show keyboard shortcuts help modal
+ */
+function showKeyboardShortcutsHelp() {
+    const modal = document.getElementById('shortcuts-modal');
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+
+    // Close on Escape key
+    document.addEventListener('keydown', handleShortcutsModalEscape);
+}
+
+/**
+ * Close keyboard shortcuts help modal
+ */
+function closeShortcutsModal() {
+    const modal = document.getElementById('shortcuts-modal');
+    modal.style.display = 'none';
+    document.body.style.overflow = 'auto';
+    document.removeEventListener('keydown', handleShortcutsModalEscape);
+}
+
+/**
+ * Handle Escape key to close shortcuts modal
+ */
+function handleShortcutsModalEscape(e) {
+    if (e.key === 'Escape') {
+        closeShortcutsModal();
+    }
+}
 
 /**
  * Initialize filter event listeners
@@ -231,9 +331,108 @@ function loadFiltersFromURL() {
 }
 
 /**
+ * Show toast notification
+ */
+function showToast(message, type = 'info') {
+    const toastContainer = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+
+    const icons = {
+        error: '❌',
+        warning: '⚠️',
+        success: '✅',
+        info: 'ℹ️'
+    };
+
+    toast.innerHTML = `
+        <span class="toast-icon">${icons[type] || icons.info}</span>
+        <span class="toast-message">${escapeHtml(message)}</span>
+        <button class="toast-close" onclick="this.parentElement.remove()" aria-label="Close notification">×</button>
+    `;
+
+    toastContainer.appendChild(toast);
+
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.remove();
+        }
+    }, 5000);
+}
+
+/**
+ * Fetch with retry logic and exponential backoff
+ */
+async function fetchWithRetry(url, options = {}, retries = 3) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            const response = await fetch(url, options);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return await response.json();
+        } catch (error) {
+            if (i === retries - 1) {
+                // Last retry failed
+                throw error;
+            }
+            // Wait before retry (exponential backoff: 1s, 2s, 4s)
+            const waitTime = 1000 * Math.pow(2, i);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+
+            if (i < retries - 1) {
+                showToast(`Retrying... (Attempt ${i + 2}/${retries})`, 'warning');
+            }
+        }
+    }
+}
+
+/**
+ * Initialize offline detection
+ */
+function initializeOfflineDetection() {
+    window.addEventListener('online', () => {
+        showToast('Connection restored. Refreshing data...', 'success');
+        loadData();
+    });
+
+    window.addEventListener('offline', () => {
+        showToast('You are offline. Some features may not work.', 'warning');
+    });
+}
+
+/**
+ * Show skeleton loader in a container
+ */
+function showSkeletonLoader(containerId, type = 'card') {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    if (type === 'stat') {
+        container.innerHTML = '<div class="skeleton skeleton-stat"></div>';
+    } else if (type === 'list') {
+        container.innerHTML = `
+            <div class="skeleton skeleton-card"></div>
+            <div class="skeleton skeleton-card"></div>
+            <div class="skeleton skeleton-card"></div>
+        `;
+    } else {
+        container.innerHTML = '<div class="skeleton skeleton-card"></div>';
+    }
+}
+
+/**
  * Main function to load all dashboard data
  */
 async function loadData() {
+    // Show skeleton loaders
+    showSkeletonLoader('projects-list', 'list');
+    showSkeletonLoader('categories-chart', 'list');
+    showSkeletonLoader('lifecycle-chart', 'list');
+    showSkeletonLoader('recent-searches', 'list');
+    showSkeletonLoader('recent-additions', 'list');
+
     try {
         await Promise.all([
             loadDashboardStats(),
@@ -249,11 +448,7 @@ async function loadData() {
  */
 async function loadDashboardStats() {
     try {
-        const response = await fetch(`${API_BASE}/api/stats`);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
+        const data = await fetchWithRetry(`${API_BASE}/api/stats`);
 
         if (data.status === 'success') {
             // Store original data for filtering
@@ -275,11 +470,11 @@ async function loadDashboardStats() {
                 applyFilters();
             }
         } else {
-            showError('stats', data.error || 'Unknown error');
+            showToast(`Failed to load statistics: ${data.error || 'Unknown error'}`, 'error');
         }
     } catch (error) {
         console.error('Error loading stats:', error);
-        showError('stats', error.message);
+        showToast(`Failed to load statistics: ${error.message}`, 'error');
     }
 }
 
@@ -288,11 +483,7 @@ async function loadDashboardStats() {
  */
 async function loadRecentActivity() {
     try {
-        const response = await fetch(`${API_BASE}/api/activity?limit=20`);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
+        const data = await fetchWithRetry(`${API_BASE}/api/activity?limit=20`);
 
         if (data.status === 'success') {
             // Store original data for filtering
@@ -308,11 +499,11 @@ async function loadRecentActivity() {
                 applyFilters();
             }
         } else {
-            showError('activity', data.error || 'Unknown error');
+            showToast(`Failed to load activity: ${data.error || 'Unknown error'}`, 'error');
         }
     } catch (error) {
         console.error('Error loading activity:', error);
-        showError('activity', error.message);
+        showToast(`Failed to load activity: ${error.message}`, 'error');
     }
 }
 
