@@ -287,6 +287,19 @@ class IncrementalIndexer(BaseCodeIndexer):
         # Import extractor for dependency tracking
         self.import_extractor = ImportExtractor()
 
+        # Importance scorer for intelligent code importance (FEAT-049)
+        if config.enable_importance_scoring:
+            from src.analysis.importance_scorer import ImportanceScorer
+            self.importance_scorer = ImportanceScorer(
+                complexity_weight=config.importance_complexity_weight,
+                usage_weight=config.importance_usage_weight,
+                criticality_weight=config.importance_criticality_weight,
+            )
+            logger.info("Importance scoring enabled for code units")
+        else:
+            self.importance_scorer = None
+            logger.info("Importance scoring disabled (using fixed 0.7)")
+
         logger.info(f"Incremental indexer initialized for project: {self.project_name}")
 
     async def initialize(self) -> None:
@@ -864,9 +877,39 @@ class IncrementalIndexer(BaseCodeIndexer):
         if import_metadata is None:
             import_metadata = {"imports": [], "dependencies": [], "import_count": 0}
 
+        # Read file content for export detection (used by importance scorer)
+        try:
+            file_content = file_path.read_text(encoding='utf-8', errors='ignore')
+        except Exception as e:
+            logger.warning(f"Failed to read file content for importance scoring: {e}")
+            file_content = None
+
+        # Calculate importance scores for all units (batch mode for efficiency)
+        if self.importance_scorer:
+            try:
+                # Convert SemanticUnit objects to dicts for scorer
+                unit_dicts = [
+                    {
+                        "name": u.name,
+                        "content": u.content,
+                        "signature": u.signature,
+                        "unit_type": u.unit_type,
+                        "language": language,
+                    }
+                    for u in units
+                ]
+                importance_scores = self.importance_scorer.calculate_batch(
+                    unit_dicts, file_path, file_content
+                )
+            except Exception as e:
+                logger.warning(f"Failed to calculate importance scores: {e}, using default 0.5")
+                importance_scores = [None] * len(units)
+        else:
+            importance_scores = [None] * len(units)
+
         # Build batch store items
         items = []
-        for unit, embedding in zip(units, embeddings):
+        for unit, embedding, importance_score in zip(units, embeddings, importance_scores):
             # Build content for storage
             content = self._build_indexable_content(file_path, unit)
 
@@ -893,13 +936,19 @@ class IncrementalIndexer(BaseCodeIndexer):
             id_string = f"{self.project_name}:{str(file_path.resolve())}:{unit.start_line}:{unit.name}"
             deterministic_id = hashlib.sha256(id_string.encode()).hexdigest()[:32]
 
+            # Determine importance (FEAT-049: intelligent scoring or fallback to default)
+            if importance_score:
+                importance = importance_score.importance
+            else:
+                importance = 0.7  # Fallback to moderate importance
+
             metadata = {
                 "id": deterministic_id,  # Deterministic ID prevents duplicates
                 "category": MemoryCategory.CODE.value,
                 "context_level": ContextLevel.PROJECT_CONTEXT.value,
                 "scope": MemoryScope.PROJECT.value,
                 "project_name": self.project_name,
-                "importance": 0.7,  # Code units have moderate importance
+                "importance": importance,  # Dynamic importance (FEAT-049)
                 "tags": ["code", unit.unit_type, language.lower()],
                 "metadata": unit_metadata,
             }
