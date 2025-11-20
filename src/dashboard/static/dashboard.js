@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeKeyboardShortcuts();
     initializeOfflineDetection();
     initializeTooltips();
+    initializeComparison();
     loadFiltersFromURL();
     loadData();
     // Auto-refresh every 30 seconds
@@ -689,6 +690,9 @@ async function loadDashboardStats() {
             // Populate project dropdown
             populateProjectDropdown(originalData.projects);
 
+            // Populate comparison selector (UX-040)
+            populateComparisonSelector(originalData.projects);
+
             // Update display
             updateOverview(data);
             updateProjects(originalData.projects);
@@ -1058,4 +1062,121 @@ function highlightCode(codeElement) {
     code = code.replace(/(\/\/.*$)/gm, '<span style="color: #5c6370; font-style: italic;">$1</span>');
 
     codeElement.innerHTML = code;
+}
+
+/**
+ * Initialize project comparison (UX-040)
+ */
+function initializeComparison() {
+    const comparisonSelect = document.getElementById('comparison-projects');
+    const compareBtn = document.getElementById('compare-btn');
+    const clearBtn = document.getElementById('clear-comparison-btn');
+
+    // Enable/disable compare button based on selection
+    comparisonSelect.addEventListener('change', () => {
+        const selected = Array.from(comparisonSelect.selectedOptions);
+        compareBtn.disabled = selected.length < 2 || selected.length > 4;
+    });
+
+    // Handle compare button click
+    compareBtn.addEventListener('click', () => {
+        const selectedProjects = Array.from(comparisonSelect.selectedOptions).map(opt => opt.value);
+        if (selectedProjects.length >= 2 && selectedProjects.length <= 4) {
+            renderComparison(selectedProjects);
+        }
+    });
+
+    // Handle clear button click
+    clearBtn.addEventListener('click', () => {
+        comparisonSelect.selectedIndex = -1;
+        document.getElementById('comparison-results').style.display = 'none';
+        document.getElementById('comparison-empty').style.display = 'block';
+        clearBtn.style.display = 'none';
+        compareBtn.disabled = true;
+    });
+}
+
+/**
+ * Populate comparison project selector
+ */
+function populateComparisonSelector(projects) {
+    const select = document.getElementById('comparison-projects');
+    select.innerHTML = '';
+
+    if (!projects || projects.length === 0) {
+        select.innerHTML = '<option value="">No projects available</option>';
+        return;
+    }
+
+    projects.forEach(project => {
+        const option = document.createElement('option');
+        option.value = project.name;
+        option.textContent = `${project.name} (${project.num_memories} memories)`;
+        select.appendChild(option);
+    });
+}
+
+/**
+ * Render project comparison table
+ */
+function renderComparison(projectNames) {
+    // Get full project data
+    const projects = originalData.projects.filter(p => projectNames.includes(p.name));
+
+    if (projects.length < 2) {
+        showToast('Please select at least 2 projects to compare', 'warning');
+        return;
+    }
+
+    // Define metrics to compare
+    const metrics = [
+        { key: 'num_memories', label: 'Total Memories', format: (v) => v.toLocaleString(), highlight: 'max' },
+        { key: 'num_files', label: 'Files Indexed', format: (v) => v.toLocaleString(), highlight: 'max' },
+        { key: 'num_functions', label: 'Functions', format: (v) => v.toLocaleString(), highlight: 'max' },
+        { key: 'num_classes', label: 'Classes', format: (v) => v.toLocaleString(), highlight: 'max' },
+        { key: 'index_time', label: 'Index Time', format: (v) => `${v.toFixed(2)}s`, highlight: 'min' },
+        { key: 'last_indexed', label: 'Last Indexed', format: (v) => new Date(v).toLocaleDateString(), highlight: 'none' }
+    ];
+
+    // Build table header
+    const thead = document.getElementById('comparison-thead');
+    thead.innerHTML = `
+        <tr>
+            <th>Metric</th>
+            ${projects.map(p => `<th>${escapeHtml(p.name)}</th>`).join('')}
+        </tr>
+    `;
+
+    // Build table body
+    const tbody = document.getElementById('comparison-tbody');
+    tbody.innerHTML = metrics.map(metric => {
+        const values = projects.map(p => p[metric.key] || 0);
+
+        // Determine which value(s) should be highlighted
+        let highlightValue = null;
+        if (metric.highlight === 'max') {
+            highlightValue = Math.max(...values);
+        } else if (metric.highlight === 'min') {
+            highlightValue = Math.min(...values);
+        }
+
+        const cells = projects.map((p, i) => {
+            const value = values[i];
+            const formatted = metric.format(value);
+            const isHighlight = highlightValue !== null && value === highlightValue;
+            return `<td class="${isHighlight ? 'highlight' : ''}">${formatted}</td>`;
+        }).join('');
+
+        return `
+            <tr>
+                <td class="metric-label">${metric.label}</td>
+                ${cells}
+            </tr>
+        `;
+    }).join('');
+
+    // Show results, hide empty state
+    document.getElementById('comparison-results').style.display = 'block';
+    document.getElementById('comparison-empty').style.display = 'none';
+    document.getElementById('clear-comparison-btn').style.display = 'inline-block';
 }

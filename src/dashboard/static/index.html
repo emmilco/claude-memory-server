@@ -129,6 +129,30 @@
                 </div>
             </section>
 
+            <!-- Project Comparison View -->
+            <section class="card comparison-card">
+                <h2>📊 Project Comparison <span class="help-icon" data-tippy-content="Compare metrics across multiple projects side-by-side to identify patterns and outliers.">ⓘ</span></h2>
+                <div class="comparison-controls">
+                    <label for="comparison-projects">Select projects to compare (2-4):</label>
+                    <select id="comparison-projects" multiple size="5" data-tippy-content="Hold Cmd/Ctrl to select multiple projects">
+                        <option value="">Loading projects...</option>
+                    </select>
+                    <button id="compare-btn" class="btn-primary" disabled data-tippy-content="Select 2-4 projects to compare">Compare Selected</button>
+                    <button id="clear-comparison-btn" class="btn-secondary" style="display: none;" data-tippy-content="Clear comparison and start over">Clear</button>
+                </div>
+                <div id="comparison-results" class="comparison-results" style="display: none;">
+                    <table class="comparison-table">
+                        <thead id="comparison-thead">
+                        </thead>
+                        <tbody id="comparison-tbody">
+                        </tbody>
+                    </table>
+                </div>
+                <div id="comparison-empty" class="comparison-empty">
+                    <p>Select 2-4 projects from the list above to see a side-by-side comparison.</p>
+                </div>
+            </section>
+
             <!-- Projects Section -->
             <section class="card">
                 <h2>📁 Projects <span class="help-icon" data-tippy-content="Projects are collections of memories tied to a specific codebase or context.">ⓘ</span></h2>
