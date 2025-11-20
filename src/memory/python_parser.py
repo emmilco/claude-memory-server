@@ -49,7 +49,7 @@ class PythonParser:
         "java": (tree_sitter_java, "language") if TREE_SITTER_AVAILABLE else None,
         "go": (tree_sitter_go, "language") if TREE_SITTER_AVAILABLE else None,
         "rust": (tree_sitter_rust_lang, "language") if TREE_SITTER_AVAILABLE else None,
-        "php": (tree_sitter_php, "language") if TREE_SITTER_AVAILABLE else None,
+        "php": (tree_sitter_php, "language_php") if TREE_SITTER_AVAILABLE else None,  # BUG-021: Use language_php, not language
         "ruby": (tree_sitter_ruby, "language") if TREE_SITTER_AVAILABLE else None,
         "swift": (tree_sitter_swift, "language") if TREE_SITTER_AVAILABLE else None,
         "kotlin": (tree_sitter_kotlin, "language") if TREE_SITTER_AVAILABLE else None,

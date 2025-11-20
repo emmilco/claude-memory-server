@@ -84,6 +84,12 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Fixed
 
+- **BUG-021: PHP Parser Initialization Warning**
+  - Fixed PHP parser failing to initialize with warning about missing 'language' attribute
+  - Changed attribute name from 'language' to 'language_php' to match tree-sitter-php API
+  - PHP files can now be indexed by Python parser fallback
+  - Modified: `src/memory/python_parser.py`
+
 - **BUG-016: list_memories Returns Incorrect Total Count** (Duplicate of BUG-018)
   - Resolved as duplicate - issue was caused by RetrievalGate blocking list queries
   - BUG-018 fix (removing RetrievalGate) resolved this issue as side effect
