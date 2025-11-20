@@ -102,6 +102,24 @@ A pre-commit hook enforces CHANGELOG updates:
 - **Parallel Embedding Generation Fork Crashes**
   - Fixed "child process terminated abruptly" errors during parallel indexing
   - Changed multiprocessing method from 'fork' to 'spawn' to prevent tokenizers conflicts
+
+- **Code Review Fixes: Comprehensive Cleanup**
+  - Fixed parameter name inconsistency: `min_relevance` → `min_importance` in MCP tool schema for consistency with server API
+  - Converted 7 inline TODO comments to tracked TODO.md entries (FEAT-050 through FEAT-054, REF-011, REF-012)
+  - Modified: `src/mcp_server.py`, `TODO.md`
+
+### Removed - 2025-11-20
+
+- **RetrievalGate Infrastructure (Complete Removal)**
+  - Removed orphaned RetrievalGate feature disabled in BUG-018
+  - Deleted `src/router/retrieval_gate.py` (entire file)
+  - Removed RetrievalGate imports from `src/router/__init__.py`
+  - Removed type hints, initialization, and metrics from `src/core/server.py`
+  - Removed `retrieval_gate_enabled` field from StatusResponse model
+  - Removed config options: `enable_retrieval_gate`, `retrieval_gate_threshold`
+  - Removed config validation for retrieval_gate_threshold
+  - Modified: `src/core/server.py`, `src/core/models.py`, `src/config.py`, `src/router/__init__.py`
+  - Impact: Cleaner codebase, removed ~200 lines of dead code
   - Added explicit tokenizers.set_parallelism(False) in worker processes
   - Result: 100% indexing success rate (was 91% with 51 failures)
   - Modified: `src/embeddings/parallel_generator.py`

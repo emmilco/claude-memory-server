@@ -76,10 +76,3 @@ def test_security_settings():
     config = ServerConfig()
     assert config.enable_input_validation is True
     assert config.max_memory_size_bytes == 10240
-
-
-def test_retrieval_gate_settings():
-    """Test adaptive retrieval configuration."""
-    config = ServerConfig()
-    assert config.enable_retrieval_gate is True
-    assert config.retrieval_gate_threshold == 0.6  # Lowered to reduce false negatives

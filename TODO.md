@@ -261,6 +261,48 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - [ ] LLM-powered suggestions based on patterns
   - [ ] Identify code smells
 
+- [ ] **FEAT-050**: Track cache usage in queries
+  - [ ] Add cache hit/miss tracking to retrieve_memories()
+  - [ ] Include used_cache flag in QueryResponse
+  - **Location:** src/core/server.py:631
+  - **Discovered:** 2025-11-20 during code review
+
+- [ ] **FEAT-051**: Query-based deletion for Qdrant
+  - [ ] Implement deletion by query filters instead of memory IDs
+  - [ ] Support clearing entire project indexes
+  - **Location:** src/core/server.py:2983
+  - **Discovered:** 2025-11-20 during code review
+
+- [ ] **FEAT-052**: Map project_name to repo_path for git history
+  - [ ] Add configuration mapping between project names and repository paths
+  - [ ] Enable git history search by project_name instead of hardcoded paths
+  - **Location:** src/core/server.py:3448
+  - **Discovered:** 2025-11-20 during code review
+
+- [ ] **FEAT-053**: Enhanced file history with diff content
+  - [ ] Include diff content analysis in file history search
+  - [ ] Match changes in diff content, not just commit messages
+  - **Location:** src/core/server.py:3679
+  - **Discovered:** 2025-11-20 during code review
+
+- [ ] **FEAT-054**: File pattern and language filtering for multi-repo search
+  - [ ] Add file_pattern parameter to cross-project search
+  - [ ] Add language filter support to search_all_projects()
+  - **Location:** src/memory/multi_repository_search.py:221
+  - **Discovered:** 2025-11-20 during code review
+
+- [ ] **REF-011**: Integrate ProjectArchivalManager with metrics
+  - [ ] Connect metrics_collector to ProjectArchivalManager
+  - [ ] Enable accurate active vs archived project counts
+  - **Location:** src/monitoring/metrics_collector.py:201
+  - **Discovered:** 2025-11-20 during code review
+
+- [ ] **REF-012**: Implement rollback support for bulk operations
+  - [ ] Add soft delete capability for bulk operations
+  - [ ] Enable rollback of bulk deletions
+  - **Location:** src/memory/bulk_operations.py:394
+  - **Discovered:** 2025-11-20 during code review
+
 - [x] **UX-026**: Web dashboard MVP ✅ **COMPLETE**
   - [x] Basic web UI with statistics
   - [x] Project breakdown display
