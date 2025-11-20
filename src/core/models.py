@@ -54,16 +54,6 @@ class ProvenanceSource(str, Enum):
     LEGACY = "legacy"  # Migrated from old system
 
 
-class RelationshipType(str, Enum):
-    """Type of relationship between memories."""
-
-    SUPPORTS = "supports"  # Memory A supports/reinforces memory B
-    CONTRADICTS = "contradicts"  # Memory A contradicts memory B
-    RELATED = "related"  # Memories are related/similar
-    SUPERSEDES = "supersedes"  # Memory A replaces memory B
-    DUPLICATE = "duplicate"  # Memory A is a duplicate of memory B
-
-
 class MergeStrategy(str, Enum):
     """Strategy for merging duplicate memories."""
 
@@ -85,22 +75,6 @@ class MemoryProvenance(BaseModel):
     conversation_id: Optional[str] = None  # Associated conversation
     file_context: List[str] = Field(default_factory=list)  # Files being worked on
     notes: Optional[str] = None  # Additional provenance notes
-
-    model_config = ConfigDict(use_enum_values=False)
-
-
-class MemoryRelationship(BaseModel):
-    """Relationship between two memories."""
-
-    id: str = Field(default_factory=lambda: str(uuid4()))
-    source_memory_id: str  # The memory that has the relationship
-    target_memory_id: str  # The memory it relates to
-    relationship_type: RelationshipType
-    confidence: float = Field(ge=0.0, le=1.0)  # Confidence in relationship
-    detected_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    detected_by: str = "auto"  # "auto", "user", "system"
-    notes: Optional[str] = None  # Explanation of relationship
-    dismissed: bool = False  # User dismissed this relationship
 
     model_config = ConfigDict(use_enum_values=False)
 

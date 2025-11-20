@@ -9,7 +9,6 @@ from src.config import get_config
 from src.store.sqlite_store import SQLiteMemoryStore
 from src.embeddings.generator import EmbeddingGenerator
 from src.memory.provenance_tracker import ProvenanceTracker
-from src.memory.relationship_detector import RelationshipDetector
 from src.memory.trust_signals import TrustSignalGenerator
 from src.core.models import (
     MemoryUnit,
@@ -18,7 +17,6 @@ from src.core.models import (
     MemoryScope,
     ProvenanceSource,
     MemoryProvenance,
-    RelationshipType,
 )
 
 
@@ -45,12 +43,6 @@ def embedding_gen():
 async def tracker(test_store):
     """Create provenance tracker."""
     return ProvenanceTracker(test_store)
-
-
-@pytest_asyncio.fixture
-async def detector(test_store, embedding_gen):
-    """Create relationship detector."""
-    return RelationshipDetector(test_store, embedding_gen)
 
 
 @pytest_asyncio.fixture
@@ -110,9 +102,10 @@ async def test_end_to_end_provenance_tracking(test_store, tracker, embedding_gen
     assert verified.provenance.last_confirmed is not None
 
 
+@pytest.mark.skip(reason="Relationship detection functionality removed (see CHANGELOG 2025-11-20)")
 @pytest.mark.asyncio
-async def test_contradiction_detection_workflow(test_store, detector, embedding_gen):
-    """Test contradiction detection between memories."""
+async def test_contradiction_detection_workflow(test_store, embedding_gen):
+    """Test contradiction detection between memories. DEPRECATED: Relationship functionality removed."""
     # 1. Create first preference
     embedding1 = await embedding_gen.generate("I prefer Vue.js for frontend")
     mem1_id = await test_store.store(
@@ -167,9 +160,10 @@ async def test_contradiction_detection_workflow(test_store, detector, embedding_
     assert contradiction.target_memory_id == mem1_id
 
 
+@pytest.mark.skip(reason="Relationship detection functionality removed (see CHANGELOG 2025-11-20)")
 @pytest.mark.asyncio
-async def test_duplicate_detection_workflow(test_store, detector, embedding_gen):
-    """Test duplicate detection between similar memories."""
+async def test_duplicate_detection_workflow(test_store, embedding_gen):
+    """Test duplicate detection between similar memories. DEPRECATED: Relationship functionality removed."""
     # 1. Create original memory
     content = "Always use async/await for asynchronous operations in JavaScript"
     embedding1 = await embedding_gen.generate(content)
@@ -270,9 +264,10 @@ async def test_trust_signals_generation(test_store, trust_gen, embedding_gen):
     assert "project" in why_text.lower() or "current project" in why_text.lower()
 
 
+@pytest.mark.skip(reason="Relationship detection functionality removed (see CHANGELOG 2025-11-20)")
 @pytest.mark.asyncio
-async def test_relationship_storage_and_retrieval(test_store, detector, embedding_gen):
-    """Test storing and retrieving relationships."""
+async def test_relationship_storage_and_retrieval(test_store, embedding_gen):
+    """Test storing and retrieving relationships. DEPRECATED: Relationship functionality removed."""
     # 1. Create two related memories
     embedding1 = await embedding_gen.generate("Use React hooks for state management")
     mem1_id = await test_store.store(

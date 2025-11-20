@@ -583,22 +583,49 @@ async def main():
     # Initialize the modern server
     config = get_config()
     memory_server = MemoryRAGServer(config)
-    await memory_server.initialize()
+
+    # Fast initialization - defer expensive operations until after MCP is listening
+    await memory_server.initialize(defer_preload=True)
 
     logger.info(f"Server initialized (project: {memory_server.project_name or 'global'})")
     logger.info(f"Storage backend: {config.storage_backend}")
 
-    # Perform startup health check
-    if not await _startup_health_check(config, memory_server):
-        logger.error("❌ Startup health check failed. Server cannot start.")
-        logger.error("Please fix the issues above and try again.")
-        logger.error("For detailed troubleshooting: see docs/TROUBLESHOOTING.md")
-        await memory_server.close()
-        sys.exit(1)
-
     try:
-        # Run MCP server
+        # Run MCP server - start listening BEFORE doing expensive health checks
         async with stdio_server() as (read_stream, write_stream):
+            # Background task: Complete initialization and health checks
+            async def complete_initialization():
+                """Complete expensive initialization in the background."""
+                try:
+                    # Preload embedding model
+                    logger.info("Background: Preloading embedding model...")
+                    await memory_server.embedding_generator.initialize()
+                    logger.info("Background: Embedding model ready")
+
+                    # Collect initial metrics
+                    if memory_server.metrics_collector:
+                        logger.info("Background: Collecting initial metrics...")
+                        try:
+                            initial_metrics = await memory_server.metrics_collector.collect_metrics()
+                            initial_metrics.health_score = memory_server._calculate_simple_health_score(initial_metrics)
+                            memory_server.metrics_collector.store_metrics(initial_metrics)
+                            logger.info(f"Background: Initial metrics collected (health: {initial_metrics.health_score}/100)")
+                        except Exception as e:
+                            logger.warning(f"Background: Failed to collect initial metrics: {e}")
+
+                    # Perform startup health check
+                    if not await _startup_health_check(config, memory_server):
+                        logger.warning("⚠️ Startup health check failed - server running in degraded mode")
+                        logger.warning("Some features may not work correctly. See docs/TROUBLESHOOTING.md")
+                    else:
+                        logger.info("✅ Background initialization complete - all systems ready")
+                except Exception as e:
+                    logger.error(f"Background initialization error: {e}")
+
+            # Start background initialization (don't await - let it run in parallel)
+            asyncio.create_task(complete_initialization())
+
+            # Start serving MCP requests immediately
             await app.run(
                 read_stream, write_stream, app.create_initialization_options()
             )

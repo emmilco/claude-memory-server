@@ -127,8 +127,13 @@ class MemoryRAGServer:
             "last_query_time": None,
         }
 
-    async def initialize(self) -> None:
-        """Initialize async components."""
+    async def initialize(self, defer_preload: bool = False) -> None:
+        """Initialize async components.
+
+        Args:
+            defer_preload: If True, skip embedding model preloading for faster startup.
+                          Model will be loaded on first use instead.
+        """
         try:
             # Initialize store
             self.store = create_memory_store(config=self.config)
@@ -142,9 +147,13 @@ class MemoryRAGServer:
 
             # Initialize embedding generator
             self.embedding_generator = EmbeddingGenerator(self.config)
-            
+
             # Preload embedding model on startup to avoid delay on first query
-            await self.embedding_generator.initialize()
+            # Skip preload if defer_preload=True (for fast MCP server startup)
+            if not defer_preload:
+                await self.embedding_generator.initialize()
+            else:
+                logger.info("Embedding model preload deferred (will load on first use)")
 
             # Initialize embedding cache
             self.embedding_cache = EmbeddingCache(self.config)
@@ -259,8 +268,8 @@ class MemoryRAGServer:
                 self.suggestion_engine = None
                 logger.info("Proactive suggestions disabled")
 
-            # Collect initial metrics snapshot
-            if self.metrics_collector:
+            # Collect initial metrics snapshot (defer if requested for fast startup)
+            if self.metrics_collector and not defer_preload:
                 try:
                     initial_metrics = await self.metrics_collector.collect_metrics()
                     initial_metrics.health_score = self._calculate_simple_health_score(initial_metrics)
@@ -268,6 +277,8 @@ class MemoryRAGServer:
                     logger.info(f"Initial metrics snapshot collected (health: {initial_metrics.health_score}/100)")
                 except Exception as e:
                     logger.warning(f"Failed to collect initial metrics: {e}")
+            elif defer_preload:
+                logger.info("Initial metrics collection deferred (will collect in background)")
 
             logger.info("Server initialized successfully")
 

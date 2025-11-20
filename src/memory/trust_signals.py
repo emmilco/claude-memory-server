@@ -112,18 +112,7 @@ class TrustSignalGenerator:
             elif memory.category == MemoryCategory.FACT:
                 why_shown.append("Factual information")
 
-            # 6. Relationship information (if requested)
-            if include_relationships:
-                try:
-                    relationships = await self.store.get_relationships(memory.id)
-                    if relationships:
-                        related_count = len([r for r in relationships if r.get("relationship_type") == "related"])
-                        if related_count > 0:
-                            why_shown.append(f"Related to {related_count} other memories")
-                except Exception as e:
-                    logger.debug(f"Could not fetch relationships: {e}")
-
-            # 7. Provenance source
+            # 6. Provenance source
             source_quality = self._get_source_quality_label(memory.provenance.source.value)
             why_shown.append(f"Source: {source_quality}")
 
@@ -136,17 +125,8 @@ class TrustSignalGenerator:
                 "age_days": (datetime.now(UTC) - memory.created_at).days
             }
 
-            # Check for contradictions
+            # Check for contradictions (no longer supported)
             contradiction_detected = False
-            try:
-                relationships = await self.store.get_relationships(memory.id)
-                contradiction_detected = any(
-                    r.get("relationship_type") == "contradicts"
-                    for r in relationships
-                )
-            except Exception as e:
-                logger.debug(f"Failed to check relationships for memory {memory.id}: {e}")
-                pass  # Assume no contradictions if we can't check
 
             # Get confidence level
             confidence_level = self.generate_confidence_explanation(trust_score)
@@ -168,14 +148,8 @@ class TrustSignalGenerator:
                     months = days_ago // 30
                     last_verified = f"{months} month{'s' if months > 1 else ''} ago"
 
-            # Get related count
+            # Get related count (no longer supported)
             related_count = 0
-            try:
-                relationships = await self.store.get_relationships(memory.id)
-                related_count = len(relationships)
-            except Exception as e:
-                logger.debug(f"Failed to get relationship count for memory {memory.id}: {e}")
-                pass  # Assume 0 relationships if we can't check
 
             return TrustSignals(
                 why_shown=why_shown,
@@ -252,18 +226,9 @@ class TrustSignalGenerator:
                 if days_since_confirmed < 30:
                     age_score = min(0.15, age_score + 0.05)
 
-            # 5. Contradiction status (10%)
+            # 5. Contradiction status (10%) - no longer supported, assume no contradictions
             contradiction_penalty = 0.0
-            try:
-                relationships = await self.store.get_relationships(memory.id)
-                has_contradictions = any(
-                    r.get("relationship_type") == "contradicts"
-                    for r in relationships
-                )
-                contradiction_score = 0.0 if has_contradictions else 0.1
-            except Exception as e:
-                logger.debug(f"Failed to check contradictions for memory {memory.id}: {e}")
-                contradiction_score = 0.05  # Neutral if we can't check
+            contradiction_score = 0.1  # Assume no contradictions
 
             # Calculate total
             trust_score = source_score + verification_score + access_score + age_score + contradiction_score

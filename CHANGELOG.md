@@ -113,8 +113,11 @@ A pre-commit hook enforces CHANGELOG updates:
   - Removed files: `relationship_detector.py`, `consolidation_engine.py`, `consolidation_jobs.py`
   - Removed CLI commands: `verify`, `consolidate`
   - Removed dashboard API: `/api/relationships` endpoint and graph generation
+  - Removed dashboard UI: relationship graph visualization section and vis.js dependency
   - Removed models: `RelationshipType`, `MemoryRelationship` from `core/models.py`
   - Removed SQLite table: `memory_relationships` and associated indices
+  - Cleaned up `trust_signals.py`: removed `get_relationships()` calls, assume no contradictions
+  - Skipped 3 integration tests that depended on relationship detection
   - Reason: Feature had zero user exposure (not in MCP/main API), limited actionability for code relationships
 
 ### Changed - 2025-11-20
