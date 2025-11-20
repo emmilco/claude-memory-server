@@ -315,7 +315,7 @@ class TestScoreBreakdown:
         assert hasattr(score, "has_error_handling")
 
     def test_score_calculation_formula(self, scorer):
-        """Final score is sum of components (capped at 1.0)."""
+        """Final score is sum of weighted components divided by baseline max (1.2)."""
         code_unit = {
             "name": "func",
             "content": "def func(): return 1",
@@ -325,9 +325,10 @@ class TestScoreBreakdown:
         }
         score = scorer.calculate_importance(code_unit)
 
-        # Manual calculation (without weights, since weights are 1.0)
-        expected = score.complexity_score + score.usage_boost + score.criticality_boost
-        expected = min(1.0, expected)
+        # Manual calculation with new normalization formula
+        # With default weights (1.0, 1.0, 1.0), raw score is summed then divided by 1.2
+        raw_score = score.complexity_score + score.usage_boost + score.criticality_boost
+        expected = min(1.0, raw_score / 1.2)  # Normalize by baseline max
 
         assert abs(score.importance - expected) < 0.01  # Allow small floating point error
 
@@ -456,3 +457,88 @@ class TestFilesystemIntegration:
 
         score = scorer.calculate_importance(code_unit, file_content=file_content)
         assert score.is_exported is True
+
+
+class TestEntryPointDetection:
+    """Tests for entry point file detection."""
+
+    def test_entry_point_boost(self, scorer):
+        """Entry point files receive usage boost."""
+        code_unit = {
+            "name": "handler",
+            "content": "def handler(): pass",
+            "signature": "def handler():",
+            "unit_type": "function",
+            "language": "python",
+        }
+
+        # Non-entry point file
+        score1 = scorer.calculate_importance(code_unit, file_path=Path("src/utils/helpers.py"))
+
+        # Entry point file (api directory)
+        score2 = scorer.calculate_importance(code_unit, file_path=Path("src/api/handlers.py"))
+
+        # Entry point should have higher score
+        assert score2.is_entry_point
+        assert not score1.is_entry_point
+        assert score2.usage_boost > score1.usage_boost
+        assert score2.importance > score1.importance
+
+
+class TestScoringPresets:
+    """Tests for scoring presets."""
+
+    def test_from_preset_balanced(self):
+        """Balanced preset creates scorer with equal weights."""
+        scorer = ImportanceScorer.from_preset("balanced")
+        assert scorer.complexity_weight == 1.0
+        assert scorer.usage_weight == 1.0
+        assert scorer.criticality_weight == 1.0
+
+    def test_from_preset_security(self):
+        """Security preset emphasizes criticality."""
+        scorer = ImportanceScorer.from_preset("security")
+        assert scorer.complexity_weight == 0.8
+        assert scorer.usage_weight == 0.5
+        assert scorer.criticality_weight == 2.0
+
+    def test_from_preset_complexity(self):
+        """Complexity preset emphasizes code complexity."""
+        scorer = ImportanceScorer.from_preset("complexity")
+        assert scorer.complexity_weight == 2.0
+        assert scorer.usage_weight == 0.5
+        assert scorer.criticality_weight == 0.8
+
+    def test_from_preset_api(self):
+        """API preset emphasizes usage patterns."""
+        scorer = ImportanceScorer.from_preset("api")
+        assert scorer.complexity_weight == 1.0
+        assert scorer.usage_weight == 2.0
+        assert scorer.criticality_weight == 1.0
+
+    def test_from_preset_unknown(self):
+        """Unknown preset raises ValueError."""
+        with pytest.raises(ValueError, match="Unknown preset"):
+            ImportanceScorer.from_preset("nonexistent")
+
+    def test_preset_affects_scoring(self):
+        """Security preset increases scores for security functions."""
+        security_func = {
+            "name": "authenticate",
+            "content": "def authenticate(password): return validate(password)",
+            "signature": "def authenticate(password):",
+            "unit_type": "function",
+            "language": "python",
+        }
+
+        # Compare balanced vs security preset
+        balanced = ImportanceScorer.from_preset("balanced")
+        security = ImportanceScorer.from_preset("security")
+
+        score_balanced = balanced.calculate_importance(security_func, file_path=Path("src/auth.py"))
+        score_security = security.calculate_importance(security_func, file_path=Path("src/auth.py"))
+
+        # Security preset should increase score for functions with security keywords
+        # (if the function has any criticality boost)
+        if score_balanced.criticality_boost > 0:
+            assert score_security.importance > score_balanced.importance

@@ -5,10 +5,12 @@ Analyzes usage patterns including:
 - Call graph centrality (number of callers)
 - Public vs private API status
 - Export status (explicitly exported vs internal)
+- Entry point detection (main files, API files, __init__)
 """
 
 import re
 import logging
+from pathlib import Path
 from typing import Dict, Any, List, Optional, Set
 from dataclasses import dataclass
 
@@ -22,6 +24,7 @@ class UsageMetrics:
     caller_count: int
     is_public: bool
     is_exported: bool
+    is_entry_point: bool  # In entry point file (main, api, __init__)
     usage_boost: float  # Boost to add to base score (0.0-0.2)
 
 
@@ -44,6 +47,7 @@ class UsageAnalyzer:
         code_unit: Dict[str, Any],
         all_units: Optional[List[Dict[str, Any]]] = None,
         file_content: Optional[str] = None,
+        file_path: Optional[Path] = None,
     ) -> UsageMetrics:
         """
         Analyze usage patterns of a code unit.
@@ -56,6 +60,7 @@ class UsageAnalyzer:
                 - language: Programming language
             all_units: List of all code units in the file (for call graph)
             file_content: Full file content (for export detection)
+            file_path: Path to the file (for entry point detection)
 
         Returns:
             UsageMetrics with calculated metrics and boost
@@ -73,14 +78,16 @@ class UsageAnalyzer:
         caller_count = self._count_callers(name)
         is_public = self._is_public_api(name, unit_type, language)
         is_exported = self._is_exported(name, file_content, language)
+        is_entry_point = self._is_entry_point(file_path)
 
         # Calculate usage boost
-        boost = self._calculate_usage_boost(caller_count, is_public, is_exported)
+        boost = self._calculate_usage_boost(caller_count, is_public, is_exported, is_entry_point)
 
         return UsageMetrics(
             caller_count=caller_count,
             is_public=is_public,
             is_exported=is_exported,
+            is_entry_point=is_entry_point,
             usage_boost=boost,
         )
 
@@ -223,39 +230,77 @@ class UsageAnalyzer:
             # Default: assume not exported unless we can detect it
             return False
 
+    def _is_entry_point(self, file_path: Optional[Path]) -> bool:
+        """
+        Determine if code is in an entry point file.
+
+        Entry point files:
+        - __init__.py (package initialization)
+        - main.py, app.py, api.py (application entry points)
+        - Files in 'api', 'core', 'routes' directories
+
+        Args:
+            file_path: Path to the file containing this code unit
+
+        Returns:
+            True if in an entry point file, False otherwise
+        """
+        if not file_path:
+            return False
+
+        filename = file_path.name.lower()
+        path_parts = [p.lower() for p in file_path.parts]
+
+        # Entry point filenames
+        entry_point_files = ['__init__.py', 'main.py', 'app.py', 'api.py', 'server.py', 'cli.py']
+        if filename in entry_point_files:
+            return True
+
+        # Entry point directories
+        entry_point_dirs = ['api', 'core', 'routes', 'endpoints', 'handlers']
+        if any(dir_name in path_parts for dir_name in entry_point_dirs):
+            return True
+
+        return False
+
     def _calculate_usage_boost(
-        self, caller_count: int, is_public: bool, is_exported: bool
+        self, caller_count: int, is_public: bool, is_exported: bool, is_entry_point: bool
     ) -> float:
         """
         Calculate usage boost (0.0-0.2 range).
 
         Formula:
-        - Caller count: 0-10+ callers = 0.0-0.12 boost
-        - Public API: +0.04 boost
-        - Explicitly exported: +0.04 boost
+        - Caller count: 0-10+ callers = 0.0-0.10 boost
+        - Public API: +0.03 boost
+        - Explicitly exported: +0.03 boost
+        - Entry point file: +0.04 boost
         """
         boost = 0.0
 
-        # Caller count boost (0.0-0.12)
+        # Caller count boost (0.0-0.10, reduced from 0.12 to make room for entry point)
         if caller_count >= self.HIGH_USAGE_THRESHOLD:
-            boost += 0.12
+            boost += 0.10
         elif caller_count >= self.MEDIUM_USAGE_THRESHOLD:
-            # Scale from 0.04 to 0.12
+            # Scale from 0.03 to 0.10
             ratio = (caller_count - self.MEDIUM_USAGE_THRESHOLD) / (
                 self.HIGH_USAGE_THRESHOLD - self.MEDIUM_USAGE_THRESHOLD
             )
-            boost += 0.04 + (ratio * 0.08)
+            boost += 0.03 + (ratio * 0.07)
         elif caller_count > 0:
-            # Scale from 0.0 to 0.04
+            # Scale from 0.0 to 0.03
             ratio = caller_count / self.MEDIUM_USAGE_THRESHOLD
-            boost += ratio * 0.04
+            boost += ratio * 0.03
 
         # Public API boost
         if is_public:
-            boost += 0.04
+            boost += 0.03
 
         # Export boost
         if is_exported:
+            boost += 0.03
+
+        # Entry point boost (new!)
+        if is_entry_point:
             boost += 0.04
 
         return min(boost, self.MAX_USAGE_BOOST)
