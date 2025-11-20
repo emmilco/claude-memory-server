@@ -56,7 +56,7 @@ class MemoryRAGServer:
     Features:
     - Memory storage and retrieval with vector search
     - Context-level stratification (USER_PREFERENCE, PROJECT_CONTEXT, SESSION_STATE)
-    - Qdrant or SQLite backend
+    - Qdrant vector store backend
     - Embedding caching
     - Read-only mode support
     - Project detection from git
@@ -176,9 +176,9 @@ class MemoryRAGServer:
             self.pruner = MemoryPruner(self.config, self.store)
 
             # Initialize performance monitoring (FEAT-022) - Must be before scheduler
-            # Determine monitoring database path (same directory as sqlite memory db)
-            sqlite_dir = os.path.dirname(os.path.expanduser(self.config.sqlite_path))
-            monitoring_db_path = os.path.join(sqlite_dir, "monitoring.db")
+            # Determine monitoring database path (in the standard config directory)
+            config_dir = os.path.dirname(os.path.expanduser(self.config.embedding_cache_path))
+            monitoring_db_path = os.path.join(config_dir, "monitoring.db")
 
             self.metrics_collector = MetricsCollector(
                 db_path=monitoring_db_path,
@@ -1788,28 +1788,22 @@ class MemoryRAGServer:
             # Get memories without project (global memories)
             try:
                 # Count global memories (those without project_name)
-                if hasattr(self.store, 'conn'):  # SQLite backend
-                    cursor = self.store.conn.execute(
-                        "SELECT COUNT(*) FROM memories WHERE project_name IS NULL"
-                    )
-                    global_count = cursor.fetchone()[0]
-                else:  # Qdrant backend - count memories without project_name
-                    from qdrant_client.models import Filter, FieldCondition, IsNullCondition
+                from qdrant_client.models import Filter, FieldCondition, IsNullCondition
 
-                    # Count memories where project_name is null or empty
-                    count_result = await self.store.client.count(
-                        collection_name=self.store.collection_name,
-                        count_filter=Filter(
-                            should=[
-                                FieldCondition(
-                                    key="project_name",
-                                    match=IsNullCondition()
-                                ),
-                            ]
-                        ),
-                        exact=True,
-                    )
-                    global_count = count_result.count
+                # Count memories where project_name is null or empty
+                count_result = await self.store.client.count(
+                    collection_name=self.store.collection_name,
+                    count_filter=Filter(
+                        should=[
+                            FieldCondition(
+                                key="project_name",
+                                match=IsNullCondition()
+                            ),
+                        ]
+                    ),
+                    exact=True,
+                )
+                global_count = count_result.count
             except Exception as e:
                 logger.debug(f"Could not count global memories: {e}")
                 global_count = 0
@@ -2992,27 +2986,9 @@ class MemoryRAGServer:
 
                 # Delete all CODE memories for this project
                 # Code units are stored with category="context", scope="project"
-                if hasattr(self.store, 'conn'):
-                    # SQLite store
-                    cursor = self.store.conn.cursor()
-                    cursor.execute("""
-                        SELECT id FROM memories
-                        WHERE project_name = ? AND category = ? AND scope = ?
-                    """, (project_name, "context", "project"))
-
-                    memory_ids = [row[0] for row in cursor.fetchall()]
-                    units_deleted = len(memory_ids)
-
-                    # Delete in batches
-                    for memory_id in memory_ids:
-                        await self.store.delete(memory_id)
-
-                    logger.info(f"Deleted {units_deleted} existing code units for {project_name}")
-                else:
-                    # Qdrant or other store - use query-based deletion
-                    # For now, log a warning
-                    logger.warning("Clear existing index not yet supported for this store type")
-                    units_deleted = 0
+                # TODO: Implement query-based deletion for Qdrant
+                logger.warning("Clear existing index not yet fully supported for Qdrant store")
+                units_deleted = 0
 
             # Step 2: Clear embedding cache if requested
             if bypass_cache and self.embedding_cache:
@@ -3477,7 +3453,7 @@ class MemoryRAGServer:
             if until:
                 until_dt = self._parse_date_filter(until)
 
-            # Search commits in SQLite store
+            # Search commits in vector store
             commits = await self.store.search_git_commits(
                 query=query,
                 repository_path=None,  # TODO: Map project_name to repo_path

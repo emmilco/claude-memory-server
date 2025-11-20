@@ -208,9 +208,8 @@ class DockerNotRunningError(MemoryRAGError):
         solution = (
             f"Start Docker:\n\n"
             f"  {start_cmd}\n\n"
-            f"Or use SQLite instead:\n\n"
-            f"  Add {{\"storage_backend\": \"sqlite\"}} to ~/.claude-rag/config.json\n"
-            f"  # The system will automatically fall back to SQLite"
+            f"Then start Qdrant:\n\n"
+            f"  docker-compose up -d"
         )
         docs_url = "See docs/SETUP.md for Docker setup instructions"
 

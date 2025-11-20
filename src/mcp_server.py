@@ -532,12 +532,12 @@ async def _startup_health_check(config, memory_server) -> bool:
         # Check 1: Storage backend connectivity
         logger.info(f"✓ Checking {config.storage_backend} connectivity...")
         try:
-            # Test a simple operation
-            await memory_server.store.get_stats()
+            # Test a simple operation - get all projects
+            await memory_server.store.get_all_projects()
             logger.info(f"✓ {config.storage_backend.upper()} connection successful")
         except Exception as e:
             logger.error(f"✗ {config.storage_backend.upper()} connection failed: {e}")
-            logger.error("  → Try: docker-compose up -d (for Qdrant) or check SQLite path")
+            logger.error("  → Try: docker-compose up -d")
             return False
 
         # Check 2: Embedding model

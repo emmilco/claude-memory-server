@@ -15,12 +15,11 @@ class ServerConfig(BaseSettings):
     server_name: str = "claude-memory-rag"
     log_level: str = "INFO"
 
-    # Storage backend selection (Qdrant required for semantic code search)
-    storage_backend: Literal["sqlite", "qdrant"] = "qdrant"
+    # Storage backend (Qdrant required for semantic code search)
+    storage_backend: Literal["qdrant"] = "qdrant"
     qdrant_url: str = "http://localhost:6333"
     qdrant_api_key: Optional[str] = None
     qdrant_collection_name: str = "memory"
-    sqlite_path: str = "~/.claude-rag/memory.db"  # Deprecated: SQLite no longer supported for code search
 
     # Performance tuning
     embedding_batch_size: int = 32
@@ -239,13 +238,6 @@ class ServerConfig(BaseSettings):
     def get_expanded_path(self, path: str) -> Path:
         """Expand ~ and environment variables in path."""
         return Path(os.path.expanduser(os.path.expandvars(path)))
-
-    @property
-    def sqlite_path_expanded(self) -> Path:
-        """Get expanded SQLite path."""
-        path = self.get_expanded_path(self.sqlite_path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        return path
 
     @property
     def embedding_cache_path_expanded(self) -> Path:
