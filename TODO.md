@@ -1,5 +1,66 @@
 # TODO
 
+## 🚨 CRITICAL BUGS FOUND IN E2E TESTING (2025-11-20)
+
+### BUG-015: Health Check False Negative for Qdrant ⚠️ HIGH
+**Component:** `src/cli/health_command.py:143`
+**Issue:** Health check reports Qdrant as unreachable even when functional
+**Root Cause:** Using wrong endpoint `/health` instead of `/`
+**Impact:** Misleading error messages, conflicts with validate-install
+**Fix:** Change endpoint check from `/health` to `/` with JSON validation
+
+### BUG-016: list_memories Returns Incorrect Total Count ⚠️ MEDIUM
+**Component:** Memory management API
+**Issue:** `list_memories()` returns `total: 0` when memories exist in results array
+**Impact:** Breaks pagination, incorrect analytics
+**Fix:** Update method to properly count and return total
+
+### BUG-017: Documentation Claims Incorrect API Parameter Names ⚠️ MEDIUM
+**Component:** Documentation (README.md, API.md)
+**Issue:** Examples use wrong parameter names:
+  - `index_codebase(path=...)` should be `directory_path=...`
+  - `opt_in_project()` should be `opt_in_cross_project()`
+  - `get_stats()` should be `get_status()`
+**Impact:** Documentation examples fail when copy-pasted
+**Fix:** Audit and update all documentation examples
+
+### BUG-018: Memory Retrieval Not Finding Recently Stored Memories ⚠️ HIGH
+**Component:** Semantic search / memory retrieval
+**Issue:** Memories stored via `store_memory()` not immediately retrievable via `retrieve_memories()`
+**Impact:** Core functionality appears broken, poor user experience
+**Investigation Required:** Check embedding timing, vector store indexing delay, similarity threshold
+
+### BUG-019: Docker Container Shows "Unhealthy" Despite Working ⚠️ LOW
+**Component:** `docker-compose.yml` healthcheck
+**Issue:** `docker ps` shows Qdrant as "(unhealthy)" even though fully functional
+**Impact:** User confusion, unnecessary container restarts
+**Fix:** Update Docker healthcheck configuration
+
+### BUG-020: Inconsistent Return Value Structures ⚠️ MEDIUM
+**Component:** API design consistency
+**Issue:** Different methods use different success indicators:
+  - `delete_memory`: `{"status": "success"}`
+  - Expected by tests: `{"success": true}`
+**Impact:** Confusing API, error-prone client code
+**Recommendation:** Standardize on consistent return structure
+
+### BUG-021: PHP Parser Initialization Warning ⚠️ LOW
+**Component:** `src/memory/python_parser.py`
+**Issue:** Warning: "Failed to initialize php parser: module 'tree_sitter_php' has no attribute 'language'"
+**Impact:** PHP files cannot be indexed, log noise
+**Investigation Required:** Check tree-sitter-php installation and API version
+
+### BUG-022: Code Indexer Extracts Zero Semantic Units ⚠️ HIGH
+**Component:** Code indexing / parsing
+**Issue:** `index_codebase()` successfully indexes 11 files but extracts 0 semantic units
+**Impact:** Code search returns no meaningful results, semantic analysis broken
+**Expected:** Should extract functions, classes, methods from Python files
+**Investigation Required:** Check parser configuration, semantic unit extraction logic
+
+**Full E2E Test Report:** See `E2E_TEST_REPORT.md` for detailed findings
+
+---
+
 ## ID System
 Each item has a unique ID for tracking and association with planning documents in `planning_docs/`.
 Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
