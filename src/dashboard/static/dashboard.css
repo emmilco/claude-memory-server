@@ -283,6 +283,123 @@ header h1 {
     font-style: italic;
 }
 
+/* Insights Widget Styles (UX-041) */
+.insights-card {
+    border-left: 4px solid var(--accent-color);
+}
+
+.insights-container {
+    display: grid;
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.insight-item {
+    padding: 16px 20px;
+    border-radius: 8px;
+    border-left: 4px solid;
+    background: var(--bg-color);
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    transition: all 0.2s ease;
+}
+
+.insight-item:hover {
+    transform: translateX(4px);
+    box-shadow: var(--shadow);
+}
+
+.insight-item.critical {
+    border-color: #f44336;
+    background: rgba(244, 67, 54, 0.05);
+}
+
+.insight-item.warning {
+    border-color: var(--warning-color);
+    background: rgba(255, 152, 0, 0.05);
+}
+
+.insight-item.info {
+    border-color: var(--accent-color);
+    background: rgba(33, 150, 243, 0.05);
+}
+
+.insight-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.insight-content {
+    flex: 1;
+}
+
+.insight-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+}
+
+.insight-message {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    line-height: 1.5;
+}
+
+.insight-action {
+    font-size: 0.85rem;
+    color: var(--accent-color);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.insight-action::before {
+    content: "→";
+    font-weight: bold;
+}
+
+.insight-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.insight-badge.performance {
+    background: rgba(33, 150, 243, 0.2);
+    color: var(--accent-color);
+}
+
+.insight-badge.maintenance {
+    background: rgba(255, 152, 0, 0.2);
+    color: var(--warning-color);
+}
+
+.insight-badge.usage {
+    background: rgba(76, 175, 80, 0.2);
+    color: var(--success-color);
+}
+
+.insight-badge.health {
+    background: rgba(156, 39, 176, 0.2);
+    color: #9c27b0;
+}
+
+.no-insights {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
 .list {
     margin-top: 16px;
 }

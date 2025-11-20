@@ -48,6 +48,8 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             self._handle_api_activity(parsed_path.query)
         elif parsed_path.path == "/api/health":
             self._handle_api_health()
+        elif parsed_path.path == "/api/insights":
+            self._handle_api_insights()
         else:
             # Serve static files
             super().do_GET()
@@ -134,6 +136,128 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         except Exception as e:
             logger.error(f"Error handling /api/health: {e}")
             self._send_error_response(500, str(e))
+
+    def _handle_api_insights(self):
+        """Handle /api/insights endpoint - returns automated insights and recommendations."""
+        try:
+            if not self.rag_server or not self.event_loop:
+                self._send_error_response(500, "Server not initialized")
+                return
+
+            # Get stats and health data for insight generation
+            stats_future = asyncio.run_coroutine_threadsafe(
+                self.rag_server.get_dashboard_stats(),
+                self.event_loop
+            )
+            health_future = asyncio.run_coroutine_threadsafe(
+                self.rag_server.get_health_score(),
+                self.event_loop
+            )
+
+            stats_data = stats_future.result(timeout=10)
+            health_data = health_future.result(timeout=10)
+
+            # Generate insights based on data patterns
+            insights = self._generate_insights(stats_data, health_data)
+
+            self._send_json_response({"insights": insights})
+        except Exception as e:
+            logger.error(f"Error handling /api/insights: {e}")
+            self._send_error_response(500, str(e))
+
+    def _generate_insights(self, stats: dict, health: dict) -> list:
+        """Generate automated insights based on system data."""
+        insights = []
+
+        # Get metrics
+        metrics = health.get("metrics", {})
+        cache_hit_rate = metrics.get("cache_hit_rate", 0)
+        search_latency_p95 = metrics.get("search_latency_p95_ms", 0)
+
+        # Insight 1: Cache performance
+        if cache_hit_rate < 0.7:
+            insights.append({
+                "type": "performance",
+                "severity": "WARNING",
+                "title": "Low Cache Hit Rate",
+                "message": f"Cache hit rate at {cache_hit_rate * 100:.1f}% (target: 80%)",
+                "action": "Consider increasing cache size or reviewing indexing patterns",
+                "priority": 2
+            })
+        elif cache_hit_rate >= 0.9:
+            insights.append({
+                "type": "performance",
+                "severity": "INFO",
+                "title": "Excellent Cache Performance",
+                "message": f"Cache hit rate at {cache_hit_rate * 100:.1f}% - optimal performance",
+                "action": None,
+                "priority": 5
+            })
+
+        # Insight 2: Search latency
+        if search_latency_p95 > 50:
+            insights.append({
+                "type": "performance",
+                "severity": "WARNING",
+                "title": "High Search Latency",
+                "message": f"P95 search latency at {search_latency_p95:.2f}ms (target: <50ms)",
+                "action": "Review index size, consider optimization",
+                "priority": 2
+            })
+
+        # Insight 3: Stale projects
+        projects = stats.get("projects", [])
+        stale_projects = [p for p in projects if p.get("needs_reindex", False)]
+        if stale_projects:
+            insights.append({
+                "type": "maintenance",
+                "severity": "WARNING",
+                "title": "Stale Projects Detected",
+                "message": f"{len(stale_projects)} project(s) need reindexing",
+                "action": f"Reindex: {', '.join([p['name'] for p in stale_projects[:3]])}",
+                "priority": 3
+            })
+
+        # Insight 4: Project distribution
+        total_memories = stats.get("total_memories", 0)
+        num_projects = stats.get("num_projects", 0)
+        if num_projects > 0:
+            avg_memories_per_project = total_memories / num_projects
+            if avg_memories_per_project < 10:
+                insights.append({
+                    "type": "usage",
+                    "severity": "INFO",
+                    "title": "Low Memory Density",
+                    "message": f"Average {avg_memories_per_project:.1f} memories per project",
+                    "action": "Consider consolidating small projects or adding more memories",
+                    "priority": 4
+                })
+
+        # Insight 5: Overall health
+        health_score = health.get("overall_score", 0)
+        if health_score >= 95:
+            insights.append({
+                "type": "health",
+                "severity": "INFO",
+                "title": "System Running Optimally",
+                "message": f"Health score: {health_score}/100 - all systems nominal",
+                "action": None,
+                "priority": 6
+            })
+        elif health_score < 70:
+            insights.append({
+                "type": "health",
+                "severity": "CRITICAL",
+                "title": "System Health Critical",
+                "message": f"Health score: {health_score}/100 - immediate attention required",
+                "action": "Check alerts and run diagnostics",
+                "priority": 1
+            })
+
+        # Sort by priority (lower number = higher priority)
+        insights.sort(key=lambda x: x["priority"])
+
+        return insights
 
     def _send_json_response(self, data: dict):
         """Send JSON response."""

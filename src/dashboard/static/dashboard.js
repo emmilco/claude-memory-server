@@ -593,6 +593,64 @@ function updateHealthAlerts(alerts) {
 }
 
 /**
+ * Load insights and recommendations (UX-041)
+ */
+async function loadInsights() {
+    try {
+        const data = await fetchWithRetry(`${API_BASE}/api/insights`);
+        updateInsights(data.insights || []);
+    } catch (error) {
+        console.error('Error loading insights:', error);
+        showToast(`Failed to load insights: ${error.message}`, 'error');
+
+        // Show error state
+        document.getElementById('insights-list').innerHTML =
+            '<p class="loading" style="color: var(--warning-color);">Failed to load insights</p>';
+    }
+}
+
+/**
+ * Update insights display
+ */
+function updateInsights(insights) {
+    const container = document.getElementById('insights-list');
+
+    if (!insights || insights.length === 0) {
+        container.innerHTML = '<p class="no-insights">✨ No insights available - system running smoothly</p>';
+        return;
+    }
+
+    const insightsHTML = insights.map(insight => {
+        const severityClass = insight.severity.toLowerCase();
+        const icon = {
+            CRITICAL: '🔴',
+            WARNING: '⚠️',
+            INFO: '💡'
+        }[insight.severity] || '💡';
+
+        const actionHTML = insight.action
+            ? `<div class="insight-action">${escapeHtml(insight.action)}</div>`
+            : '';
+
+        return `
+            <div class="insight-item ${severityClass}">
+                <span class="insight-icon">${icon}</span>
+                <div class="insight-content">
+                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px;">
+                        <div class="insight-title">${escapeHtml(insight.title)}</div>
+                        <span class="insight-badge ${insight.type}">${insight.type}</span>
+                    </div>
+                    <div class="insight-message">${escapeHtml(insight.message)}</div>
+                    ${actionHTML}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    container.innerHTML = insightsHTML;
+}
+
+/**
  * Main function to load all dashboard data
  */
 async function loadData() {
@@ -607,7 +665,8 @@ async function loadData() {
         await Promise.all([
             loadDashboardStats(),
             loadRecentActivity(),
-            loadHealthData()
+            loadHealthData(),
+            loadInsights()
         ]);
     } catch (error) {
         console.error('Error loading dashboard data:', error);
