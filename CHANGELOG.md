@@ -82,6 +82,26 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ## [Unreleased]
 
+### Fixed - 2025-11-20
+
+- **Parallel Embedding Generation Fork Crashes**
+  - Fixed "child process terminated abruptly" errors during parallel indexing
+  - Changed multiprocessing method from 'fork' to 'spawn' to prevent tokenizers conflicts
+  - Added explicit tokenizers.set_parallelism(False) in worker processes
+  - Result: 100% indexing success rate (was 91% with 51 failures)
+  - Modified: `src/embeddings/parallel_generator.py`
+
+### Removed - 2025-11-20
+
+- **Memory Relationship Functionality Removal**
+  - Removed relationship detection and graph visualization features
+  - Removed files: `relationship_detector.py`, `consolidation_engine.py`, `consolidation_jobs.py`
+  - Removed CLI commands: `verify`, `consolidate`
+  - Removed dashboard API: `/api/relationships` endpoint and graph generation
+  - Removed models: `RelationshipType`, `MemoryRelationship` from `core/models.py`
+  - Removed SQLite table: `memory_relationships` and associated indices
+  - Reason: Feature had zero user exposure (not in MCP/main API), limited actionability for code relationships
+
 ### Changed - 2025-11-20
 
 - **DOC-009: Complete Documentation Audit & Accuracy Updates**

@@ -14,17 +14,21 @@ from src.embeddings.cache import EmbeddingCache
 
 logger = logging.getLogger(__name__)
 
-# Set multiprocessing start method to 'fork' on Unix systems (faster and avoids pickling issues)
+# Set multiprocessing start method to 'spawn' to avoid fork issues with transformers/tokenizers
+# 'spawn' creates fresh processes without copying memory, preventing tokenizers fork conflicts
 # This must be done before creating any processes
 if hasattr(multiprocessing, 'set_start_method'):
     try:
         # Only set if not already set
         current_method = multiprocessing.get_start_method(allow_none=True)
         if current_method is None:
-            multiprocessing.set_start_method('fork', force=False)
-            logger.info("Set multiprocessing start method to 'fork'")
-        elif current_method != 'fork':
-            logger.warning(f"Multiprocessing start method is '{current_method}', not 'fork'. May cause issues on macOS.")
+            multiprocessing.set_start_method('spawn', force=False)
+            logger.info("Set multiprocessing start method to 'spawn' (safe for transformers)")
+        elif current_method == 'fork':
+            logger.warning(
+                f"Multiprocessing start method is 'fork'. This may cause issues with "
+                f"tokenizers library. Consider using 'spawn' instead."
+            )
     except RuntimeError as e:
         logger.debug(f"Could not set multiprocessing start method: {e}")
 
@@ -51,6 +55,15 @@ def _load_model_in_worker(model_name: str) -> Any:
             import torch
             from sentence_transformers import SentenceTransformer
             from src.embeddings.rust_bridge import RustBridge
+
+            # Disable tokenizers parallelism in worker to prevent conflicts
+            # This is the proper way to disable it via the API
+            try:
+                import tokenizers
+                tokenizers.set_parallelism(False)
+            except (ImportError, AttributeError):
+                # tokenizers may not be available or may not have this method
+                pass
 
             logger.info(f"Worker {os.getpid()}: Loading model {model_name}")
 
