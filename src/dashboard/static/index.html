@@ -61,6 +61,13 @@
                 </select>
                 <button id="clear-filters" class="btn-secondary" data-tippy-content="Clear all active filters and show everything. Press 'c' to clear.">Clear Filters</button>
             </div>
+            <div class="time-range-buttons">
+                <button class="time-btn" data-range="1h" data-tippy-content="Show last hour">1H</button>
+                <button class="time-btn" data-range="24h" data-tippy-content="Show last 24 hours">Today</button>
+                <button class="time-btn" data-range="7d" data-tippy-content="Show last 7 days">7D</button>
+                <button class="time-btn" data-range="30d" data-tippy-content="Show last 30 days">30D</button>
+                <button class="time-btn active" data-range="" data-tippy-content="Show all time">All</button>
+            </div>
             <div id="filter-badge" class="filter-badge" style="display: none;"></div>
         </section>
 

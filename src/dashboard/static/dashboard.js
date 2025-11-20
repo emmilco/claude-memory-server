@@ -27,6 +27,7 @@ let originalData = {
 document.addEventListener('DOMContentLoaded', () => {
     initializeTheme();
     initializeFilters();
+    initializeTimeRange();
     initializeKeyboardShortcuts();
     initializeOfflineDetection();
     initializeTooltips();
@@ -400,6 +401,54 @@ function initializeOfflineDetection() {
 
     window.addEventListener('offline', () => {
         showToast('You are offline. Some features may not work.', 'warning');
+    });
+}
+
+/**
+ * Initialize time range buttons
+ */
+function initializeTimeRange() {
+    // Load saved time range from localStorage
+    const savedRange = localStorage.getItem('dashboard-time-range') || '';
+
+    // Set active button
+    document.querySelectorAll('.time-btn').forEach(btn => {
+        const range = btn.getAttribute('data-range');
+        if (range === savedRange) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+
+    // Sync with dropdown
+    const dropdown = document.getElementById('filter-date-range');
+    if (dropdown) {
+        dropdown.value = savedRange;
+    }
+
+    // Add click handlers to time range buttons
+    document.querySelectorAll('.time-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const range = btn.getAttribute('data-range');
+
+            // Update button states
+            document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            // Update dropdown
+            const dropdown = document.getElementById('filter-date-range');
+            if (dropdown) {
+                dropdown.value = range;
+            }
+
+            // Update filter and save to localStorage
+            filters.dateRange = range;
+            localStorage.setItem('dashboard-time-range', range);
+
+            // Apply filters
+            applyFilters();
+        });
     });
 }
 
