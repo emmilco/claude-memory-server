@@ -166,6 +166,21 @@ class MemoryRAGServer:
             # Initialize pruner
             self.pruner = MemoryPruner(self.config, self.store)
 
+            # Initialize performance monitoring (FEAT-022) - Must be before scheduler
+            # Determine monitoring database path (same directory as sqlite memory db)
+            sqlite_dir = os.path.dirname(os.path.expanduser(self.config.sqlite_path))
+            monitoring_db_path = os.path.join(sqlite_dir, "monitoring.db")
+
+            self.metrics_collector = MetricsCollector(
+                db_path=monitoring_db_path,
+                store=self.store
+            )
+            self.alert_engine = AlertEngine(db_path=monitoring_db_path)
+            self.health_reporter = HealthReporter()
+            self.capacity_planner = CapacityPlanner(self.metrics_collector)
+
+            logger.info(f"Performance monitoring enabled (metrics DB: {monitoring_db_path})")
+
             # Initialize background scheduler for auto-pruning
             if self.config.enable_auto_pruning:
                 await self._start_pruning_scheduler()
@@ -244,20 +259,15 @@ class MemoryRAGServer:
                 self.suggestion_engine = None
                 logger.info("Proactive suggestions disabled")
 
-            # Initialize performance monitoring (FEAT-022)
-            # Determine monitoring database path (same directory as sqlite memory db)
-            sqlite_dir = os.path.dirname(os.path.expanduser(self.config.sqlite_path))
-            monitoring_db_path = os.path.join(sqlite_dir, "monitoring.db")
-
-            self.metrics_collector = MetricsCollector(
-                db_path=monitoring_db_path,
-                store=self.store
-            )
-            self.alert_engine = AlertEngine(db_path=monitoring_db_path)
-            self.health_reporter = HealthReporter()
-            self.capacity_planner = CapacityPlanner(self.metrics_collector)
-
-            logger.info(f"Performance monitoring enabled (metrics DB: {monitoring_db_path})")
+            # Collect initial metrics snapshot
+            if self.metrics_collector:
+                try:
+                    initial_metrics = await self.metrics_collector.collect_metrics()
+                    initial_metrics.health_score = self._calculate_simple_health_score(initial_metrics)
+                    self.metrics_collector.store_metrics(initial_metrics)
+                    logger.info(f"Initial metrics snapshot collected (health: {initial_metrics.health_score}/100)")
+                except Exception as e:
+                    logger.warning(f"Failed to collect initial metrics: {e}")
 
             logger.info("Server initialized successfully")
 
@@ -630,6 +640,16 @@ class MemoryRAGServer:
                     query_embedding=query_embedding if self.config.enable_conversation_tracking else None,
                 )
                 logger.debug(f"Tracked {len(results_shown)} results in session {session_id}")
+
+            # Log metrics for performance monitoring
+            if self.metrics_collector:
+                avg_relevance = sum(r.score for r in memory_results) / len(memory_results) if memory_results else 0.0
+                self.metrics_collector.log_query(
+                    query=query,
+                    latency_ms=query_time_ms,
+                    result_count=len(memory_results),
+                    avg_relevance=avg_relevance
+                )
 
             return response.model_dump()
 
@@ -1762,9 +1782,23 @@ class MemoryRAGServer:
                         "SELECT COUNT(*) FROM memories WHERE project_name IS NULL"
                     )
                     global_count = cursor.fetchone()[0]
-                else:  # Qdrant backend - calculate from total minus project totals
-                    project_total = sum(p.get("total_memories", 0) for p in project_stats)
-                    global_count = total_memories - project_total
+                else:  # Qdrant backend - count memories without project_name
+                    from qdrant_client.models import Filter, FieldCondition, IsNullCondition
+
+                    # Count memories where project_name is null or empty
+                    count_result = await self.store.client.count(
+                        collection_name=self.store.collection_name,
+                        count_filter=Filter(
+                            should=[
+                                FieldCondition(
+                                    key="project_name",
+                                    match=IsNullCondition()
+                                ),
+                            ]
+                        ),
+                        exact=True,
+                    )
+                    global_count = count_result.count
             except Exception as e:
                 logger.debug(f"Could not count global memories: {e}")
                 global_count = 0
@@ -2357,6 +2391,16 @@ class MemoryRAGServer:
             actual_search_mode = search_mode
             if search_mode == "hybrid" and not self.hybrid_searcher:
                 actual_search_mode = "semantic"  # Fallback
+
+            # Log metrics for performance monitoring
+            if self.metrics_collector:
+                avg_relevance = sum(r["relevance_score"] for r in code_results) / len(code_results) if code_results else 0.0
+                self.metrics_collector.log_query(
+                    query=query,
+                    latency_ms=query_time_ms,
+                    result_count=len(code_results),
+                    avg_relevance=avg_relevance
+                )
 
             return {
                 "status": "success",
@@ -3818,6 +3862,17 @@ class MemoryRAGServer:
                 replace_existing=True,
             )
 
+            # Add metrics collection job (every hour)
+            if self.metrics_collector:
+                self.scheduler.add_job(
+                    self._collect_metrics_job,
+                    CronTrigger(minute="0"),  # Run at the top of every hour
+                    id="metrics_collection",
+                    name="Collect health metrics",
+                    replace_existing=True,
+                )
+                logger.info("Metrics collection scheduler added (hourly)")
+
             self.scheduler.start()
             logger.info("Pruning scheduler started")
 
@@ -3854,6 +3909,55 @@ class MemoryRAGServer:
 
         except Exception as e:
             logger.error(f"Auto-prune job failed: {e}", exc_info=True)
+
+    async def _collect_metrics_job(self) -> None:
+        """Background job to collect and store health metrics."""
+        try:
+            logger.info("Running metrics collection job")
+
+            if not self.metrics_collector:
+                logger.warning("Metrics collector not initialized, skipping metrics collection")
+                return
+
+            # Collect current metrics
+            metrics = await self.metrics_collector.collect_metrics()
+
+            # Calculate health score (simplified version)
+            metrics.health_score = self._calculate_simple_health_score(metrics)
+
+            # Store metrics in database
+            self.metrics_collector.store_metrics(metrics)
+
+            logger.info(
+                f"Metrics collected: {metrics.total_memories} memories, "
+                f"{metrics.avg_search_latency_ms:.2f}ms avg latency, "
+                f"health score: {metrics.health_score}/100"
+            )
+
+        except Exception as e:
+            logger.error(f"Metrics collection job failed: {e}", exc_info=True)
+
+    def _calculate_simple_health_score(self, metrics) -> int:
+        """Calculate a simple health score from metrics (0-100)."""
+        score = 100
+
+        # Deduct points for high latency
+        if metrics.avg_search_latency_ms > 50:
+            score -= min(30, int((metrics.avg_search_latency_ms - 50) / 2))
+
+        # Deduct points for low cache hit rate
+        if metrics.cache_hit_rate < 0.7:
+            score -= int((0.7 - metrics.cache_hit_rate) * 40)
+
+        # Deduct points for high noise ratio
+        if metrics.noise_ratio > 0.2:
+            score -= int((metrics.noise_ratio - 0.2) * 50)
+
+        # Deduct points for stale indexes
+        if metrics.index_staleness_ratio > 0.2:
+            score -= int((metrics.index_staleness_ratio - 0.2) * 30)
+
+        return max(0, min(100, score))
 
     async def analyze_conversation(
         self,
