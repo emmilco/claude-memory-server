@@ -76,6 +76,16 @@
 
 **Full E2E Test Report:** See `E2E_TEST_REPORT.md` for detailed findings
 
+### ~~BUG-024: Quality Score Artificially Low (Missing Query Logging)~~ ✅ FIXED
+**Component:** Health monitoring / metrics collection
+**Issue:** Health score quality component stuck at 40/100 due to missing query relevance logging
+**Root Cause:** `find_similar_code()`, `search_all_projects()`, `search_git_history()` not calling `metrics_collector.log_query()` with relevance scores
+**Impact:** Quality score calculation defaults to 0.0 for avg_relevance (60% weight), resulting in artificially low 40/100 score
+**Fix Applied:** Added query logging with relevance scores to all three methods
+**Expected Result:** Quality score should reach 60-90/100 range with normal usage
+**Modified:** `src/core/server.py` (lines 2534-2542, 2686-2694, 3455-3517)
+**Status:** ✅ Fixed (2025-11-20)
+
 ---
 
 ## ID System

@@ -2531,6 +2531,16 @@ class MemoryRAGServer:
 
             query_time_ms = (time.time() - start_time) * 1000
 
+            # Log metrics for performance monitoring
+            if self.metrics_collector:
+                avg_relevance = sum(r["similarity_score"] for r in code_results) / len(code_results) if code_results else 0.0
+                self.metrics_collector.log_query(
+                    query=f"<code_similarity:{len(code_snippet)} chars>",  # Anonymize code snippet
+                    latency_ms=query_time_ms,
+                    result_count=len(code_results),
+                    avg_relevance=avg_relevance
+                )
+
             logger.info(
                 f"Find similar code: found {len(code_results)} results "
                 f"in {query_time_ms:.2f}ms (project: {filter_project_name})"
@@ -2672,6 +2682,16 @@ class MemoryRAGServer:
                 projects_with_results[project] += 1
 
             query_time_ms = (time.time() - start_time) * 1000
+
+            # Log metrics for performance monitoring
+            if self.metrics_collector:
+                avg_relevance = sum(r["relevance_score"] for r in final_results) / len(final_results) if final_results else 0.0
+                self.metrics_collector.log_query(
+                    query=query,
+                    latency_ms=query_time_ms,
+                    result_count=len(final_results),
+                    avg_relevance=avg_relevance
+                )
 
             logger.info(
                 f"Cross-project search: '{query}' found {len(final_results)} results "
@@ -3432,6 +3452,8 @@ class MemoryRAGServer:
         try:
             from datetime import datetime, timedelta, UTC
             import re
+            import time
+            start_time = time.time()
 
             logger.info(f"Searching git history: '{query}' (project: {project_name})")
 
@@ -3483,13 +3505,25 @@ class MemoryRAGServer:
                     "stats": commit.get("stats", {}),
                 })
 
-            logger.info(f"Found {len(results)} matching commits")
+            query_time_ms = (time.time() - start_time) * 1000
+
+            # Log metrics for performance monitoring (no relevance scores for FTS search)
+            if self.metrics_collector:
+                self.metrics_collector.log_query(
+                    query=query,
+                    latency_ms=query_time_ms,
+                    result_count=len(results),
+                    avg_relevance=None  # FTS search has no semantic scores
+                )
+
+            logger.info(f"Found {len(results)} matching commits in {query_time_ms:.2f}ms")
 
             return {
                 "status": "success",
                 "query": query,
                 "results": results,
                 "count": len(results),
+                "query_time_ms": query_time_ms,
                 "filters": {
                     "project": project_name,
                     "author": author,
@@ -4543,6 +4577,64 @@ class MemoryRAGServer:
         except Exception as e:
             logger.error(f"Error calculating health score: {e}")
             raise StorageError(f"Failed to calculate health score: {str(e)}")
+
+    async def start_dashboard(self, port: int = 8080, host: str = "localhost") -> Dict[str, Any]:
+        """
+        Start the web dashboard server for visual monitoring and analytics.
+
+        **Use when:** Need visual interface for monitoring system health, metrics, and analytics.
+        Starts the dashboard in a background process.
+
+        Args:
+            port: Port to run dashboard on (default: 8080)
+            host: Host to bind to (default: localhost)
+
+        Returns:
+            Dict with url, pid, and status
+        """
+        try:
+            import subprocess
+            import sys
+            from pathlib import Path
+
+            # Get the path to the dashboard server module
+            dashboard_path = Path(__file__).parent.parent / "dashboard" / "web_server.py"
+
+            if not dashboard_path.exists():
+                raise ValueError(f"Dashboard server not found at {dashboard_path}")
+
+            # Start the dashboard in a background process
+            process = subprocess.Popen(
+                [sys.executable, str(dashboard_path), "--port", str(port), "--host", host],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                start_new_session=True  # Detach from parent
+            )
+
+            # Give it a moment to start
+            import time
+            time.sleep(1)
+
+            # Check if it's still running
+            if process.poll() is not None:
+                # Process died, get error output
+                stderr = process.stderr.read().decode('utf-8') if process.stderr else "Unknown error"
+                raise RuntimeError(f"Dashboard server failed to start: {stderr}")
+
+            url = f"http://{host}:{port}"
+            logger.info(f"Dashboard server started at {url} (PID: {process.pid})")
+
+            return {
+                "status": "started",
+                "url": url,
+                "pid": process.pid,
+                "host": host,
+                "port": port
+            }
+
+        except Exception as e:
+            logger.error(f"Error starting dashboard: {e}")
+            raise StorageError(f"Failed to start dashboard: {str(e)}")
 
     async def get_capacity_forecast(self, days_ahead: int = 30) -> Dict[str, Any]:
         """
