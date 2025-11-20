@@ -12,7 +12,8 @@ services:
     volumes:
       - qdrant_storage:/qdrant/storage
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      # BUG-019: Use root endpoint (/) instead of /health (doesn't exist)
+      test: ["CMD", "curl", "-f", "http://localhost:6333/"]
       interval: 5s
       timeout: 10s
       retries: 5

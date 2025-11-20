@@ -81,6 +81,12 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Fixed
 
+- **BUG-019: Docker Healthcheck Shows Unhealthy**
+  - Fixed Docker healthcheck showing Qdrant as "(unhealthy)" despite working correctly
+  - Changed healthcheck endpoint from `/health` (non-existent) to `/` (root endpoint)
+  - Docker ps will now correctly show healthy status
+  - Modified: `docker-compose.yml`
+
 - **BUG-022: Code Indexer Extracts Zero Semantic Units**
   - Fixed path filtering logic that prevented indexing from git worktrees and directories with dots
   - Changed from filtering ALL paths with dot-prefixed parts to only filtering known unwanted directories
