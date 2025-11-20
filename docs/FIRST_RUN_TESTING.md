@@ -348,7 +348,7 @@ python -m src.cli health --verbose
 
 # Expected output:
 # ✅ Python version: 3.13.x
-# ✅ Storage backend: [SQLite/Qdrant] connected
+# ✅ Storage backend: Qdrant connected
 # ✅ Embedding model: Loaded
 # ✅ Parser: [Python/Rust] available
 # ✅ Cache: Working

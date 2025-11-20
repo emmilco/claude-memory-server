@@ -342,10 +342,10 @@ sudo usermod -aG docker $USER
 **Without Docker (SQLite fallback):**
 ```bash
 # Set in .env file:
-CLAUDE_RAG_STORAGE_BACKEND=sqlite
+CLAUDE_RAG_STORAGE_BACKEND=qdrant
 
 # Or export:
-export CLAUDE_RAG_STORAGE_BACKEND=sqlite
+export CLAUDE_RAG_STORAGE_BACKEND=qdrant
 ```
 
 ---
@@ -1309,7 +1309,7 @@ for mode in ["semantic", "keyword", "hybrid"]:
 A: Model loading takes ~1s. Subsequent queries use cached model and are fast.
 
 **Q: Can I use SQLite instead of Qdrant?**
-A: Yes, set `CLAUDE_RAG_STORAGE_BACKEND=sqlite`. Note: Slower for large datasets.
+A: Qdrant is required for semantic code search. SQLite backend has been removed.
 
 **Q: How do I reset everything?**
 A: 

@@ -505,7 +505,7 @@ curl http://localhost:6333/cluster
 
 1. **Enable quantization** (int8) - saves 75%
 2. **Reduce HNSW m parameter** (16 → 8)
-3. **Use SQLite backend** (development only)
+3. **Optimize Qdrant configuration** (see Qdrant docs)
 4. **Limit embedding cache size**
 5. **Use keyword search** (no embedding overhead)
 
