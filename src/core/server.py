@@ -32,7 +32,7 @@ from src.core.exceptions import (
     ReadOnlyError,
     RetrievalError,
 )
-from src.router import RetrievalGate
+# RetrievalGate removed (BUG-018) - was blocking valid queries
 from src.memory.usage_tracker import UsageTracker
 from src.memory.pruner import MemoryPruner
 from src.memory.conversation_tracker import ConversationTracker
@@ -149,17 +149,10 @@ class MemoryRAGServer:
             # Initialize embedding cache
             self.embedding_cache = EmbeddingCache(self.config)
 
-            # Initialize retrieval gate if enabled
-            if self.config.enable_retrieval_gate:
-                self.retrieval_gate = RetrievalGate(
-                    threshold=self.config.retrieval_gate_threshold
-                )
-                logger.info(
-                    f"Retrieval gate enabled (threshold: {self.config.retrieval_gate_threshold})"
-                )
-            else:
-                self.retrieval_gate = None
-                logger.info("Retrieval gate disabled")
+            # Retrieval gate removed (BUG-018) - was blocking valid queries
+            # Gate saved ~$3/day but broke core functionality
+            # Search is already fast (4ms P95), no need for filtering
+            self.retrieval_gate = None
 
             # Initialize usage tracker if enabled
             if self.config.enable_usage_tracking:
@@ -504,38 +497,7 @@ class MemoryRAGServer:
                 advanced_filters=adv_filters_obj,
             )
 
-            # Check retrieval gate first (if enabled)
-            if self.retrieval_gate is not None:
-                gate_decision = self.retrieval_gate.should_retrieve(
-                    query=query,
-                    expected_results=limit,
-                )
-
-                # If gate says skip, return empty results immediately
-                if not gate_decision.should_retrieve:
-                    query_time_ms = (time.time() - start_time) * 1000
-                    self.stats["queries_processed"] += 1
-                    self.stats["queries_gated"] += 1
-
-                    # Update gate metrics from the gate itself
-                    gate_metrics = self.retrieval_gate.get_metrics()
-                    self.stats["estimated_tokens_saved"] = gate_metrics.get("estimated_tokens_saved", 0)
-
-                    response = RetrievalResponse(
-                        results=[],
-                        total_found=0,
-                        query_time_ms=query_time_ms,
-                        used_cache=False,
-                    )
-
-                    logger.info(
-                        f"Query gated (utility: {gate_decision.utility_score:.3f}) - "
-                        f"skipped retrieval in {query_time_ms:.2f}ms"
-                    )
-
-                    return response.model_dump()
-
-            # Gate approved - proceed with retrieval
+            # Retrieval gate removed (BUG-018) - proceed directly to retrieval
 
             # Conversation-aware query expansion (if session provided)
             expanded_query = query
