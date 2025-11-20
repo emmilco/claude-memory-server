@@ -1,6 +1,6 @@
 # API Reference
 
-**Last Updated:** November 18, 2025
+**Last Updated:** November 20, 2025
 **Version:** 4.0 (Production-Ready with Advanced Features)
 
 ---
@@ -9,7 +9,7 @@
 
 The Claude Memory RAG Server exposes tools through the Model Context Protocol (MCP). All tools are accessible to Claude via MCP tool calls.
 
-**Total Tools:** 16 MCP tools + 28 CLI commands
+**Total Tools:** 16 MCP tools + 30 CLI commands (19 main commands + 11 subcommands)
 
 ### Available MCP Tools
 
@@ -440,10 +440,14 @@ Semantic search across indexed code with hybrid search support (BM25 + vector).
   "project_name": "string (optional, defaults to current project)",
   "limit": "integer 1-50 (default: 10)",
   "file_pattern": "string (optional, e.g., '*/auth/*')",
-  "language": "python|javascript|typescript|java|go|rust (optional)",
+  "language": "python|javascript|typescript|java|go|rust|ruby|swift|kotlin|php|c|cpp|csharp|sql (optional)",
   "search_mode": "semantic|keyword|hybrid (default: semantic)"
 }
 ```
+
+**Supported Languages (17 file types):**
+- **Programming:** Python, JavaScript, TypeScript, Java, Go, Rust, Ruby, Swift, Kotlin, PHP, C, C++, C#, SQL
+- **Config:** JSON, YAML, TOML
 
 **Search Modes:**
 - **semantic**: Vector similarity search only (best for concept matching)

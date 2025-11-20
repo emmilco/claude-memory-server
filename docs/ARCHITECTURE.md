@@ -1,8 +1,8 @@
 # Architecture Documentation
 
-**Last Updated:** November 17, 2025
+**Last Updated:** November 20, 2025
 **Version:** 4.0 (Production-Ready Enterprise Features)
-**Components:** 123 Python modules, 12 language parsers, 28 CLI commands
+**Components:** 159 Python modules (~58K LOC), 17 file type parsers (14 languages + 3 config), 30 CLI commands, 16 MCP tools
 
 ---
 
@@ -27,8 +27,10 @@ The Claude Memory RAG Server is a Model Context Protocol (MCP) server that provi
 - **Memory Lifecycle Management:** 4-tier lifecycle system (ACTIVE/RECENT/ARCHIVED/STALE) with automatic transitions
 - **Memory Provenance & Trust:** Track memory sources, relationships, and confidence scoring
 - **Intelligent Consolidation:** Automatic duplicate detection and merging with conflict resolution
-- **Hybrid Code Search:** Combines semantic (vector) and keyword (BM25) search
-- **Multi-Language Support:** 9 programming languages + 3 config formats (12 total)
+- **Hybrid Code Search:** Combines semantic (vector) and keyword (BM25) search with 3 fusion methods
+- **Multi-Language Support:** 17 file types total:
+  - **14 Programming Languages:** Python, JavaScript, TypeScript, Java, Go, Rust, Ruby, Swift, Kotlin, PHP, C, C++, C#, SQL
+  - **3 Config Formats:** JSON, YAML, TOML
 - **Git History Indexing:** Semantic search over commit history with temporal queries
 - **Dependency Tracking:** Import/dependency analysis with circular dependency detection
 - **Multi-Project Management:** Project context detection, archival, and cross-project search
@@ -39,6 +41,7 @@ The Claude Memory RAG Server is a Model Context Protocol (MCP) server that provi
 - **Security:** Comprehensive input validation and injection prevention (267+ patterns blocked)
 - **Real-time Indexing:** Auto-reindex code files on changes with background job management
 - **Token Analytics:** Track token savings and ROI from semantic search
+- **Parallel Processing:** Multi-core embedding generation (4-8x faster) and parallel test execution (2.55x faster)
 
 ### Technology Stack
 
@@ -96,10 +99,12 @@ The Claude Memory RAG Server is a Model Context Protocol (MCP) server that provi
 **incremental_indexer.py** (26KB, comprehensive)
 - Indexes code files incrementally with change detection
 - Parse → Extract → Embed → Store → Track hash
-- Supports 9 languages: Python, JS, TS, Java, Go, Rust, C, C++, C#, SQL
-- Supports config files: JSON, YAML, TOML
+- Supports 17 file types:
+  - **14 Languages:** Python, JavaScript, TypeScript, Java, Go, Rust, Ruby, Swift, Kotlin, PHP, C, C++, C#, SQL
+  - **3 Config Formats:** JSON, YAML, TOML
 - Real-time progress callbacks with rich UI
-- Parallel embedding generation support
+- Parallel embedding generation support (4-8x faster)
+- Incremental caching with 98% hit rate (5-10x faster re-indexing)
 
 **auto_indexing_service.py** (16KB)
 - Orchestrates automatic foreground/background indexing
@@ -119,7 +124,8 @@ The Claude Memory RAG Server is a Model Context Protocol (MCP) server that provi
 **python_parser.py** (11KB)
 - Pure Python fallback parser using tree-sitter Python bindings
 - No Rust dependency required
-- Supports all 6 original languages
+- Supports all 14 programming languages (10-20x slower than Rust but fully functional)
+- Automatic graceful degradation when Rust parser unavailable
 
 **Memory Classification & Lifecycle**
 

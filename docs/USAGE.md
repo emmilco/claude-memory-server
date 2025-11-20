@@ -1,7 +1,7 @@
 # Usage Guide
 
-**Last Updated:** November 17, 2025
-**Version:** 4.0 (Production-Ready with 28 CLI Commands)
+**Last Updated:** November 20, 2025
+**Version:** 4.0 (Production-Ready with 30 CLI Commands)
 
 ---
 

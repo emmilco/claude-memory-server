@@ -84,6 +84,16 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Changed - 2025-11-20
 
+- **DOC-009: Complete Documentation Audit & Accuracy Updates**
+  - Updated all documentation dates to 2025-11-20
+  - Corrected module count: 123 → 159 Python modules (~58K LOC)
+  - Corrected CLI command count: 28 → 30 commands (19 main + 11 subcommands)
+  - Corrected language support: 12 → 17 file types (14 languages + 3 config formats)
+  - Added comprehensive language list to API.md and ARCHITECTURE.md
+  - Added codebase statistics: 186+ functions, 280+ classes, 47K test lines
+  - Enhanced parser documentation: Python fallback supports all 14 languages
+  - Modified: All docs in `docs/` directory
+
 - **Dashboard Trend Charts: Real Historical Metrics**
   - Replaced simulated trend data with actual historical metrics from database
   - Dashboard now queries real time-series data from `MetricsCollector`
@@ -120,9 +130,23 @@ A pre-commit hook enforces CHANGELOG updates:
   - Set multiprocessing start method to 'fork' for better compatibility
   - Added explicit meta tensor detection and materialization on CPU
   - Disabled trust_remote_code to prevent lazy initialization
-  - Added environment variable PYTORCH_ENABLE_MPS_FALLBACK=1
   - Properly handles both meta tensors and device migration
+  - Removed runtime environment variable usage (PYTORCH_ENABLE_MPS_FALLBACK) - not needed
   - Modified: `src/embeddings/parallel_generator.py`
+
+- **Eliminated Runtime Environment Variables**
+  - Removed only runtime env var usage from codebase (PYTORCH_ENABLE_MPS_FALLBACK in parallel_generator.py)
+  - Configuration system already prioritizes alternatives: user config file (~/.claude-rag/config.json) > env vars > defaults
+  - .env files remain optional for convenience but are not required
+  - All 163 configuration options have sensible built-in defaults
+  - Modified: `src/embeddings/parallel_generator.py`
+
+- **Dashboard Relationship Graph: Real Data Instead of Random**
+  - Replaced randomly generated fake relationships with queries for actual stored relationships
+  - Graph now queries `store.get_relationships()` for real semantic relationships
+  - Nodes update correctly when new memories are indexed
+  - Empty relationship graph shows nodes only (relationships not yet implemented in Qdrant backend)
+  - Modified: `src/dashboard/web_server.py`, `src/store/qdrant_store.py` (added get_relationships stub)
 
 ### Fixed (from previous)
 
