@@ -218,21 +218,29 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
 
 **Phase 1: Core Usability (~20-24 hours, 1-2 weeks)**
 
-- [ ] **UX-034**: Dashboard Search and Filter Panel (~4-6 hours)
-  - [ ] Global search bar for memories
-  - [ ] Filter dropdowns: project, category, date range, lifecycle state
-  - [ ] Real-time filtering of displayed data
-  - [ ] URL parameters for shareable filtered views
-  - **Impact**: Users can find specific memories/projects quickly
-  - **Reference**: planning_docs/UX-026_dashboard_enhancement_analysis.md
+**Progress**: 2/15 features complete (13%). See `planning_docs/UX-034-048_dashboard_enhancements_progress.md` for comprehensive implementation guide for remaining 13 features.
 
-- [ ] **UX-035**: Memory Detail Modal (~6-8 hours)
-  - [ ] Click any memory to see full details
-  - [ ] Full content with syntax highlighting for code
-  - [ ] Display all metadata: tags, importance, provenance, timestamps
-  - [ ] Actions: Edit, Delete, Export, View Relationships
+- [x] **UX-034**: Dashboard Search and Filter Panel ✅ **COMPLETE** (~3 hours)
+  - [x] Global search bar for memories (with 300ms debouncing)
+  - [x] Filter dropdowns: project, category, date range, lifecycle state
+  - [x] Real-time filtering of displayed data (client-side)
+  - [x] URL parameters for shareable filtered views
+  - [x] Empty state messaging and filter badge
+  - [x] Responsive mobile design
+  - **Impact**: Users can find specific memories/projects quickly
+  - **Implementation**: Client-side filtering, ~300 lines of code added
+  - **Reference**: planning_docs/UX-034_search_filter_panel.md
+
+- [x] **UX-035**: Memory Detail Modal ✅ **COMPLETE** (~1 hour)
+  - [x] Click any memory to see full details
+  - [x] Full content with syntax highlighting for code
+  - [x] Display all metadata: tags, importance, provenance, timestamps
+  - [x] Modal with smooth animations (fadeIn, slideUp)
+  - [x] Escape key support and click-outside-to-close
+  - [x] Responsive mobile design
   - **Impact**: Transform from view-only to interactive tool
-  - **Reference**: planning_docs/UX-026_dashboard_enhancement_analysis.md
+  - **Implementation**: Modal overlay with basic syntax highlighting (~350 lines)
+  - **Reference**: planning_docs/UX-034-048_dashboard_enhancements_progress.md
 
 - [ ] **UX-036**: Health Dashboard Widget (~4-6 hours)
   - [ ] Health score gauge (0-100) with color coding

@@ -13,6 +13,42 @@
             <p class="subtitle">Memory system statistics and recent activity</p>
         </header>
 
+        <!-- Filter Panel -->
+        <section class="filter-panel">
+            <div class="filter-controls">
+                <input type="search" id="global-search" placeholder="🔍 Search memories..." aria-label="Search memories">
+                <select id="filter-project" aria-label="Filter by project">
+                    <option value="">All Projects</option>
+                </select>
+                <select id="filter-category" aria-label="Filter by category">
+                    <option value="">All Categories</option>
+                    <option value="preference">Preference</option>
+                    <option value="fact">Fact</option>
+                    <option value="event">Event</option>
+                    <option value="workflow">Workflow</option>
+                    <option value="context">Context</option>
+                    <option value="code">Code</option>
+                </select>
+                <select id="filter-lifecycle" aria-label="Filter by lifecycle state">
+                    <option value="">All States</option>
+                    <option value="active">Active</option>
+                    <option value="warming_up">Warming Up</option>
+                    <option value="mature">Mature</option>
+                    <option value="declining">Declining</option>
+                    <option value="archived">Archived</option>
+                </select>
+                <select id="filter-date-range" aria-label="Filter by date range">
+                    <option value="">All Time</option>
+                    <option value="1h">Last Hour</option>
+                    <option value="24h">Last 24 Hours</option>
+                    <option value="7d">Last 7 Days</option>
+                    <option value="30d">Last 30 Days</option>
+                </select>
+                <button id="clear-filters" class="btn-secondary">Clear Filters</button>
+            </div>
+            <div id="filter-badge" class="filter-badge" style="display: none;"></div>
+        </section>
+
         <main>
             <!-- Overview Section -->
             <section class="card">
@@ -76,6 +112,58 @@
         <footer>
             <p>Claude Memory RAG Server Dashboard v1.0 | <a href="#" onclick="loadData(); return false;">Refresh</a></p>
         </footer>
+    </div>
+
+    <!-- Memory Detail Modal -->
+    <div id="memory-modal" class="modal" style="display: none;">
+        <div class="modal-overlay" onclick="closeMemoryModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Memory Details</h2>
+                <button class="modal-close" onclick="closeMemoryModal()" aria-label="Close modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="memory-metadata">
+                    <div class="metadata-row">
+                        <span class="metadata-label">Category:</span>
+                        <span id="modal-category" class="metadata-value">-</span>
+                    </div>
+                    <div class="metadata-row">
+                        <span class="metadata-label">Project:</span>
+                        <span id="modal-project" class="metadata-value">-</span>
+                    </div>
+                    <div class="metadata-row">
+                        <span class="metadata-label">Importance:</span>
+                        <span id="modal-importance" class="metadata-value">-</span>
+                    </div>
+                    <div class="metadata-row">
+                        <span class="metadata-label">Lifecycle:</span>
+                        <span id="modal-lifecycle" class="metadata-value">-</span>
+                    </div>
+                    <div class="metadata-row">
+                        <span class="metadata-label">Created:</span>
+                        <span id="modal-created" class="metadata-value">-</span>
+                    </div>
+                    <div class="metadata-row">
+                        <span class="metadata-label">Last Accessed:</span>
+                        <span id="modal-accessed" class="metadata-value">-</span>
+                    </div>
+                </div>
+
+                <div class="memory-content-section">
+                    <h3>Content</h3>
+                    <pre id="modal-content" class="memory-content"><code></code></pre>
+                </div>
+
+                <div class="memory-tags-section" id="modal-tags-section" style="display: none;">
+                    <h3>Tags</h3>
+                    <div id="modal-tags" class="tags-container"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeMemoryModal()">Close</button>
+            </div>
+        </div>
     </div>
 
     <script src="dashboard.js"></script>

@@ -89,6 +89,21 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-01-XX
 
+- **UX-034-035: Dashboard Core Enhancements (Phase 1 Progress: 2/15 features)**
+  - Completed first 2 of 15 planned dashboard enhancement features
+  - **UX-034**: Search and Filter Panel (~300 lines)
+    - Search bar with 300ms debouncing, project/category/lifecycle/date filters
+    - Client-side filtering, URL parameter sync, empty state messaging
+    - Responsive mobile design
+  - **UX-035**: Memory Detail Modal (~350 lines)
+    - Interactive modal with smooth animations for viewing memory details
+    - Full metadata display with star ratings, timestamps
+    - Basic syntax highlighting for code (keywords, strings, comments)
+    - Escape key support, click-outside-to-close, mobile responsive
+  - Created comprehensive implementation guide for remaining 13 features
+  - Files: `src/dashboard/static/index.html`, `dashboard.css`, `dashboard.js`
+  - Planning: `planning_docs/UX-034_search_filter_panel.md`, `planning_docs/UX-034-048_dashboard_enhancements_progress.md`
+
 - **UX-026: Web Dashboard Enhancement Planning**
   - Created comprehensive enhancement analysis with 15 new features across 4 phases
   - Added 15 new TODO items (UX-034 through UX-048) for dashboard improvements
