@@ -82,7 +82,22 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ## [Unreleased]
 
+### Added - 2025-11-20
+
+- **start_dashboard MCP Tool**
+  - Added `start_dashboard` MCP tool to launch web dashboard from Claude
+  - Starts dashboard server in background process with configurable port/host
+  - Returns dashboard URL and process ID for monitoring
+  - Modified: `src/mcp_server.py`, `src/core/server.py`
+
 ### Fixed - 2025-11-20
+
+- **BUG-024: Quality Score Artificially Low (Missing Query Logging)**
+  - Fixed health monitoring quality score stuck at 40/100 due to missing relevance tracking
+  - Added query logging with relevance scores to `find_similar_code()`, `search_all_projects()`, `search_git_history()`
+  - Quality score now accurately reflects search result quality (60% weight on avg_relevance)
+  - Expected improvement: Quality score should reach 60-90/100 range with normal usage
+  - Modified: `src/core/server.py` (lines 2534-2542, 2686-2694, 3455-3517)
 
 - **Parallel Embedding Generation Fork Crashes**
   - Fixed "child process terminated abruptly" errors during parallel indexing

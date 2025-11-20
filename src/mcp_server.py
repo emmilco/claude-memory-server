@@ -279,6 +279,25 @@ async def list_tools() -> List[Tool]:
                 },
             },
         ),
+        Tool(
+            name="start_dashboard",
+            description="Start the web dashboard server for visual monitoring and analytics",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "port": {
+                        "type": "integer",
+                        "description": "Port to run dashboard on (default: 8080)",
+                        "minimum": 1024,
+                        "maximum": 65535,
+                    },
+                    "host": {
+                        "type": "string",
+                        "description": "Host to bind to (default: localhost)",
+                    },
+                },
+            },
+        ),
     ]
 
 
@@ -477,6 +496,20 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
             for alert in result["alerts"][:5]:
                 output += f"• {alert['severity']}: {alert['message']}\n"
             return [TextContent(type="text", text=output)]
+
+        elif name == "start_dashboard":
+            port = arguments.get("port", 8080)
+            host = arguments.get("host", "localhost")
+            result = await memory_server.start_dashboard(port=port, host=host)
+            return [
+                TextContent(
+                    type="text",
+                    text=f"✅ Dashboard server started at {result['url']}\n"
+                    f"Process ID: {result['pid']}\n\n"
+                    f"Open {result['url']} in your browser to view the dashboard.\n"
+                    f"The server is running in the background."
+                )
+            ]
 
         else:
             return [TextContent(type="text", text=f"Unknown tool: {name}")]
