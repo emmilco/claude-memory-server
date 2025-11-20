@@ -373,6 +373,41 @@ footer a:hover {
     display: inline-block;
 }
 
+/* Time Range Buttons */
+.time-range-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+
+.time-btn {
+    padding: 8px 16px;
+    border: 2px solid var(--border-color);
+    border-radius: 20px;
+    background-color: var(--card-bg);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.time-btn:hover {
+    border-color: var(--accent-color);
+    background-color: var(--bg-color);
+}
+
+.time-btn.active {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+    color: white;
+}
+
+.time-btn:active {
+    transform: scale(0.95);
+}
+
 /* Empty state for filtered results */
 .empty-state {
     text-align: center;
