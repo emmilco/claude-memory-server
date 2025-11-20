@@ -81,6 +81,12 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Fixed
 
+- **BUG-016: list_memories Returns Incorrect Total Count** (Duplicate of BUG-018)
+  - Resolved as duplicate - issue was caused by RetrievalGate blocking list queries
+  - BUG-018 fix (removing RetrievalGate) resolved this issue as side effect
+  - Testing confirms list_memories now returns correct total counts
+  - No code changes needed
+
 - **BUG-019: Docker Healthcheck Shows Unhealthy**
   - Fixed Docker healthcheck showing Qdrant as "(unhealthy)" despite working correctly
   - Changed healthcheck endpoint from `/health` (non-existent) to `/` (root endpoint)
