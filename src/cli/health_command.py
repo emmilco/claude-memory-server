@@ -140,12 +140,13 @@ class HealthCommand:
             # Check Qdrant connection
             try:
                 result = subprocess.run(
-                    ["curl", "-s", f"{config.qdrant_url}/health"],
+                    ["curl", "-s", f"{config.qdrant_url}/"],
                     capture_output=True,
                     text=True,
                     timeout=2,
                 )
-                if result.returncode == 0 and "ok" in result.stdout.lower():
+                # Qdrant root endpoint returns JSON with "version" field
+                if result.returncode == 0 and "version" in result.stdout.lower():
                     return True, "Qdrant", f"Running at {config.qdrant_url}"
                 else:
                     return False, "Qdrant", f"Not reachable at {config.qdrant_url}"

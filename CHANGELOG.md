@@ -79,6 +79,14 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ## [Unreleased]
 
+### Fixed
+
+- **BUG-015: Health Check False Negative**
+  - Fixed health check command incorrectly reporting Qdrant as unreachable
+  - Changed endpoint check from `/health` (non-existent) to `/` (root endpoint)
+  - Health check now correctly detects running Qdrant instances
+  - Modified: `src/cli/health_command.py`
+
 ### Added - 2025-01-XX
 
 - **UX-008: Phase 2 - Safety, Reliability & Onboarding**
