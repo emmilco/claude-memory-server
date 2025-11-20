@@ -46,6 +46,12 @@ class ServerConfig(BaseSettings):
     enable_file_watcher: bool = True
     watch_debounce_ms: int = 1000
 
+    # Importance scoring (FEAT-049)
+    enable_importance_scoring: bool = True  # Enable intelligent importance scoring for code units
+    importance_complexity_weight: float = 1.0  # Weight for complexity factors (0.0-2.0)
+    importance_usage_weight: float = 1.0  # Weight for usage/centrality factors (0.0-2.0)
+    importance_criticality_weight: float = 1.0  # Weight for keyword/pattern factors (0.0-2.0)
+
     # Graceful degradation (UX-012)
     # NOTE: allow_qdrant_fallback removed in REF-010 - Qdrant is now required
     allow_rust_fallback: bool = True  # Fall back to Python parser if Rust unavailable
@@ -219,6 +225,14 @@ class ServerConfig(BaseSettings):
 
         if self.git_diff_size_limit_kb < 1:
             raise ValueError("git_diff_size_limit_kb must be at least 1")
+
+        # Validate importance scoring weights (FEAT-049)
+        if not 0.0 <= self.importance_complexity_weight <= 2.0:
+            raise ValueError("importance_complexity_weight must be between 0.0 and 2.0")
+        if not 0.0 <= self.importance_usage_weight <= 2.0:
+            raise ValueError("importance_usage_weight must be between 0.0 and 2.0")
+        if not 0.0 <= self.importance_criticality_weight <= 2.0:
+            raise ValueError("importance_criticality_weight must be between 0.0 and 2.0")
 
         return self
 
