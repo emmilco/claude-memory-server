@@ -2227,3 +2227,20 @@ class QdrantMemoryStore(MemoryStore):
         except Exception as e:
             logger.error(f"Error retrieving recent activity: {e}")
             raise StorageError(f"Failed to retrieve recent activity: {e}")
+
+    async def get_relationships(self, memory_ids: List[str]) -> List[Dict[str, Any]]:
+        """
+        Get relationships for a list of memory IDs.
+
+        Note: Qdrant backend doesn't currently store relationships in the vector store.
+        Relationships are stored separately in SQLite. This method returns an empty
+        list as a placeholder - actual relationship detection happens via RelationshipDetector.
+
+        Args:
+            memory_ids: List of memory IDs to get relationships for
+
+        Returns:
+            Empty list (relationships not stored in Qdrant)
+        """
+        # Qdrant doesn't store relationships - they're in SQLite or detected on-demand
+        return []

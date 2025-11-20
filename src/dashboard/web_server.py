@@ -52,8 +52,6 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             self._handle_api_insights()
         elif parsed_path.path == "/api/trends":
             self._handle_api_trends(parsed_path.query)
-        elif parsed_path.path == "/api/relationships":
-            self._handle_api_relationships(parsed_path.query)
         else:
             # Serve static files
             super().do_GET()
@@ -313,9 +311,8 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             self._send_error_response(500, str(e))
 
     def _generate_trends(self, stats: dict, period: str, metric: str) -> dict:
-        """Generate time-series trend data based on current stats."""
+        """Generate time-series trend data from actual historical metrics."""
         from datetime import datetime, timedelta
-        import random
 
         # Parse period
         if period == '7d':
@@ -327,114 +324,69 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         else:
             days = 30
 
-        # Generate dates
+        # Get historical metrics from database
+        if not self.rag_server or not self.event_loop:
+            return self._generate_empty_trends(days)
+
+        try:
+            # Get daily aggregated metrics
+            future = asyncio.run_coroutine_threadsafe(
+                self._get_daily_metrics(days),
+                self.event_loop
+            )
+            daily_metrics = future.result(timeout=10)
+
+            if not daily_metrics:
+                return self._generate_empty_trends(days)
+
+            # Convert to trend format
+            dates = []
+            memory_counts = []
+            search_volumes = []
+            avg_latencies = []
+
+            for metrics in daily_metrics:
+                dates.append(metrics.timestamp.strftime('%Y-%m-%d'))
+                memory_counts.append(int(metrics.total_memories))
+                # Use queries_per_day as search volume
+                search_volumes.append(int(metrics.queries_per_day))
+                avg_latencies.append(round(metrics.avg_search_latency_ms, 2))
+
+            return {
+                "period": period,
+                "dates": dates,
+                "metrics": {
+                    "memory_count": memory_counts,
+                    "search_volume": search_volumes,
+                    "avg_latency": avg_latencies
+                }
+            }
+        except Exception as e:
+            logger.error(f"Error fetching historical metrics: {e}")
+            return self._generate_empty_trends(days)
+
+    def _generate_empty_trends(self, days: int) -> dict:
+        """Generate empty trend data when no historical data available."""
+        from datetime import datetime, timedelta
+
         end_date = datetime.now()
         dates = [(end_date - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(days-1, -1, -1)]
 
-        # Current totals
-        total_memories = stats.get('total_memories', 0)
-        num_projects = stats.get('num_projects', 0)
-
-        # Generate realistic trend data (simulated growth)
-        # In production, this would query actual historical data from the database
-        memory_counts = []
-        search_volumes = []
-        avg_latencies = []
-
-        for i in range(days):
-            # Simulate gradual growth from 60% to 100% of current total
-            progress = 0.6 + (0.4 * i / days)
-            memory_count = int(total_memories * progress)
-            memory_counts.append(memory_count)
-
-            # Simulate search volume (random but realistic)
-            base_searches = max(5, int(memory_count * 0.05))  # 5% of memories searched
-            search_volume = base_searches + random.randint(-base_searches//3, base_searches//3)
-            search_volumes.append(max(0, search_volume))
-
-            # Simulate latency (stable with minor variations)
-            base_latency = 12.0  # ms
-            latency = base_latency + random.uniform(-3.0, 3.0)
-            avg_latencies.append(round(max(5.0, latency), 2))
-
         return {
-            "period": period,
+            "period": f"{days}d",
             "dates": dates,
             "metrics": {
-                "memory_count": memory_counts,
-                "search_volume": search_volumes,
-                "avg_latency": avg_latencies
+                "memory_count": [0] * days,
+                "search_volume": [0] * days,
+                "avg_latency": [0.0] * days
             }
         }
 
-    def _handle_api_relationships(self, query_string: str):
-        """Handle /api/relationships endpoint - returns memory relationship graph."""
-        try:
-            if not self.rag_server or not self.event_loop:
-                self._send_error_response(500, "Server not initialized")
-                return
-
-            # Parse query parameters
-            params = parse_qs(query_string)
-            limit = int(params.get('limit', ['50'])[0])  # Max nodes to return
-
-            # Get recent activity to build relationships
-            activity_future = asyncio.run_coroutine_threadsafe(
-                self.rag_server.get_recent_activity(limit=limit),
-                self.event_loop
-            )
-            activity_data = activity_future.result(timeout=10)
-
-            # Generate relationship graph
-            graph = self._generate_relationship_graph(activity_data)
-
-            self._send_json_response(graph)
-        except Exception as e:
-            logger.error(f"Error handling /api/relationships: {e}")
-            self._send_error_response(500, str(e))
-
-    def _generate_relationship_graph(self, activity_data: dict) -> dict:
-        """Generate memory relationship graph from activity data."""
-        import random
-
-        recent_additions = activity_data.get('recent_additions', [])
-
-        # Build nodes from recent memories
-        nodes = []
-        for i, memory in enumerate(recent_additions[:30]):  # Limit to 30 nodes for readability
-            nodes.append({
-                "id": f"mem_{i}",
-                "label": memory.get('content', '')[:40] + '...' if len(memory.get('content', '')) > 40 else memory.get('content', ''),
-                "category": memory.get('category', 'fact'),
-                "importance": memory.get('importance', 5),
-                "project": memory.get('project_name', 'global')
-            })
-
-        # Generate plausible relationships between nodes
-        edges = []
-        for i in range(len(nodes)):
-            # Each node connects to 1-3 other nodes
-            num_connections = random.randint(1, min(3, len(nodes) - 1))
-            for _ in range(num_connections):
-                target = random.randint(0, len(nodes) - 1)
-                if target != i:  # No self-loops
-                    relationship_types = ['RELATED_TO', 'SUPERSEDES', 'CONTRADICTS', 'REFERENCES']
-                    rel_type = random.choice(relationship_types)
-
-                    # Avoid duplicate edges
-                    edge_id = f"{i}-{target}-{rel_type}"
-                    if not any(e['id'] == edge_id for e in edges):
-                        edges.append({
-                            "id": edge_id,
-                            "from": f"mem_{i}",
-                            "to": f"mem_{target}",
-                            "type": rel_type
-                        })
-
-        return {
-            "nodes": nodes,
-            "edges": edges[:40]  # Limit edges for performance
-        }
+    async def _get_daily_metrics(self, days: int):
+        """Get daily aggregated metrics from collector."""
+        if not self.rag_server.metrics_collector:
+            return []
+        return self.rag_server.metrics_collector.get_daily_aggregate(days=days)
 
     def _handle_create_memory(self):
         """Handle POST /api/memories - create new memory."""
