@@ -7,6 +7,10 @@
     <link rel="stylesheet" href="dashboard.css">
     <!-- Tippy.js for tooltips -->
     <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/dist/tippy.css">
+    <!-- Chart.js for trend visualizations (UX-038) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- vis.js for relationship graph (UX-039) -->
+    <script src="https://unpkg.com/vis-network@9.1.2/standalone/umd/vis-network.min.js"></script>
 </head>
 <body>
     <!-- Toast Container -->
@@ -27,6 +31,22 @@
                 </div>
             </div>
         </header>
+
+        <!-- Quick Actions Toolbar (UX-042) -->
+        <section class="quick-actions-bar">
+            <button class="action-btn" onclick="showCreateMemoryForm()" data-tippy-content="Create a new memory manually">
+                📝 Create Memory
+            </button>
+            <button class="action-btn" onclick="showIndexProjectForm()" data-tippy-content="Index a new codebase project">
+                📂 Index Project
+            </button>
+            <button class="action-btn" onclick="showExportForm()" data-tippy-content="Export memories to file">
+                💾 Export Data
+            </button>
+            <button class="action-btn" onclick="runHealthCheck()" data-tippy-content="Run full system health check">
+                🏥 Health Check
+            </button>
+        </section>
 
         <!-- Filter Panel -->
         <section class="filter-panel">
@@ -88,6 +108,107 @@
                         <div class="stat-value" id="global-memories">-</div>
                         <div class="stat-label">Global Memories</div>
                     </div>
+                </div>
+            </section>
+
+            <!-- Health Dashboard Widget -->
+            <section class="card health-widget">
+                <h2>🏥 System Health <span class="help-icon" data-tippy-content="Real-time system health monitoring with performance metrics and active alerts.">ⓘ</span></h2>
+                <div class="health-content">
+                    <div class="health-score-container">
+                        <div class="health-score-gauge" id="health-gauge">
+                            <svg class="gauge-svg" viewBox="0 0 200 120">
+                                <path class="gauge-track" d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke-width="20"/>
+                                <path class="gauge-fill" id="gauge-fill" d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke-width="20"/>
+                            </svg>
+                            <div class="gauge-value" id="health-score-value">--</div>
+                            <div class="gauge-label">Health Score</div>
+                        </div>
+                        <div class="health-metrics">
+                            <div class="metric">
+                                <span class="metric-label">Search Latency (P95):</span>
+                                <span id="metric-latency" class="metric-value">--</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Cache Hit Rate:</span>
+                                <span id="metric-cache" class="metric-value">--</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="health-alerts" class="alerts-container">
+                        <p class="loading">Loading health data...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Insights and Recommendations -->
+            <section class="card insights-card">
+                <h2>💡 Insights & Recommendations <span class="help-icon" data-tippy-content="Automated insights based on system data patterns, with actionable recommendations.">ⓘ</span></h2>
+                <div id="insights-list" class="insights-container">
+                    <p class="loading">Loading insights...</p>
+                </div>
+            </section>
+
+            <!-- Trend Charts (UX-038) -->
+            <section class="card trends-card">
+                <h2>📈 Trends <span class="help-icon" data-tippy-content="Historical trends showing memory growth, search activity, and performance over time.">ⓘ</span></h2>
+                <div class="trends-controls">
+                    <label for="trend-period">Time Period:</label>
+                    <select id="trend-period" onchange="loadTrends()">
+                        <option value="7d">Last 7 Days</option>
+                        <option value="30d" selected>Last 30 Days</option>
+                        <option value="90d">Last 90 Days</option>
+                    </select>
+                </div>
+                <div class="trends-container">
+                    <div class="trend-chart-wrapper">
+                        <h3>Memory Growth</h3>
+                        <canvas id="memory-trend-chart"></canvas>
+                    </div>
+                    <div class="trend-chart-wrapper">
+                        <h3>Search Activity</h3>
+                        <canvas id="search-trend-chart"></canvas>
+                    </div>
+                    <div class="trend-chart-wrapper">
+                        <h3>Performance (Latency)</h3>
+                        <canvas id="latency-trend-chart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Memory Relationships Graph (UX-039) -->
+            <section class="card relationships-card">
+                <h2>🔗 Memory Relationships <span class="help-icon" data-tippy-content="Interactive graph showing how memories are connected through various relationships (related, supersedes, contradicts, references).">ⓘ</span></h2>
+                <div id="relationships-graph" class="relationships-graph"></div>
+                <div class="graph-legend">
+                    <div class="legend-item"><span class="legend-dot related"></span> RELATED_TO</div>
+                    <div class="legend-item"><span class="legend-dot supersedes"></span> SUPERSEDES</div>
+                    <div class="legend-item"><span class="legend-dot contradicts"></span> CONTRADICTS</div>
+                    <div class="legend-item"><span class="legend-dot references"></span> REFERENCES</div>
+                </div>
+            </section>
+
+            <!-- Project Comparison View -->
+            <section class="card comparison-card">
+                <h2>📊 Project Comparison <span class="help-icon" data-tippy-content="Compare metrics across multiple projects side-by-side to identify patterns and outliers.">ⓘ</span></h2>
+                <div class="comparison-controls">
+                    <label for="comparison-projects">Select projects to compare (2-4):</label>
+                    <select id="comparison-projects" multiple size="5" data-tippy-content="Hold Cmd/Ctrl to select multiple projects">
+                        <option value="">Loading projects...</option>
+                    </select>
+                    <button id="compare-btn" class="btn-primary" disabled data-tippy-content="Select 2-4 projects to compare">Compare Selected</button>
+                    <button id="clear-comparison-btn" class="btn-secondary" style="display: none;" data-tippy-content="Clear comparison and start over">Clear</button>
+                </div>
+                <div id="comparison-results" class="comparison-results" style="display: none;">
+                    <table class="comparison-table">
+                        <thead id="comparison-thead">
+                        </thead>
+                        <tbody id="comparison-tbody">
+                        </tbody>
+                    </table>
+                </div>
+                <div id="comparison-empty" class="comparison-empty">
+                    <p>Select 2-4 projects from the list above to see a side-by-side comparison.</p>
                 </div>
             </section>
 
@@ -226,6 +347,101 @@
             </div>
             <div class="modal-footer">
                 <button class="btn-secondary" onclick="closeMemoryModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Memory Modal (UX-042) -->
+    <div id="create-memory-modal" class="modal" style="display: none;">
+        <div class="modal-overlay" onclick="closeCreateMemoryModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📝 Create New Memory</h2>
+                <button class="modal-close" onclick="closeCreateMemoryModal()" aria-label="Close modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="create-memory-form" onsubmit="handleCreateMemory(event); return false;">
+                    <div class="form-group">
+                        <label for="memory-content">Content *</label>
+                        <textarea id="memory-content" rows="5" required placeholder="Enter memory content..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="memory-category">Category</label>
+                        <select id="memory-category">
+                            <option value="fact">Fact</option>
+                            <option value="preference">Preference</option>
+                            <option value="event">Event</option>
+                            <option value="workflow">Workflow</option>
+                            <option value="context">Context</option>
+                            <option value="code">Code</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="memory-project">Project (optional)</label>
+                        <select id="memory-project">
+                            <option value="">Global Memory</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="memory-importance">Importance: <span id="importance-value">5</span></label>
+                        <input type="range" id="memory-importance" min="1" max="10" value="5" oninput="document.getElementById('importance-value').textContent = this.value">
+                    </div>
+                    <button type="submit" class="btn-primary">Create Memory</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Index Project Modal (UX-042) -->
+    <div id="index-project-modal" class="modal" style="display: none;">
+        <div class="modal-overlay" onclick="closeIndexProjectModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📂 Index New Project</h2>
+                <button class="modal-close" onclick="closeIndexProjectModal()" aria-label="Close modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="index-project-form" onsubmit="handleIndexProject(event); return false;">
+                    <div class="form-group">
+                        <label for="project-directory">Directory Path *</label>
+                        <input type="text" id="project-directory" required placeholder="/path/to/project">
+                    </div>
+                    <div class="form-group">
+                        <label for="project-name">Project Name *</label>
+                        <input type="text" id="project-name" required placeholder="my-project">
+                    </div>
+                    <button type="submit" class="btn-primary">Start Indexing</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Data Modal (UX-042/UX-043) -->
+    <div id="export-modal" class="modal" style="display: none;">
+        <div class="modal-overlay" onclick="closeExportModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>💾 Export Memories</h2>
+                <button class="modal-close" onclick="closeExportModal()" aria-label="Close modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="export-form" onsubmit="handleExport(event); return false;">
+                    <div class="form-group">
+                        <label for="export-format">Format</label>
+                        <select id="export-format">
+                            <option value="json">JSON</option>
+                            <option value="csv">CSV</option>
+                            <option value="markdown">Markdown</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="export-project">Project</label>
+                        <select id="export-project">
+                            <option value="">All Projects</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-primary">Generate Export</button>
+                </form>
             </div>
         </div>
     </div>

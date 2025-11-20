@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeKeyboardShortcuts();
     initializeOfflineDetection();
     initializeTooltips();
+    initializeComparison();
     loadFiltersFromURL();
     loadData();
     // Auto-refresh every 30 seconds
@@ -493,6 +494,164 @@ function showSkeletonLoader(containerId, type = 'card') {
 }
 
 /**
+ * Load health data and update health widget (UX-036)
+ */
+async function loadHealthData() {
+    try {
+        const data = await fetchWithRetry(`${API_BASE}/api/health`);
+
+        // Update health score gauge
+        const healthScore = data.health_score || 0;
+        updateHealthGauge(healthScore);
+
+        // Update performance metrics
+        document.getElementById('metric-latency').textContent =
+            `${(data.performance_metrics?.search_latency_p95 || 0).toFixed(2)}ms`;
+        document.getElementById('metric-cache').textContent =
+            `${((data.performance_metrics?.cache_hit_rate || 0) * 100).toFixed(1)}%`;
+
+        // Update alerts
+        updateHealthAlerts(data.alerts || []);
+
+    } catch (error) {
+        console.error('Error loading health data:', error);
+        showToast(`Failed to load health data: ${error.message}`, 'error');
+
+        // Show error state
+        document.getElementById('health-score-value').textContent = '--';
+        document.getElementById('metric-latency').textContent = '--';
+        document.getElementById('metric-cache').textContent = '--';
+        document.getElementById('health-alerts').innerHTML =
+            '<p class="loading" style="color: var(--warning-color);">Failed to load health data</p>';
+    }
+}
+
+/**
+ * Update health gauge visualization
+ */
+function updateHealthGauge(score) {
+    const gaugeValue = document.getElementById('health-score-value');
+    const gaugeFill = document.getElementById('gauge-fill');
+
+    gaugeValue.textContent = Math.round(score);
+
+    // Calculate arc length (semicircle, ~251 units total)
+    const arcLength = 251.2;
+    const fillLength = (score / 100) * arcLength;
+
+    // Set stroke-dasharray to show the fill
+    gaugeFill.style.strokeDasharray = `${fillLength} ${arcLength}`;
+
+    // Set color based on health score
+    let color;
+    if (score >= 90) {
+        color = 'var(--success-color)';
+    } else if (score >= 70) {
+        color = 'var(--warning-color)';
+    } else {
+        color = '#f44336';
+    }
+    gaugeFill.style.stroke = color;
+    gaugeValue.style.color = color;
+}
+
+/**
+ * Update health alerts display
+ */
+function updateHealthAlerts(alerts) {
+    const container = document.getElementById('health-alerts');
+
+    if (!alerts || alerts.length === 0) {
+        container.innerHTML = '<p class="no-alerts">✅ No active alerts - system healthy</p>';
+        return;
+    }
+
+    // Sort alerts by severity
+    const severityOrder = { CRITICAL: 0, WARNING: 1, INFO: 2 };
+    alerts.sort((a, b) => {
+        const severityA = severityOrder[a.severity] ?? 999;
+        const severityB = severityOrder[b.severity] ?? 999;
+        return severityA - severityB;
+    });
+
+    const alertsHTML = alerts.map(alert => {
+        const severityClass = alert.severity.toLowerCase();
+        const icon = {
+            CRITICAL: '🔴',
+            WARNING: '⚠️',
+            INFO: 'ℹ️'
+        }[alert.severity] || 'ℹ️';
+
+        return `
+            <div class="alert-item ${severityClass}">
+                <span class="alert-icon">${icon}</span>
+                <div class="alert-message">${escapeHtml(alert.message)}</div>
+            </div>
+        `;
+    }).join('');
+
+    container.innerHTML = alertsHTML;
+}
+
+/**
+ * Load insights and recommendations (UX-041)
+ */
+async function loadInsights() {
+    try {
+        const data = await fetchWithRetry(`${API_BASE}/api/insights`);
+        updateInsights(data.insights || []);
+    } catch (error) {
+        console.error('Error loading insights:', error);
+        showToast(`Failed to load insights: ${error.message}`, 'error');
+
+        // Show error state
+        document.getElementById('insights-list').innerHTML =
+            '<p class="loading" style="color: var(--warning-color);">Failed to load insights</p>';
+    }
+}
+
+/**
+ * Update insights display
+ */
+function updateInsights(insights) {
+    const container = document.getElementById('insights-list');
+
+    if (!insights || insights.length === 0) {
+        container.innerHTML = '<p class="no-insights">✨ No insights available - system running smoothly</p>';
+        return;
+    }
+
+    const insightsHTML = insights.map(insight => {
+        const severityClass = insight.severity.toLowerCase();
+        const icon = {
+            CRITICAL: '🔴',
+            WARNING: '⚠️',
+            INFO: '💡'
+        }[insight.severity] || '💡';
+
+        const actionHTML = insight.action
+            ? `<div class="insight-action">${escapeHtml(insight.action)}</div>`
+            : '';
+
+        return `
+            <div class="insight-item ${severityClass}">
+                <span class="insight-icon">${icon}</span>
+                <div class="insight-content">
+                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px;">
+                        <div class="insight-title">${escapeHtml(insight.title)}</div>
+                        <span class="insight-badge ${insight.type}">${insight.type}</span>
+                    </div>
+                    <div class="insight-message">${escapeHtml(insight.message)}</div>
+                    ${actionHTML}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    container.innerHTML = insightsHTML;
+}
+
+/**
  * Main function to load all dashboard data
  */
 async function loadData() {
@@ -506,7 +665,11 @@ async function loadData() {
     try {
         await Promise.all([
             loadDashboardStats(),
-            loadRecentActivity()
+            loadRecentActivity(),
+            loadHealthData(),
+            loadInsights(),
+            loadTrends(),
+            loadRelationships()
         ]);
     } catch (error) {
         console.error('Error loading dashboard data:', error);
@@ -528,6 +691,12 @@ async function loadDashboardStats() {
 
             // Populate project dropdown
             populateProjectDropdown(originalData.projects);
+
+            // Populate comparison selector (UX-040)
+            populateComparisonSelector(originalData.projects);
+
+            // Populate action project selectors (UX-042/UX-043)
+            populateActionProjectSelectors();
 
             // Update display
             updateOverview(data);
@@ -898,4 +1067,565 @@ function highlightCode(codeElement) {
     code = code.replace(/(\/\/.*$)/gm, '<span style="color: #5c6370; font-style: italic;">$1</span>');
 
     codeElement.innerHTML = code;
+}
+
+/**
+ * Initialize project comparison (UX-040)
+ */
+function initializeComparison() {
+    const comparisonSelect = document.getElementById('comparison-projects');
+    const compareBtn = document.getElementById('compare-btn');
+    const clearBtn = document.getElementById('clear-comparison-btn');
+
+    // Enable/disable compare button based on selection
+    comparisonSelect.addEventListener('change', () => {
+        const selected = Array.from(comparisonSelect.selectedOptions);
+        compareBtn.disabled = selected.length < 2 || selected.length > 4;
+    });
+
+    // Handle compare button click
+    compareBtn.addEventListener('click', () => {
+        const selectedProjects = Array.from(comparisonSelect.selectedOptions).map(opt => opt.value);
+        if (selectedProjects.length >= 2 && selectedProjects.length <= 4) {
+            renderComparison(selectedProjects);
+        }
+    });
+
+    // Handle clear button click
+    clearBtn.addEventListener('click', () => {
+        comparisonSelect.selectedIndex = -1;
+        document.getElementById('comparison-results').style.display = 'none';
+        document.getElementById('comparison-empty').style.display = 'block';
+        clearBtn.style.display = 'none';
+        compareBtn.disabled = true;
+    });
+}
+
+/**
+ * Populate comparison project selector
+ */
+function populateComparisonSelector(projects) {
+    const select = document.getElementById('comparison-projects');
+    select.innerHTML = '';
+
+    if (!projects || projects.length === 0) {
+        select.innerHTML = '<option value="">No projects available</option>';
+        return;
+    }
+
+    projects.forEach(project => {
+        const option = document.createElement('option');
+        option.value = project.name;
+        option.textContent = `${project.name} (${project.num_memories} memories)`;
+        select.appendChild(option);
+    });
+}
+
+/**
+ * Render project comparison table
+ */
+function renderComparison(projectNames) {
+    // Get full project data
+    const projects = originalData.projects.filter(p => projectNames.includes(p.name));
+
+    if (projects.length < 2) {
+        showToast('Please select at least 2 projects to compare', 'warning');
+        return;
+    }
+
+    // Define metrics to compare
+    const metrics = [
+        { key: 'num_memories', label: 'Total Memories', format: (v) => v.toLocaleString(), highlight: 'max' },
+        { key: 'num_files', label: 'Files Indexed', format: (v) => v.toLocaleString(), highlight: 'max' },
+        { key: 'num_functions', label: 'Functions', format: (v) => v.toLocaleString(), highlight: 'max' },
+        { key: 'num_classes', label: 'Classes', format: (v) => v.toLocaleString(), highlight: 'max' },
+        { key: 'index_time', label: 'Index Time', format: (v) => `${v.toFixed(2)}s`, highlight: 'min' },
+        { key: 'last_indexed', label: 'Last Indexed', format: (v) => new Date(v).toLocaleDateString(), highlight: 'none' }
+    ];
+
+    // Build table header
+    const thead = document.getElementById('comparison-thead');
+    thead.innerHTML = `
+        <tr>
+            <th>Metric</th>
+            ${projects.map(p => `<th>${escapeHtml(p.name)}</th>`).join('')}
+        </tr>
+    `;
+
+    // Build table body
+    const tbody = document.getElementById('comparison-tbody');
+    tbody.innerHTML = metrics.map(metric => {
+        const values = projects.map(p => p[metric.key] || 0);
+
+        // Determine which value(s) should be highlighted
+        let highlightValue = null;
+        if (metric.highlight === 'max') {
+            highlightValue = Math.max(...values);
+        } else if (metric.highlight === 'min') {
+            highlightValue = Math.min(...values);
+        }
+
+        const cells = projects.map((p, i) => {
+            const value = values[i];
+            const formatted = metric.format(value);
+            const isHighlight = highlightValue !== null && value === highlightValue;
+            return `<td class="${isHighlight ? 'highlight' : ''}">${formatted}</td>`;
+        }).join('');
+
+        return `
+            <tr>
+                <td class="metric-label">${metric.label}</td>
+                ${cells}
+            </tr>
+        `;
+    }).join('');
+
+    // Show results, hide empty state
+    document.getElementById('comparison-results').style.display = 'block';
+    document.getElementById('comparison-empty').style.display = 'none';
+    document.getElementById('clear-comparison-btn').style.display = 'inline-block';
+}
+
+/**
+ * Quick Actions Functions (UX-042 / UX-043)
+ */
+
+// Populate project dropdowns for create memory and export
+function populateActionProjectSelectors() {
+    const memoryProjectSelect = document.getElementById('memory-project');
+    const exportProjectSelect = document.getElementById('export-project');
+
+    if (memoryProjectSelect && originalData.projects) {
+        memoryProjectSelect.innerHTML = '<option value="">Global Memory</option>';
+        originalData.projects.forEach(project => {
+            const option = document.createElement('option');
+            option.value = project.name;
+            option.textContent = project.name;
+            memoryProjectSelect.appendChild(option);
+        });
+    }
+
+    if (exportProjectSelect && originalData.projects) {
+        exportProjectSelect.innerHTML = '<option value="">All Projects</option>';
+        originalData.projects.forEach(project => {
+            const option = document.createElement('option');
+            option.value = project.name;
+            option.textContent = project.name;
+            exportProjectSelect.appendChild(option);
+        });
+    }
+}
+
+// Show create memory modal
+function showCreateMemoryForm() {
+    document.getElementById('create-memory-modal').style.display = 'flex';
+    document.getElementById('memory-content').focus();
+}
+
+function closeCreateMemoryModal() {
+    document.getElementById('create-memory-modal').style.display = 'none';
+    document.getElementById('create-memory-form').reset();
+}
+
+// Handle create memory form submission
+async function handleCreateMemory(event) {
+    event.preventDefault();
+
+    const content = document.getElementById('memory-content').value;
+    const category = document.getElementById('memory-category').value;
+    const projectName = document.getElementById('memory-project').value || null;
+    const importance = parseInt(document.getElementById('memory-importance').value);
+
+    try {
+        const response = await fetch(`${API_BASE}/api/memories`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                content,
+                category,
+                project_name: projectName,
+                importance
+            })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            showToast('Memory created successfully!', 'success');
+            closeCreateMemoryModal();
+            // Reload data to show new memory
+            loadData();
+        } else {
+            showToast(`Failed to create memory: ${result.error || 'Unknown error'}`, 'error');
+        }
+    } catch (error) {
+        showToast(`Error creating memory: ${error.message}`, 'error');
+    }
+}
+
+// Show index project modal
+function showIndexProjectForm() {
+    document.getElementById('index-project-modal').style.display = 'flex';
+    document.getElementById('project-directory').focus();
+}
+
+function closeIndexProjectModal() {
+    document.getElementById('index-project-modal').style.display = 'none';
+    document.getElementById('index-project-form').reset();
+}
+
+// Handle index project form submission
+async function handleIndexProject(event) {
+    event.preventDefault();
+
+    const directoryPath = document.getElementById('project-directory').value;
+    const projectName = document.getElementById('project-name').value;
+
+    try {
+        showToast('Starting indexing... This may take a while', 'info');
+
+        const response = await fetch(`${API_BASE}/api/index`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                directory_path: directoryPath,
+                project_name: projectName
+            })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            showToast(`Indexing completed! ${result.stats?.num_functions || 0} functions indexed`, 'success');
+            closeIndexProjectModal();
+            // Reload data to show new project
+            loadData();
+        } else {
+            showToast(`Indexing failed: ${result.error || 'Unknown error'}`, 'error');
+        }
+    } catch (error) {
+        showToast(`Error indexing project: ${error.message}`, 'error');
+    }
+}
+
+// Show export modal
+function showExportForm() {
+    document.getElementById('export-modal').style.display = 'flex';
+}
+
+function closeExportModal() {
+    document.getElementById('export-modal').style.display = 'none';
+    document.getElementById('export-form').reset();
+}
+
+// Handle export form submission
+async function handleExport(event) {
+    event.preventDefault();
+
+    const format = document.getElementById('export-format').value;
+    const projectName = document.getElementById('export-project').value || null;
+
+    try {
+        showToast('Generating export...', 'info');
+
+        const response = await fetch(`${API_BASE}/api/export`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                format,
+                project_name: projectName
+            })
+        });
+
+        if (response.ok) {
+            // Download the file
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `memories_export.${format}`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            showToast('Export downloaded successfully!', 'success');
+            closeExportModal();
+        } else {
+            const result = await response.json();
+            showToast(`Export failed: ${result.error || 'Unknown error'}`, 'error');
+        }
+    } catch (error) {
+        showToast(`Error exporting data: ${error.message}`, 'error');
+    }
+}
+
+// Run health check
+async function runHealthCheck() {
+    try {
+        showToast('Running health check...', 'info');
+        await loadHealthData();
+        showToast('Health check complete! Check the Health widget above', 'success');
+    } catch (error) {
+        showToast(`Health check failed: ${error.message}`, 'error');
+    }
+}
+
+/**
+ * Trend Charts Functions (UX-038)
+ */
+
+// Global chart instances
+let memoryTrendChart = null;
+let searchTrendChart = null;
+let latencyTrendChart = null;
+
+// Load trend data and render charts
+async function loadTrends() {
+    try {
+        const period = document.getElementById('trend-period').value;
+        const data = await fetchWithRetry(`${API_BASE}/api/trends?period=${period}`);
+
+        renderTrendCharts(data);
+    } catch (error) {
+        console.error('Error loading trends:', error);
+        showToast(`Failed to load trends: ${error.message}`, 'error');
+    }
+}
+
+// Render all trend charts
+function renderTrendCharts(data) {
+    const { dates, metrics } = data;
+
+    // Destroy existing charts
+    if (memoryTrendChart) memoryTrendChart.destroy();
+    if (searchTrendChart) searchTrendChart.destroy();
+    if (latencyTrendChart) latencyTrendChart.destroy();
+
+    // Chart.js default config
+    const commonOptions = {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            x: {
+                grid: {
+                    color: 'rgba(0, 0, 0, 0.05)'
+                }
+            },
+            y: {
+                beginAtZero: true,
+                grid: {
+                    color: 'rgba(0, 0, 0, 0.05)'
+                }
+            }
+        }
+    };
+
+    // Memory Growth Chart
+    const memoryCtx = document.getElementById('memory-trend-chart').getContext('2d');
+    memoryTrendChart = new Chart(memoryCtx, {
+        type: 'line',
+        data: {
+            labels: dates,
+            datasets: [{
+                label: 'Total Memories',
+                data: metrics.memory_count,
+                borderColor: '#2196F3',
+                backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                tension: 0.4,
+                fill: true,
+                borderWidth: 2
+            }]
+        },
+        options: commonOptions
+    });
+
+    // Search Activity Chart
+    const searchCtx = document.getElementById('search-trend-chart').getContext('2d');
+    searchTrendChart = new Chart(searchCtx, {
+        type: 'bar',
+        data: {
+            labels: dates,
+            datasets: [{
+                label: 'Searches',
+                data: metrics.search_volume,
+                backgroundColor: '#4CAF50',
+                borderWidth: 0
+            }]
+        },
+        options: commonOptions
+    });
+
+    // Performance (Latency) Chart
+    const latencyCtx = document.getElementById('latency-trend-chart').getContext('2d');
+    latencyTrendChart = new Chart(latencyCtx, {
+        type: 'line',
+        data: {
+            labels: dates,
+            datasets: [{
+                label: 'Avg Latency (ms)',
+                data: metrics.avg_latency,
+                borderColor: '#FF9800',
+                backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                tension: 0.4,
+                fill: true,
+                borderWidth: 2
+            }]
+        },
+        options: {
+            ...commonOptions,
+            scales: {
+                ...commonOptions.scales,
+                y: {
+                    ...commonOptions.scales.y,
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Milliseconds'
+                    }
+                }
+            }
+        }
+    });
+}
+
+/**
+ * Memory Relationships Graph (UX-039)
+ */
+
+let relationshipsNetwork = null;
+
+// Load and render memory relationships graph
+async function loadRelationships() {
+    try {
+        const data = await fetchWithRetry(`${API_BASE}/api/relationships?limit=30`);
+        renderRelationshipGraph(data);
+    } catch (error) {
+        console.error('Error loading relationships:', error);
+        showToast(`Failed to load relationship graph: ${error.message}`, 'error');
+    }
+}
+
+// Render interactive relationship graph with vis.js
+function renderRelationshipGraph(data) {
+    const container = document.getElementById('relationships-graph');
+
+    if (!data.nodes || data.nodes.length === 0) {
+        container.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-secondary); font-style: italic;">No relationships available</div>';
+        return;
+    }
+
+    // Category colors
+    const categoryColors = {
+        preference: '#9c27b0',
+        fact: '#2196F3',
+        event: '#FF9800',
+        workflow: '#4CAF50',
+        context: '#00BCD4',
+        code: '#f44336'
+    };
+
+    // Prepare nodes for vis.js
+    const nodes = new vis.DataSet(data.nodes.map(node => ({
+        id: node.id,
+        label: node.label,
+        title: `${node.label}\n\nCategory: ${node.category}\nImportance: ${node.importance}\nProject: ${node.project}`,
+        color: {
+            background: categoryColors[node.category] || '#2196F3',
+            border: categoryColors[node.category] || '#2196F3',
+            highlight: {
+                background: categoryColors[node.category] || '#2196F3',
+                border: '#000000'
+            }
+        },
+        font: {
+            color: '#ffffff',
+            size: 12
+        },
+        size: 15 + (node.importance * 2)  // Size based on importance
+    })));
+
+    // Edge colors by relationship type
+    const edgeColors = {
+        'RELATED_TO': '#2196F3',
+        'SUPERSEDES': '#4CAF50',
+        'CONTRADICTS': '#f44336',
+        'REFERENCES': '#FF9800'
+    };
+
+    // Prepare edges for vis.js
+    const edges = new vis.DataSet(data.edges.map(edge => ({
+        id: edge.id,
+        from: edge.from,
+        to: edge.to,
+        label: edge.type,
+        color: {
+            color: edgeColors[edge.type] || '#999999',
+            highlight: edgeColors[edge.type] || '#999999'
+        },
+        arrows: {
+            to: {
+                enabled: true,
+                scaleFactor: 0.5
+            }
+        },
+        font: {
+            size: 10,
+            align: 'middle'
+        }
+    })));
+
+    // Network options
+    const options = {
+        nodes: {
+            shape: 'dot',
+            scaling: {
+                min: 10,
+                max: 30
+            }
+        },
+        edges: {
+            smooth: {
+                type: 'continuous'
+            }
+        },
+        physics: {
+            stabilization: {
+                iterations: 100
+            },
+            barnesHut: {
+                gravitationalConstant: -30000,
+                springConstant: 0.001,
+                springLength: 200
+            }
+        },
+        interaction: {
+            hover: true,
+            tooltipDelay: 200,
+            zoomView: true,
+            dragView: true
+        }
+    };
+
+    // Destroy existing network
+    if (relationshipsNetwork) {
+        relationshipsNetwork.destroy();
+    }
+
+    // Create new network
+    relationshipsNetwork = new vis.Network(container, { nodes, edges }, options);
+
+    // Add click handler
+    relationshipsNetwork.on('click', (params) => {
+        if (params.nodes.length > 0) {
+            const nodeId = params.nodes[0];
+            const node = nodes.get(nodeId);
+            showToast(`Memory: ${node.label}`, 'info');
+        }
+    });
 }
