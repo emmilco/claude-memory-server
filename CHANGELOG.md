@@ -84,6 +84,12 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Fixed
 
+- **BUG-017: Documentation Parameter Names Incorrect**
+  - Fixed incorrect method name `get_stats` in documentation (actual method is `get_status`)
+  - Updated README.md, docs/API.md, and TUTORIAL.md with correct method names
+  - Verified cache.get_stats() usage is correct (different class)
+  - Modified: `README.md`, `docs/API.md`, `TUTORIAL.md`
+
 - **BUG-021: PHP Parser Initialization Warning**
   - Fixed PHP parser failing to initialize with warning about missing 'language' attribute
   - Changed attribute name from 'language' to 'language_php' to match tree-sitter-php API
