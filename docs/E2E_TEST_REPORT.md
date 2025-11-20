@@ -153,7 +153,7 @@ python -m src.cli health
 - Output:
   - ✓ Python version: 3.13.6
   - ✓ Rust parser: Available
-  - ✓ SQLite backend: Connected (463.5 MB)
+  - ✓ Qdrant backend: Connected
   - ✓ Embedding model: Loaded
   - ✓ Embedding cache: 191.0 MB
   - ✓ All systems healthy!

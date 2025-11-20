@@ -531,7 +531,7 @@ Before completing review:
 
 ### This Codebase Characteristics
 - **Heavy async/await usage**: Extra attention to async patterns
-- **Multiple storage backends**: Check consistency between SQLite and Qdrant
+- **Multiple storage backends**: Check consistency for Qdrant
 - **Tree-sitter parsing**: Verify error handling for parse failures
 - **Embedding generation**: Watch for performance bottlenecks
 - **MCP server**: Ensure all tools have proper validation

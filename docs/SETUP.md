@@ -43,7 +43,7 @@ python setup.py
 The wizard will:
 1. Check prerequisites
 2. Install Python dependencies
-3. Set up storage backend (SQLite or Qdrant)
+3. Set up Qdrant storage backend
 4. Build Rust module (optional)
 5. Verify installation with sample project
 6. Run health checks
@@ -269,7 +269,7 @@ CLAUDE_RAG_ENABLE_HYBRID_SEARCH=true  # Semantic + keyword search
 CLAUDE_RAG_HYBRID_SEARCH_ALPHA=0.5  # Weight: 0=BM25 only, 1=semantic only
 
 # Storage
-CLAUDE_RAG_STORAGE_BACKEND=qdrant  # or sqlite
+CLAUDE_RAG_STORAGE_BACKEND=qdrant
 CLAUDE_RAG_DATA_DIR=~/.claude-rag
 
 # Logging

@@ -215,7 +215,7 @@ cd rust_core && maturin develop && cd ..
 docker-compose up -d
 
 # 4. Configure (edit .env or set environment variables)
-export CLAUDE_RAG_STORAGE_BACKEND=sqlite  # or qdrant
+export CLAUDE_RAG_STORAGE_BACKEND=qdrant
 ```
 
 </details>
@@ -474,7 +474,7 @@ Create `~/.claude-rag/config.json`:
 
 ```json
 {
-  "storage_backend": "sqlite",
+  "storage_backend": "qdrant",
   "embedding_model": "all-MiniLM-L6-v2",
   "enable_parallel_embeddings": true,
   "enable_file_watcher": true,
@@ -491,14 +491,7 @@ Create `~/.claude-rag/config.json`:
 **Common Presets:**
 
 ```json
-// Minimal (No Docker)
-{
-  "storage_backend": "sqlite",
-  "enable_parallel_embeddings": false,
-  "allow_rust_fallback": true
-}
-
-// Standard (Docker)
+// Standard
 {
   "storage_backend": "qdrant",
   "qdrant_url": "http://localhost:6333",
@@ -521,7 +514,7 @@ Create `.env` file (project-specific configuration):
 
 ```bash
 # Storage Backend
-CLAUDE_RAG_STORAGE_BACKEND=sqlite
+CLAUDE_RAG_STORAGE_BACKEND=qdrant
 CLAUDE_RAG_QDRANT_URL=http://localhost:6333
 
 # Embeddings
@@ -545,10 +538,7 @@ CLAUDE_RAG_WATCH_DEBOUNCE_MS=1000
 # View current configuration
 python -m src.cli status
 
-# Test with different storage backend
-echo '{"storage_backend": "sqlite"}' > ~/.claude-rag/config.json
-
-# Or use environment variable
+# Configure storage backend
 export CLAUDE_RAG_STORAGE_BACKEND=qdrant
 ```
 

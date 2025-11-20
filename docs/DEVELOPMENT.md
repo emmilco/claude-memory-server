@@ -99,7 +99,7 @@ claude-memory-server/
 │   ├── store/                     # Storage backends
 │   │   ├── base.py               # Abstract interface
 │   │   ├── qdrant_store.py       # Production vector DB
-│   │   ├── sqlite_store.py       # Fallback/dev storage
+│   │   ├── (sqlite_store.py removed - Qdrant only)
 │   │   └── readonly_wrapper.py   # Read-only mode
 │   ├── embeddings/                # Embedding generation
 │   │   ├── generator.py          # Standard single-threaded

@@ -467,7 +467,7 @@ All commands support Rich-formatted output with tables, progress bars, and color
 - Quality metrics: avg relevance, noise ratio, duplicate/contradiction rates
 - Database health: memory counts by lifecycle state, DB size
 - Usage patterns: queries/day, memories created/day
-- Time-series storage in SQLite with 90-day retention
+- Time-series storage in local database with 90-day retention
 - Daily and weekly metric aggregation
 
 **alert_engine.py** (18KB)
@@ -496,7 +496,7 @@ All commands support Rich-formatted output with tables, progress bars, and color
 ### 9. Analytics & Tracking (src/analytics/)
 
 **token_tracker.py** (350+ lines)
-- Token usage tracking with SQLite backend
+- Token usage tracking with local database backend
 - Automatic savings estimation: manual paste vs RAG search
 - Cost calculation ($3/M input tokens for Claude Sonnet 3.5)
 - Session-level analytics with filtering

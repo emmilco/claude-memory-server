@@ -307,7 +307,7 @@ If you discover a security vulnerability:
 ### Data Protection
 
 - **No PII Storage:** Server doesn't collect personal information
-- **Local Storage:** All data stored locally (Qdrant, SQLite)
+- **Local Storage:** All data stored locally (Qdrant)
 - **No External Calls:** No telemetry or external API calls
 - **Audit Trail:** Security logs provide audit trail
 

@@ -82,7 +82,7 @@ curl http://localhost:6333/health
 **Option B: Switch to SQLite (No Docker Required)**
 ```bash
 # Edit .env file
-echo "STORAGE_BACKEND=sqlite" > .env
+echo "STORAGE_BACKEND=qdrant" > .env
 echo "SQLITE_DB_PATH=~/.claude-rag/sqlite.db" >> .env
 
 # Restart server

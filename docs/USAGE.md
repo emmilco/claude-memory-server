@@ -426,7 +426,7 @@ python -m src.cli status
 python -m src.cli health
 
 # Checks:
-# - Storage connection (Qdrant/SQLite)
+# - Storage connection (Qdrant)
 # - Parser availability (Rust/Python)
 # - Embedding model
 # - Disk space and memory
