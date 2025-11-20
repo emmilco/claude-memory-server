@@ -89,16 +89,22 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-20
 
-- **FEAT-049: Intelligent Code Importance Scoring (WIP)**
-  - Created `src/analysis/` package with 4 new analyzer modules (950+ lines total)
-  - `ComplexityAnalyzer`: Calculates cyclomatic complexity, line count, nesting depth, parameters, documentation
-  - `UsageAnalyzer`: Builds call graphs, detects public/private APIs, tracks exports
-  - `CriticalityAnalyzer`: Identifies security keywords, error handling, critical decorators
-  - `ImportanceScorer`: Integrates analyzers with configurable weights, batch scoring
+- **FEAT-049: Intelligent Code Importance Scoring** ✅
+  - Created `src/analysis/` package with 4 new analyzer modules (950+ lines production code)
+  - `ComplexityAnalyzer`: Cyclomatic complexity, line count, nesting depth, parameters, documentation (300+ lines)
+  - `UsageAnalyzer`: Call graphs, public/private APIs, export detection (250+ lines)
+  - `CriticalityAnalyzer`: Security keywords (60+), error handling, critical decorators (230+ lines)
+  - `ImportanceScorer`: Integration layer with configurable weights, batch scoring (170+ lines)
   - Added 4 config options: `enable_importance_scoring`, `importance_complexity_weight`, `importance_usage_weight`, `importance_criticality_weight`
   - Updated `IncrementalIndexer` to replace fixed importance=0.7 with dynamic calculation
-  - Created 40 unit tests for ComplexityAnalyzer (100% passing)
-  - **Status:** Core implementation complete, additional tests and validation pending
+  - Comprehensive test suite: 155 tests (100% passing)
+    - test_complexity_analyzer.py: 40 tests
+    - test_usage_analyzer.py: 47 tests
+    - test_criticality_analyzer.py: 34 tests
+    - test_importance_scorer.py: 34 tests
+  - Multi-language support: Python, JavaScript, TypeScript, Java, Go, Rust
+  - Backward compatible: Can be disabled via `enable_importance_scoring=false`
+  - **Impact:** Makes importance scores meaningful for 10,000+ code unit codebases, enables filtering/ranking by actual code significance
 
 ### Added - 2025-01-XX
 
