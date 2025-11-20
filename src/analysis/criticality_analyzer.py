@@ -25,14 +25,14 @@ class CriticalityMetrics:
     has_error_handling: bool
     has_critical_decorator: bool
     file_proximity_score: float
-    criticality_boost: float  # Boost to add to base score (0.0-0.2)
+    criticality_boost: float  # Boost to add to base score (0.0-0.3)
 
 
 class CriticalityAnalyzer:
     """Analyzes criticality indicators to estimate code importance."""
 
-    # Criticality boost ranges
-    MAX_CRITICALITY_BOOST = 0.2
+    # Criticality boost ranges (expanded from 0.2 to 0.3 to better reward critical code)
+    MAX_CRITICALITY_BOOST = 0.3
 
     # Security-related keywords (context-aware)
     SECURITY_KEYWORDS = {

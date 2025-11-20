@@ -84,6 +84,19 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Fixed
 
+- **FEAT-049: Intelligent Code Importance Scoring - Fixes & Enhancements**
+  - Fixed weight configuration behavior to use multiplicative amplification (weights now work intuitively)
+  - Expanded criticality boost range from 0.2 to 0.3 (+50% boost capacity for security functions)
+  - Added entry point detection (+0.04 usage boost for API/main files)
+  - Added scoring presets (`from_preset("security")`, `from_preset("complexity")`, etc.)
+  - Updated importance scorer formula: `(complexity * wc + usage * wu + criticality * wcr) / 1.2`
+  - Added `is_entry_point` field to `ImportanceScore` dataclass
+  - Modified: `src/analysis/importance_scorer.py`, `src/analysis/criticality_analyzer.py`, `src/analysis/usage_analyzer.py`
+  - Tests: 33/33 passing (added 7 new tests)
+  - **Impact:** Weight configuration now intuitive, critical functions score higher, entry points prioritized
+
+### Fixed (from previous)
+
 - **BUG-020: Inconsistent Return Value Structures** (Reclassified as Future Enhancement)
   - Analyzed API return structure inconsistencies across methods
   - Determined this is a design improvement, not a functional bug

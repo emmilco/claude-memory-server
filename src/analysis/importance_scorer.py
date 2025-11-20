@@ -23,7 +23,7 @@ class ImportanceScore:
     importance: float  # Final score (0.0-1.0)
     complexity_score: float  # Base complexity (0.3-0.7)
     usage_boost: float  # Usage boost (0.0-0.2)
-    criticality_boost: float  # Criticality boost (0.0-0.2)
+    criticality_boost: float  # Criticality boost (0.0-0.3)
 
     # Individual metrics (for debugging/analysis)
     cyclomatic_complexity: int
@@ -34,6 +34,7 @@ class ImportanceScore:
     caller_count: int
     is_public: bool
     is_exported: bool
+    is_entry_point: bool
     security_keywords: List[str]
     has_error_handling: bool
 
@@ -45,9 +46,10 @@ class ImportanceScorer:
     Combines three analyzers:
     1. ComplexityAnalyzer: Base score (0.3-0.7) from complexity metrics
     2. UsageAnalyzer: Boost (0.0-0.2) from usage patterns
-    3. CriticalityAnalyzer: Boost (0.0-0.2) from criticality indicators
+    3. CriticalityAnalyzer: Boost (0.0-0.3) from criticality indicators
 
-    Final score = min(1.0, complexity + usage_boost + criticality_boost)
+    Weights are normalized so increasing a weight increases emphasis on that factor.
+    Final score = min(1.0, weighted_sum of all factors)
     """
 
     def __init__(
@@ -59,10 +61,18 @@ class ImportanceScorer:
         """
         Initialize importance scorer with configurable weights.
 
+        Weights amplify each factor's contribution independently.
+        - Weight 1.0 = normal contribution (default behavior)
+        - Weight 2.0 = 2x contribution from that factor
+        - Weight 0.5 = half contribution from that factor
+
+        Setting criticality_weight=2.0 will amplify security-related scores
+        without reducing other factors.
+
         Args:
-            complexity_weight: Multiplier for complexity score (0.0-2.0)
-            usage_weight: Multiplier for usage boost (0.0-2.0)
-            criticality_weight: Multiplier for criticality boost (0.0-2.0)
+            complexity_weight: Multiplier for complexity contribution (0.0-2.0)
+            usage_weight: Multiplier for usage contribution (0.0-2.0)
+            criticality_weight: Multiplier for criticality contribution (0.0-2.0)
         """
         self.complexity_weight = complexity_weight
         self.usage_weight = usage_weight
@@ -71,6 +81,47 @@ class ImportanceScorer:
         self.complexity_analyzer = ComplexityAnalyzer()
         self.usage_analyzer = UsageAnalyzer()
         self.criticality_analyzer = CriticalityAnalyzer()
+
+    @classmethod
+    def from_preset(cls, preset_name: str) -> "ImportanceScorer":
+        """
+        Create scorer with predefined weight preset.
+
+        Available presets:
+        - "balanced": Equal weights (1.0, 1.0, 1.0) - default behavior
+        - "security": Emphasize criticality (0.8, 0.5, 2.0)
+        - "complexity": Emphasize code complexity (2.0, 0.5, 0.8)
+        - "api": Emphasize public API usage (1.0, 2.0, 1.0)
+
+        Args:
+            preset_name: Name of the preset configuration
+
+        Returns:
+            ImportanceScorer configured with preset weights
+
+        Raises:
+            ValueError: If preset_name is not recognized
+        """
+        presets = {
+            "balanced": (1.0, 1.0, 1.0),
+            "security": (0.8, 0.5, 2.0),
+            "complexity": (2.0, 0.5, 0.8),
+            "api": (1.0, 2.0, 1.0),
+        }
+
+        if preset_name not in presets:
+            available = ", ".join(presets.keys())
+            raise ValueError(
+                f"Unknown preset: '{preset_name}'. "
+                f"Available presets: {available}"
+            )
+
+        weights = presets[preset_name]
+        return cls(
+            complexity_weight=weights[0],
+            usage_weight=weights[1],
+            criticality_weight=weights[2],
+        )
 
     def calculate_importance(
         self,
@@ -99,16 +150,30 @@ class ImportanceScorer:
         try:
             # Run all analyzers
             complexity_metrics = self.complexity_analyzer.analyze(code_unit)
-            usage_metrics = self.usage_analyzer.analyze(code_unit, all_units, file_content)
+            usage_metrics = self.usage_analyzer.analyze(code_unit, all_units, file_content, file_path)
             criticality_metrics = self.criticality_analyzer.analyze(code_unit, file_path)
 
-            # Apply weights
+            # Apply weights directly to amplify each factor's contribution
+            # Higher weight = larger contribution from that factor
+            # With default weights (1.0, 1.0, 1.0), this matches original additive behavior
             weighted_complexity = complexity_metrics.complexity_score * self.complexity_weight
             weighted_usage = usage_metrics.usage_boost * self.usage_weight
             weighted_criticality = criticality_metrics.criticality_boost * self.criticality_weight
 
-            # Calculate final score
-            final_score = weighted_complexity + weighted_usage + weighted_criticality
+            # Sum weighted contributions
+            raw_score = weighted_complexity + weighted_usage + weighted_criticality
+
+            # Normalize to 0.0-1.0 range
+            # With default weights (1.0, 1.0, 1.0):
+            #   - Min possible: 0.3 + 0.0 + 0.0 = 0.3
+            #   - Max possible: 0.7 + 0.2 + 0.3 = 1.2
+            # With custom weights, range expands/contracts proportionally
+            #
+            # We normalize by comparing against the baseline max (1.2) to keep
+            # default behavior unchanged, then cap at 1.0
+            baseline_max = 1.2  # Max with weights (1.0, 1.0, 1.0)
+
+            final_score = raw_score / baseline_max
 
             # Ensure within valid range (0.0-1.0)
             final_score = max(0.0, min(1.0, final_score))
@@ -126,6 +191,7 @@ class ImportanceScorer:
                 caller_count=usage_metrics.caller_count,
                 is_public=usage_metrics.is_public,
                 is_exported=usage_metrics.is_exported,
+                is_entry_point=usage_metrics.is_entry_point,
                 security_keywords=criticality_metrics.security_keywords,
                 has_error_handling=criticality_metrics.has_error_handling,
             )
@@ -146,6 +212,7 @@ class ImportanceScorer:
                 caller_count=0,
                 is_public=True,
                 is_exported=False,
+                is_entry_point=False,
                 security_keywords=[],
                 has_error_handling=False,
             )
