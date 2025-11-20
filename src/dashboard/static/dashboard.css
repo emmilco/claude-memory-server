@@ -240,6 +240,112 @@ footer a:hover {
     text-decoration: underline;
 }
 
+/* Filter Panel Styles */
+.filter-panel {
+    background: var(--card-bg);
+    border-radius: 8px;
+    padding: 20px;
+    margin: 0 0 24px 0;
+    box-shadow: var(--shadow);
+}
+
+.filter-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+}
+
+.filter-controls input[type="search"] {
+    flex: 1 1 300px;
+    padding: 10px 16px;
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    transition: border-color 0.2s ease;
+}
+
+.filter-controls input[type="search"]:focus {
+    outline: none;
+    border-color: var(--accent-color);
+}
+
+.filter-controls select {
+    padding: 10px 16px;
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    background-color: var(--card-bg);
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+}
+
+.filter-controls select:focus {
+    outline: none;
+    border-color: var(--accent-color);
+}
+
+.filter-controls select:hover {
+    border-color: var(--text-secondary);
+}
+
+.filter-controls .btn-secondary {
+    padding: 10px 20px;
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    background-color: var(--card-bg);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.filter-controls .btn-secondary:hover {
+    background-color: var(--bg-color);
+    border-color: var(--accent-color);
+}
+
+.filter-controls .btn-secondary:active {
+    transform: scale(0.98);
+}
+
+.filter-badge {
+    margin-top: 12px;
+    padding: 6px 12px;
+    background-color: var(--accent-color);
+    color: white;
+    border-radius: 16px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: inline-block;
+}
+
+/* Empty state for filtered results */
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+}
+
+.empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.empty-state-message {
+    font-size: 1.1rem;
+    margin-bottom: 8px;
+}
+
+.empty-state-hint {
+    font-size: 0.9rem;
+    opacity: 0.7;
+}
+
 @media (max-width: 768px) {
     .container {
         padding: 12px;
@@ -256,5 +362,15 @@ footer a:hover {
     .project-stats {
         flex-direction: column;
         gap: 8px;
+    }
+
+    .filter-controls {
+        flex-direction: column;
+    }
+
+    .filter-controls input[type="search"],
+    .filter-controls select,
+    .filter-controls .btn-secondary {
+        width: 100%;
     }
 }

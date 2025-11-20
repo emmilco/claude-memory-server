@@ -89,6 +89,16 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-01-XX
 
+- **UX-034: Dashboard Search and Filter Panel**
+  - Added comprehensive search and filter panel to web dashboard
+  - Features: search bar with 300ms debouncing, project/category/lifecycle/date filters
+  - Client-side filtering for instant response (no backend changes required)
+  - URL parameter support for shareable filtered views
+  - Active filter count badge and empty state messaging
+  - Responsive design for mobile devices
+  - Files: `src/dashboard/static/index.html`, `dashboard.css`, `dashboard.js`
+  - Planning: `planning_docs/UX-034_search_filter_panel.md`
+
 - **UX-026: Web Dashboard Enhancement Planning**
   - Created comprehensive enhancement analysis with 15 new features across 4 phases
   - Added 15 new TODO items (UX-034 through UX-048) for dashboard improvements

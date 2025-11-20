@@ -5,12 +5,230 @@
 // API base URL (same origin)
 const API_BASE = '';
 
+// Global filter state
+const filters = {
+    search: '',
+    project: '',
+    category: '',
+    lifecycle: '',
+    dateRange: ''
+};
+
+// Store original data for client-side filtering
+let originalData = {
+    projects: [],
+    categories: {},
+    lifecycleStates: {},
+    recentSearches: [],
+    recentAdditions: []
+};
+
 // Load dashboard data on page load
 document.addEventListener('DOMContentLoaded', () => {
+    initializeFilters();
+    loadFiltersFromURL();
     loadData();
     // Auto-refresh every 30 seconds
     setInterval(loadData, 30000);
 });
+
+/**
+ * Initialize filter event listeners
+ */
+function initializeFilters() {
+    // Search input with debouncing
+    const searchInput = document.getElementById('global-search');
+    let searchTimeout;
+    searchInput.addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            filters.search = e.target.value.toLowerCase();
+            applyFilters();
+        }, 300);
+    });
+
+    // Filter dropdowns
+    document.getElementById('filter-project').addEventListener('change', (e) => {
+        filters.project = e.target.value;
+        applyFilters();
+    });
+
+    document.getElementById('filter-category').addEventListener('change', (e) => {
+        filters.category = e.target.value;
+        applyFilters();
+    });
+
+    document.getElementById('filter-lifecycle').addEventListener('change', (e) => {
+        filters.lifecycle = e.target.value;
+        applyFilters();
+    });
+
+    document.getElementById('filter-date-range').addEventListener('change', (e) => {
+        filters.dateRange = e.target.value;
+        applyFilters();
+    });
+
+    // Clear filters button
+    document.getElementById('clear-filters').addEventListener('click', () => {
+        clearFilters();
+    });
+}
+
+/**
+ * Apply current filters to displayed data
+ */
+function applyFilters() {
+    // Filter projects
+    const filteredProjects = originalData.projects.filter(project => {
+        if (filters.project && project.project_name !== filters.project) return false;
+        if (filters.search && !project.project_name.toLowerCase().includes(filters.search)) return false;
+        return true;
+    });
+
+    // Filter categories
+    const filteredCategories = {};
+    if (filters.category) {
+        if (originalData.categories[filters.category]) {
+            filteredCategories[filters.category] = originalData.categories[filters.category];
+        }
+    } else {
+        Object.assign(filteredCategories, originalData.categories);
+    }
+
+    // Filter lifecycle states
+    const filteredLifecycleStates = {};
+    if (filters.lifecycle) {
+        if (originalData.lifecycleStates[filters.lifecycle]) {
+            filteredLifecycleStates[filters.lifecycle] = originalData.lifecycleStates[filters.lifecycle];
+        }
+    } else {
+        Object.assign(filteredLifecycleStates, originalData.lifecycleStates);
+    }
+
+    // Filter recent searches
+    const filteredSearches = originalData.recentSearches.filter(search => {
+        if (filters.search && !search.query.toLowerCase().includes(filters.search)) return false;
+        if (filters.project && search.project_name !== filters.project) return false;
+        if (filters.dateRange && !isWithinDateRange(search.timestamp, filters.dateRange)) return false;
+        return true;
+    });
+
+    // Filter recent additions
+    const filteredAdditions = originalData.recentAdditions.filter(addition => {
+        if (filters.search && !addition.content.toLowerCase().includes(filters.search)) return false;
+        if (filters.category && addition.category !== filters.category) return false;
+        if (filters.dateRange && !isWithinDateRange(addition.created_at, filters.dateRange)) return false;
+        return true;
+    });
+
+    // Update display with filtered data
+    updateProjects(filteredProjects);
+    updateCategories(filteredCategories);
+    updateLifecycleStates(filteredLifecycleStates);
+    updateRecentSearches(filteredSearches);
+    updateRecentAdditions(filteredAdditions);
+
+    // Update filter badge and URL
+    updateFilterBadge();
+    updateURLParams();
+}
+
+/**
+ * Check if timestamp is within date range
+ */
+function isWithinDateRange(timestamp, range) {
+    if (!timestamp || !range) return true;
+
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now - date;
+
+    switch (range) {
+        case '1h':
+            return diffMs <= 3600000; // 1 hour
+        case '24h':
+            return diffMs <= 86400000; // 24 hours
+        case '7d':
+            return diffMs <= 604800000; // 7 days
+        case '30d':
+            return diffMs <= 2592000000; // 30 days
+        default:
+            return true;
+    }
+}
+
+/**
+ * Update filter badge showing active filter count
+ */
+function updateFilterBadge() {
+    const activeFilters = [];
+    if (filters.search) activeFilters.push('search');
+    if (filters.project) activeFilters.push('project');
+    if (filters.category) activeFilters.push('category');
+    if (filters.lifecycle) activeFilters.push('lifecycle');
+    if (filters.dateRange) activeFilters.push('date');
+
+    const badge = document.getElementById('filter-badge');
+    if (activeFilters.length > 0) {
+        badge.textContent = `${activeFilters.length} filter${activeFilters.length > 1 ? 's' : ''} active`;
+        badge.style.display = 'inline-block';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+/**
+ * Clear all filters
+ */
+function clearFilters() {
+    filters.search = '';
+    filters.project = '';
+    filters.category = '';
+    filters.lifecycle = '';
+    filters.dateRange = '';
+
+    document.getElementById('global-search').value = '';
+    document.getElementById('filter-project').value = '';
+    document.getElementById('filter-category').value = '';
+    document.getElementById('filter-lifecycle').value = '';
+    document.getElementById('filter-date-range').value = '';
+
+    applyFilters();
+}
+
+/**
+ * Update URL parameters based on current filters
+ */
+function updateURLParams() {
+    const params = new URLSearchParams();
+    if (filters.search) params.set('search', filters.search);
+    if (filters.project) params.set('project', filters.project);
+    if (filters.category) params.set('category', filters.category);
+    if (filters.lifecycle) params.set('lifecycle', filters.lifecycle);
+    if (filters.dateRange) params.set('date', filters.dateRange);
+
+    const newURL = params.toString() ? `${window.location.pathname}?${params.toString()}` : window.location.pathname;
+    window.history.replaceState({}, '', newURL);
+}
+
+/**
+ * Load filters from URL parameters
+ */
+function loadFiltersFromURL() {
+    const params = new URLSearchParams(window.location.search);
+
+    filters.search = params.get('search') || '';
+    filters.project = params.get('project') || '';
+    filters.category = params.get('category') || '';
+    filters.lifecycle = params.get('lifecycle') || '';
+    filters.dateRange = params.get('date') || '';
+
+    document.getElementById('global-search').value = filters.search;
+    document.getElementById('filter-project').value = filters.project;
+    document.getElementById('filter-category').value = filters.category;
+    document.getElementById('filter-lifecycle').value = filters.lifecycle;
+    document.getElementById('filter-date-range').value = filters.dateRange;
+}
 
 /**
  * Main function to load all dashboard data
@@ -38,10 +256,24 @@ async function loadDashboardStats() {
         const data = await response.json();
 
         if (data.status === 'success') {
+            // Store original data for filtering
+            originalData.projects = data.projects || [];
+            originalData.categories = data.categories || {};
+            originalData.lifecycleStates = data.lifecycle_states || {};
+
+            // Populate project dropdown
+            populateProjectDropdown(originalData.projects);
+
+            // Update display
             updateOverview(data);
-            updateProjects(data.projects || []);
-            updateCategories(data.categories || {});
-            updateLifecycleStates(data.lifecycle_states || {});
+            updateProjects(originalData.projects);
+            updateCategories(originalData.categories);
+            updateLifecycleStates(originalData.lifecycleStates);
+
+            // Apply filters if any are active
+            if (filters.search || filters.project || filters.category || filters.lifecycle || filters.dateRange) {
+                applyFilters();
+            }
         } else {
             showError('stats', data.error || 'Unknown error');
         }
@@ -63,14 +295,50 @@ async function loadRecentActivity() {
         const data = await response.json();
 
         if (data.status === 'success') {
-            updateRecentSearches(data.recent_searches || []);
-            updateRecentAdditions(data.recent_additions || []);
+            // Store original data for filtering
+            originalData.recentSearches = data.recent_searches || [];
+            originalData.recentAdditions = data.recent_additions || [];
+
+            // Update display
+            updateRecentSearches(originalData.recentSearches);
+            updateRecentAdditions(originalData.recentAdditions);
+
+            // Apply filters if any are active
+            if (filters.search || filters.project || filters.category || filters.lifecycle || filters.dateRange) {
+                applyFilters();
+            }
         } else {
             showError('activity', data.error || 'Unknown error');
         }
     } catch (error) {
         console.error('Error loading activity:', error);
         showError('activity', error.message);
+    }
+}
+
+/**
+ * Populate project dropdown with available projects
+ */
+function populateProjectDropdown(projects) {
+    const dropdown = document.getElementById('filter-project');
+    // Keep the "All Projects" option
+    const allOption = dropdown.querySelector('option[value=""]');
+
+    // Clear existing options except "All Projects"
+    dropdown.innerHTML = '';
+    dropdown.appendChild(allOption);
+
+    // Add project options
+    projects.forEach(project => {
+        const option = document.createElement('option');
+        option.value = project.project_name;
+        option.textContent = project.project_name;
+        dropdown.appendChild(option);
+    });
+
+    // Restore selected value if filters are active
+    if (filters.project) {
+        dropdown.value = filters.project;
     }
 }
 
@@ -93,7 +361,18 @@ function updateProjects(projects) {
     const container = document.getElementById('projects-list');
 
     if (projects.length === 0) {
-        container.innerHTML = '<p class="loading">No projects found</p>';
+        const hasActiveFilters = filters.search || filters.project || filters.category || filters.lifecycle || filters.dateRange;
+        if (hasActiveFilters) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">🔍</div>
+                    <div class="empty-state-message">No projects match your filters</div>
+                    <div class="empty-state-hint">Try adjusting your search criteria</div>
+                </div>
+            `;
+        } else {
+            container.innerHTML = '<p class="loading">No projects found</p>';
+        }
         return;
     }
 
