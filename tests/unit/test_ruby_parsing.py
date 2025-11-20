@@ -231,7 +231,7 @@ class TestRubyComplexScenarios:
             content = sample_ruby_file.read_text()
 
             result = parse_source_file(str(sample_ruby_file), content)
-        units = result.units if hasattr(result, 'units') else result
+            units = result.units if hasattr(result, 'units') else result
             assert isinstance(units, list) or hasattr(result, 'units')
         except Exception as e:
             pytest.fail(f"Parsing raised unexpected exception: {e}")

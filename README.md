@@ -49,7 +49,7 @@ This is an MCP server that sits between Claude and your development environment,
 - **Git Awareness:** Search commit history semantically, track how code evolved
 - **Hybrid Search:** Combines semantic understanding with keyword precision
 
-**Status:** Production ready • 1413/1414 tests passing (99.9%) • 67% coverage • 7-13ms search latency
+**Status:** v4.0 RC1 • ✅ 2723 tests (BUG-023 fixed) • 67% coverage • 7-13ms search latency
 
 **Version:** 4.0 (Production-Ready Enterprise Features)
 
@@ -96,7 +96,7 @@ You: "How does the application start up?"
 **Supported Languages:**
 - **Programming:** Python, JavaScript, TypeScript, Java, Go, Rust, Ruby, Swift, Kotlin, PHP, C, C++, C#, SQL (14 languages)
 - **Configuration:** JSON, YAML, TOML (3 formats)
-- **Total:** 15 file formats supported
+- **Total:** 17 file formats supported
 
 **Performance:**
 - 7-13ms search latency (hybrid search: 10-18ms)

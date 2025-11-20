@@ -8,7 +8,8 @@
 ## Prerequisites
 
 ### Required
-- **Python:** 3.13 or higher
+- **Python:** 3.8 or higher (3.13+ recommended for best performance)
+  - **Note:** Developed and tested on Python 3.13.6, should work on 3.8+
 - **Disk Space:** 1GB minimum (10GB recommended for large codebases)
 - **RAM:** 2GB minimum (4GB recommended)
 

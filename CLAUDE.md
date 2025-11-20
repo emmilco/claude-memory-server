@@ -13,7 +13,7 @@ A Model Context Protocol (MCP) server providing persistent memory, documentation
 - **Memory management** - Store/retrieve memories with 4-tier lifecycle and provenance tracking
 - **Memory intelligence** - Duplicate detection, consolidation, trust scoring, contradiction resolution
 - **Documentation RAG** - Search project documentation semantically
-- **Code indexing** - Parse and index 15 file formats (12 languages + 3 config types) using tree-sitter
+- **Code indexing** - Parse and index 17 file formats (14 languages + 3 config types) using tree-sitter
 - **Parallel embeddings** - 4-8x faster indexing with multi-process architecture
 - **Incremental caching** - 98% cache hit rate, 5-10x faster re-indexing
 - **Real-time watching** - Auto-reindex on file changes with smart batching
@@ -22,14 +22,14 @@ A Model Context Protocol (MCP) server providing persistent memory, documentation
 - **Git history search** - Semantic search over commit history
 
 ### Technology Stack
-- **Language:** Python 3.8+ (3.13+ recommended) with type hints (123 modules, ~500KB code)
+- **Language:** Python 3.8+ (3.13+ recommended) with type hints (159 modules, ~4MB code)
 - **Performance:** Rust module via PyO3 for parsing (1-6ms per file) OR pure Python fallback
 - **Vector DB:** Qdrant (Docker, localhost:6333) OR SQLite (no Docker required)
 - **Embeddings:** all-MiniLM-L6-v2 (384 dimensions) with parallel generation
 - **Search:** Hybrid (BM25 + vector) with 3 fusion strategies, query synonyms, reranking
-- **Framework:** MCP (Model Context Protocol) - 14 MCP tools + 28 CLI commands
-- **Testing:** pytest with 1413/1414 tests passing (99.9% pass rate, 67% overall coverage, 80-85% core)
-- **Languages Supported:** Python, JS, TS, Java, Go, Rust, Ruby, Swift, Kotlin, C, C++, C#, SQL, JSON, YAML, TOML (15 total)
+- **Framework:** MCP (Model Context Protocol) - 16 MCP tools + 28 CLI commands
+- **Testing:** pytest with 2723 tests (collection verified, pass rate TBD) - 67% coverage
+- **Languages Supported:** Python, JS, TS, Java, Go, Rust, Ruby, Swift, Kotlin, PHP, C, C++, C#, SQL, JSON, YAML, TOML (17 total)
 
 ## Essential Files
 
@@ -466,13 +466,13 @@ python -m src.mcp_server
 ## Current State (Auto-Update This Section)
 
 ### Metrics
-- **Test Status:** 2157/2158 passing (1 flaky performance test that passes when run individually)
-- **Pass Rate:** 99.95% (improved from 97.9% → 99.4% → 99.9% → 99.95%)
-- **Coverage:** 67% overall (80-85% core modules, meets original target)
+- **Test Status:** ✅ 2723 tests collected successfully (BUG-023 fixed)
+- **Pass Rate:** Run `pytest tests/` to verify (collection errors resolved)
+- **Coverage:** 67% overall on passing tests (80-85% core modules target)
   - **Note:** Coverage excludes 14 impractical-to-test files per `.coveragerc` (CLI/TUI/schedulers)
-- **Modules:** 123 Python modules totaling ~500KB production code
-- **Languages:** 12 formats (Python, JS, TS, Java, Go, Rust, C, C++, C#, SQL, JSON, YAML, TOML)
-- **Commands:** 17 MCP tools + 28 CLI commands (updated 2025-11-18)
+- **Modules:** 159 Python modules totaling ~4MB production code
+- **Languages:** 17 file formats (14 languages + 3 config types)
+- **Commands:** 16 MCP tools + 28 CLI commands (updated 2025-11-20)
 - **Performance:**
   - Search: 7-13ms (semantic), 3-7ms (keyword), 10-18ms (hybrid)
   - Search P95 latency: 3.96ms (87% better than 50ms target) ✅
@@ -491,18 +491,21 @@ python -m src.mcp_server
 - ✅ Enhanced UX (actionable errors, interactive TUIs, comprehensive CLI)
 - ✅ Enterprise Features (backup/restore, analytics, token tracking, optimization)
 
-**Production Readiness:**
-- ✅ 99.95% test pass rate (2157/2158 tests)
-- ✅ Comprehensive documentation (10 guides, all updated to v4.0)
+**Production Readiness (v4.0 RC1 - Release Candidate):**
+- ✅ Test suite repaired (BUG-023 fixed: pytest-asyncio added, syntax error corrected)
+- ✅ Comprehensive documentation (13 guides, all updated to v4.0)
 - ✅ Security hardened (267+ attack patterns blocked, read-only mode)
 - ✅ Performance optimized (4-8x indexing, 98% cache hit rate, P95 <4ms)
-- ✅ Fully featured (123 modules, 17 MCP tools, 28 CLI commands)
+- ✅ Fully featured (159 modules, 16 MCP tools, 28 CLI commands)
 - ✅ Automated maintenance (health scheduler, backup scheduler)
 - ✅ Error recovery workflows (comprehensive troubleshooting guide)
 - ✅ First-run testing framework (automated validation script)
 
 ### Known Issues
-- **1 performance test:** Flaky under heavy system load (passes individually) - non-blocking
+- ~~**BUG-023: Test suite collection errors**~~ ✅ **FIXED** (2025-11-20)
+  - **Root Cause:** Missing pytest-asyncio dependency + syntax error in test_ruby_parsing.py
+  - **Fix:** Added pytest-asyncio>=0.21.0 to requirements.txt, fixed indentation
+  - **Result:** All 2723 tests now collect successfully
 
 ## Key Commands Reference
 

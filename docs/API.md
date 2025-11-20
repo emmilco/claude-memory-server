@@ -9,7 +9,7 @@
 
 The Claude Memory RAG Server exposes tools through the Model Context Protocol (MCP). All tools are accessible to Claude via MCP tool calls.
 
-**Total Tools:** 23 MCP tools + 28 CLI commands
+**Total Tools:** 16 MCP tools + 28 CLI commands
 
 ### Available MCP Tools
 

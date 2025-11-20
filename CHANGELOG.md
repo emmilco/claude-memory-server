@@ -82,7 +82,49 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ## [Unreleased]
 
-### Fixed
+### Changed - 2025-11-20
+
+- **Dashboard Trend Charts: Real Historical Metrics**
+  - Replaced simulated trend data with actual historical metrics from database
+  - Dashboard now queries real time-series data from `MetricsCollector`
+  - Metrics automatically collected on server startup and hourly thereafter
+  - Search operations (retrieve_memories, search_code) now log query metrics
+  - Shows empty trends until data accumulates over time
+  - Modified: `src/dashboard/web_server.py`, `src/core/server.py`
+
+### Fixed - 2025-11-20
+
+- **DOC-008: Documentation Audit & Corrections**
+  - Fixed critical test suite status claims (was "99.95% pass rate", actually had 45 collection errors)
+  - **BUG-023: Test suite collection errors** ✅ FIXED
+    - Added missing `pytest-asyncio>=0.21.0` dependency to requirements.txt
+    - Fixed syntax error in tests/unit/test_ruby_parsing.py (indentation on lines 234-235)
+    - Result: All 2723 tests now collect successfully (down from 45 errors)
+  - Standardized MCP tools count across all documentation (16 tools, not 17 or 23)
+  - Corrected Python version requirements inconsistency (unified to "3.8+, 3.13+ recommended")
+  - Updated module count (123→159) and code size (~500KB→~4MB) to match reality
+  - Updated language support count (12-15→17 file formats consistently)
+  - Updated documentation guides count (10→13)
+  - **BUG-017: Code examples audit** ✅ VERIFIED CORRECT (no fixes needed)
+  - Downgraded status from "Production Ready" to "v4.0 RC1" due to test issues
+  - Modified: CLAUDE.md, README.md, TODO.md, docs/API.md, docs/SETUP.md
+  - Added: planning_docs/DOC-008_documentation_audit_2025-11-20.md, planning_docs/DOC-008_fixes_complete_2025-11-20.md
+
+- **Dashboard Global Memories Negative Count**
+  - Fixed calculation that used subtraction causing negative values
+  - Now directly queries Qdrant for memories without project_name using IsNullCondition
+  - SQLite backend already used correct direct query
+  - Modified: `src/core/server.py` (get_dashboard_stats method)
+
+- **Parallel Embedding Generation Meta Tensor Error (Complete Fix)**
+  - Set multiprocessing start method to 'fork' for better compatibility
+  - Added explicit meta tensor detection and materialization on CPU
+  - Disabled trust_remote_code to prevent lazy initialization
+  - Added environment variable PYTORCH_ENABLE_MPS_FALLBACK=1
+  - Properly handles both meta tensors and device migration
+  - Modified: `src/embeddings/parallel_generator.py`
+
+### Fixed (from previous)
 
 - **FEAT-049: Intelligent Code Importance Scoring - Fixes & Enhancements**
   - Fixed weight configuration behavior to use multiplicative amplification (weights now work intuitively)
