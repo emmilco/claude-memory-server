@@ -5,22 +5,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Claude Memory Dashboard</title>
     <link rel="stylesheet" href="dashboard.css">
+    <!-- Tippy.js for tooltips -->
+    <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/dist/tippy.css">
 </head>
 <body>
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
     <div class="container">
         <header>
-            <h1>🧠 Claude Memory Dashboard</h1>
-            <p class="subtitle">Memory system statistics and recent activity</p>
+            <div class="header-content">
+                <div>
+                    <h1>🧠 Claude Memory Dashboard</h1>
+                    <p class="subtitle">Memory system statistics and recent activity</p>
+                </div>
+                <div class="theme-toggle">
+                    <button id="dark-mode-toggle" aria-label="Toggle dark mode">
+                        <span class="icon-light">☀️</span>
+                        <span class="icon-dark" style="display:none;">🌙</span>
+                    </button>
+                </div>
+            </div>
         </header>
 
         <!-- Filter Panel -->
         <section class="filter-panel">
             <div class="filter-controls">
-                <input type="search" id="global-search" placeholder="🔍 Search memories..." aria-label="Search memories">
-                <select id="filter-project" aria-label="Filter by project">
+                <input type="search" id="global-search" placeholder="🔍 Search memories..." aria-label="Search memories" data-tippy-content="Search across all memories and projects. Press '/' to focus.">
+                <select id="filter-project" aria-label="Filter by project" data-tippy-content="Filter memories by project. Select a specific project or view all.">
                     <option value="">All Projects</option>
                 </select>
-                <select id="filter-category" aria-label="Filter by category">
+                <select id="filter-category" aria-label="Filter by category" data-tippy-content="Filter by memory category (preference, fact, event, workflow, context, code).">
                     <option value="">All Categories</option>
                     <option value="preference">Preference</option>
                     <option value="fact">Fact</option>
@@ -29,7 +44,7 @@
                     <option value="context">Context</option>
                     <option value="code">Code</option>
                 </select>
-                <select id="filter-lifecycle" aria-label="Filter by lifecycle state">
+                <select id="filter-lifecycle" aria-label="Filter by lifecycle state" data-tippy-content="Filter by lifecycle state. Memories transition from warming_up → active → mature → declining.">
                     <option value="">All States</option>
                     <option value="active">Active</option>
                     <option value="warming_up">Warming Up</option>
@@ -37,14 +52,14 @@
                     <option value="declining">Declining</option>
                     <option value="archived">Archived</option>
                 </select>
-                <select id="filter-date-range" aria-label="Filter by date range">
+                <select id="filter-date-range" aria-label="Filter by date range" data-tippy-content="Filter by time range. Shows memories created within the selected period.">
                     <option value="">All Time</option>
                     <option value="1h">Last Hour</option>
                     <option value="24h">Last 24 Hours</option>
                     <option value="7d">Last 7 Days</option>
                     <option value="30d">Last 30 Days</option>
                 </select>
-                <button id="clear-filters" class="btn-secondary">Clear Filters</button>
+                <button id="clear-filters" class="btn-secondary" data-tippy-content="Clear all active filters and show everything. Press 'c' to clear.">Clear Filters</button>
             </div>
             <div id="filter-badge" class="filter-badge" style="display: none;"></div>
         </section>
@@ -52,7 +67,7 @@
         <main>
             <!-- Overview Section -->
             <section class="card">
-                <h2>📊 Overview</h2>
+                <h2>📊 Overview <span class="help-icon" data-tippy-content="Total statistics across all memories, projects, and global context.">ⓘ</span></h2>
                 <div id="overview" class="stats-grid">
                     <div class="stat-item">
                         <div class="stat-value" id="total-memories">-</div>
@@ -71,7 +86,7 @@
 
             <!-- Projects Section -->
             <section class="card">
-                <h2>📁 Projects</h2>
+                <h2>📁 Projects <span class="help-icon" data-tippy-content="Projects are collections of memories tied to a specific codebase or context.">ⓘ</span></h2>
                 <div id="projects-list" class="list">
                     <p class="loading">Loading...</p>
                 </div>
@@ -79,7 +94,7 @@
 
             <!-- Categories Section -->
             <section class="card">
-                <h2>🏷️ Categories</h2>
+                <h2>🏷️ Categories <span class="help-icon" data-tippy-content="Memory categories: preference (user preferences), fact (statements), event (occurrences), workflow (processes), context (background), code (functions/classes).">ⓘ</span></h2>
                 <div id="categories-chart" class="chart">
                     <p class="loading">Loading...</p>
                 </div>
@@ -87,7 +102,7 @@
 
             <!-- Lifecycle States Section -->
             <section class="card">
-                <h2>♻️ Lifecycle States</h2>
+                <h2>♻️ Lifecycle States <span class="help-icon" data-tippy-content="Memories evolve through states: warming_up (new) → active (useful) → mature (established) → declining (less relevant) → archived (inactive).">ⓘ</span></h2>
                 <div id="lifecycle-chart" class="chart">
                     <p class="loading">Loading...</p>
                 </div>
@@ -112,6 +127,48 @@
         <footer>
             <p>Claude Memory RAG Server Dashboard v1.0 | <a href="#" onclick="loadData(); return false;">Refresh</a></p>
         </footer>
+    </div>
+
+    <!-- Keyboard Shortcuts Help Modal -->
+    <div id="shortcuts-modal" class="modal" style="display: none;">
+        <div class="modal-overlay" onclick="closeShortcutsModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>⌨️ Keyboard Shortcuts</h2>
+                <button class="modal-close" onclick="closeShortcutsModal()" aria-label="Close modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <table class="shortcuts-table">
+                    <tr>
+                        <td><kbd>/</kbd></td>
+                        <td>Focus search</td>
+                    </tr>
+                    <tr>
+                        <td><kbd>r</kbd></td>
+                        <td>Refresh dashboard data</td>
+                    </tr>
+                    <tr>
+                        <td><kbd>d</kbd></td>
+                        <td>Toggle dark mode</td>
+                    </tr>
+                    <tr>
+                        <td><kbd>c</kbd></td>
+                        <td>Clear all filters</td>
+                    </tr>
+                    <tr>
+                        <td><kbd>Esc</kbd></td>
+                        <td>Close modal/dialog</td>
+                    </tr>
+                    <tr>
+                        <td><kbd>?</kbd></td>
+                        <td>Show this help</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeShortcutsModal()">Close</button>
+            </div>
+        </div>
     </div>
 
     <!-- Memory Detail Modal -->
@@ -166,6 +223,9 @@
         </div>
     </div>
 
+    <!-- Popper.js and Tippy.js -->
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+    <script src="https://unpkg.com/tippy.js@6"></script>
     <script src="dashboard.js"></script>
 </body>
 </html>
