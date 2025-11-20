@@ -122,7 +122,7 @@ Claude automatically remembers:
 ## Quick Start
 
 ### Prerequisites
-- **Required:** Python 3.13+ only!
+- **Required:** Python 3.8+ (Python 3.13+ recommended for best performance)
 - **Optional:** Rust (for faster parsing), Docker (for Qdrant scalability)
 - ~1GB disk space (10GB recommended for large codebases)
 
@@ -149,15 +149,24 @@ The interactive wizard will:
 ### Add to Claude Code
 
 ```bash
-# Get absolute Python path (important for pyenv users!)
+# Step 1: Get absolute Python path (important for pyenv users!)
 PYTHON_PATH=$(which python)
-PROJECT_DIR=$(pwd)  # Make sure you're in claude-memory-server directory!
+echo "Python path: $PYTHON_PATH"  # Verify the path
 
-# Add MCP server with absolute paths
+# Step 2: Get project directory (make sure you're in claude-memory-server directory!)
+PROJECT_DIR=$(pwd)
+echo "Project directory: $PROJECT_DIR"  # Verify the path
+
+# Step 3: Add MCP server with absolute paths
 claude mcp add --transport stdio --scope user \
   claude-memory-rag -- \
   $PYTHON_PATH "$PROJECT_DIR/src/mcp_server.py"
 ```
+
+**What these variables mean:**
+- `$PYTHON_PATH`: The full path to your Python interpreter (e.g., `/usr/local/bin/python3`)
+- `$PROJECT_DIR`: The full path to this project directory (e.g., `/Users/you/claude-memory-server`)
+- These are bash shell variables that get automatically replaced with the actual paths when you run the commands above
 
 **Important Configuration Notes:**
 - **For pyenv users:** Using the absolute Python path (`$PYTHON_PATH`) ensures the MCP server uses the correct Python environment with installed dependencies, even when you switch between different project directories with different pyenv environments.
@@ -166,7 +175,13 @@ claude mcp add --transport stdio --scope user \
 ### Verify Installation
 
 ```bash
+# Quick health check
 python -m src.cli health
+
+# Comprehensive validation (checks Python, dependencies, Qdrant, parsers)
+python -m src.cli validate-install
+
+# If validation fails, follow the actionable error messages provided
 ```
 
 ### Optional: Upgrade for Better Performance
@@ -248,6 +263,19 @@ Claude: ✅ Documentation Ingestion Complete
 You: How does authentication work in this project?
 Claude: Based on the documentation:
         [Shows relevant sections from docs]
+```
+
+**Browse memories interactively:**
+```bash
+# Launch the interactive memory browser (TUI)
+python -m src.cli browse
+
+# Features:
+# - Full-text search across all memories
+# - Filter by category, context level, or project
+# - View detailed memory metadata (provenance, trust score, usage stats)
+# - Navigate with keyboard shortcuts
+# - Real-time search as you type
 ```
 
 ### Project Archival
@@ -348,10 +376,10 @@ Claude has access to these tools:
 ## Technology Stack
 
 ### Core
-- **Python 3.13** - Main application
-- **Rust 1.91** - Fast code parsing (tree-sitter)
-- **Qdrant** - Vector database
-- **PyO3** - Python-Rust bridge
+- **Python 3.8+** - Main application (3.13+ recommended)
+- **Rust 1.91** - Fast code parsing (tree-sitter, optional)
+- **Qdrant** - Vector database (optional, SQLite fallback available)
+- **PyO3** - Python-Rust bridge (optional)
 
 ### AI/ML
 - **sentence-transformers** - Embedding generation
@@ -428,20 +456,95 @@ claude-memory-server/
 
 ## Configuration
 
-### Environment Variables
+The server can be configured using either **JSON config file** (recommended) or **environment variables**.
 
-Create `.env` file (optional):
+**Configuration Priority (highest to lowest):**
+1. Environment variables (`CLAUDE_RAG_*`)
+2. JSON config file (`~/.claude-rag/config.json`)
+3. Built-in defaults
+
+### Option 1: JSON Configuration (Recommended)
+
+Create `~/.claude-rag/config.json`:
+
+```json
+{
+  "storage_backend": "sqlite",
+  "embedding_model": "all-MiniLM-L6-v2",
+  "enable_parallel_embeddings": true,
+  "enable_file_watcher": true,
+  "watch_debounce_ms": 1000
+}
+```
+
+**Benefits:**
+- Easier to read and edit
+- Persistent across all projects
+- No environment variable conflicts
+- See `config.json.example` for all options with comments
+
+**Common Presets:**
+
+```json
+// Minimal (No Docker)
+{
+  "storage_backend": "sqlite",
+  "enable_parallel_embeddings": false,
+  "allow_rust_fallback": true
+}
+
+// Standard (Docker)
+{
+  "storage_backend": "qdrant",
+  "qdrant_url": "http://localhost:6333",
+  "enable_parallel_embeddings": true
+}
+
+// High Performance
+{
+  "storage_backend": "qdrant",
+  "enable_parallel_embeddings": true,
+  "embedding_parallel_workers": 8,
+  "embedding_batch_size": 64,
+  "enable_hybrid_search": true
+}
+```
+
+### Option 2: Environment Variables
+
+Create `.env` file (project-specific configuration):
+
 ```bash
-# Qdrant
+# Storage Backend
+CLAUDE_RAG_STORAGE_BACKEND=sqlite
 CLAUDE_RAG_QDRANT_URL=http://localhost:6333
-CLAUDE_RAG_COLLECTION_NAME=memory
 
 # Embeddings
 CLAUDE_RAG_EMBEDDING_MODEL=all-MiniLM-L6-v2
+CLAUDE_RAG_ENABLE_PARALLEL_EMBEDDINGS=true
 
-# Features
+# File Watching
 CLAUDE_RAG_ENABLE_FILE_WATCHER=true
 CLAUDE_RAG_WATCH_DEBOUNCE_MS=1000
+```
+
+**When to use:**
+- Override global settings for specific projects
+- Temporary configuration changes
+- CI/CD environments
+- See `.env.example` for all available variables
+
+### Quick Configuration Guide
+
+```bash
+# View current configuration
+python -m src.cli status
+
+# Test with different storage backend
+echo '{"storage_backend": "sqlite"}' > ~/.claude-rag/config.json
+
+# Or use environment variable
+export CLAUDE_RAG_STORAGE_BACKEND=qdrant
 ```
 
 ## Testing

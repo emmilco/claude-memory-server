@@ -106,7 +106,7 @@ class QdrantConnectionError(StorageError):
             "2. Use SQLite instead: Add {\"storage_backend\": \"sqlite\"} to ~/.claude-rag/config.json\n"
             "3. Check Qdrant is running: curl http://localhost:6333/health"
         )
-        docs_url = "https://github.com/anthropics/claude-code/blob/main/docs/setup.md"
+        docs_url = "See docs/SETUP.md for detailed setup instructions"
 
         super().__init__(message, solution, docs_url)
 
@@ -167,7 +167,7 @@ class DependencyError(MemoryRAGError):
             f"  pip install -r requirements.txt"
         )
 
-        docs_url = "https://github.com/anthropics/claude-memory-server/blob/main/docs/setup.md"
+        docs_url = "See docs/TROUBLESHOOTING.md for dependency issues"
 
         super().__init__(message, solution, docs_url)
 
@@ -195,7 +195,7 @@ class DockerNotRunningError(MemoryRAGError):
             f"  Add {{\"storage_backend\": \"sqlite\"}} to ~/.claude-rag/config.json\n"
             f"  # The system will automatically fall back to SQLite"
         )
-        docs_url = "https://github.com/anthropics/claude-memory-server/blob/main/docs/setup.md#docker-setup"
+        docs_url = "See docs/SETUP.md for Docker setup instructions"
 
         super().__init__(message, solution, docs_url)
 
@@ -215,6 +215,6 @@ class RustBuildError(MemoryRAGError):
             "   The system will automatically fall back to Python parser\n"
             "   Performance: ~10-20x slower than Rust parser"
         )
-        docs_url = "https://github.com/anthropics/claude-memory-server/blob/main/docs/setup.md#rust-parser"
+        docs_url = "See docs/TROUBLESHOOTING.md for Rust parser issues"
 
         super().__init__(message, solution, docs_url)

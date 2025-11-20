@@ -22,7 +22,7 @@ A Model Context Protocol (MCP) server providing persistent memory, documentation
 - **Git history search** - Semantic search over commit history
 
 ### Technology Stack
-- **Language:** Python 3.13+ with type hints (123 modules, ~500KB code)
+- **Language:** Python 3.8+ (3.13+ recommended) with type hints (123 modules, ~500KB code)
 - **Performance:** Rust module via PyO3 for parsing (1-6ms per file) OR pure Python fallback
 - **Vector DB:** Qdrant (Docker, localhost:6333) OR SQLite (no Docker required)
 - **Embeddings:** all-MiniLM-L6-v2 (384 dimensions) with parallel generation

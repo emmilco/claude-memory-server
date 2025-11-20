@@ -79,6 +79,23 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ## [Unreleased]
 
+### Changed - 2025-01-XX
+
+- **UX-007: Product Design Audit & Quick Wins (Phase 1)**
+  - Created `.env.example` with all 40+ configuration options organized by category
+  - Created `config.json.example` for JSON-based configuration (recommended method)
+  - Fixed Python version contradiction: clarified "3.8+ required, 3.13+ recommended" across README.md and CLAUDE.md
+  - Added command grouping to CLI help: organized 28 commands into 6 categories (Code & Indexing, Git Operations, Memory Management, etc.)
+  - Added usage examples to key CLI commands (index, watch, git-index, git-search, consolidate)
+  - Documented validation command (`validate-install`) in README Verify Installation section
+  - Documented memory browser TUI (`browse`) in README Usage section
+  - Added MCP config variable explanation with verification steps ($PYTHON_PATH, $PROJECT_DIR)
+  - Fixed broken documentation URLs in exceptions.py: changed GitHub URLs to local docs references
+  - Added prominent DRY-RUN banner to consolidate command with yellow bordered panel warning
+  - Enhanced watch command output to show monitored file types and ignored directories
+  - Rewrote README Configuration section: documented both JSON (recommended) and ENV methods with priority explanation and common presets
+  - Files: `.env.example`, `config.json.example`, `README.md`, `CLAUDE.md`, `src/cli/__init__.py`, `src/cli/consolidate_command.py`, `src/cli/watch_command.py`, `src/core/exceptions.py`
+
 ### Fixed - 2025-11-19
 
 - **BUG-015: Code Search Category Filter Mismatch**

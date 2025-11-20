@@ -37,6 +37,40 @@ def create_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="claude-rag",
         description="Claude Memory RAG Server - CLI for code indexing and memory management",
+        epilog="""
+Command Categories:
+
+  Code & Indexing:
+    index              Index code files for semantic search
+    watch              Watch directory for changes and auto-index
+    browse             Interactive memory browser (TUI)
+
+  Git Operations:
+    git-index          Index git history for semantic search
+    git-search         Search git commit history
+
+  Memory Management:
+    prune              Prune expired and stale memories
+    verify             Interactive memory verification workflow
+    consolidate        Find and merge duplicate memories
+
+  Monitoring & Health:
+    health             Run health check diagnostics
+    health-monitor     Continuous health monitoring and alerts
+    status             Show server and storage status
+    analytics          View token usage analytics and cost savings
+    session-summary    View summary of current or recent sessions
+
+  Project Management:
+    repository         Manage multi-repository operations
+    workspace          Manage workspace configurations
+
+  System:
+    validate-install   Validate installation and check prerequisites
+
+For detailed help on any command: claude-rag <command> --help
+        """,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
     parser.add_argument(
@@ -53,6 +87,18 @@ def create_parser() -> argparse.ArgumentParser:
     index_parser = subparsers.add_parser(
         "index",
         help="Index code files for semantic search",
+        epilog="""
+Examples:
+  # Index current directory
+  claude-rag index .
+
+  # Index specific directory with custom project name
+  claude-rag index ~/my-project --project-name my-app
+
+  # Index without recursing subdirectories
+  claude-rag index ./src --no-recursive
+        """,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     index_parser.add_argument(
         "path",
@@ -93,6 +139,17 @@ def create_parser() -> argparse.ArgumentParser:
     watch_parser = subparsers.add_parser(
         "watch",
         help="Watch directory for changes and auto-index",
+        epilog="""
+Examples:
+  # Watch current directory for changes
+  claude-rag watch .
+
+  # Watch specific directory with custom project name
+  claude-rag watch ~/my-project --project-name my-app
+
+  # Press Ctrl+C to stop watching (will finish current file before stopping)
+        """,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     watch_parser.add_argument(
         "path",
@@ -141,6 +198,18 @@ def create_parser() -> argparse.ArgumentParser:
     git_index_parser = subparsers.add_parser(
         "git-index",
         help="Index git history for semantic search",
+        epilog="""
+Examples:
+  # Index last 100 commits from current repo
+  claude-rag git-index . --project-name myproject --commits 100
+
+  # Index with diff content
+  claude-rag git-index ~/my-repo -p myproject --diffs
+
+  # Verbose output with custom commit count
+  claude-rag git-index . -p myproject -n 500 -v
+        """,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     git_index_parser.add_argument(
         "repo_path",
@@ -183,6 +252,18 @@ def create_parser() -> argparse.ArgumentParser:
     git_search_parser = subparsers.add_parser(
         "git-search",
         help="Search git commit history",
+        epilog="""
+Examples:
+  # Search for authentication-related commits
+  claude-rag git-search "authentication bug fix"
+
+  # Search with filters
+  claude-rag git-search "database migration" -p myproject --since "last month"
+
+  # Search by author
+  claude-rag git-search "refactoring" --author "dev@example.com" -l 20
+        """,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     git_search_parser.add_argument(
         "query",
@@ -356,6 +437,23 @@ def create_parser() -> argparse.ArgumentParser:
     consolidate_parser = subparsers.add_parser(
         "consolidate",
         help="Find and merge duplicate memories",
+        epilog="""
+Examples:
+  # Preview what would be merged (dry-run by default)
+  claude-rag consolidate
+
+  # Actually perform the merges
+  claude-rag consolidate --execute
+
+  # Auto-merge high-confidence duplicates
+  claude-rag consolidate --auto --execute
+
+  # Interactive review of each merge
+  claude-rag consolidate --interactive --execute
+
+Note: Runs in dry-run mode by default for safety. Use --execute to actually merge.
+        """,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     consolidate_parser.add_argument(
         "--auto",

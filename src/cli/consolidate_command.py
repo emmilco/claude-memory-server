@@ -63,6 +63,17 @@ async def consolidate_command(
 
         # Display header
         console.print("\n[bold cyan]Memory Consolidation Tool[/bold cyan]")
+
+        # Prominent DRY-RUN banner
+        if dry_run:
+            console.print(Panel(
+                "[bold yellow]⚠️  DRY-RUN MODE - NO CHANGES WILL BE MADE[/bold yellow]\n\n"
+                "This is a preview only. To actually merge duplicates, run with --execute flag:\n"
+                "  claude-rag consolidate --execute",
+                border_style="yellow",
+                box=box.DOUBLE
+            ))
+
         console.print(f"Mode: {'AUTO-MERGE' if auto else 'INTERACTIVE' if interactive else 'DRY-RUN'}")
         if category:
             console.print(f"Category filter: {memory_category.value}")
