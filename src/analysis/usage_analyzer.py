@@ -201,7 +201,7 @@ class UsageAnalyzer:
             # Check for export keyword
             export_patterns = [
                 rf'export\s+(function|class|const|let|var)\s+{re.escape(name)}\b',
-                rf'export\s+\{{\s*{re.escape(name)}\s*\}}',
+                rf'export\s+\{{[^}}]*\b{re.escape(name)}\b[^}}]*\}}',  # export { func1, func2 }
                 rf'export\s+default\s+{re.escape(name)}\b',
             ]
             for pattern in export_patterns:
@@ -211,7 +211,8 @@ class UsageAnalyzer:
 
         elif language.lower() == "java":
             # Check for public modifier in class/method declaration
-            pattern = rf'\bpublic\s+(class|interface|enum)?\s*{re.escape(name)}\b'
+            # More flexible pattern to match methods: public void methodName()
+            pattern = rf'\bpublic\s+(\w+\s+)*{re.escape(name)}\s*\('
             return bool(re.search(pattern, file_content))
 
         elif language.lower() == "go":
