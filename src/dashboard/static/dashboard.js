@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeFilters();
     initializeKeyboardShortcuts();
     initializeOfflineDetection();
+    initializeTooltips();
     loadFiltersFromURL();
     loadData();
     // Auto-refresh every 30 seconds
@@ -399,6 +400,26 @@ function initializeOfflineDetection() {
 
     window.addEventListener('offline', () => {
         showToast('You are offline. Some features may not work.', 'warning');
+    });
+}
+
+/**
+ * Initialize tooltips with Tippy.js
+ */
+function initializeTooltips() {
+    // Check if Tippy.js is loaded
+    if (typeof tippy === 'undefined') {
+        console.warn('Tippy.js not loaded, tooltips will not be available');
+        return;
+    }
+
+    // Initialize tooltips for all elements with data-tippy-content
+    tippy('[data-tippy-content]', {
+        placement: 'top',
+        animation: 'fade',
+        theme: 'translucent',
+        delay: [300, 0], // Show after 300ms, hide immediately
+        arrow: true
     });
 }
 

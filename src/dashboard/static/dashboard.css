@@ -600,6 +600,21 @@ footer a:hover {
     text-align: center;
 }
 
+/* Help Icons */
+.help-icon {
+    display: inline-block;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    cursor: help;
+    margin-left: 8px;
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
+}
+
+.help-icon:hover {
+    opacity: 1;
+}
+
 /* Skeleton Loading States */
 .skeleton {
     background: linear-gradient(
