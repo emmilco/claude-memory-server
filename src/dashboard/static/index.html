@@ -114,6 +114,58 @@
         </footer>
     </div>
 
+    <!-- Memory Detail Modal -->
+    <div id="memory-modal" class="modal" style="display: none;">
+        <div class="modal-overlay" onclick="closeMemoryModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Memory Details</h2>
+                <button class="modal-close" onclick="closeMemoryModal()" aria-label="Close modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="memory-metadata">
+                    <div class="metadata-row">
+                        <span class="metadata-label">Category:</span>
+                        <span id="modal-category" class="metadata-value">-</span>
+                    </div>
+                    <div class="metadata-row">
+                        <span class="metadata-label">Project:</span>
+                        <span id="modal-project" class="metadata-value">-</span>
+                    </div>
+                    <div class="metadata-row">
+                        <span class="metadata-label">Importance:</span>
+                        <span id="modal-importance" class="metadata-value">-</span>
+                    </div>
+                    <div class="metadata-row">
+                        <span class="metadata-label">Lifecycle:</span>
+                        <span id="modal-lifecycle" class="metadata-value">-</span>
+                    </div>
+                    <div class="metadata-row">
+                        <span class="metadata-label">Created:</span>
+                        <span id="modal-created" class="metadata-value">-</span>
+                    </div>
+                    <div class="metadata-row">
+                        <span class="metadata-label">Last Accessed:</span>
+                        <span id="modal-accessed" class="metadata-value">-</span>
+                    </div>
+                </div>
+
+                <div class="memory-content-section">
+                    <h3>Content</h3>
+                    <pre id="modal-content" class="memory-content"><code></code></pre>
+                </div>
+
+                <div class="memory-tags-section" id="modal-tags-section" style="display: none;">
+                    <h3>Tags</h3>
+                    <div id="modal-tags" class="tags-container"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeMemoryModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script src="dashboard.js"></script>
 </body>
 </html>

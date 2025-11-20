@@ -487,17 +487,20 @@ function updateRecentAdditions(additions) {
         return;
     }
 
-    container.innerHTML = additions.map(addition => `
-        <div class="activity-item">
+    container.innerHTML = additions.map((addition, index) => `
+        <div class="activity-item" onclick="openMemoryModal(recentAdditionsData[${index}])" style="cursor: pointer;">
             <div class="activity-header">
                 <span class="activity-title">${escapeHtml(addition.category)}</span>
                 <span class="activity-meta">${formatTimestamp(addition.created_at)}</span>
             </div>
             <div class="activity-content">
-                ${escapeHtml(addition.content)}
+                ${escapeHtml(addition.content.substring(0, 100))}${addition.content.length > 100 ? '...' : ''}
             </div>
         </div>
     `).join('');
+
+    // Store full data globally for modal access
+    window.recentAdditionsData = additions;
 }
 
 /**
@@ -544,4 +547,94 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text.toString();
     return div.innerHTML;
+}
+
+/**
+ * Open memory detail modal with memory data
+ */
+function openMemoryModal(memory) {
+    // Populate metadata
+    document.getElementById('modal-category').textContent = memory.category || '-';
+    document.getElementById('modal-project').textContent = memory.project_name || 'Global';
+    document.getElementById('modal-importance').textContent = memory.importance ?
+        `${'★'.repeat(Math.round(memory.importance * 5))}${'☆'.repeat(5 - Math.round(memory.importance * 5))} (${memory.importance.toFixed(1)})` : '-';
+    document.getElementById('modal-lifecycle').textContent = memory.lifecycle_state || '-';
+    document.getElementById('modal-created').textContent = memory.created_at ?
+        new Date(memory.created_at).toLocaleString() : '-';
+    document.getElementById('modal-accessed').textContent = memory.last_accessed ?
+        formatTimestamp(memory.last_accessed) : '-';
+
+    // Populate content
+    const contentElement = document.getElementById('modal-content');
+    const codeElement = contentElement.querySelector('code');
+    codeElement.textContent = memory.content || '';
+
+    // Apply basic syntax highlighting if content looks like code
+    if (memory.category === 'code' && memory.content) {
+        highlightCode(codeElement);
+    }
+
+    // Populate tags if present
+    if (memory.tags && memory.tags.length > 0) {
+        const tagsSection = document.getElementById('modal-tags-section');
+        const tagsContainer = document.getElementById('modal-tags');
+        tagsContainer.innerHTML = memory.tags.map(tag =>
+            `<span class="tag">${escapeHtml(tag)}</span>`
+        ).join('');
+        tagsSection.style.display = 'block';
+    } else {
+        document.getElementById('modal-tags-section').style.display = 'none';
+    }
+
+    // Show modal
+    const modal = document.getElementById('memory-modal');
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+
+    // Close on Escape key
+    document.addEventListener('keydown', handleModalEscape);
+}
+
+/**
+ * Close memory detail modal
+ */
+function closeMemoryModal() {
+    const modal = document.getElementById('memory-modal');
+    modal.style.display = 'none';
+    document.body.style.overflow = 'auto';
+    document.removeEventListener('keydown', handleModalEscape);
+}
+
+/**
+ * Handle Escape key to close modal
+ */
+function handleModalEscape(e) {
+    if (e.key === 'Escape') {
+        closeMemoryModal();
+    }
+}
+
+/**
+ * Basic syntax highlighting for code
+ */
+function highlightCode(codeElement) {
+    let code = codeElement.textContent;
+
+    // Simple keyword highlighting (Python/JavaScript common keywords)
+    const keywords = ['def', 'class', 'function', 'const', 'let', 'var', 'import', 'from', 'return',
+                     'if', 'else', 'elif', 'for', 'while', 'try', 'except', 'catch', 'async', 'await'];
+
+    keywords.forEach(keyword => {
+        const regex = new RegExp(`\\b${keyword}\\b`, 'g');
+        code = code.replace(regex, `<span style="color: #c678dd; font-weight: bold;">${keyword}</span>`);
+    });
+
+    // String highlighting
+    code = code.replace(/(['"`])(.*?)\1/g, '<span style="color: #98c379;">$1$2$1</span>');
+
+    // Comment highlighting
+    code = code.replace(/(#.*$)/gm, '<span style="color: #5c6370; font-style: italic;">$1</span>');
+    code = code.replace(/(\/\/.*$)/gm, '<span style="color: #5c6370; font-style: italic;">$1</span>');
+
+    codeElement.innerHTML = code;
 }
