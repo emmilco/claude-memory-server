@@ -84,6 +84,13 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Fixed
 
+- **BUG-020: Inconsistent Return Value Structures** (Reclassified as Future Enhancement)
+  - Analyzed API return structure inconsistencies across methods
+  - Determined this is a design improvement, not a functional bug
+  - Requires breaking changes and major version bump (v5.0)
+  - Reclassified as future enhancement for deliberate API redesign
+  - Documented analysis in planning_docs/BUG-020_api_consistency_analysis.md
+
 - **BUG-017: Documentation Parameter Names Incorrect**
   - Fixed incorrect method name `get_stats` in documentation (actual method is `get_status`)
   - Updated README.md, docs/API.md, and TUTORIAL.md with correct method names
