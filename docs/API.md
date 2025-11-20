@@ -21,7 +21,7 @@ The Claude Memory RAG Server exposes tools through the Model Context Protocol (M
 | `update_memory` | Update an existing memory | Memory Management |
 | `get_memory_by_id` | Get a memory by ID | Memory Management |
 | `delete_memory` | Delete a memory by ID | Memory Management |
-| `get_stats` | Get system statistics | System |
+| `get_status` | Get system statistics | System |
 | `show_context` | Debug context (dev only) | System |
 | `search_code` | Semantic code search with hybrid mode | Code Intelligence |
 | `index_codebase` | Index code files | Code Intelligence |

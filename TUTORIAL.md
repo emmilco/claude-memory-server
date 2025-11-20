@@ -1235,7 +1235,7 @@ When talking to Claude, it automatically has access to:
 - **retrieve_memories** - Recall information
 - **ingest_docs** - Process documentation
 - **search_all** - Combined search
-- **get_stats** - System statistics
+- **get_status** - System statistics
 - And 16 more tools!
 
 Claude decides when to use these based on your conversation.

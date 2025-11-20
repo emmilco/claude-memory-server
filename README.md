@@ -347,7 +347,7 @@ Claude has access to these tools:
 - **`search_all`** - Explicit search without routing
 
 ### Utility Tools
-- **`get_stats`** - View memory and indexing statistics
+- **`get_status`** - View memory and indexing statistics
 - **`show_context`** - Debug tool to see current context
 
 ## Architecture
