@@ -147,6 +147,142 @@ header h1 {
     letter-spacing: 0.5px;
 }
 
+/* Health Widget Styles (UX-036) */
+.health-widget {
+    border-left: 4px solid var(--success-color);
+}
+
+.health-content {
+    display: flex;
+    gap: 30px;
+    margin-top: 20px;
+}
+
+.health-score-container {
+    display: flex;
+    gap: 30px;
+    align-items: center;
+    flex: 1;
+}
+
+.health-score-gauge {
+    position: relative;
+    width: 200px;
+    text-align: center;
+}
+
+.gauge-svg {
+    width: 200px;
+    height: 120px;
+}
+
+.gauge-track {
+    stroke: var(--border-color);
+    stroke-linecap: round;
+}
+
+.gauge-fill {
+    stroke: var(--success-color);
+    stroke-linecap: round;
+    transition: stroke-dasharray 0.5s ease, stroke 0.3s ease;
+}
+
+.gauge-value {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -20%);
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: var(--text-primary);
+}
+
+.gauge-label {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+}
+
+.health-metrics {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    flex: 1;
+}
+
+.metric {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: var(--bg-color);
+    border-radius: 6px;
+}
+
+.metric-label {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.metric-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--accent-color);
+}
+
+.alerts-container {
+    flex: 1;
+    min-width: 300px;
+}
+
+.alert-item {
+    padding: 12px 16px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    border-left: 4px solid;
+    background: var(--bg-color);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.alert-item.critical {
+    border-color: #f44336;
+}
+
+.alert-item.warning {
+    border-color: var(--warning-color);
+}
+
+.alert-item.info {
+    border-color: var(--accent-color);
+}
+
+.alert-icon {
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.alert-message {
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    flex: 1;
+}
+
+.alert-timestamp {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.no-alerts {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
 .list {
     margin-top: 16px;
 }

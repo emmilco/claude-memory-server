@@ -46,6 +46,8 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             self._handle_api_stats()
         elif parsed_path.path == "/api/activity":
             self._handle_api_activity(parsed_path.query)
+        elif parsed_path.path == "/api/health":
+            self._handle_api_health()
         else:
             # Serve static files
             super().do_GET()
@@ -94,6 +96,43 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             self._send_json_response(result)
         except Exception as e:
             logger.error(f"Error handling /api/activity: {e}")
+            self._send_error_response(500, str(e))
+
+    def _handle_api_health(self):
+        """Handle /api/health endpoint - returns system health metrics."""
+        try:
+            if not self.rag_server or not self.event_loop:
+                self._send_error_response(500, "Server not initialized")
+                return
+
+            # Get health score and alerts in parallel
+            health_future = asyncio.run_coroutine_threadsafe(
+                self.rag_server.get_health_score(),
+                self.event_loop
+            )
+            alerts_future = asyncio.run_coroutine_threadsafe(
+                self.rag_server.get_active_alerts(),
+                self.event_loop
+            )
+
+            health_data = health_future.result(timeout=10)
+            alerts_data = alerts_future.result(timeout=10)
+
+            # Combine into response
+            response = {
+                "health_score": health_data.get("overall_score", 0),
+                "component_scores": health_data.get("component_scores", {}),
+                "alerts": alerts_data.get("alerts", []),
+                "performance_metrics": {
+                    "search_latency_p50": health_data.get("metrics", {}).get("search_latency_p50_ms", 0),
+                    "search_latency_p95": health_data.get("metrics", {}).get("search_latency_p95_ms", 0),
+                    "cache_hit_rate": health_data.get("metrics", {}).get("cache_hit_rate", 0)
+                }
+            }
+
+            self._send_json_response(response)
+        except Exception as e:
+            logger.error(f"Error handling /api/health: {e}")
             self._send_error_response(500, str(e))
 
     def _send_json_response(self, data: dict):

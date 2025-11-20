@@ -493,6 +493,106 @@ function showSkeletonLoader(containerId, type = 'card') {
 }
 
 /**
+ * Load health data and update health widget (UX-036)
+ */
+async function loadHealthData() {
+    try {
+        const data = await fetchWithRetry(`${API_BASE}/api/health`);
+
+        // Update health score gauge
+        const healthScore = data.health_score || 0;
+        updateHealthGauge(healthScore);
+
+        // Update performance metrics
+        document.getElementById('metric-latency').textContent =
+            `${(data.performance_metrics?.search_latency_p95 || 0).toFixed(2)}ms`;
+        document.getElementById('metric-cache').textContent =
+            `${((data.performance_metrics?.cache_hit_rate || 0) * 100).toFixed(1)}%`;
+
+        // Update alerts
+        updateHealthAlerts(data.alerts || []);
+
+    } catch (error) {
+        console.error('Error loading health data:', error);
+        showToast(`Failed to load health data: ${error.message}`, 'error');
+
+        // Show error state
+        document.getElementById('health-score-value').textContent = '--';
+        document.getElementById('metric-latency').textContent = '--';
+        document.getElementById('metric-cache').textContent = '--';
+        document.getElementById('health-alerts').innerHTML =
+            '<p class="loading" style="color: var(--warning-color);">Failed to load health data</p>';
+    }
+}
+
+/**
+ * Update health gauge visualization
+ */
+function updateHealthGauge(score) {
+    const gaugeValue = document.getElementById('health-score-value');
+    const gaugeFill = document.getElementById('gauge-fill');
+
+    gaugeValue.textContent = Math.round(score);
+
+    // Calculate arc length (semicircle, ~251 units total)
+    const arcLength = 251.2;
+    const fillLength = (score / 100) * arcLength;
+
+    // Set stroke-dasharray to show the fill
+    gaugeFill.style.strokeDasharray = `${fillLength} ${arcLength}`;
+
+    // Set color based on health score
+    let color;
+    if (score >= 90) {
+        color = 'var(--success-color)';
+    } else if (score >= 70) {
+        color = 'var(--warning-color)';
+    } else {
+        color = '#f44336';
+    }
+    gaugeFill.style.stroke = color;
+    gaugeValue.style.color = color;
+}
+
+/**
+ * Update health alerts display
+ */
+function updateHealthAlerts(alerts) {
+    const container = document.getElementById('health-alerts');
+
+    if (!alerts || alerts.length === 0) {
+        container.innerHTML = '<p class="no-alerts">✅ No active alerts - system healthy</p>';
+        return;
+    }
+
+    // Sort alerts by severity
+    const severityOrder = { CRITICAL: 0, WARNING: 1, INFO: 2 };
+    alerts.sort((a, b) => {
+        const severityA = severityOrder[a.severity] ?? 999;
+        const severityB = severityOrder[b.severity] ?? 999;
+        return severityA - severityB;
+    });
+
+    const alertsHTML = alerts.map(alert => {
+        const severityClass = alert.severity.toLowerCase();
+        const icon = {
+            CRITICAL: '🔴',
+            WARNING: '⚠️',
+            INFO: 'ℹ️'
+        }[alert.severity] || 'ℹ️';
+
+        return `
+            <div class="alert-item ${severityClass}">
+                <span class="alert-icon">${icon}</span>
+                <div class="alert-message">${escapeHtml(alert.message)}</div>
+            </div>
+        `;
+    }).join('');
+
+    container.innerHTML = alertsHTML;
+}
+
+/**
  * Main function to load all dashboard data
  */
 async function loadData() {
@@ -506,7 +606,8 @@ async function loadData() {
     try {
         await Promise.all([
             loadDashboardStats(),
-            loadRecentActivity()
+            loadRecentActivity(),
+            loadHealthData()
         ]);
     } catch (error) {
         console.error('Error loading dashboard data:', error);

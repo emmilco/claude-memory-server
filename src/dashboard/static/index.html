@@ -91,6 +91,36 @@
                 </div>
             </section>
 
+            <!-- Health Dashboard Widget -->
+            <section class="card health-widget">
+                <h2>🏥 System Health <span class="help-icon" data-tippy-content="Real-time system health monitoring with performance metrics and active alerts.">ⓘ</span></h2>
+                <div class="health-content">
+                    <div class="health-score-container">
+                        <div class="health-score-gauge" id="health-gauge">
+                            <svg class="gauge-svg" viewBox="0 0 200 120">
+                                <path class="gauge-track" d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke-width="20"/>
+                                <path class="gauge-fill" id="gauge-fill" d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke-width="20"/>
+                            </svg>
+                            <div class="gauge-value" id="health-score-value">--</div>
+                            <div class="gauge-label">Health Score</div>
+                        </div>
+                        <div class="health-metrics">
+                            <div class="metric">
+                                <span class="metric-label">Search Latency (P95):</span>
+                                <span id="metric-latency" class="metric-value">--</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Cache Hit Rate:</span>
+                                <span id="metric-cache" class="metric-value">--</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="health-alerts" class="alerts-container">
+                        <p class="loading">Loading health data...</p>
+                    </div>
+                </div>
+            </section>
+
             <!-- Projects Section -->
             <section class="card">
                 <h2>📁 Projects <span class="help-icon" data-tippy-content="Projects are collections of memories tied to a specific codebase or context.">ⓘ</span></h2>
