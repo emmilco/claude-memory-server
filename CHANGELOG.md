@@ -89,6 +89,16 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-01-XX
 
+- **UX-026: Web Dashboard Enhancement Planning**
+  - Created comprehensive enhancement analysis with 15 new features across 4 phases
+  - Added 15 new TODO items (UX-034 through UX-048) for dashboard improvements
+  - Phase 1: Core Usability - Search/Filter Panel, Memory Detail Modal, Health Widget, Time Range Selector
+  - Phase 2: Advanced Analytics - Trend Charts, Relationships Graph, Project Comparison, Insights
+  - Phase 3: Productivity - Quick Actions, Export/Reporting
+  - Phase 4: UX Polish - Dark Mode, Keyboard Shortcuts, Tooltips, Loading States, Error Handling
+  - Total estimated effort: ~80-103 hours across 4 phases
+  - Files: `planning_docs/UX-026_dashboard_enhancement_analysis.md` (created), `TODO.md` (updated)
+
 - **UX-008: Phase 2 - Safety, Reliability & Onboarding**
   - Created `tutorial` command: interactive 6-step guided tutorial for new users (5-10 min)
   - Implemented startup health check in MCP server: validates storage, embeddings, directories before serving

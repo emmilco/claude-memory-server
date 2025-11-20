@@ -207,11 +207,147 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - [ ] LLM-powered suggestions based on patterns
   - [ ] Identify code smells
 
-- [ ] **UX-026**: Web dashboard (~1-2 weeks)
-  - [ ] Optional web UI for visibility
-  - [ ] Visual project explorer
-  - [ ] Memory graph/relationships
-  - [ ] Usage analytics
+- [x] **UX-026**: Web dashboard MVP ✅ **COMPLETE**
+  - [x] Basic web UI with statistics
+  - [x] Project breakdown display
+  - [x] Category and lifecycle charts
+  - [x] Recent activity view
+  - **Status**: MVP complete, see enhancements below
+
+#### Web Dashboard Enhancements (Post-MVP)
+
+**Phase 1: Core Usability (~20-24 hours, 1-2 weeks)**
+
+- [ ] **UX-034**: Dashboard Search and Filter Panel (~4-6 hours)
+  - [ ] Global search bar for memories
+  - [ ] Filter dropdowns: project, category, date range, lifecycle state
+  - [ ] Real-time filtering of displayed data
+  - [ ] URL parameters for shareable filtered views
+  - **Impact**: Users can find specific memories/projects quickly
+  - **Reference**: planning_docs/UX-026_dashboard_enhancement_analysis.md
+
+- [ ] **UX-035**: Memory Detail Modal (~6-8 hours)
+  - [ ] Click any memory to see full details
+  - [ ] Full content with syntax highlighting for code
+  - [ ] Display all metadata: tags, importance, provenance, timestamps
+  - [ ] Actions: Edit, Delete, Export, View Relationships
+  - **Impact**: Transform from view-only to interactive tool
+  - **Reference**: planning_docs/UX-026_dashboard_enhancement_analysis.md
+
+- [ ] **UX-036**: Health Dashboard Widget (~4-6 hours)
+  - [ ] Health score gauge (0-100) with color coding
+  - [ ] Active alerts count with severity badges
+  - [ ] Performance metrics: search latency, cache hit rate
+  - [ ] Link to full health command output
+  - **Impact**: Proactive monitoring, surface issues immediately
+  - **Data Source**: Existing get_health_score() and get_active_alerts() MCP tools
+  - **Reference**: planning_docs/UX-026_dashboard_enhancement_analysis.md
+
+- [ ] **UX-037**: Interactive Time Range Selector (~3-4 hours)
+  - [ ] Preset buttons: Last Hour, Today, Last 7 Days, Last 30 Days, All Time
+  - [ ] Custom date picker
+  - [ ] Update all charts/activity based on selection
+  - [ ] Persist selection in localStorage
+  - **Impact**: Understand trends and historical patterns
+  - **Reference**: planning_docs/UX-026_dashboard_enhancement_analysis.md
+
+**Phase 2: Advanced Analytics (~32-40 hours, 1-2 weeks)**
+
+- [ ] **UX-038**: Trend Charts and Sparklines (~8-10 hours)
+  - [ ] Line charts for memory count over time (daily/weekly)
+  - [ ] Search volume heatmap (by hour/day)
+  - [ ] Performance trend (latency over time)
+  - [ ] Use Chart.js or ApexCharts (lightweight library)
+  - **Impact**: Understand usage patterns and identify anomalies
+  - **Backend**: Add time-series aggregation endpoints
+  - **Reference**: planning_docs/UX-026_dashboard_enhancement_analysis.md
+
+- [ ] **UX-039**: Memory Relationships Graph Viewer (~10-12 hours)
+  - [ ] Interactive graph using D3.js or vis.js
+  - [ ] Click memory to see relationships (SUPERSEDES, CONTRADICTS, RELATED_TO)
+  - [ ] Color-coded by relationship type
+  - [ ] Zoom/pan controls
+  - **Impact**: Understand knowledge structure, discover related content
+  - **Data Source**: Existing MemoryRelationship model in database
+  - **Reference**: planning_docs/UX-026_dashboard_enhancement_analysis.md
+
+- [ ] **UX-040**: Project Comparison View (~6-8 hours)
+  - [ ] Select 2-4 projects to compare side-by-side
+  - [ ] Bar charts: memory count, file count, function count
+  - [ ] Category distribution comparison
+  - [ ] Performance metrics comparison (index time, search latency)
+  - **Impact**: Identify outliers, understand relative project complexity
+  - **Reference**: planning_docs/UX-026_dashboard_enhancement_analysis.md
+
+- [ ] **UX-041**: Top Insights and Recommendations (~8-10 hours)
+  - [ ] Automatic insight detection:
+    - "Project X hasn't been indexed in 45 days"
+    - "Search latency increased 40% this week"
+    - "15 memories marked 'not helpful' - consider cleanup"
+    - "Cache hit rate below 70% - consider increasing cache size"
+  - [ ] Priority/severity levels
+  - [ ] One-click actions ("Index Now", "View Memories", "Adjust Settings")
+  - **Impact**: Proactive guidance to improve memory system usage
+  - **Backend**: Add insight detection logic
+  - **Reference**: planning_docs/UX-026_dashboard_enhancement_analysis.md
+
+**Phase 3: Productivity Features (~16-22 hours, 1 week)**
+
+- [ ] **UX-042**: Quick Actions Toolbar (~6-8 hours)
+  - [ ] Buttons for: Index Project, Create Memory, Export Data, Run Health Check
+  - [ ] Forms with validation
+  - [ ] Status feedback (loading, success, error)
+  - **Impact**: Avoid switching to CLI for frequent tasks
+  - **Reference**: planning_docs/UX-026_dashboard_enhancement_analysis.md
+
+- [ ] **UX-043**: Export and Reporting (~6-8 hours)
+  - [ ] Export formats: JSON, CSV, Markdown, PDF (summary report)
+  - [ ] Filters: by project, date range, category
+  - [ ] Optional: Scheduled reports (daily/weekly email)
+  - **Impact**: Share insights, backup data, integration with other tools
+  - **Data Source**: Existing export_memories() MCP tool
+  - **Reference**: planning_docs/UX-026_dashboard_enhancement_analysis.md
+
+**Phase 4: UX Polish (~12-17 hours, 3-5 days)**
+
+- [ ] **UX-044**: Dark Mode Toggle (~2-3 hours)
+  - [ ] Alternative dark color scheme
+  - [ ] Toggle switch in header
+  - [ ] CSS variables for theming
+  - [ ] Persist preference in localStorage
+  - **Impact**: Reduce eye strain, user preference
+  - **Reference**: planning_docs/UX-026_dashboard_enhancement_analysis.md
+
+- [ ] **UX-045**: Keyboard Shortcuts (~2-3 hours)
+  - [ ] `/` - Focus search
+  - [ ] `n` - New memory
+  - [ ] `h` - Health check
+  - [ ] `?` - Show help modal
+  - [ ] `Esc` - Close modals
+  - **Impact**: Faster navigation for power users
+  - **Reference**: planning_docs/UX-026_dashboard_enhancement_analysis.md
+
+- [ ] **UX-046**: Responsive Tooltips and Help (~3-4 hours)
+  - [ ] Tooltip library (tippy.js or similar)
+  - [ ] Help icon (?) next to complex features
+  - [ ] Onboarding tour for first-time users
+  - **Impact**: Improve discoverability, reduce learning curve
+  - **Reference**: planning_docs/UX-026_dashboard_enhancement_analysis.md
+
+- [ ] **UX-047**: Loading States and Skeleton Screens (~2-3 hours)
+  - [ ] Skeleton screens instead of "Loading..."
+  - [ ] Smooth transitions
+  - [ ] Progress indicators for long operations
+  - **Impact**: Perceived performance improvement
+  - **Reference**: planning_docs/UX-026_dashboard_enhancement_analysis.md
+
+- [ ] **UX-048**: Error Handling and Retry (~3-4 hours)
+  - [ ] Toast notifications for errors
+  - [ ] Retry button
+  - [ ] Detailed error messages (from backend)
+  - [ ] Offline detection
+  - **Impact**: Better UX when things go wrong
+  - **Reference**: planning_docs/UX-026_dashboard_enhancement_analysis.md
 
 - [ ] **UX-027**: VS Code extension (~2-3 weeks)
   - [ ] Inline code search results
