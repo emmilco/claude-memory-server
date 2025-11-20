@@ -297,7 +297,6 @@ class StatusResponse(BaseModel):
     memory_count: int
     qdrant_available: bool
     file_watcher_enabled: bool
-    retrieval_gate_enabled: bool
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 

@@ -15,12 +15,11 @@ class ServerConfig(BaseSettings):
     server_name: str = "claude-memory-rag"
     log_level: str = "INFO"
 
-    # Storage backend selection (Qdrant required for semantic code search)
-    storage_backend: Literal["sqlite", "qdrant"] = "qdrant"
+    # Storage backend (Qdrant required for semantic code search)
+    storage_backend: Literal["qdrant"] = "qdrant"
     qdrant_url: str = "http://localhost:6333"
     qdrant_api_key: Optional[str] = None
     qdrant_collection_name: str = "memory"
-    sqlite_path: str = "~/.claude-rag/memory.db"  # Deprecated: SQLite no longer supported for code search
 
     # Performance tuning
     embedding_batch_size: int = 32
@@ -56,10 +55,6 @@ class ServerConfig(BaseSettings):
     # NOTE: allow_qdrant_fallback removed in REF-010 - Qdrant is now required
     allow_rust_fallback: bool = True  # Fall back to Python parser if Rust unavailable
     warn_on_degradation: bool = True  # Show warnings when running in degraded mode
-
-    # Adaptive retrieval
-    enable_retrieval_gate: bool = True
-    retrieval_gate_threshold: float = 0.6  # Lowered to reduce false negatives while still filtering low-utility queries
 
     # Memory pruning and ranking
     session_state_ttl_hours: int = 48
@@ -152,11 +147,7 @@ class ServerConfig(BaseSettings):
         # Validate memory size limit
         if self.max_memory_size_bytes < 1024:  # At least 1KB
             raise ValueError("max_memory_size_bytes must be at least 1024 (1KB)")
-        
-        # Validate retrieval gate threshold
-        if not 0.0 <= self.retrieval_gate_threshold <= 1.0:
-            raise ValueError("retrieval_gate_threshold must be between 0.0 and 1.0")
-        
+
         # Validate timeouts
         if self.retrieval_timeout_ms < 100:
             raise ValueError("retrieval_timeout_ms should be at least 100ms")
@@ -239,13 +230,6 @@ class ServerConfig(BaseSettings):
     def get_expanded_path(self, path: str) -> Path:
         """Expand ~ and environment variables in path."""
         return Path(os.path.expanduser(os.path.expandvars(path)))
-
-    @property
-    def sqlite_path_expanded(self) -> Path:
-        """Get expanded SQLite path."""
-        path = self.get_expanded_path(self.sqlite_path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        return path
 
     @property
     def embedding_cache_path_expanded(self) -> Path:

@@ -93,9 +93,9 @@ async def list_tools() -> List[Tool]:
                         "type": "number",
                         "description": "Maximum results (default: 10)",
                     },
-                    "min_relevance": {
+                    "min_importance": {
                         "type": "number",
-                        "description": "Minimum relevance score 0-1 (default: 0.0)",
+                        "description": "Minimum importance score 0-1 (default: 0.0)",
                     },
                 },
                 "required": ["query"],
@@ -334,7 +334,7 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
             result = await memory_server.retrieve_memories(
                 query=arguments["query"],
                 limit=arguments.get("limit", 10),
-                min_importance=arguments.get("min_relevance", 0.0),
+                min_importance=arguments.get("min_importance", 0.0),
             )
 
             if not result["results"]:
@@ -532,12 +532,12 @@ async def _startup_health_check(config, memory_server) -> bool:
         # Check 1: Storage backend connectivity
         logger.info(f"✓ Checking {config.storage_backend} connectivity...")
         try:
-            # Test a simple operation
-            await memory_server.store.get_stats()
+            # Test a simple operation - get all projects
+            await memory_server.store.get_all_projects()
             logger.info(f"✓ {config.storage_backend.upper()} connection successful")
         except Exception as e:
             logger.error(f"✗ {config.storage_backend.upper()} connection failed: {e}")
-            logger.error("  → Try: docker-compose up -d (for Qdrant) or check SQLite path")
+            logger.error("  → Try: docker-compose up -d")
             return False
 
         # Check 2: Embedding model

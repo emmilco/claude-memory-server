@@ -4,7 +4,6 @@ import pytest
 from datetime import datetime, UTC
 from unittest.mock import Mock, AsyncMock, MagicMock, patch
 from src.store.qdrant_store import QdrantMemoryStore
-from src.store.sqlite_store import SQLiteMemoryStore
 from src.core.exceptions import StorageError
 
 
