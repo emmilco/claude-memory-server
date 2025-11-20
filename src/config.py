@@ -15,12 +15,12 @@ class ServerConfig(BaseSettings):
     server_name: str = "claude-memory-rag"
     log_level: str = "INFO"
 
-    # Storage backend selection (SQLite is default for easier setup, upgrade to Qdrant for production)
-    storage_backend: Literal["sqlite", "qdrant"] = "sqlite"
+    # Storage backend selection (Qdrant required for semantic code search)
+    storage_backend: Literal["sqlite", "qdrant"] = "qdrant"
     qdrant_url: str = "http://localhost:6333"
     qdrant_api_key: Optional[str] = None
     qdrant_collection_name: str = "memory"
-    sqlite_path: str = "~/.claude-rag/memory.db"
+    sqlite_path: str = "~/.claude-rag/memory.db"  # Deprecated: SQLite no longer supported for code search
 
     # Performance tuning
     embedding_batch_size: int = 32
@@ -47,7 +47,7 @@ class ServerConfig(BaseSettings):
     watch_debounce_ms: int = 1000
 
     # Graceful degradation (UX-012)
-    allow_qdrant_fallback: bool = True  # Fall back to SQLite if Qdrant unavailable
+    # NOTE: allow_qdrant_fallback removed in REF-010 - Qdrant is now required
     allow_rust_fallback: bool = True  # Fall back to Python parser if Rust unavailable
     warn_on_degradation: bool = True  # Show warnings when running in degraded mode
 
@@ -118,7 +118,8 @@ class ServerConfig(BaseSettings):
 
     model_config = SettingsConfigDict(
         env_prefix="CLAUDE_RAG_",
-        case_sensitive=False
+        case_sensitive=False,
+        extra="ignore"  # REF-010: Ignore deprecated config options like allow_qdrant_fallback for backward compatibility
     )
 
     @model_validator(mode='after')

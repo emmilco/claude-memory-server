@@ -19,6 +19,7 @@ from src.cli.health_monitor_command import HealthMonitorCommand
 from src.cli.verify_command import verify_command
 from src.cli.consolidate_command import consolidate_command
 from src.cli.validate_install import validate_installation
+from src.cli.validate_setup_command import ValidateSetupCommand
 from src.cli.repository_command import add_repository_parser, RepositoryCommand
 from src.cli.workspace_command import add_workspace_parser, WorkspaceCommand
 
@@ -67,6 +68,7 @@ Command Categories:
 
   System:
     validate-install   Validate installation and check prerequisites
+    validate-setup     Validate Qdrant setup and connectivity
     tutorial           Interactive tutorial for new users (5-10 min)
 
 For detailed help on any command: claude-rag <command> --help
@@ -495,6 +497,28 @@ Note: Runs in dry-run mode by default for safety. Use --execute to actually merg
         help="Validate installation and check prerequisites",
     )
 
+    # Validate-setup command
+    validate_setup_parser = subparsers.add_parser(
+        "validate-setup",
+        help="Validate Qdrant setup and connectivity",
+        epilog="""
+Examples:
+  # Check if Qdrant is running and accessible
+  claude-rag validate-setup
+
+This command checks:
+  - Python version (3.8+)
+  - Configuration (storage_backend)
+  - Docker installation and status
+  - Qdrant connectivity and health
+
+Exit codes:
+  0 - All checks passed
+  1 - One or more checks failed
+        """,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+
     # Tutorial command
     tutorial_parser = subparsers.add_parser(
         "tutorial",
@@ -589,6 +613,10 @@ async def main_async(args):
     elif args.command == "validate-install":
         result = await validate_installation()
         sys.exit(0 if result else 1)
+    elif args.command == "validate-setup":
+        cmd = ValidateSetupCommand()
+        exit_code = cmd.run()
+        sys.exit(exit_code)
     elif args.command == "tutorial":
         from src.cli.tutorial_command import tutorial_command
         await tutorial_command()

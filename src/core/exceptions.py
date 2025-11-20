@@ -99,7 +99,7 @@ class ConfigurationError(MemoryRAGError):
 
 
 class QdrantConnectionError(StorageError):
-    """Raised when Qdrant connection fails with actionable fallback."""
+    """Raised when Qdrant connection fails with actionable setup instructions."""
 
     error_code = "E010"
 
@@ -109,10 +109,11 @@ class QdrantConnectionError(StorageError):
 
         message = f"Cannot connect to Qdrant at {url}: {reason}"
         solution = (
-            "Options:\n"
+            "Steps to fix:\n"
             "1. Start Qdrant: docker-compose up -d\n"
-            "2. Use SQLite instead: Add {\"storage_backend\": \"sqlite\"} to ~/.claude-rag/config.json\n"
-            "3. Check Qdrant is running: curl http://localhost:6333/health"
+            "2. Check Qdrant is running: curl http://localhost:6333/health\n"
+            "3. Verify Docker is running: docker ps\n"
+            "4. Use validate-setup command: claude-rag validate-setup"
         )
         docs_url = "See docs/SETUP.md for detailed setup instructions"
 

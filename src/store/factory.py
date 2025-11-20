@@ -11,9 +11,8 @@ async def create_store(config: ServerConfig) -> MemoryStore:
     """
     Create and initialize a memory store based on configuration.
 
-    Implements graceful degradation (UX-012):
-    - If Qdrant is unavailable and allow_qdrant_fallback=True, falls back to SQLite
-    - Logs warnings when degradation occurs if warn_on_degradation=True
+    REF-010: SQLite fallback removed - Qdrant is now required for semantic code search.
+    This ensures users get proper semantic search capabilities instead of degraded keyword search.
 
     Args:
         config: Server configuration
@@ -22,35 +21,33 @@ async def create_store(config: ServerConfig) -> MemoryStore:
         Initialized memory store instance
 
     Raises:
-        RuntimeError: If store cannot be initialized and fallback is disabled
+        RuntimeError: If Qdrant cannot be initialized with setup instructions
     """
-    store = None
-
     if config.storage_backend == "qdrant":
         try:
             from src.store.qdrant_store import QdrantMemoryStore
             store = QdrantMemoryStore(config)
             await store.initialize()
+            logger.info("✅ Connected to Qdrant vector store")
             return store
         except Exception as e:
-            if config.allow_qdrant_fallback:
-                if config.warn_on_degradation:
-                    logger.warning(
-                        f"Qdrant unavailable ({e}), falling back to SQLite. "
-                        "Performance may be reduced. Consider starting Qdrant with 'docker-compose up -d' "
-                        "or set STORAGE_BACKEND=sqlite in .env to suppress this warning."
-                    )
-                # Fallback to SQLite
-                from src.store.sqlite_store import SQLiteMemoryStore
-                store = SQLiteMemoryStore(config)
-            else:
-                raise RuntimeError(
-                    f"Failed to connect to Qdrant ({e}). "
-                    "Set ALLOW_QDRANT_FALLBACK=true to automatically fall back to SQLite."
-                ) from e
+            logger.error(f"❌ Qdrant initialization failed: {e}")
+            raise RuntimeError(
+                f"Failed to initialize Qdrant at {config.qdrant_url}\n\n"
+                f"💡 Solution:\n"
+                f"  1. Start Qdrant: docker-compose up -d\n"
+                f"  2. Check Qdrant health: curl {config.qdrant_url}/health\n"
+                f"  3. Verify Docker is running: docker ps\n\n"
+                f"Original error: {e}"
+            ) from e
     else:
+        # SQLite is deprecated for code search
+        logger.warning(
+            "⚠️  SQLite backend is deprecated for code search.\n"
+            "   SQLite provides keyword-only search without semantic similarity.\n"
+            "   For proper semantic code search, use Qdrant: docker-compose up -d"
+        )
         from src.store.sqlite_store import SQLiteMemoryStore
         store = SQLiteMemoryStore(config)
-
-    await store.initialize()
-    return store
+        await store.initialize()
+        return store

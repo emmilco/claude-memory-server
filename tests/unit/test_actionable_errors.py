@@ -26,14 +26,15 @@ class TestActionableErrors:
         assert "📖 Docs: https://docs.example.com/troubleshooting" in error_str
 
     def test_qdrant_connection_error_has_solutions(self):
-        """Test Qdrant connection error provides multiple solutions."""
+        """Test Qdrant connection error provides multiple solutions (REF-010: SQLite fallback removed)."""
         error = QdrantConnectionError("http://localhost:6333", "Connection refused")
 
         error_str = str(error)
         assert "Cannot connect to Qdrant" in error_str
         assert "docker-compose up -d" in error_str
-        assert "CLAUDE_RAG_STORAGE_BACKEND=sqlite" in error_str
         assert "curl http://localhost:6333/health" in error_str
+        assert "docker ps" in error_str
+        assert "validate-setup" in error_str
         assert "📖 Docs:" in error_str
 
     def test_collection_not_found_has_solution(self):
