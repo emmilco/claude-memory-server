@@ -12,6 +12,34 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
 
 ## Current Sprint
 
+### 🔴 Critical Bugs (Blocking)
+
+**These bugs completely break core functionality and must be fixed immediately**
+
+- [x] **BUG-012**: MemoryCategory.CODE attribute missing ✅ **FIXED**
+  - **Error:** `type object 'MemoryCategory' has no attribute 'CODE'`
+  - **Impact:** Code indexing completely broken - 91% of files fail to index (10/11 failures)
+  - **Location:** `src/memory/incremental_indexer.py:884` uses `MemoryCategory.CODE.value`
+  - **Root Cause:** MemoryCategory enum only has: PREFERENCE, FACT, EVENT, WORKFLOW, CONTEXT
+  - **Fix:** Added CODE = "code" to MemoryCategory enum in `src/core/models.py:26`
+  - **Result:** All files now index successfully (11/11), 867 semantic units extracted
+
+- [x] **BUG-013**: Parallel embeddings PyTorch model loading failure ✅ **FIXED**
+  - **Error:** "Cannot copy out of meta tensor; no data! Please use torch.nn.Module.to_empty() instead of torch.nn.Module.to()"
+  - **Impact:** Parallel embedding generation fails, blocks indexing with parallel mode enabled
+  - **Location:** `src/embeddings/parallel_generator.py:41` - `model.to("cpu")`
+  - **Root Cause:** Worker processes can't use `.to()` on models loaded from main process
+  - **Fix:** Changed to `SentenceTransformer(model_name, device="cpu")` instead of `.to("cpu")`
+  - **Result:** Parallel embeddings work with 9.7x speedup (37.17 files/sec vs 3.82)
+
+- [x] **BUG-014**: cache_dir_expanded attribute missing from ServerConfig ✅ **FIXED**
+  - **Error:** `'ServerConfig' object has no attribute 'cache_dir_expanded'`
+  - **Impact:** Health check command crashes when checking cache statistics
+  - **Location:** `src/cli/health_command.py:371`
+  - **Root Cause:** Code references non-existent attribute; cache is a file, not a directory
+  - **Fix:** Changed to use `embedding_cache_path_expanded` and check file size directly
+  - **Result:** Health command works perfectly, shows all system statistics
+
 ### 🟡 Tier 2: Core Functionality Extensions
 
 **These extend core capabilities with new features (nice-to-have)**
@@ -139,6 +167,20 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
 
 ### 🔨 Tier 6: Refactoring & Tech Debt
 
+- [ ] **REF-010**: Remove SQLite fallback, require Qdrant (~1 day) 🔥
+  - **Rationale:** SQLite mode provides poor UX for code search (keyword-only, no semantic similarity, misleading 0.700 scores). Empirical evaluation (EVAL-001) showed it adds complexity without value.
+  - [ ] Remove SQLite fallback logic from `src/store/__init__.py:49-84`
+  - [ ] Remove `allow_qdrant_fallback` config option from ServerConfig
+  - [ ] Update `create_memory_store()` to fail fast if Qdrant unavailable
+  - [ ] Update error messages: "Start Qdrant with: docker-compose up -d"
+  - [ ] Remove `src/store/sqlite_store.py` (or keep for non-code-search use cases only)
+  - [ ] Update documentation to require Qdrant for code search
+  - [ ] Add setup validation script that checks Qdrant availability
+  - [ ] Update tests to mock Qdrant instead of using SQLite fallback
+  - [ ] Add clear error in code search tools if backend isn't Qdrant
+  - **Benefits:** Simpler architecture, clear expectations, better error messages, no misleading degraded mode
+  - **Migration:** Provide cloud Qdrant option or embedded vector DB alternative
+
 - [ ] **REF-007**: Consolidate two server implementations
   - Merge old mcp_server.py with new src/core/
   - Unified architecture
@@ -222,6 +264,22 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
 ## Completed Recently
 
 ### 2025-11-19
+
+- [x] **BUG-015**: Code search category filter mismatch ✅ **COMPLETE**
+  - Fixed critical bug where code indexed with category=CODE but searched with category=CONTEXT
+  - Impact: 100% failure rate - all code searches returned "No code found"
+  - Fix: Changed src/core/server.py:2291,2465 to use MemoryCategory.CODE
+  - Discovery: Found during EVAL-001 empirical evaluation
+  - **Result:** Code search now works correctly with Qdrant backend
+
+- [x] **EVAL-001**: Empirical evaluation of MCP RAG usefulness ✅ **COMPLETE**
+  - Evaluated MCP RAG semantic search vs Baseline (Grep/Read/Glob) approach
+  - Tested 10 questions across 6 categories (Architecture, Location, Debugging, Planning, Historical, Cross-cutting)
+  - Discovered BUG-015 (category filter mismatch) - FIXED
+  - Identified SQLite vs Qdrant performance gap (keyword vs semantic search)
+  - Validated Baseline approach is highly effective (4.5/5 quality, 100% success rate)
+  - Deliverables: 4 comprehensive reports in planning_docs/EVAL-001_*.md
+  - **Next:** Re-run with Qdrant for fair semantic search comparison
 
 - [x] **BUG-008**: File Watcher Async/Threading Bug & Stale Index Cleanup ✅ **COMPLETE**
   - Fixed RuntimeError: no running event loop in file watcher

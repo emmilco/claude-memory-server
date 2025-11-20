@@ -79,6 +79,47 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ## [Unreleased]
 
+### Fixed - 2025-11-19
+
+- **BUG-015: Code Search Category Filter Mismatch**
+  - Fixed critical bug where code search always returned "No code found"
+  - Issue: Code indexed with `category=CODE` but searched with `category=CONTEXT`
+  - Changed `src/core/server.py:2291,2465` to use `MemoryCategory.CODE` in search filters
+  - Discovered during EVAL-001 empirical evaluation
+  - Result: Code search now functional with Qdrant backend
+  - Files: `src/core/server.py`
+
+### Fixed - 2025-11-20
+
+- **BUG-012: MemoryCategory.CODE Missing**
+  - Fixed code indexing failure: added `CODE = "code"` to MemoryCategory enum in `src/core/models.py`
+  - Issue: 91% of files failed to index with `'MemoryCategory' object has no attribute 'CODE'`
+  - Result: 100% indexing success rate, 323 files / 19,168 semantic units extracted in test
+
+- **BUG-013: Parallel Embeddings PyTorch Model Loading Failure**
+  - Fixed PyTorch model loading in worker processes: changed `model.to("cpu")` to `SentenceTransformer(model_name, device="cpu")`
+  - Issue: "Cannot copy out of meta tensor" error blocked parallel embedding generation
+  - Result: 9.7x faster indexing (37.17 files/sec vs 3.82 files/sec)
+  - File: `src/embeddings/parallel_generator.py:40`
+
+- **BUG-014: Health Command cache_dir_expanded Attribute Missing**
+  - Fixed health check crash: changed `config.cache_dir_expanded` to `config.embedding_cache_path_expanded`
+  - Issue: Health command crashed when checking cache statistics
+  - Result: Health command works perfectly, shows all system statistics
+  - File: `src/cli/health_command.py:371`
+
+### Planning - 2025-11-19
+
+- **EVAL-001: Empirical Evaluation of MCP RAG Usefulness**
+  - Completed systematic evaluation: MCP RAG semantic search vs Baseline (Grep/Read/Glob)
+  - Tested 10 representative questions across 6 categories
+  - Discovered and fixed BUG-015 (category filter mismatch)
+  - Identified critical difference between SQLite (keyword-only) vs Qdrant (semantic) backends
+  - Key findings: Qdrant provides 36-66% varied relevance scores, SQLite returns constant 70%, Baseline is highly effective (4.5/5 quality)
+  - Created 5 comprehensive reports in `planning_docs/EVAL-001_*.md`
+  - Added REF-010 to TODO: Remove SQLite fallback, require Qdrant for production
+  - Files: `planning_docs/EVAL-001_*.md`, `TODO.md`, `test_qdrant_search.py`
+
 ### Added - 2025-11-19
 
 - **UX-007: pyenv Environment Isolation Fix & MCP Configuration Improvements**

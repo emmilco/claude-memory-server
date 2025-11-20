@@ -2288,7 +2288,7 @@ class MemoryRAGServer:
             filters = SearchFilters(
                 scope=MemoryScope.PROJECT,
                 project_name=filter_project_name,
-                category=MemoryCategory.CONTEXT,
+                category=MemoryCategory.CODE,
                 context_level=ContextLevel.PROJECT_CONTEXT,
                 tags=["code"],  # Code semantic units are tagged with "code"
             )
@@ -2466,7 +2466,7 @@ class MemoryRAGServer:
             filters = SearchFilters(
                 scope=MemoryScope.PROJECT,
                 project_name=filter_project_name,
-                category=MemoryCategory.CONTEXT,
+                category=MemoryCategory.CODE,
                 context_level=ContextLevel.PROJECT_CONTEXT,
                 tags=["code"],  # Code semantic units are tagged with "code"
             )
