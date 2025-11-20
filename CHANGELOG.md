@@ -79,6 +79,17 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ## [Unreleased]
 
+### Added - 2025-01-XX
+
+- **UX-008: Phase 2 - Safety, Reliability & Onboarding**
+  - Created `tutorial` command: interactive 6-step guided tutorial for new users (5-10 min)
+  - Implemented startup health check in MCP server: validates storage, embeddings, directories before serving
+  - Added confirmation prompts to `prune` command: preview mode + yes/no confirmation before deletion
+  - Added confirmation prompts to `verify` command: requires confirmation before deleting memories
+  - Added `--yes` flag to skip confirmations for automation/scripting
+  - Added error codes to all 16 exception classes (E000-E015): makes errors searchable and easier to report
+  - Files: `src/cli/tutorial_command.py` (created), `src/cli/prune_command.py`, `src/cli/verify_command.py`, `src/cli/__init__.py`, `src/mcp_server.py`, `src/core/exceptions.py`, `planning_docs/UX-007_product_design_audit.md`
+
 ### Changed - 2025-01-XX
 
 - **UX-007: Product Design Audit & Quick Wins (Phase 1)**

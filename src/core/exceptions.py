@@ -4,6 +4,8 @@
 class MemoryRAGError(Exception):
     """Base exception for all Memory RAG errors with actionable solutions."""
 
+    error_code = "E000"  # Default error code, overridden by subclasses
+
     def __init__(self, message: str, solution: str = None, docs_url: str = None):
         """
         Initialize error with actionable guidance.
@@ -16,8 +18,8 @@ class MemoryRAGError(Exception):
         self.solution = solution
         self.docs_url = docs_url
 
-        # Build comprehensive error message
-        full_message = message
+        # Build comprehensive error message with error code
+        full_message = f"[{self.error_code}] {message}"
         if solution:
             full_message += f"\n\n💡 Solution: {solution}"
         if docs_url:
@@ -29,17 +31,19 @@ class MemoryRAGError(Exception):
 class StorageError(MemoryRAGError):
     """Raised when storage backend operations fail."""
 
-    pass
+    error_code = "E001"
 
 
 class ValidationError(MemoryRAGError):
     """Raised when input validation fails."""
 
-    pass
+    error_code = "E002"
 
 
 class ReadOnlyError(MemoryRAGError):
     """Raised when write operations are attempted in read-only mode."""
+
+    error_code = "E003"
 
     def __init__(self, operation: str = "write"):
         self.operation = operation
@@ -51,17 +55,19 @@ class ReadOnlyError(MemoryRAGError):
 class RetrievalError(MemoryRAGError):
     """Raised when memory retrieval fails."""
 
-    pass
+    error_code = "E004"
 
 
 class SecurityError(MemoryRAGError):
     """Raised when security violations are detected."""
 
-    pass
+    error_code = "E005"
 
 
 class EmbeddingError(MemoryRAGError):
     """Raised when embedding generation fails with actionable guidance."""
+
+    error_code = "E006"
 
     def __init__(self, message: str):
         solution = (
@@ -77,23 +83,25 @@ class EmbeddingError(MemoryRAGError):
 class ParsingError(MemoryRAGError):
     """Raised when code parsing fails."""
 
-    pass
+    error_code = "E007"
 
 
 class IndexingError(MemoryRAGError):
     """Raised when code indexing fails."""
 
-    pass
+    error_code = "E008"
 
 
 class ConfigurationError(MemoryRAGError):
     """Raised when configuration is invalid."""
 
-    pass
+    error_code = "E009"
 
 
 class QdrantConnectionError(StorageError):
     """Raised when Qdrant connection fails with actionable fallback."""
+
+    error_code = "E010"
 
     def __init__(self, url: str, reason: str = "Connection failed"):
         self.url = url
@@ -114,6 +122,8 @@ class QdrantConnectionError(StorageError):
 class CollectionNotFoundError(StorageError):
     """Raised when a Qdrant collection does not exist."""
 
+    error_code = "E011"
+
     def __init__(self, collection_name: str):
         self.collection_name = collection_name
 
@@ -129,6 +139,8 @@ class CollectionNotFoundError(StorageError):
 class MemoryNotFoundError(StorageError):
     """Raised when a memory with specified ID is not found."""
 
+    error_code = "E012"
+
     def __init__(self, memory_id: str):
         self.memory_id = memory_id
         super().__init__(f"Memory with ID '{memory_id}' not found")
@@ -136,6 +148,8 @@ class MemoryNotFoundError(StorageError):
 
 class DependencyError(MemoryRAGError):
     """Raised when a required dependency is missing or incompatible."""
+
+    error_code = "E013"
 
     def __init__(self, package_name: str, context: str = ""):
         import platform
@@ -175,6 +189,8 @@ class DependencyError(MemoryRAGError):
 class DockerNotRunningError(MemoryRAGError):
     """Raised when Docker is required but not running."""
 
+    error_code = "E014"
+
     def __init__(self):
         import platform
 
@@ -202,6 +218,8 @@ class DockerNotRunningError(MemoryRAGError):
 
 class RustBuildError(MemoryRAGError):
     """Raised when Rust parser build fails."""
+
+    error_code = "E015"
 
     def __init__(self, error_message: str):
         message = f"Failed to build Rust parser: {error_message}"

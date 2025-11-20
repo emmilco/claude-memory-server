@@ -67,6 +67,7 @@ Command Categories:
 
   System:
     validate-install   Validate installation and check prerequisites
+    tutorial           Interactive tutorial for new users (5-10 min)
 
 For detailed help on any command: claude-rag <command> --help
         """,
@@ -192,6 +193,11 @@ Examples:
         "-v", "--verbose",
         action="store_true",
         help="Show detailed output",
+    )
+    prune_parser.add_argument(
+        "-y", "--yes",
+        action="store_true",
+        help="Skip confirmation prompts (use with caution!)",
     )
 
     # Git index command
@@ -489,6 +495,23 @@ Note: Runs in dry-run mode by default for safety. Use --execute to actually merg
         help="Validate installation and check prerequisites",
     )
 
+    # Tutorial command
+    tutorial_parser = subparsers.add_parser(
+        "tutorial",
+        help="Interactive tutorial for new users",
+        epilog="""
+This guided tutorial covers:
+  • What Claude Memory RAG does
+  • How to index your first codebase
+  • Semantic code search
+  • Memory management
+  • Configuration and next steps
+
+Estimated time: 5-10 minutes
+        """,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+
     # Repository command
     add_repository_parser(subparsers)
 
@@ -521,6 +544,7 @@ async def main_async(args):
             ttl_hours=args.ttl_hours,
             verbose=args.verbose,
             stale_days=args.stale_days,
+            yes=args.yes,
         )
         sys.exit(exit_code)
     elif args.command == "git-index":
@@ -565,6 +589,9 @@ async def main_async(args):
     elif args.command == "validate-install":
         result = await validate_installation()
         sys.exit(0 if result else 1)
+    elif args.command == "tutorial":
+        from src.cli.tutorial_command import tutorial_command
+        await tutorial_command()
     elif args.command in ("repository", "repo"):
         cmd = RepositoryCommand()
         await cmd.run(args)

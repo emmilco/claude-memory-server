@@ -137,9 +137,18 @@ async def verify_command(
                 )
 
                 if action == "delete":
-                    await store.delete(memory.id)
-                    console.print("[red]✗ Deleted[/red]\n")
-                    rejected_count += 1
+                    # Confirm deletion
+                    confirm_delete = Confirm.ask(
+                        f"[bold red]⚠️  Permanently delete memory '{memory.id[:8]}...'? This cannot be undone[/bold red]",
+                        default=False
+                    )
+                    if confirm_delete:
+                        await store.delete(memory.id)
+                        console.print("[red]✗ Deleted[/red]\n")
+                        rejected_count += 1
+                    else:
+                        console.print("[yellow]Deletion cancelled[/yellow]\n")
+                        skipped_count += 1
                 elif action == "update":
                     console.print("[yellow]! Please update via main interface[/yellow]\n")
                     skipped_count += 1

@@ -486,6 +486,61 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
         return [TextContent(type="text", text=f"Error: {str(e)}")]
 
 
+async def _startup_health_check(config, memory_server) -> bool:
+    """
+    Perform startup health check to validate system is ready.
+
+    Returns:
+        True if all checks pass, False otherwise
+    """
+    try:
+        logger.info("Running startup health checks...")
+
+        # Check 1: Storage backend connectivity
+        logger.info(f"✓ Checking {config.storage_backend} connectivity...")
+        try:
+            # Test a simple operation
+            await memory_server.store.get_stats()
+            logger.info(f"✓ {config.storage_backend.upper()} connection successful")
+        except Exception as e:
+            logger.error(f"✗ {config.storage_backend.upper()} connection failed: {e}")
+            logger.error("  → Try: docker-compose up -d (for Qdrant) or check SQLite path")
+            return False
+
+        # Check 2: Embedding model
+        logger.info("✓ Checking embedding model...")
+        try:
+            test_embedding = await memory_server.embedding_generator.generate_embedding("test")
+            if test_embedding and len(test_embedding) > 0:
+                logger.info(f"✓ Embedding model loaded successfully ({len(test_embedding)} dims)")
+            else:
+                logger.error("✗ Embedding generation returned empty result")
+                return False
+        except Exception as e:
+            logger.error(f"✗ Embedding model failed: {e}")
+            logger.error("  → Try: pip install sentence-transformers")
+            return False
+
+        # Check 3: Required directories
+        logger.info("✓ Checking required directories...")
+        required_dirs = [
+            config.get_expanded_path(config.sqlite_path).parent,
+            config.get_expanded_path(config.embedding_cache_path).parent,
+        ]
+        for dir_path in required_dirs:
+            if not dir_path.exists():
+                logger.warning(f"  Creating directory: {dir_path}")
+                dir_path.mkdir(parents=True, exist_ok=True)
+        logger.info("✓ All required directories exist")
+
+        logger.info("✅ All startup health checks passed!")
+        return True
+
+    except Exception as e:
+        logger.error(f"✗ Startup health check failed: {e}")
+        return False
+
+
 async def main():
     """Initialize and run the MCP server."""
     global memory_server
@@ -499,6 +554,14 @@ async def main():
 
     logger.info(f"Server initialized (project: {memory_server.project_name or 'global'})")
     logger.info(f"Storage backend: {config.storage_backend}")
+
+    # Perform startup health check
+    if not await _startup_health_check(config, memory_server):
+        logger.error("❌ Startup health check failed. Server cannot start.")
+        logger.error("Please fix the issues above and try again.")
+        logger.error("For detailed troubleshooting: see docs/TROUBLESHOOTING.md")
+        await memory_server.close()
+        sys.exit(1)
 
     try:
         # Run MCP server

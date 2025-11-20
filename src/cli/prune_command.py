@@ -21,6 +21,7 @@ async def prune_command(
     ttl_hours: Optional[int] = None,
     verbose: bool = False,
     stale_days: Optional[int] = None,
+    yes: bool = False,
 ) -> int:
     """
     Prune expired and stale memories.
@@ -30,6 +31,7 @@ async def prune_command(
         ttl_hours: Time-to-live for SESSION_STATE in hours
         verbose: Show detailed output
         stale_days: Also prune memories unused for N days
+        yes: Skip confirmation prompts
 
     Returns:
         Exit code (0 for success)
@@ -49,6 +51,30 @@ async def prune_command(
         console.print(f"TTL: {ttl_hours or config.session_state_ttl_hours} hours")
         console.print(f"Mode: {'DRY RUN' if dry_run else 'EXECUTE'}\n")
 
+        # First, do a dry run to see what would be deleted
+        preview_result = await pruner.prune_expired(
+            dry_run=True,
+            ttl_hours=ttl_hours,
+            safety_check=True,
+        )
+
+        # Show preview
+        console.print(f"[yellow]Found {preview_result.memories_deleted} expired memories to delete[/yellow]")
+
+        # If not in dry-run mode, ask for confirmation (unless --yes flag is set)
+        if not dry_run and preview_result.memories_deleted > 0 and not yes:
+            console.print()
+            response = console.input(
+                f"[bold yellow]⚠️  About to delete {preview_result.memories_deleted} memories. "
+                "This cannot be undone. Continue? (yes/no): [/bold yellow]"
+            )
+            if response.lower() not in ["yes", "y"]:
+                console.print("[yellow]Aborted. No memories were deleted.[/yellow]")
+                await store.close()
+                return 0
+            console.print()
+
+        # Execute actual pruning
         result = await pruner.prune_expired(
             dry_run=dry_run,
             ttl_hours=ttl_hours,
@@ -81,10 +107,35 @@ async def prune_command(
             console.print(f"\n[bold]Pruning Stale Memories[/bold]")
             console.print(f"Unused for: {stale_days} days\n")
 
-            stale_result = await pruner.prune_stale(
+            # Preview stale memories
+            stale_preview = await pruner.prune_stale(
                 days_unused=stale_days,
-                dry_run=dry_run,
+                dry_run=True,
             )
+
+            console.print(f"[yellow]Found {stale_preview.memories_deleted} stale memories to delete[/yellow]")
+
+            # Confirmation for stale deletion (unless --yes flag is set)
+            if not dry_run and stale_preview.memories_deleted > 0 and not yes:
+                console.print()
+                response = console.input(
+                    f"[bold yellow]⚠️  About to delete {stale_preview.memories_deleted} stale memories. "
+                    "This cannot be undone. Continue? (yes/no): [/bold yellow]"
+                )
+                if response.lower() not in ["yes", "y"]:
+                    console.print("[yellow]Skipped stale memory deletion.[/yellow]")
+                    stale_result = stale_preview
+                else:
+                    console.print()
+                    stale_result = await pruner.prune_stale(
+                        days_unused=stale_days,
+                        dry_run=dry_run,
+                    )
+            else:
+                stale_result = await pruner.prune_stale(
+                    days_unused=stale_days,
+                    dry_run=dry_run,
+                )
 
             stale_table = Table(title="Stale Memory Pruning Results")
             stale_table.add_column("Metric", style="cyan")
@@ -156,6 +207,11 @@ def main():
         action="store_true",
         help="Show detailed output",
     )
+    parser.add_argument(
+        "-y", "--yes",
+        action="store_true",
+        help="Skip confirmation prompts (use with caution!)",
+    )
 
     args = parser.parse_args()
 
@@ -165,6 +221,7 @@ def main():
             ttl_hours=args.ttl_hours,
             verbose=args.verbose,
             stale_days=args.stale_days,
+            yes=args.yes,
         )
     )
 
