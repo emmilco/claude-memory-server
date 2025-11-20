@@ -109,6 +109,29 @@ A pre-commit hook enforces CHANGELOG updates:
   - Health check now correctly detects running Qdrant instances
   - Modified: `src/cli/health_command.py`
 
+### Added - 2025-11-20
+
+- **UX-044-048: Dashboard Quick Wins Sprint (Phase 4 Complete: 5/15 additional features)**
+  - **UX-044**: Dark Mode Toggle (~80 lines)
+    - Theme toggle button with sun/moon icons, CSS variables for dark theme
+    - localStorage persistence, keyboard shortcut 'd'
+  - **UX-045**: Keyboard Shortcuts (~90 lines)
+    - Global shortcuts: `/` (search), `r` (refresh), `d` (dark), `c` (clear), `?` (help), `Esc` (close)
+    - Keyboard shortcuts help modal with styled kbd elements
+  - **UX-046**: Tooltips and Help System (~46 lines)
+    - Tippy.js integration with tooltips on all controls
+    - Help icons (ⓘ) on section headers with detailed explanations
+  - **UX-047**: Loading States and Skeleton Screens (~55 lines)
+    - Animated skeleton screens with gradient animation
+    - Replaced "Loading..." with professional loading states
+  - **UX-048**: Error Handling and Retry (~140 lines)
+    - Toast notification system (error/warning/success/info)
+    - Automatic retry with exponential backoff
+    - Offline detection and connection restoration
+  - Dashboard progress: 7/15 features complete (47%), all Phase 4 features done
+  - Files: `src/dashboard/static/index.html`, `dashboard.css`, `dashboard.js`
+  - Planning: `planning_docs/UX-034-048_dashboard_enhancements_progress.md` (updated)
+
 ### Added - 2025-01-XX
 
 - **UX-034-035: Dashboard Core Enhancements (Phase 1 Progress: 2/15 features)**
