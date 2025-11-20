@@ -150,6 +150,14 @@ A pre-commit hook enforces CHANGELOG updates:
   - Result: Health command works perfectly, shows all system statistics
   - File: `src/cli/health_command.py:371`
 
+### Added - 2025-11-20
+
+- **E2E Testing Documentation**
+  - Created comprehensive end-to-end testing report documenting all core features
+  - Report covers: bug fixes (BUG-012, BUG-013, BUG-014), multi-project indexing, CLI commands, performance metrics
+  - Includes manual testing scripts for API validation and MCP tools verification
+  - Files: `docs/E2E_TEST_REPORT.md`, `tests/manual/` (test_all_features.py, test_mcp_tools.py, debug_search.py, eval_test.py)
+
 ### Planning - 2025-11-19
 
 - **EVAL-001: Empirical Evaluation of MCP RAG Usefulness**

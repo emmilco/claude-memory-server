@@ -368,11 +368,9 @@ class HealthCommand:
                     index_size = db_path.stat().st_size
 
             # Get cache size
-            cache_dir = config.cache_dir_expanded
-            if cache_dir.exists():
-                for file in cache_dir.rglob("*"):
-                    if file.is_file():
-                        index_size += file.stat().st_size
+            cache_path = config.embedding_cache_path_expanded
+            if cache_path.exists():
+                index_size += cache_path.stat().st_size
 
             return {
                 "total_projects": len(projects),

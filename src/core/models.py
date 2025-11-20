@@ -23,6 +23,7 @@ class MemoryCategory(str, Enum):
     EVENT = "event"  # Events and changes
     WORKFLOW = "workflow"  # Processes and workflows
     CONTEXT = "context"  # General context
+    CODE = "code"  # Code snippets and functions
 
 
 class MemoryScope(str, Enum):

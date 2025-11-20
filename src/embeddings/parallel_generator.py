@@ -37,8 +37,7 @@ def _load_model_in_worker(model_name: str) -> Any:
             from src.embeddings.rust_bridge import RustBridge
 
             logger.info(f"Worker {os.getpid()}: Loading model {model_name}")
-            model = SentenceTransformer(model_name)
-            model.to("cpu")  # Force CPU for consistency
+            model = SentenceTransformer(model_name, device="cpu")
             _worker_model_cache[model_name] = model
             logger.info(f"Worker {os.getpid()}: Model loaded successfully")
         except Exception as e:
