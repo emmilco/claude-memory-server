@@ -693,6 +693,9 @@ async function loadDashboardStats() {
             // Populate comparison selector (UX-040)
             populateComparisonSelector(originalData.projects);
 
+            // Populate action project selectors (UX-042/UX-043)
+            populateActionProjectSelectors();
+
             // Update display
             updateOverview(data);
             updateProjects(originalData.projects);
@@ -1179,4 +1182,189 @@ function renderComparison(projectNames) {
     document.getElementById('comparison-results').style.display = 'block';
     document.getElementById('comparison-empty').style.display = 'none';
     document.getElementById('clear-comparison-btn').style.display = 'inline-block';
+}
+
+/**
+ * Quick Actions Functions (UX-042 / UX-043)
+ */
+
+// Populate project dropdowns for create memory and export
+function populateActionProjectSelectors() {
+    const memoryProjectSelect = document.getElementById('memory-project');
+    const exportProjectSelect = document.getElementById('export-project');
+
+    if (memoryProjectSelect && originalData.projects) {
+        memoryProjectSelect.innerHTML = '<option value="">Global Memory</option>';
+        originalData.projects.forEach(project => {
+            const option = document.createElement('option');
+            option.value = project.name;
+            option.textContent = project.name;
+            memoryProjectSelect.appendChild(option);
+        });
+    }
+
+    if (exportProjectSelect && originalData.projects) {
+        exportProjectSelect.innerHTML = '<option value="">All Projects</option>';
+        originalData.projects.forEach(project => {
+            const option = document.createElement('option');
+            option.value = project.name;
+            option.textContent = project.name;
+            exportProjectSelect.appendChild(option);
+        });
+    }
+}
+
+// Show create memory modal
+function showCreateMemoryForm() {
+    document.getElementById('create-memory-modal').style.display = 'flex';
+    document.getElementById('memory-content').focus();
+}
+
+function closeCreateMemoryModal() {
+    document.getElementById('create-memory-modal').style.display = 'none';
+    document.getElementById('create-memory-form').reset();
+}
+
+// Handle create memory form submission
+async function handleCreateMemory(event) {
+    event.preventDefault();
+
+    const content = document.getElementById('memory-content').value;
+    const category = document.getElementById('memory-category').value;
+    const projectName = document.getElementById('memory-project').value || null;
+    const importance = parseInt(document.getElementById('memory-importance').value);
+
+    try {
+        const response = await fetch(`${API_BASE}/api/memories`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                content,
+                category,
+                project_name: projectName,
+                importance
+            })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            showToast('Memory created successfully!', 'success');
+            closeCreateMemoryModal();
+            // Reload data to show new memory
+            loadData();
+        } else {
+            showToast(`Failed to create memory: ${result.error || 'Unknown error'}`, 'error');
+        }
+    } catch (error) {
+        showToast(`Error creating memory: ${error.message}`, 'error');
+    }
+}
+
+// Show index project modal
+function showIndexProjectForm() {
+    document.getElementById('index-project-modal').style.display = 'flex';
+    document.getElementById('project-directory').focus();
+}
+
+function closeIndexProjectModal() {
+    document.getElementById('index-project-modal').style.display = 'none';
+    document.getElementById('index-project-form').reset();
+}
+
+// Handle index project form submission
+async function handleIndexProject(event) {
+    event.preventDefault();
+
+    const directoryPath = document.getElementById('project-directory').value;
+    const projectName = document.getElementById('project-name').value;
+
+    try {
+        showToast('Starting indexing... This may take a while', 'info');
+
+        const response = await fetch(`${API_BASE}/api/index`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                directory_path: directoryPath,
+                project_name: projectName
+            })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            showToast(`Indexing completed! ${result.stats?.num_functions || 0} functions indexed`, 'success');
+            closeIndexProjectModal();
+            // Reload data to show new project
+            loadData();
+        } else {
+            showToast(`Indexing failed: ${result.error || 'Unknown error'}`, 'error');
+        }
+    } catch (error) {
+        showToast(`Error indexing project: ${error.message}`, 'error');
+    }
+}
+
+// Show export modal
+function showExportForm() {
+    document.getElementById('export-modal').style.display = 'flex';
+}
+
+function closeExportModal() {
+    document.getElementById('export-modal').style.display = 'none';
+    document.getElementById('export-form').reset();
+}
+
+// Handle export form submission
+async function handleExport(event) {
+    event.preventDefault();
+
+    const format = document.getElementById('export-format').value;
+    const projectName = document.getElementById('export-project').value || null;
+
+    try {
+        showToast('Generating export...', 'info');
+
+        const response = await fetch(`${API_BASE}/api/export`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                format,
+                project_name: projectName
+            })
+        });
+
+        if (response.ok) {
+            // Download the file
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `memories_export.${format}`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            showToast('Export downloaded successfully!', 'success');
+            closeExportModal();
+        } else {
+            const result = await response.json();
+            showToast(`Export failed: ${result.error || 'Unknown error'}`, 'error');
+        }
+    } catch (error) {
+        showToast(`Error exporting data: ${error.message}`, 'error');
+    }
+}
+
+// Run health check
+async function runHealthCheck() {
+    try {
+        showToast('Running health check...', 'info');
+        await loadHealthData();
+        showToast('Health check complete! Check the Health widget above', 'success');
+    } catch (error) {
+        showToast(`Health check failed: ${error.message}`, 'error');
+    }
 }

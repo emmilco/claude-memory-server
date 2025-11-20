@@ -54,6 +54,28 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             # Serve static files
             super().do_GET()
 
+    def do_POST(self):
+        """Handle POST requests."""
+        parsed_path = urlparse(self.path)
+
+        # API endpoints
+        if parsed_path.path == "/api/memories":
+            self._handle_create_memory()
+        elif parsed_path.path == "/api/index":
+            self._handle_trigger_index()
+        elif parsed_path.path == "/api/export":
+            self._handle_export()
+        else:
+            self._send_error_response(404, "Endpoint not found")
+
+    def do_OPTIONS(self):
+        """Handle OPTIONS requests for CORS."""
+        self.send_response(200)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.end_headers()
+
     def _handle_api_stats(self):
         """Handle /api/stats endpoint."""
         try:
@@ -258,6 +280,132 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         insights.sort(key=lambda x: x["priority"])
 
         return insights
+
+    def _handle_create_memory(self):
+        """Handle POST /api/memories - create new memory."""
+        try:
+            if not self.rag_server or not self.event_loop:
+                self._send_error_response(500, "Server not initialized")
+                return
+
+            # Read request body
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length).decode('utf-8')
+            data = json.loads(body)
+
+            # Validate required fields
+            if 'content' not in data:
+                self._send_error_response(400, "Missing required field: content")
+                return
+
+            # Create memory via RAG server
+            future = asyncio.run_coroutine_threadsafe(
+                self.rag_server.store_memory(
+                    content=data['content'],
+                    category=data.get('category', 'fact'),
+                    importance=data.get('importance', 5),
+                    project_name=data.get('project_name'),
+                    tags=data.get('tags', [])
+                ),
+                self.event_loop
+            )
+            result = future.result(timeout=10)
+
+            self._send_json_response({
+                "status": "success",
+                "message": "Memory created successfully",
+                "memory_id": result.get("memory_id")
+            })
+        except json.JSONDecodeError:
+            self._send_error_response(400, "Invalid JSON in request body")
+        except Exception as e:
+            logger.error(f"Error handling /api/memories: {e}")
+            self._send_error_response(500, str(e))
+
+    def _handle_trigger_index(self):
+        """Handle POST /api/index - trigger project indexing."""
+        try:
+            if not self.rag_server or not self.event_loop:
+                self._send_error_response(500, "Server not initialized")
+                return
+
+            # Read request body
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length).decode('utf-8')
+            data = json.loads(body)
+
+            # Validate required fields
+            if 'directory_path' not in data or 'project_name' not in data:
+                self._send_error_response(400, "Missing required fields: directory_path, project_name")
+                return
+
+            # Trigger indexing (note: this is async, returns immediately)
+            future = asyncio.run_coroutine_threadsafe(
+                self.rag_server.index_codebase(
+                    directory_path=data['directory_path'],
+                    project_name=data['project_name']
+                ),
+                self.event_loop
+            )
+            result = future.result(timeout=30)  # Longer timeout for indexing
+
+            self._send_json_response({
+                "status": "success",
+                "message": f"Indexing started for project: {data['project_name']}",
+                "stats": result
+            })
+        except json.JSONDecodeError:
+            self._send_error_response(400, "Invalid JSON in request body")
+        except Exception as e:
+            logger.error(f"Error handling /api/index: {e}")
+            self._send_error_response(500, str(e))
+
+    def _handle_export(self):
+        """Handle POST /api/export - export memories."""
+        try:
+            if not self.rag_server or not self.event_loop:
+                self._send_error_response(500, "Server not initialized")
+                return
+
+            # Read request body
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length).decode('utf-8')
+            data = json.loads(body)
+
+            # Get export format (default to JSON)
+            export_format = data.get('format', 'json').lower()
+            project_name = data.get('project_name')
+
+            # Export memories
+            future = asyncio.run_coroutine_threadsafe(
+                self.rag_server.export_memories(
+                    project_name=project_name,
+                    format=export_format
+                ),
+                self.event_loop
+            )
+            result = future.result(timeout=30)
+
+            # Send file as response
+            if export_format == 'json':
+                content_type = 'application/json'
+            elif export_format == 'csv':
+                content_type = 'text/csv'
+            else:
+                content_type = 'text/plain'
+
+            self.send_response(200)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Disposition", f'attachment; filename="memories_export.{export_format}"')
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(result.encode('utf-8'))
+
+        except json.JSONDecodeError:
+            self._send_error_response(400, "Invalid JSON in request body")
+        except Exception as e:
+            logger.error(f"Error handling /api/export: {e}")
+            self._send_error_response(500, str(e))
 
     def _send_json_response(self, data: dict):
         """Send JSON response."""

@@ -28,6 +28,22 @@
             </div>
         </header>
 
+        <!-- Quick Actions Toolbar (UX-042) -->
+        <section class="quick-actions-bar">
+            <button class="action-btn" onclick="showCreateMemoryForm()" data-tippy-content="Create a new memory manually">
+                📝 Create Memory
+            </button>
+            <button class="action-btn" onclick="showIndexProjectForm()" data-tippy-content="Index a new codebase project">
+                📂 Index Project
+            </button>
+            <button class="action-btn" onclick="showExportForm()" data-tippy-content="Export memories to file">
+                💾 Export Data
+            </button>
+            <button class="action-btn" onclick="runHealthCheck()" data-tippy-content="Run full system health check">
+                🏥 Health Check
+            </button>
+        </section>
+
         <!-- Filter Panel -->
         <section class="filter-panel">
             <div class="filter-controls">
@@ -288,6 +304,101 @@
             </div>
             <div class="modal-footer">
                 <button class="btn-secondary" onclick="closeMemoryModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Memory Modal (UX-042) -->
+    <div id="create-memory-modal" class="modal" style="display: none;">
+        <div class="modal-overlay" onclick="closeCreateMemoryModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📝 Create New Memory</h2>
+                <button class="modal-close" onclick="closeCreateMemoryModal()" aria-label="Close modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="create-memory-form" onsubmit="handleCreateMemory(event); return false;">
+                    <div class="form-group">
+                        <label for="memory-content">Content *</label>
+                        <textarea id="memory-content" rows="5" required placeholder="Enter memory content..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="memory-category">Category</label>
+                        <select id="memory-category">
+                            <option value="fact">Fact</option>
+                            <option value="preference">Preference</option>
+                            <option value="event">Event</option>
+                            <option value="workflow">Workflow</option>
+                            <option value="context">Context</option>
+                            <option value="code">Code</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="memory-project">Project (optional)</label>
+                        <select id="memory-project">
+                            <option value="">Global Memory</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="memory-importance">Importance: <span id="importance-value">5</span></label>
+                        <input type="range" id="memory-importance" min="1" max="10" value="5" oninput="document.getElementById('importance-value').textContent = this.value">
+                    </div>
+                    <button type="submit" class="btn-primary">Create Memory</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Index Project Modal (UX-042) -->
+    <div id="index-project-modal" class="modal" style="display: none;">
+        <div class="modal-overlay" onclick="closeIndexProjectModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📂 Index New Project</h2>
+                <button class="modal-close" onclick="closeIndexProjectModal()" aria-label="Close modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="index-project-form" onsubmit="handleIndexProject(event); return false;">
+                    <div class="form-group">
+                        <label for="project-directory">Directory Path *</label>
+                        <input type="text" id="project-directory" required placeholder="/path/to/project">
+                    </div>
+                    <div class="form-group">
+                        <label for="project-name">Project Name *</label>
+                        <input type="text" id="project-name" required placeholder="my-project">
+                    </div>
+                    <button type="submit" class="btn-primary">Start Indexing</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Data Modal (UX-042/UX-043) -->
+    <div id="export-modal" class="modal" style="display: none;">
+        <div class="modal-overlay" onclick="closeExportModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>💾 Export Memories</h2>
+                <button class="modal-close" onclick="closeExportModal()" aria-label="Close modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="export-form" onsubmit="handleExport(event); return false;">
+                    <div class="form-group">
+                        <label for="export-format">Format</label>
+                        <select id="export-format">
+                            <option value="json">JSON</option>
+                            <option value="csv">CSV</option>
+                            <option value="markdown">Markdown</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="export-project">Project</label>
+                        <select id="export-project">
+                            <option value="">All Projects</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-primary">Generate Export</button>
+                </form>
             </div>
         </div>
     </div>
