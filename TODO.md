@@ -118,6 +118,33 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Use case:** "What files are indexed in this project?" or "Show all Python functions indexed"
   - **Enhances:** `get_status` (which only shows counts)
 
+- [ ] **FEAT-049**: Intelligent Code Importance Scoring (~1-2 weeks) 🔥
+  - [ ] **Current State:** All code units have fixed importance=0.7, making importance meaningless for discrimination
+  - [ ] **Problem:** In medium-to-large projects (10,000+ code units), importance scores provide zero discrimination between critical authentication functions and trivial helpers
+  - [ ] **Proposed Solution:** Implement dynamic importance calculation based on:
+    - **Complexity metrics:** Cyclomatic complexity, line count, nesting depth, parameter count
+    - **Usage patterns:** Call frequency, number of callers (centrality in call graph), public vs private API
+    - **Code characteristics:** Security keywords (auth, crypto, permission), error handling, documentation quality, decorators/annotations
+    - **File-level signals:** Core vs utility modules, proximity to entry points, git change frequency, bug fix history
+  - [ ] **Scoring Algorithm:**
+    - Base score calculation from complexity (0.3-0.7 range)
+    - Usage boost (+0.0 to +0.2 based on call graph centrality)
+    - Security/critical keyword boost (+0.1 to +0.2)
+    - Normalization to 0.0-1.0 range
+  - [ ] **Implementation:**
+    - [ ] Add complexity analyzer to code parser
+    - [ ] Build lightweight call graph during indexing
+    - [ ] Implement scoring heuristics in incremental_indexer.py
+    - [ ] Add configuration options for scoring weights
+    - [ ] Update tests to validate scoring ranges
+  - [ ] **Validation:**
+    - [ ] Verify distribution (not all 0.7)
+    - [ ] Spot-check critical functions have higher scores
+    - [ ] Ensure performance impact is acceptable (<10% indexing slowdown)
+  - **Impact:** Make importance scores actually useful for retrieval ranking, filtering, and prioritization
+  - **Use case:** "Show me the most important functions in this codebase" should return core logic, not utilities
+  - **Enhances:** retrieve_memories, search_code, list_memories (all support min_importance filtering)
+
 - [ ] **FEAT-048**: Dependency Graph Visualization (~2-3 days) 🔥
   - [ ] Implement `get_dependency_graph` MCP tool
   - [ ] Export formats: DOT (Graphviz), JSON (D3.js), Mermaid

@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Critical functionality notes
 ```
 
+**How to handle MERGE CONFLICTS:**
+- Ensure no information is lost between the two conflicting branches.
+
 **What to INCLUDE:**
 - Feature/bug IDs (FEAT-XXX, UX-XXX, BUG-XXX, etc.)
 - Key files created or modified (just the path, no line counts)
