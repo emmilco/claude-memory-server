@@ -430,11 +430,25 @@ class IncrementalIndexer(BaseCodeIndexer):
         for ext in self.SUPPORTED_EXTENSIONS:
             all_files.extend(dir_path.glob(f"{pattern}{ext}"))
 
-        # Filter out hidden directories and files
-        files_to_index = [
-            f for f in all_files
-            if not any(part.startswith(".") for part in f.parts)
-        ]
+        # Filter out common unwanted directories (but allow other dot-prefixed paths)
+        # BUG-022: Previous logic filtered ALL paths with dots (broke git worktrees, .config dirs, etc)
+        EXCLUDED_DIRS = {
+            ".git", ".venv", "venv", ".virtualenv", "__pycache__",
+            "node_modules", ".pytest_cache", ".mypy_cache", ".tox"
+        }
+
+        def should_include_file(file_path: Path) -> bool:
+            """Check if file should be indexed (not in excluded directories)."""
+            # Get relative path from dir_path to check only subdirectories being indexed
+            try:
+                rel_path = file_path.relative_to(dir_path)
+                # Only filter based on parts within the directory being indexed
+                return not any(part in EXCLUDED_DIRS for part in rel_path.parts)
+            except ValueError:
+                # File is not relative to dir_path (shouldn't happen, but be safe)
+                return not any(part in EXCLUDED_DIRS for part in file_path.parts)
+
+        files_to_index = [f for f in all_files if should_include_file(f)]
 
         logger.info(f"Found {len(files_to_index)} files to index in {dir_path}")
 
