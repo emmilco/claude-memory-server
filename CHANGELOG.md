@@ -81,6 +81,13 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Fixed
 
+- **BUG-022: Code Indexer Extracts Zero Semantic Units**
+  - Fixed path filtering logic that prevented indexing from git worktrees and directories with dots
+  - Changed from filtering ALL paths with dot-prefixed parts to only filtering known unwanted directories
+  - Now correctly indexes files from git worktrees, `.config` directories, and other dot-prefixed paths
+  - Results: 867 semantic units extracted from 11 files (was 0 before)
+  - Modified: `src/memory/incremental_indexer.py`
+
 - **BUG-015: Health Check False Negative**
   - Fixed health check command incorrectly reporting Qdrant as unreachable
   - Changed endpoint check from `/health` (non-existent) to `/` (root endpoint)
