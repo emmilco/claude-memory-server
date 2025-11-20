@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import os
+import multiprocessing
 from concurrent.futures import ProcessPoolExecutor
 from typing import List, Optional, Dict, Any
 import time
@@ -12,6 +13,20 @@ from src.core.exceptions import EmbeddingError
 from src.embeddings.cache import EmbeddingCache
 
 logger = logging.getLogger(__name__)
+
+# Set multiprocessing start method to 'fork' on Unix systems (faster and avoids pickling issues)
+# This must be done before creating any processes
+if hasattr(multiprocessing, 'set_start_method'):
+    try:
+        # Only set if not already set
+        current_method = multiprocessing.get_start_method(allow_none=True)
+        if current_method is None:
+            multiprocessing.set_start_method('fork', force=False)
+            logger.info("Set multiprocessing start method to 'fork'")
+        elif current_method != 'fork':
+            logger.warning(f"Multiprocessing start method is '{current_method}', not 'fork'. May cause issues on macOS.")
+    except RuntimeError as e:
+        logger.debug(f"Could not set multiprocessing start method: {e}")
 
 # Global model cache for worker processes (one model per process)
 _worker_model_cache: Dict[str, Any] = {}
@@ -33,11 +48,45 @@ def _load_model_in_worker(model_name: str) -> Any:
 
     if model_name not in _worker_model_cache:
         try:
+            import torch
             from sentence_transformers import SentenceTransformer
             from src.embeddings.rust_bridge import RustBridge
 
             logger.info(f"Worker {os.getpid()}: Loading model {model_name}")
-            model = SentenceTransformer(model_name, device="cpu")
+
+            # COMPLETE FIX: Explicitly disable meta device initialization
+            # This prevents the "Cannot copy out of meta tensor" error
+
+            # Load model with explicit CPU device and disable trust_remote_code
+            # to avoid lazy initialization on meta device
+            model = SentenceTransformer(
+                model_name,
+                device="cpu",
+                trust_remote_code=False,  # Prevents meta device issues
+            )
+
+            # Force evaluation mode (disables dropout, etc.)
+            model.eval()
+
+            # Ensure all tensors are materialized on CPU
+            # This is the key fix for meta tensor issues
+            for module in model.modules():
+                for param in module.parameters(recurse=False):
+                    if param.is_meta:
+                        # Use to_empty() instead of to() for meta tensors
+                        param.data = torch.nn.Parameter(
+                            torch.empty_like(param, device='cpu')
+                        ).data
+                    elif param.device.type != 'cpu':
+                        param.data = param.data.to('cpu')
+
+                for buffer_name, buffer in module.named_buffers(recurse=False):
+                    if buffer.is_meta:
+                        setattr(module, buffer_name,
+                               torch.empty_like(buffer, device='cpu'))
+                    elif buffer.device.type != 'cpu':
+                        setattr(module, buffer_name, buffer.to('cpu'))
+
             _worker_model_cache[model_name] = model
             logger.info(f"Worker {os.getpid()}: Model loaded successfully")
         except Exception as e:
