@@ -122,8 +122,10 @@ Claude automatically remembers:
 ## Quick Start
 
 ### Prerequisites
-- **Required:** Python 3.8+ (Python 3.13+ recommended for best performance)
-- **Optional:** Rust (for faster parsing), Docker (for Qdrant scalability)
+- **Required:**
+  - Python 3.8+ (Python 3.13+ recommended for best performance)
+  - Docker (for Qdrant vector database - **required for semantic code search**)
+- **Optional:** Rust (for faster code parsing, falls back to Python if unavailable)
 - ~1GB disk space (10GB recommended for large codebases)
 
 ### Installation (One Command!)
@@ -140,11 +142,14 @@ python setup.py
 The interactive wizard will:
 - ✅ Check your system
 - ✅ Install dependencies
-- ✅ Configure storage (SQLite by default, no Docker needed!)
+- ✅ Configure storage (Qdrant vector database for semantic search)
+- ✅ Start Qdrant via Docker (required for code search)
 - ✅ Set up parser (Python fallback if Rust unavailable)
 - ✅ Verify everything works
 
 **Result:** Working installation in 2-5 minutes!
+
+**Note:** Semantic code search requires Qdrant running on Docker. Use `claude-rag validate-setup` to check your setup.
 
 ### Add to Claude Code
 

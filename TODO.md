@@ -167,19 +167,19 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
 
 ### 🔨 Tier 6: Refactoring & Tech Debt
 
-- [ ] **REF-010**: Remove SQLite fallback, require Qdrant (~1 day) 🔥
+- [x] **REF-010**: Remove SQLite fallback, require Qdrant ✅ **COMPLETE** (~1 day) 🔥
   - **Rationale:** SQLite mode provides poor UX for code search (keyword-only, no semantic similarity, misleading 0.700 scores). Empirical evaluation (EVAL-001) showed it adds complexity without value.
-  - [ ] Remove SQLite fallback logic from `src/store/__init__.py:49-84`
-  - [ ] Remove `allow_qdrant_fallback` config option from ServerConfig
-  - [ ] Update `create_memory_store()` to fail fast if Qdrant unavailable
-  - [ ] Update error messages: "Start Qdrant with: docker-compose up -d"
-  - [ ] Remove `src/store/sqlite_store.py` (or keep for non-code-search use cases only)
-  - [ ] Update documentation to require Qdrant for code search
-  - [ ] Add setup validation script that checks Qdrant availability
-  - [ ] Update tests to mock Qdrant instead of using SQLite fallback
-  - [ ] Add clear error in code search tools if backend isn't Qdrant
+  - [x] Remove SQLite fallback logic from `src/store/__init__.py` and `src/store/factory.py`
+  - [x] Remove `allow_qdrant_fallback` config option from ServerConfig (deprecated configs ignored for backward compatibility)
+  - [x] Update `create_memory_store()` and `create_store()` to fail fast if Qdrant unavailable
+  - [x] Update error messages with actionable setup instructions
+  - [x] Keep `src/store/sqlite_store.py` for backward compatibility (deprecated, shows warning)
+  - [x] Update documentation to require Qdrant for code search (README.md)
+  - [x] Add `validate-setup` CLI command to check Qdrant availability
+  - [x] Update tests: `test_graceful_degradation.py`, `test_config.py`, `test_actionable_errors.py`
+  - [x] Add clear error in `QdrantConnectionError` with setup instructions
   - **Benefits:** Simpler architecture, clear expectations, better error messages, no misleading degraded mode
-  - **Migration:** Provide cloud Qdrant option or embedded vector DB alternative
+  - **Implemented:** 2025-11-19
 
 - [ ] **REF-007**: Consolidate two server implementations
   - Merge old mcp_server.py with new src/core/

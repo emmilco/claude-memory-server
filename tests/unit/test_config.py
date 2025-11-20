@@ -11,7 +11,7 @@ def test_config_defaults():
     config = ServerConfig()
     assert config.server_name == "claude-memory-rag"
     assert config.log_level == "INFO"
-    assert config.storage_backend == "sqlite"  # Default is SQLite for easier setup
+    assert config.storage_backend == "qdrant"  # REF-010: Qdrant is now required for semantic search
     assert config.qdrant_url == "http://localhost:6333"
     assert config.embedding_batch_size == 32
     assert config.read_only_mode is False
@@ -82,4 +82,4 @@ def test_retrieval_gate_settings():
     """Test adaptive retrieval configuration."""
     config = ServerConfig()
     assert config.enable_retrieval_gate is True
-    assert config.retrieval_gate_threshold == 0.8
+    assert config.retrieval_gate_threshold == 0.6  # Lowered to reduce false negatives

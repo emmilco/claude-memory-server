@@ -161,14 +161,13 @@ class TestDegradationGlobalFunctions:
         tracker.clear()
 
 
-class TestGracefulDegradation:
-    """Tests for graceful degradation in store creation."""
+class TestStoreCreation:
+    """Tests for store creation (REF-010: fallback removed, Qdrant required)."""
 
-    def test_qdrant_fallback_on_connection_error(self):
-        """Test fallback to SQLite when Qdrant unavailable."""
+    def test_qdrant_connection_error_fail_fast(self):
+        """Test that Qdrant connection errors fail fast with clear message."""
         config = ServerConfig(
             storage_backend="qdrant",
-            allow_qdrant_fallback=True,
             sqlite_path=":memory:",
         )
 
@@ -176,40 +175,39 @@ class TestGracefulDegradation:
         with patch("src.store.qdrant_store.QdrantMemoryStore") as mock_qdrant:
             mock_qdrant.side_effect = ConnectionError("Qdrant not available")
 
-            store = create_memory_store(config=config)
-
-            # Should have fallen back to SQLite
-            assert store is not None
-            assert "SQLiteMemoryStore" in store.__class__.__name__
-
-    def test_qdrant_fallback_disabled(self):
-        """Test that fallback can be disabled."""
-        config = ServerConfig(
-            storage_backend="qdrant",
-            allow_qdrant_fallback=False,
-        )
-
-        # Mock Qdrant to raise connection error
-        with patch("src.store.qdrant_store.QdrantMemoryStore") as mock_qdrant:
-            mock_qdrant.side_effect = ConnectionError("Qdrant not available")
-
-            with pytest.raises(ConnectionError):
+            # Should raise ConnectionError with helpful message
+            with pytest.raises(ConnectionError) as exc_info:
                 create_memory_store(config=config)
 
-    def test_sqlite_direct_selection(self):
-        """Test that SQLite can be selected directly without fallback."""
+            # Check error message contains helpful instructions
+            error_msg = str(exc_info.value)
+            assert "Failed to connect to Qdrant" in error_msg
+            assert "docker-compose up -d" in error_msg
+            assert "curl" in error_msg  # Health check suggestion
+
+    def test_sqlite_deprecated_warning(self):
+        """Test that SQLite shows deprecation warning."""
         config = ServerConfig(
             storage_backend="sqlite",
             sqlite_path=":memory:",
         )
 
-        store = create_memory_store(config=config)
+        # Capture log warnings
+        with patch("src.store.logger") as mock_logger:
+            store = create_memory_store(config=config)
 
-        assert store is not None
-        assert "SQLiteMemoryStore" in store.__class__.__name__
+            # Should create SQLite store
+            assert store is not None
+            assert "SQLiteMemoryStore" in store.__class__.__name__
 
-    def test_qdrant_success_no_fallback(self):
-        """Test that Qdrant works when available (no fallback)."""
+            # Should log deprecation warning
+            mock_logger.warning.assert_called_once()
+            warning_msg = mock_logger.warning.call_args[0][0]
+            assert "deprecated" in warning_msg.lower()
+            assert "semantic" in warning_msg.lower() or "Qdrant" in warning_msg
+
+    def test_qdrant_success(self):
+        """Test that Qdrant works when available."""
         config = ServerConfig(
             storage_backend="qdrant",
             sqlite_path=":memory:",
@@ -222,5 +220,23 @@ class TestGracefulDegradation:
 
             store = create_memory_store(config=config)
 
-            assert store is mock_store  # Got the Qdrant store
+            # Got the Qdrant store
+            assert store is mock_store
             mock_qdrant.assert_called_once()
+
+    def test_unsupported_backend_error(self):
+        """Test that unsupported backends raise clear error."""
+        config = ServerConfig(
+            storage_backend="sqlite",  # Will be patched to invalid
+            sqlite_path=":memory:",
+        )
+
+        # Temporarily set invalid backend
+        config.storage_backend = "invalid"
+
+        with pytest.raises(ValueError) as exc_info:
+            create_memory_store(config=config)
+
+        error_msg = str(exc_info.value)
+        assert "Unsupported storage backend" in error_msg
+        assert "invalid" in error_msg

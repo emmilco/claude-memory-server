@@ -79,6 +79,20 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ## [Unreleased]
 
+### Changed - 2025-11-19
+
+- **REF-010: Remove SQLite Fallback, Require Qdrant** ⚠️ **BREAKING CHANGE**
+  - Changed default `storage_backend` from "sqlite" to "qdrant" in config
+  - Removed `allow_qdrant_fallback` config option (deprecated configs are ignored for backward compatibility)
+  - Removed automatic fallback to SQLite when Qdrant unavailable
+  - Updated `create_memory_store()` and `create_store()` to fail fast with actionable error messages
+  - Added `validate-setup` CLI command to check Qdrant connectivity
+  - Updated `QdrantConnectionError` to provide setup instructions instead of fallback suggestion
+  - Updated README prerequisites to require Docker for semantic code search
+  - **Rationale**: SQLite mode provided poor UX (keyword-only search, misleading 0.700 scores). Empirical evaluation (EVAL-001) showed Baseline (Grep/Read/Glob) outperformed SQLite mode. Qdrant required for semantic search.
+  - **Migration**: Run `docker-compose up -d` to start Qdrant, use `claude-rag validate-setup` to verify
+  - Files: `src/config.py`, `src/store/__init__.py`, `src/store/factory.py`, `src/core/exceptions.py`, `src/cli/validate_setup_command.py`, `src/cli/__init__.py`, `README.md`, tests updated
+
 ### Changed - 2025-01-XX
 
 - **UX-007: Product Design Audit & Quick Wins (Phase 1)**

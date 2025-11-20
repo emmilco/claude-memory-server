@@ -4,7 +4,6 @@ import logging
 from typing import Optional
 from src.store.base import MemoryStore
 from src.config import ServerConfig
-from src.core.degradation_warnings import add_degradation_warning
 
 logger = logging.getLogger(__name__)
 
@@ -12,27 +11,23 @@ logger = logging.getLogger(__name__)
 def create_memory_store(
     backend: Optional[str] = None,
     config: Optional[ServerConfig] = None,
-    allow_fallback: Optional[bool] = None
 ) -> MemoryStore:
     """
-    Factory function to create appropriate memory store with graceful fallback.
+    Factory function to create Qdrant memory store.
 
-    Fallback behavior (when allow_fallback=True):
-    - If Qdrant is unavailable, automatically falls back to SQLite
-    - Logs warning about performance implications
-    - Provides upgrade instructions
+    REF-010: SQLite fallback removed - Qdrant is now required for semantic code search.
+    This ensures users get proper semantic search capabilities instead of degraded keyword search.
 
     Args:
         backend: Storage backend type ("qdrant" or "sqlite"). If None, uses config.
         config: Server configuration. If None, uses global config.
-        allow_fallback: If True, fall back to SQLite when Qdrant unavailable
 
     Returns:
-        MemoryStore: Configured storage backend instance.
+        MemoryStore: Configured Qdrant storage backend instance.
 
     Raises:
         ValueError: If backend is unsupported
-        ConnectionError: If Qdrant unavailable and fallback disabled
+        ConnectionError: If Qdrant is unavailable with setup instructions
     """
     if config is None:
         from src.config import get_config
@@ -41,60 +36,40 @@ def create_memory_store(
     if backend is None:
         backend = config.storage_backend
 
-    # Use config setting if allow_fallback not explicitly provided
-    if allow_fallback is None:
-        allow_fallback = config.allow_qdrant_fallback
-
-    # Try to create the requested backend
     if backend == "qdrant":
         from src.store.qdrant_store import QdrantMemoryStore
         from src.core.exceptions import QdrantConnectionError
 
         try:
             store = QdrantMemoryStore(config)
-            # Test connection by attempting to get collections
-            # This will raise QdrantConnectionError if Qdrant is down
-            logger.info("Using Qdrant vector store (optimal performance)")
+            logger.info("✅ Connected to Qdrant vector store")
             return store
         except (QdrantConnectionError, ConnectionError, Exception) as e:
-            if not allow_fallback:
-                logger.error(f"Qdrant connection failed and fallback disabled: {e}")
-                raise ConnectionError(
-                    f"Failed to connect to Qdrant: {e}\n"
-                    f"💡 Solution: Start Qdrant with 'docker-compose up -d' or enable fallback"
-                ) from e
+            logger.error(f"❌ Qdrant connection failed: {e}")
+            raise ConnectionError(
+                f"Failed to connect to Qdrant at {config.qdrant_url}\n\n"
+                f"💡 Solution:\n"
+                f"  1. Start Qdrant: docker-compose up -d\n"
+                f"  2. Check Qdrant health: curl {config.qdrant_url}/health\n"
+                f"  3. Verify Docker is running: docker ps\n\n"
+                f"Original error: {e}"
+            ) from e
 
-            # Graceful fallback to SQLite
-            logger.warning(
-                "⚠️  Qdrant unavailable, falling back to SQLite.\n"
-                f"    Reason: {e}\n"
-                f"    Performance impact: 3-5x slower search, no vector similarity\n"
-                f"    Upgrade: docker-compose up -d (see docs/setup.md)"
-            )
-
-            # Track degradation
-            add_degradation_warning(
-                component="Qdrant Vector Store",
-                message="Qdrant unavailable, using SQLite keyword search only",
-                upgrade_path="docker-compose up -d (see docs/setup.md)",
-                performance_impact="3-5x slower search, no semantic similarity",
-            )
-
-            backend = "sqlite"
-
-    if backend == "sqlite":
+    elif backend == "sqlite":
+        # SQLite is deprecated for code search
+        logger.warning(
+            "⚠️  SQLite backend is deprecated for code search.\n"
+            "   SQLite provides keyword-only search without semantic similarity.\n"
+            "   For proper semantic code search, use Qdrant: docker-compose up -d"
+        )
         from src.store.sqlite_store import SQLiteMemoryStore
-
-        if config.storage_backend == "qdrant":
-            # This is a fallback situation
-            logger.info("Using SQLite storage (degraded mode - keyword search only)")
-        else:
-            # User explicitly chose SQLite
-            logger.info("Using SQLite storage (configured)")
-
         return SQLiteMemoryStore(config)
+
     else:
-        raise ValueError(f"Unsupported storage backend: {backend}")
+        raise ValueError(
+            f"Unsupported storage backend: {backend}\n"
+            f"Supported backends: 'qdrant' (recommended), 'sqlite' (deprecated)"
+        )
 
 
 __all__ = ["MemoryStore", "create_memory_store"]
