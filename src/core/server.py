@@ -5176,6 +5176,10 @@ class MemoryRAGServer:
             self.scheduler.shutdown(wait=False)
             logger.info("Pruning scheduler stopped")
 
+        # Allow pending operations to complete before closing resources
+        # This prevents race conditions during concurrent test cleanup
+        await asyncio.sleep(0.1)
+
         if self.store:
             await self.store.close()
         if self.embedding_generator:
