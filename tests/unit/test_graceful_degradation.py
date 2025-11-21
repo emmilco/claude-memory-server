@@ -168,7 +168,6 @@ class TestStoreCreation:
         """Test that Qdrant connection errors fail fast with clear message."""
         config = ServerConfig(
             storage_backend="qdrant",
-            sqlite_path=":memory:",
         )
 
         # Mock Qdrant to raise connection error
@@ -185,32 +184,14 @@ class TestStoreCreation:
             assert "docker-compose up -d" in error_msg
             assert "curl" in error_msg  # Health check suggestion
 
-    def test_sqlite_deprecated_warning(self):
-        """Test that SQLite shows deprecation warning."""
-        config = ServerConfig(
-            storage_backend="sqlite",
-            sqlite_path=":memory:",
-        )
-
-        # Capture log warnings
-        with patch("src.store.logger") as mock_logger:
-            store = create_memory_store(config=config)
-
-            # Should create SQLite store
-            assert store is not None
-            assert "SQLiteMemoryStore" in store.__class__.__name__
-
-            # Should log deprecation warning
-            mock_logger.warning.assert_called_once()
-            warning_msg = mock_logger.warning.call_args[0][0]
-            assert "deprecated" in warning_msg.lower()
-            assert "semantic" in warning_msg.lower() or "Qdrant" in warning_msg
+    # SQLite support removed in REF-010 - test removed
+    # def test_sqlite_deprecated_warning(self):
+    #     """Test that SQLite shows deprecation warning."""
 
     def test_qdrant_success(self):
         """Test that Qdrant works when available."""
         config = ServerConfig(
             storage_backend="qdrant",
-            sqlite_path=":memory:",
         )
 
         # Mock Qdrant to succeed
@@ -224,19 +205,6 @@ class TestStoreCreation:
             assert store is mock_store
             mock_qdrant.assert_called_once()
 
-    def test_unsupported_backend_error(self):
-        """Test that unsupported backends raise clear error."""
-        config = ServerConfig(
-            storage_backend="sqlite",  # Will be patched to invalid
-            sqlite_path=":memory:",
-        )
-
-        # Temporarily set invalid backend
-        config.storage_backend = "invalid"
-
-        with pytest.raises(ValueError) as exc_info:
-            create_memory_store(config=config)
-
-        error_msg = str(exc_info.value)
-        assert "Unsupported storage backend" in error_msg
-        assert "invalid" in error_msg
+    # SQLite support removed in REF-010 - unsupported backend validation now happens at config level
+    # def test_unsupported_backend_error(self):
+    #     """Test that unsupported backends raise clear error."""
