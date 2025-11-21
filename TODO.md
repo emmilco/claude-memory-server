@@ -118,6 +118,58 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Fix:** Changed to use `embedding_cache_path_expanded` and check file size directly
   - **Result:** Health command works perfectly, shows all system statistics
 
+- [x] **BUG-027**: Incomplete SQLite Removal (REF-010) ✅ **FIXED** (2025-11-21)
+  - **Error:** 185 ERROR tests with "Input should be 'qdrant'" validation errors
+  - **Impact:** 16+ test files broken, 185 runtime test errors
+  - **Root Cause:** REF-010 removed SQLite backend but tests still try to use it
+  - **Location:** Config validation in `src/config.py:19` only accepts "qdrant"
+  - **Fix:** Updated 12 test files to use storage_backend="qdrant", removed sqlite_path parameters
+  - **Result:** All integration and unit tests now use Qdrant backend correctly
+  - **See:** planning_docs/BUG-HUNT_2025-11-21_runtime_failures.md
+
+- [x] **BUG-028**: Dict vs Object Type Mismatch in Health Components ✅ **FIXED** (2025-11-21)
+  - **Error:** "'dict' object has no attribute 'content'" and "'dict' object has no attribute 'created_at'"
+  - **Impact:** 8+ FAILED tests, health monitoring system broken
+  - **Root Cause:** get_all_memories() returns List[Dict] but consumers expect List[MemoryUnit] objects
+  - **Location:** src/memory/health_scorer.py:240, src/memory/health_jobs.py:168
+  - **Fix:** Changed all memory.attribute to memory['attribute'], added enum conversions and datetime parsing
+  - **Result:** Health monitoring system now works correctly with dictionary access
+  - **See:** planning_docs/BUG-HUNT_2025-11-21_runtime_failures.md
+
+- [x] **BUG-029**: Category Changed from "context" to "code" ✅ **FIXED** (2025-11-21)
+  - **Error:** "AssertionError: assert 'code' == 'context'"
+  - **Impact:** 2+ FAILED tests, outdated documentation
+  - **Root Cause:** Code indexing category changed to MemoryCategory.CODE but tests/comments not updated
+  - **Location:** tests/integration/test_indexing_integration.py:133, src/core/server.py:3012 comment
+  - **Fix:** Updated test assertions to expect "code", updated outdated comment
+  - **Result:** All indexing tests now pass with correct category expectations
+  - **See:** planning_docs/BUG-HUNT_2025-11-21_runtime_failures.md
+
+- [x] **BUG-030**: Invalid Qdrant Point IDs in Test Fixtures ✅ **FIXED** (2025-11-21)
+  - **Error:** "400 Bad Request: value test-1 is not a valid point ID"
+  - **Impact:** 4+ ERROR tests in backup/export functionality
+  - **Root Cause:** Tests use string IDs like "test-1" but Qdrant requires integers or UUIDs
+  - **Location:** tests/unit/test_backup_export.py:30, 44
+  - **Fix:** Replaced "test-1", "test-2" with str(uuid.uuid4())
+  - **Result:** Test fixtures now use valid UUID format for Point IDs
+  - **See:** planning_docs/BUG-HUNT_2025-11-21_runtime_failures.md
+
+- [x] **BUG-031**: Test Collection Count Discrepancy (Documentation) ✅ **FIXED** (2025-11-21)
+  - **Issue:** Test count varies between runs (documented: 2,723, actual: 2,677-2,744)
+  - **Impact:** Misleading documentation
+  - **Location:** CLAUDE.md metrics section
+  - **Fix:** Updated CLAUDE.md to reflect ~2,740 tests with note about environment variability
+  - **Result:** Documentation now accurately reflects test count range
+  - **See:** planning_docs/BUG-HUNT_2025-11-21_runtime_failures.md
+
+- [x] **BUG-032**: Coverage Metric Discrepancy (Documentation) ✅ **FIXED** (2025-11-21)
+  - **Issue:** CLAUDE.md claims 67% coverage, actual is 59.6% overall / 71.2% core modules
+  - **Impact:** Misleading documentation (but core modules meet target)
+  - **Location:** CLAUDE.md Current State section
+  - **Fix:** Updated coverage metrics with accurate breakdown (59.6% overall, 71.2% core modules)
+  - **Result:** Documentation now clearly explains overall vs core module coverage
+  - **See:** planning_docs/BUG-HUNT_2025-11-21_runtime_failures.md
+
 ### 🟡 Tier 2: Core Functionality Extensions
 
 **These extend core capabilities with new features (nice-to-have)**
