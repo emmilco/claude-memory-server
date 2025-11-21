@@ -84,6 +84,14 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Bug Fixes
 
+- **BUG-028: Dict vs Object Type Mismatch in Health Components** (2025-11-21)
+  - Fixed health_scorer.py and health_jobs.py accessing dict keys with object notation
+  - Changed `memory.content` to `memory.get('content')` for all dict memory objects
+  - Added proper enum conversion for lifecycle_state and context_level string values
+  - Added datetime parsing for created_at and last_accessed string values
+  - Files: src/memory/health_scorer.py, src/memory/health_jobs.py
+  - Result: 6+ integration tests now pass in test_health_dashboard_integration.py
+
 - **BUG-024: Tests Importing Removed Modules** (2025-11-21)
   - Fixed 11 test files that failed collection due to importing removed modules
   - Updated tests to use QdrantMemoryStore instead of removed SQLiteMemoryStore

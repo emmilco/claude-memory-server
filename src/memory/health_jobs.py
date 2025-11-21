@@ -113,20 +113,41 @@ class HealthMaintenanceJobs:
 
             for memory in all_memories:
                 # Skip if already ARCHIVED or STALE
-                current_state = getattr(
-                    memory, 'lifecycle_state', LifecycleState.ACTIVE
-                )
+                current_state = memory.get('lifecycle_state', LifecycleState.ACTIVE)
+                if isinstance(current_state, str):
+                    try:
+                        current_state = LifecycleState(current_state)
+                    except ValueError:
+                        current_state = LifecycleState.ACTIVE
+
                 if current_state in [LifecycleState.ARCHIVED, LifecycleState.STALE]:
                     continue
 
+                # Parse datetime if it's a string
+                created_at = memory.get('created_at')
+                if isinstance(created_at, str):
+                    from dateutil.parser import parse
+                    created_at = parse(created_at)
+
+                last_accessed = memory.get('last_accessed', created_at)
+                if isinstance(last_accessed, str):
+                    from dateutil.parser import parse
+                    last_accessed = parse(last_accessed)
+
+                # Parse context_level if it's a string
+                context_level = memory.get('context_level', ContextLevel.SESSION_STATE)
+                if isinstance(context_level, str):
+                    try:
+                        context_level = ContextLevel(context_level)
+                    except ValueError:
+                        context_level = ContextLevel.SESSION_STATE
+
                 # Calculate what state it should be in
                 target_state = self.lifecycle_manager.calculate_state(
-                    created_at=memory.created_at,
-                    last_accessed=getattr(
-                        memory, 'last_accessed', memory.created_at
-                    ),
-                    use_count=getattr(memory, 'use_count', 0),
-                    context_level=memory.context_level,
+                    created_at=created_at,
+                    last_accessed=last_accessed,
+                    use_count=memory.get('use_count', 0),
+                    context_level=context_level,
                 )
 
                 # If it should be ARCHIVED or STALE, it's a candidate
@@ -148,11 +169,11 @@ class HealthMaintenanceJobs:
                     try:
                         # Update lifecycle state
                         await self.store.update_lifecycle_state(
-                            memory.id, target_state
+                            memory.get('id'), target_state
                         )
                         archived_count += 1
                     except Exception as e:
-                        error_msg = f"Failed to archive memory {memory.id}: {e}"
+                        error_msg = f"Failed to archive memory {memory.get('id')}: {e}"
                         logger.error(error_msg)
                         result.errors.append(error_msg)
 
@@ -209,22 +230,38 @@ class HealthMaintenanceJobs:
 
             for memory in all_memories:
                 # Only delete STALE memories
-                current_state = getattr(
-                    memory, 'lifecycle_state', LifecycleState.ACTIVE
-                )
+                current_state = memory.get('lifecycle_state', LifecycleState.ACTIVE)
+                if isinstance(current_state, str):
+                    try:
+                        current_state = LifecycleState(current_state)
+                    except ValueError:
+                        current_state = LifecycleState.ACTIVE
+
                 if current_state != LifecycleState.STALE:
                     continue
 
                 # Check age
-                if memory.created_at > cutoff_date:
+                created_at = memory.get('created_at')
+                if isinstance(created_at, str):
+                    from dateutil.parser import parse
+                    created_at = parse(created_at)
+
+                if created_at > cutoff_date:
                     continue
 
                 # Skip USER_PREFERENCE (they're more valuable)
-                if memory.context_level == ContextLevel.USER_PREFERENCE:
+                context_level = memory.get('context_level', ContextLevel.SESSION_STATE)
+                if isinstance(context_level, str):
+                    try:
+                        context_level = ContextLevel(context_level)
+                    except ValueError:
+                        context_level = ContextLevel.SESSION_STATE
+
+                if context_level == ContextLevel.USER_PREFERENCE:
                     continue
 
                 # Check usage (skip if frequently accessed)
-                use_count = getattr(memory, 'use_count', 0)
+                use_count = memory.get('use_count', 0)
                 if use_count > 5:  # Has been used at least 5 times
                     continue
 
@@ -243,10 +280,10 @@ class HealthMaintenanceJobs:
                 deleted_count = 0
                 for memory in candidates:
                     try:
-                        await self.store.delete_memory(memory.id)
+                        await self.store.delete_memory(memory.get('id'))
                         deleted_count += 1
                     except Exception as e:
-                        error_msg = f"Failed to delete memory {memory.id}: {e}"
+                        error_msg = f"Failed to delete memory {memory.get('id')}: {e}"
                         logger.error(error_msg)
                         result.errors.append(error_msg)
 

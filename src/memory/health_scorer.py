@@ -170,7 +170,13 @@ class HealthScorer:
             all_memories = await self.store.get_all_memories()
 
             for memory in all_memories:
-                state = getattr(memory, 'lifecycle_state', LifecycleState.ACTIVE)
+                state = memory.get('lifecycle_state', LifecycleState.ACTIVE)
+                if isinstance(state, str):
+                    # Convert string to LifecycleState enum
+                    try:
+                        state = LifecycleState(state)
+                    except ValueError:
+                        state = LifecycleState.ACTIVE
                 if state in distribution:
                     distribution[state] += 1
 
@@ -237,7 +243,7 @@ class HealthScorer:
             duplicate_count = 0
 
             for memory in all_memories:
-                content = memory.content.strip().lower()
+                content = memory.get('content', '').strip().lower()
                 if content in content_map:
                     duplicate_count += 1
                 else:
