@@ -130,7 +130,7 @@ async def test_index_python_file_end_to_end(temp_dir, config):
 
         # Verify metadata
         for memory, score in results:
-            assert memory.category.value == "context"
+            assert memory.category.value == "code"
             assert memory.scope.value == "project"
             assert memory.project_name == "test_math_project"
             assert "file_path" in memory.metadata
