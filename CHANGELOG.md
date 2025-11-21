@@ -84,6 +84,11 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Bug Fixes
 
+- **FIX-SQLITE-IMPORTS: Remove SQLite Imports from Source Code** (2025-11-21)
+  - Removed SQLite imports from src/store/__init__.py, src/backup/exporter.py, src/store/factory.py
+  - Updated error messages to indicate only Qdrant backend is supported
+  - Fixes ~20-40 test failures caused by ModuleNotFoundError for deleted sqlite_store module
+
 - **BUG-031 & BUG-032: Documentation Metrics Accuracy** (2025-11-21)
   - Updated CLAUDE.md test count from 2,723 to ~2,740 (varies by environment)
   - Corrected coverage metrics: 59.6% overall, 71.2% core modules (was incorrectly 67%)
