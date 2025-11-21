@@ -5,8 +5,8 @@ import pytest_asyncio
 import asyncio
 from datetime import datetime, UTC, timedelta
 
-from src.config import get_config
-from src.store.sqlite_store import SQLiteMemoryStore
+from src.config import ServerConfig
+from src.store.qdrant_store import QdrantMemoryStore
 from src.core.models import MemoryUnit, ContextLevel, LifecycleState, MemoryCategory
 from src.memory.health_scorer import HealthScorer
 from src.memory.health_jobs import HealthMaintenanceJobs
@@ -15,17 +15,19 @@ from src.memory.lifecycle_manager import LifecycleManager
 
 @pytest_asyncio.fixture
 async def temp_db():
-    """Create a temporary database for testing."""
-    config = get_config()
-    config.storage_backend = "sqlite"
-    config.sqlite_path = ":memory:"  # In-memory database for tests
+    """Create a test Qdrant store."""
+    config = ServerConfig(
+        storage_backend="qdrant",
+        qdrant_url="http://localhost:6333",
+        qdrant_collection_name="test_health_dashboard",
+    )
 
-    store = SQLiteMemoryStore(config)
+    store = QdrantMemoryStore(config)
     await store.initialize()
 
     yield store
 
-    # Cleanup handled by in-memory DB
+    await store.close()
 
 
 class TestHealthDashboardIntegration:

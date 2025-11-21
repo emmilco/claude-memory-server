@@ -5,8 +5,8 @@ import pytest_asyncio
 import asyncio
 from datetime import datetime, UTC, timedelta
 
-from src.config import get_config
-from src.store.sqlite_store import SQLiteMemoryStore
+from src.config import ServerConfig
+from src.store.qdrant_store import QdrantMemoryStore
 from src.embeddings.generator import EmbeddingGenerator
 from src.memory.provenance_tracker import ProvenanceTracker
 from src.memory.trust_signals import TrustSignalGenerator
@@ -23,14 +23,16 @@ from src.core.models import (
 @pytest_asyncio.fixture
 async def test_store():
     """Create a test memory store."""
-    config = get_config()
-    config.storage_backend = "sqlite"
-    config.sqlite_path = ":memory:"  # In-memory database for tests
+    config = ServerConfig(
+        storage_backend="qdrant",
+        qdrant_url="http://localhost:6333",
+        qdrant_collection_name="test_provenance",
+    )
 
-    store = SQLiteMemoryStore(config)
+    store = QdrantMemoryStore(config)
     await store.initialize()
     yield store
-    # Cleanup handled by in-memory DB
+    await store.close()
 
 
 @pytest.fixture

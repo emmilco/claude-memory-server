@@ -9,22 +9,23 @@ from datetime import datetime, UTC
 
 from src.backup.exporter import DataExporter
 from src.core.models import MemoryUnit, MemoryCategory, ContextLevel, MemoryScope, LifecycleState
-from src.store.sqlite_store import SQLiteMemoryStore
+from src.store.qdrant_store import QdrantMemoryStore
 from src.config import ServerConfig
 
 
 @pytest_asyncio.fixture
 async def temp_store():
-    """Create a temporary SQLite store for testing."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        from unittest.mock import MagicMock
-        config = MagicMock()
-        config.sqlite_path_expanded = Path(tmpdir) / "test.db"
-        store = SQLiteMemoryStore(config)
-        await store.initialize()
+    """Create a temporary Qdrant store for testing."""
+    config = ServerConfig(
+        storage_backend="qdrant",
+        qdrant_url="http://localhost:6333",
+        qdrant_collection_name="test_backup_export",
+    )
+    store = QdrantMemoryStore(config)
+    await store.initialize()
 
-        # Add some test memories
-        memories = [
+    # Add some test memories
+    memories = [
             MemoryUnit(
                 id="test-1",
                 content="Test memory 1",
@@ -53,33 +54,33 @@ async def temp_store():
                 last_accessed=datetime.now(UTC),
                 lifecycle_state=LifecycleState.ACTIVE,
             ),
-        ]
+    ]
 
-        # Embeddings stored separately
-        embeddings = [[0.1] * 384, [0.2] * 384]
+    # Embeddings stored separately
+    embeddings = [[0.1] * 384, [0.2] * 384]
 
-        for memory, embedding in zip(memories, embeddings):
-            await store.store(
-                content=memory.content,
-                embedding=embedding,
-                metadata={
-                    "id": memory.id,
-                    "category": memory.category.value,
-                    "context_level": memory.context_level.value,
-                    "scope": memory.scope.value,
-                    "project_name": memory.project_name,
-                    "importance": memory.importance,
-                    "embedding_model": memory.embedding_model,
-                    "created_at": memory.created_at.isoformat(),
-                    "updated_at": memory.updated_at.isoformat(),
-                    "last_accessed": memory.last_accessed.isoformat(),
-                    "lifecycle_state": memory.lifecycle_state.value,
-                }
-            )
+    for memory, embedding in zip(memories, embeddings):
+        await store.store(
+            content=memory.content,
+            embedding=embedding,
+            metadata={
+                "id": memory.id,
+                "category": memory.category.value,
+                "context_level": memory.context_level.value,
+                "scope": memory.scope.value,
+                "project_name": memory.project_name,
+                "importance": memory.importance,
+                "embedding_model": memory.embedding_model,
+                "created_at": memory.created_at.isoformat(),
+                "updated_at": memory.updated_at.isoformat(),
+                "last_accessed": memory.last_accessed.isoformat(),
+                "lifecycle_state": memory.lifecycle_state.value,
+            }
+        )
 
-        yield store
+    yield store
 
-        await store.close()
+    await store.close()
 
 
 @pytest.mark.asyncio

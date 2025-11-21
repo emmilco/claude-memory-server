@@ -12,11 +12,11 @@ from src.memory.notification_manager import NotificationManager, NotificationBac
 from src.config import ServerConfig
 
 
-class TestNotificationBackend(NotificationBackend):
-    """Test backend for capturing notifications."""
+class MockNotificationBackend(NotificationBackend):
+    """Mock backend for capturing notifications."""
 
     def __init__(self):
-        """Initialize test backend."""
+        """Initialize mock backend."""
         self.notifications = []
 
     async def notify(self, title: str, message: str, level: str = "info") -> None:
@@ -53,7 +53,7 @@ def job_db():
 @pytest.fixture
 def notification_backend():
     """Create test notification backend."""
-    return TestNotificationBackend()
+    return MockNotificationBackend()
 
 
 @pytest.fixture

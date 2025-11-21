@@ -10,24 +10,17 @@ from src.tagging.tag_manager import TagManager
 from src.tagging.collection_manager import CollectionManager
 from src.tagging.models import TagCreate, CollectionCreate
 from src.config import ServerConfig
-from src.store.sqlite_store import SQLiteMemoryStore
+from src.store.qdrant_store import QdrantMemoryStore
 from src.core.models import MemoryUnit, MemoryCategory, ContextLevel, MemoryScope, SearchFilters
 
 
 @pytest.fixture
-def db_path():
-    """Create temporary database for testing."""
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as f:
-        yield f.name
-    Path(f.name).unlink(missing_ok=True)
-
-
-@pytest.fixture
-def config(db_path):
+def config():
     """Create test configuration."""
     config = ServerConfig(
-        storage_backend="sqlite",
-        sqlite_path=db_path,
+        storage_backend="qdrant",
+        qdrant_url="http://localhost:6333",
+        qdrant_collection_name="test_tagging",
     )
     return config
 
@@ -36,7 +29,7 @@ def config(db_path):
 def store(config):
     """Create and initialize memory store."""
     import asyncio
-    store_instance = SQLiteMemoryStore(config)
+    store_instance = QdrantMemoryStore(config)
 
     # Run initialization
     asyncio.run(store_instance.initialize())

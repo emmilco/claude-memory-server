@@ -16,22 +16,14 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-# Try to import tree-sitter Python bindings
+# Try to import core tree-sitter only
 try:
     from tree_sitter import Language, Parser
-    import tree_sitter_python
-    import tree_sitter_javascript
-    import tree_sitter_typescript
-    import tree_sitter_java
-    import tree_sitter_go
-    import tree_sitter_rust as tree_sitter_rust_lang
-    import tree_sitter_php
-    import tree_sitter_ruby
-    import tree_sitter_swift
-    import tree_sitter_kotlin
     TREE_SITTER_AVAILABLE = True
 except ImportError:
     TREE_SITTER_AVAILABLE = False
+    Language = None  # type: ignore
+    Parser = None  # type: ignore
     logger.warning(
         "tree-sitter Python bindings not available. "
         "Install with: pip install tree-sitter tree-sitter-languages"
@@ -41,18 +33,19 @@ except ImportError:
 class PythonParser:
     """Pure Python parser using tree-sitter bindings."""
 
-    # Language mappings - module and language function name
+    # Language mappings - module name and language function name
+    # Modules are imported lazily to avoid failures if optional languages are missing
     LANGUAGE_MODULES = {
-        "python": (tree_sitter_python, "language") if TREE_SITTER_AVAILABLE else None,
-        "javascript": (tree_sitter_javascript, "language") if TREE_SITTER_AVAILABLE else None,
-        "typescript": (tree_sitter_typescript, "language_typescript") if TREE_SITTER_AVAILABLE else None,
-        "java": (tree_sitter_java, "language") if TREE_SITTER_AVAILABLE else None,
-        "go": (tree_sitter_go, "language") if TREE_SITTER_AVAILABLE else None,
-        "rust": (tree_sitter_rust_lang, "language") if TREE_SITTER_AVAILABLE else None,
-        "php": (tree_sitter_php, "language_php") if TREE_SITTER_AVAILABLE else None,  # BUG-021: Use language_php, not language
-        "ruby": (tree_sitter_ruby, "language") if TREE_SITTER_AVAILABLE else None,
-        "swift": (tree_sitter_swift, "language") if TREE_SITTER_AVAILABLE else None,
-        "kotlin": (tree_sitter_kotlin, "language") if TREE_SITTER_AVAILABLE else None,
+        "python": ("tree_sitter_python", "language"),
+        "javascript": ("tree_sitter_javascript", "language"),
+        "typescript": ("tree_sitter_typescript", "language_typescript"),
+        "java": ("tree_sitter_java", "language"),
+        "go": ("tree_sitter_go", "language"),
+        "rust": ("tree_sitter_rust", "language"),
+        "php": ("tree_sitter_php", "language_php"),  # Fixed: use language_php not language
+        "ruby": ("tree_sitter_ruby", "language"),
+        "swift": ("tree_sitter_swift", "language"),
+        "kotlin": ("tree_sitter_kotlin", "language"),
     }
 
     # Node types to extract by language
@@ -93,21 +86,26 @@ class PythonParser:
         self.parsers = {}
         self.languages = {}
 
-        # Initialize parsers for each language
-        for lang_name, lang_info in self.LANGUAGE_MODULES.items():
-            if lang_info is not None:
-                try:
-                    lang_module, lang_func_name = lang_info
-                    lang_func = getattr(lang_module, lang_func_name)
-                    language = Language(lang_func())
-                    parser = Parser(language)
+        # Initialize parsers for each language - import lazily
+        for lang_name, (module_name, func_name) in self.LANGUAGE_MODULES.items():
+            try:
+                # Lazy import the language module
+                import importlib
+                lang_module = importlib.import_module(module_name)
+                lang_func = getattr(lang_module, func_name)
+                language = Language(lang_func())
+                parser = Parser(language)
 
-                    self.parsers[lang_name] = parser
-                    self.languages[lang_name] = language
+                self.parsers[lang_name] = parser
+                self.languages[lang_name] = language
 
-                    logger.debug(f"Initialized {lang_name} parser")
-                except Exception as e:
-                    logger.warning(f"Failed to initialize {lang_name} parser: {e}")
+                logger.debug(f"Initialized {lang_name} parser")
+            except ImportError as e:
+                # Language module not installed - skip it (not an error)
+                logger.debug(f"Skipping {lang_name} parser (module not installed): {e}")
+            except Exception as e:
+                # Other errors - warn but continue
+                logger.warning(f"Failed to initialize {lang_name} parser: {e}")
 
     def parse_file(self, file_path: str, language: str) -> List[Dict[str, Any]]:
         """

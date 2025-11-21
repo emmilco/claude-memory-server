@@ -8,7 +8,7 @@ from pathlib import Path
 
 from src.core.server import MemoryRAGServer
 from src.config import ServerConfig
-from src.store.sqlite_store import SQLiteMemoryStore
+from src.store.qdrant_store import QdrantMemoryStore
 
 
 @pytest_asyncio.fixture
@@ -49,10 +49,11 @@ class User {
 
 @pytest_asyncio.fixture
 async def server():
-    """Create a test server with SQLite backend."""
+    """Create a test server with Qdrant backend."""
     config = ServerConfig(
-        storage_backend="sqlite",
-        sqlite_path=":memory:",
+        storage_backend="qdrant",
+        qdrant_url="http://localhost:6333",
+        qdrant_collection_name="test_project_reindexing",
         embedding_cache_enabled=True,
     )
 
