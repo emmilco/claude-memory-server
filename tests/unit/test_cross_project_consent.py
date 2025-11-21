@@ -33,8 +33,9 @@ def consent_manager(consent_db):
 async def server():
     """Create a test server with cross-project search enabled."""
     config = ServerConfig(
-        storage_backend="sqlite",
-        sqlite_path=":memory:",
+        storage_backend="qdrant",
+        qdrant_url="http://localhost:6333",
+        qdrant_collection_name="test_cross_project_consent",
         enable_cross_project_search=True,
     )
 
@@ -284,8 +285,9 @@ async def test_list_opted_in_projects_tool(server):
 async def test_tools_with_cross_project_disabled():
     """Test that consent tools raise error when cross-project search is disabled."""
     config = ServerConfig(
-        storage_backend="sqlite",
-        sqlite_path=":memory:",
+        storage_backend="qdrant",
+        qdrant_url="http://localhost:6333",
+        qdrant_collection_name="test_cross_project_disabled",
         enable_cross_project_search=False,  # Disabled
     )
 

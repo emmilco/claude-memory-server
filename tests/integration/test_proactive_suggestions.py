@@ -15,8 +15,9 @@ class TestProactiveSuggestionsIntegration:
     async def server(self, tmp_path):
         """Create a test server with suggestions enabled."""
         config = ServerConfig(
-            storage_backend="sqlite",
-            sqlite_path=str(tmp_path / "test_memory.db"),
+            storage_backend="qdrant",
+            qdrant_url="http://localhost:6333",
+            qdrant_collection_name="test_proactive_suggestions",
             enable_proactive_suggestions=True,
             proactive_suggestions_threshold=0.90,
         )
@@ -121,8 +122,9 @@ class TestProactiveSuggestionsIntegration:
     async def test_disabled_server_returns_disabled_message(self, tmp_path):
         """Test that disabled server returns appropriate message."""
         config = ServerConfig(
-            storage_backend="sqlite",
-            sqlite_path=str(tmp_path / "test_disabled.db"),
+            storage_backend="qdrant",
+            qdrant_url="http://localhost:6333",
+            qdrant_collection_name="test_proactive_disabled",
             enable_proactive_suggestions=False,
         )
         server_instance = MemoryRAGServer(config=config)

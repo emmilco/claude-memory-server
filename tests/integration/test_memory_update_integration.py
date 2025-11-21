@@ -17,12 +17,11 @@ from src.core.exceptions import ReadOnlyError
 
 @pytest_asyncio.fixture
 async def test_server(tmp_path):
-    """Create a test server with SQLite backend."""
-    db_path = tmp_path / "test.db"
+    """Create a test server with Qdrant backend."""
     config = ServerConfig(
-        storage_backend="sqlite",
-        sqlite_path=str(db_path),
+        storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
+        qdrant_collection_name="test_memory_update",
         read_only_mode=False,
         embedding_model="all-MiniLM-L6-v2",
     )
@@ -238,10 +237,10 @@ class TestMemoryUpdateIntegration:
     @pytest.mark.asyncio
     async def test_update_in_read_only_mode(self, tmp_path):
         """Test that update fails in read-only mode."""
-        db_path = tmp_path / "readonly.db"
         config = ServerConfig(
-            storage_backend="sqlite",
-            sqlite_path=str(db_path),
+            storage_backend="qdrant",
+            qdrant_url="http://localhost:6333",
+            qdrant_collection_name="test_readonly",
             read_only_mode=True,
         )
         server = MemoryRAGServer(config)

@@ -66,7 +66,9 @@ def notification_manager(notification_backend):
 def config():
     """Create test configuration."""
     return ServerConfig(
-        storage_backend="sqlite",  # Use SQLite for tests
+        storage_backend="qdrant",
+        qdrant_url="http://localhost:6333",
+        qdrant_collection_name="test_background_indexer",
         enable_parallel_embeddings=False,  # Disable for faster tests
     )
 

@@ -84,6 +84,12 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Bug Fixes
 
+- **BUG-027: Incomplete SQLite Removal (REF-010)** (2025-11-21)
+  - Updated 12 test files to use Qdrant backend instead of SQLite
+  - Changed test fixtures from `storage_backend="sqlite"` to `storage_backend="qdrant"`
+  - Updated test_config.py to reflect SQLite is no longer a valid backend option
+  - Files: 4 integration tests, 8 unit tests (all passing after fix)
+
 - **BUG-024: Tests Importing Removed Modules** (2025-11-21)
   - Fixed 11 test files that failed collection due to importing removed modules
   - Updated tests to use QdrantMemoryStore instead of removed SQLiteMemoryStore

@@ -31,12 +31,13 @@ def test_config_from_env(monkeypatch):
 
 def test_config_storage_backend_validation():
     """Test that storage backend only accepts valid values."""
-    # Valid backends
+    # Valid backend (only qdrant is supported after REF-010)
     config1 = ServerConfig(storage_backend="qdrant")
     assert config1.storage_backend == "qdrant"
 
-    config2 = ServerConfig(storage_backend="sqlite")
-    assert config2.storage_backend == "sqlite"
+    # SQLite is no longer supported (REF-010)
+    with pytest.raises(Exception):  # Pydantic validation error
+        ServerConfig(storage_backend="sqlite")
 
     # Invalid backend should raise validation error
     with pytest.raises(Exception):  # Pydantic validation error

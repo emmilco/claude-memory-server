@@ -43,7 +43,9 @@ class TestConfidenceLabels:
 async def mock_server():
     """Create a mock server with mocked dependencies."""
     config = ServerConfig(
-        storage_backend="sqlite",
+        storage_backend="qdrant",
+        qdrant_url="http://localhost:6333",
+        qdrant_collection_name="test_confidence_scores",
         read_only_mode=False,
         enable_retrieval_gate=False,
     )

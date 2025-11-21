@@ -11,8 +11,9 @@ from src.core.server import MemoryRAGServer
 def gate_enabled_config():
     """Create config with gate enabled."""
     return ServerConfig(
-        storage_backend="sqlite",
-        sqlite_path=":memory:",
+        storage_backend="qdrant",
+        qdrant_url="http://localhost:6333",
+        qdrant_collection_name="test_gate_enabled",
         enable_retrieval_gate=True,
         retrieval_gate_threshold=0.5,
         embedding_cache_enabled=False,  # Disable cache for predictable testing
@@ -23,8 +24,9 @@ def gate_enabled_config():
 def gate_disabled_config():
     """Create config with gate disabled."""
     return ServerConfig(
-        storage_backend="sqlite",
-        sqlite_path=":memory:",
+        storage_backend="qdrant",
+        qdrant_url="http://localhost:6333",
+        qdrant_collection_name="test_gate_disabled",
         enable_retrieval_gate=False,
         embedding_cache_enabled=False,
     )
@@ -34,8 +36,9 @@ def gate_disabled_config():
 def strict_gate_config():
     """Create config with strict gate (high threshold)."""
     return ServerConfig(
-        storage_backend="sqlite",
-        sqlite_path=":memory:",
+        storage_backend="qdrant",
+        qdrant_url="http://localhost:6333",
+        qdrant_collection_name="test_gate_strict",
         enable_retrieval_gate=True,
         retrieval_gate_threshold=0.8,
         embedding_cache_enabled=False,

@@ -19,8 +19,9 @@ async def server_with_hybrid_search():
 
     try:
         config = ServerConfig(
-            storage_backend="sqlite",
-            sqlite_path=f"{temp_dir}/test.db",
+            storage_backend="qdrant",
+            qdrant_url="http://localhost:6333",
+            qdrant_collection_name="test_hybrid_search",
             enable_hybrid_search=True,
             hybrid_search_alpha=0.5,
             hybrid_fusion_method="weighted",
@@ -48,8 +49,9 @@ async def server_without_hybrid_search():
 
     try:
         config = ServerConfig(
-            storage_backend="sqlite",
-            sqlite_path=f"{temp_dir}/test.db",
+            storage_backend="qdrant",
+            qdrant_url="http://localhost:6333",
+            qdrant_collection_name="test_hybrid_search_disabled",
             enable_hybrid_search=False,
             read_only_mode=False,
         )
@@ -273,8 +275,9 @@ class TestHybridSearchIntegration:
 
             try:
                 config = ServerConfig(
-                    storage_backend="sqlite",
-                    sqlite_path=f"{temp_dir}/test.db",
+                    storage_backend="qdrant",
+                    qdrant_url="http://localhost:6333",
+                    qdrant_collection_name=f"test_fusion_{fusion_method}",
                     enable_hybrid_search=True,
                     hybrid_fusion_method=fusion_method,
                     read_only_mode=False,
@@ -497,8 +500,9 @@ class TestHybridSearchConfiguration:
 
             try:
                 config = ServerConfig(
-                    storage_backend="sqlite",
-                    sqlite_path=f"{temp_dir}/test.db",
+                    storage_backend="qdrant",
+                    qdrant_url="http://localhost:6333",
+                    qdrant_collection_name=f"test_alpha_{int(alpha*100)}",
                     enable_hybrid_search=True,
                     hybrid_search_alpha=alpha,
                     read_only_mode=False,
@@ -522,8 +526,9 @@ class TestHybridSearchConfiguration:
 
             try:
                 config = ServerConfig(
-                    storage_backend="sqlite",
-                    sqlite_path=f"{temp_dir}/test.db",
+                    storage_backend="qdrant",
+                    qdrant_url="http://localhost:6333",
+                    qdrant_collection_name=f"test_bm25_k{int(k1*10)}_b{int(b*100)}",
                     enable_hybrid_search=True,
                     bm25_k1=k1,
                     bm25_b=b,
