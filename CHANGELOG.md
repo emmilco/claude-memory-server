@@ -104,6 +104,11 @@ A pre-commit hook enforces CHANGELOG updates:
   - Files: src/memory/health_scorer.py, src/memory/health_jobs.py
   - Result: 6+ integration tests now pass in test_health_dashboard_integration.py
 
+- **BUG-029: Category Changed from "context" to "code"** (2025-11-21)
+  - Updated test expectations in test_indexing_integration.py for code category
+  - Updated comment in server.py reflecting correct code unit category
+  - Files: tests/integration/test_indexing_integration.py, src/core/server.py
+
 - **BUG-024: Tests Importing Removed Modules** (2025-11-21)
   - Fixed 11 test files that failed collection due to importing removed modules
   - Updated tests to use QdrantMemoryStore instead of removed SQLiteMemoryStore

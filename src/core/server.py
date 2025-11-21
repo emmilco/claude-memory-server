@@ -3009,7 +3009,7 @@ class MemoryRAGServer:
                 logger.info(f"Clearing existing index for project: {project_name}")
 
                 # Delete all CODE memories for this project
-                # Code units are stored with category="context", scope="project"
+                # Code units are stored with category="code", scope="project"
                 # TODO: Implement query-based deletion for Qdrant
                 logger.warning("Clear existing index not yet fully supported for Qdrant store")
                 units_deleted = 0
