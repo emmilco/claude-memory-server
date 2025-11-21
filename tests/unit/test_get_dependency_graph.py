@@ -228,8 +228,9 @@ async def circular_dependency_graph(sqlite_store):
 async def server_with_graph(sample_dependency_graph):
     """Create server with sample dependency graph."""
     config = ServerConfig(
-        storage_backend="sqlite",
-        sqlite_path=":memory:",
+        storage_backend="qdrant",
+        qdrant_url="http://localhost:6333",
+        qdrant_collection_name="test_dependency_graph",
     )
     server = MemoryRAGServer(config)
     server.store = sample_dependency_graph  # Use pre-populated store
@@ -240,8 +241,9 @@ async def server_with_graph(sample_dependency_graph):
 async def server_with_circular(circular_dependency_graph):
     """Create server with circular dependency graph."""
     config = ServerConfig(
-        storage_backend="sqlite",
-        sqlite_path=":memory:",
+        storage_backend="qdrant",
+        qdrant_url="http://localhost:6333",
+        qdrant_collection_name="test_circular_dependency",
     )
     server = MemoryRAGServer(config)
     server.store = circular_dependency_graph

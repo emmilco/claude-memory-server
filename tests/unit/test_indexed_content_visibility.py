@@ -53,7 +53,9 @@ def function_three():
 def config():
     """Create test configuration."""
     return ServerConfig(
-        storage_backend="sqlite",  # Use SQLite for faster tests
+        storage_backend="qdrant",
+        qdrant_url="http://localhost:6333",
+        qdrant_collection_name="test_indexed_content_visibility",
         read_only_mode=False,
         enable_retrieval_gate=False,
     )

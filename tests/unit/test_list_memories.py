@@ -13,7 +13,9 @@ from src.core.models import MemoryCategory, ContextLevel, MemoryScope
 def config():
     """Create test configuration."""
     return ServerConfig(
-        storage_backend="sqlite",  # Use SQLite for faster tests
+        storage_backend="qdrant",
+        qdrant_url="http://localhost:6333",
+        qdrant_collection_name="test_list_memories",
         read_only_mode=False,
         enable_retrieval_gate=False,
     )

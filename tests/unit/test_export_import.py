@@ -17,7 +17,7 @@ from src.config import ServerConfig
 def mock_config():
     """Create a mock server config."""
     config = MagicMock()
-    config.storage_backend = "sqlite"
+    config.storage_backend = "qdrant"
     config.qdrant_url = "http://localhost:6333"
     config.collection_name = "test_memories"
     config.embedding_model = "all-MiniLM-L6-v2"
