@@ -84,6 +84,12 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Bug Fixes
 
+- **FIX-TEST-ISOLATION: Qdrant Collection Cleanup** (2025-11-21)
+  - Fixed integration test isolation by adding unique collection names to all Qdrant fixtures
+  - Added proper cleanup with `client.delete_collection()` in fixture teardown
+  - Prevents test pollution where leftover data causes "assert X == 0" failures
+  - Files: 11 integration test files (test_health_dashboard_integration.py, test_indexing_integration.py, test_qdrant_store.py, test_provenance_trust_integration.py, test_memory_update_integration.py, test_hybrid_search_integration.py, test_concurrent_operations.py, test_retrieval_gate.py, test_error_recovery.py, test_proactive_suggestions.py, test_tagging_system.py)
+
 - **BUG-031 & BUG-032: Documentation Metrics Accuracy** (2025-11-21)
   - Updated CLAUDE.md test count from 2,723 to ~2,740 (varies by environment)
   - Corrected coverage metrics: 59.6% overall, 71.2% core modules (was incorrectly 67%)

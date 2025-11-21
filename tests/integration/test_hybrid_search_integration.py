@@ -3,6 +3,7 @@
 import pytest
 import pytest_asyncio
 import asyncio
+import uuid
 from pathlib import Path
 import tempfile
 import shutil
@@ -13,15 +14,16 @@ from src.config import ServerConfig
 
 @pytest_asyncio.fixture
 async def server_with_hybrid_search():
-    """Create a server instance with hybrid search enabled."""
+    """Create a server instance with hybrid search enabled and unique collection."""
     # Create temp directory for test data
     temp_dir = tempfile.mkdtemp()
+    collection = f"test_hybrid_{uuid.uuid4().hex[:8]}"
 
     try:
         config = ServerConfig(
             storage_backend="qdrant",
             qdrant_url="http://localhost:6333",
-            qdrant_collection_name="test_hybrid_search",
+            qdrant_collection_name=collection,
             enable_hybrid_search=True,
             hybrid_search_alpha=0.5,
             hybrid_fusion_method="weighted",
@@ -37,6 +39,11 @@ async def server_with_hybrid_search():
 
         # Cleanup
         await server.close()
+        if hasattr(server.store, 'client') and server.store.client:
+            try:
+                server.store.client.delete_collection(collection)
+            except Exception:
+                pass  # Ignore cleanup errors
 
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
@@ -44,14 +51,15 @@ async def server_with_hybrid_search():
 
 @pytest_asyncio.fixture
 async def server_without_hybrid_search():
-    """Create a server instance with hybrid search disabled."""
+    """Create a server instance with hybrid search disabled and unique collection."""
     temp_dir = tempfile.mkdtemp()
+    collection = f"test_nohybrid_{uuid.uuid4().hex[:8]}"
 
     try:
         config = ServerConfig(
             storage_backend="qdrant",
             qdrant_url="http://localhost:6333",
-            qdrant_collection_name="test_hybrid_search_disabled",
+            qdrant_collection_name=collection,
             enable_hybrid_search=False,
             read_only_mode=False,
         )
@@ -61,7 +69,13 @@ async def server_without_hybrid_search():
 
         yield server
 
+        # Cleanup
         await server.close()
+        if hasattr(server.store, 'client') and server.store.client:
+            try:
+                server.store.client.delete_collection(collection)
+            except Exception:
+                pass  # Ignore cleanup errors
 
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)

@@ -3,6 +3,7 @@
 import pytest
 import pytest_asyncio
 import asyncio
+import uuid
 from typing import List
 
 from src.config import ServerConfig
@@ -17,32 +18,28 @@ from src.core.models import (
 
 @pytest.fixture
 def config():
-    """Create test configuration."""
+    """Create test configuration with unique collection name."""
     return ServerConfig(
         qdrant_url="http://localhost:6333",
-        qdrant_collection_name="test_memory",
+        qdrant_collection_name=f"test_mem_{uuid.uuid4().hex[:8]}",
     )
 
 
 @pytest_asyncio.fixture
 async def store(config):
-    """Create and initialize Qdrant store."""
+    """Create and initialize Qdrant store with unique collection."""
     test_store = QdrantMemoryStore(config)
-    await test_store.initialize()
-
-    # Clean up any existing test data
-    try:
-        test_store.client.delete_collection("test_memory")
-    except:
-        pass
-
-    # Reinitialize with clean collection
     await test_store.initialize()
 
     yield test_store
 
     # Cleanup after test
     await test_store.close()
+    if test_store.client:
+        try:
+            test_store.client.delete_collection(config.qdrant_collection_name)
+        except Exception:
+            pass  # Ignore cleanup errors
 
 
 @pytest.mark.asyncio

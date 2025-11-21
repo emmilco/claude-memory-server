@@ -2,6 +2,7 @@
 
 import pytest
 import pytest_asyncio
+import uuid
 
 from src.config import ServerConfig
 from src.core.server import MemoryRAGServer
@@ -9,11 +10,11 @@ from src.core.server import MemoryRAGServer
 
 @pytest.fixture
 def gate_enabled_config():
-    """Create config with gate enabled."""
+    """Create config with gate enabled and unique collection."""
     return ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
-        qdrant_collection_name="test_gate_enabled",
+        qdrant_collection_name=f"test_gate_en_{uuid.uuid4().hex[:8]}",
         enable_retrieval_gate=True,
         retrieval_gate_threshold=0.5,
         embedding_cache_enabled=False,  # Disable cache for predictable testing
@@ -22,11 +23,11 @@ def gate_enabled_config():
 
 @pytest.fixture
 def gate_disabled_config():
-    """Create config with gate disabled."""
+    """Create config with gate disabled and unique collection."""
     return ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
-        qdrant_collection_name="test_gate_disabled",
+        qdrant_collection_name=f"test_gate_dis_{uuid.uuid4().hex[:8]}",
         enable_retrieval_gate=False,
         embedding_cache_enabled=False,
     )
@@ -34,11 +35,11 @@ def gate_disabled_config():
 
 @pytest.fixture
 def strict_gate_config():
-    """Create config with strict gate (high threshold)."""
+    """Create config with strict gate (high threshold) and unique collection."""
     return ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
-        qdrant_collection_name="test_gate_strict",
+        qdrant_collection_name=f"test_gate_str_{uuid.uuid4().hex[:8]}",
         enable_retrieval_gate=True,
         retrieval_gate_threshold=0.8,
         embedding_cache_enabled=False,
@@ -47,29 +48,50 @@ def strict_gate_config():
 
 @pytest_asyncio.fixture
 async def server_with_gate(gate_enabled_config):
-    """Create server with gate enabled."""
+    """Create server with gate enabled and unique collection."""
     srv = MemoryRAGServer(gate_enabled_config)
     await srv.initialize()
     yield srv
+
+    # Cleanup
     await srv.close()
+    if hasattr(srv.store, 'client') and srv.store.client:
+        try:
+            srv.store.client.delete_collection(gate_enabled_config.qdrant_collection_name)
+        except Exception:
+            pass  # Ignore cleanup errors
 
 
 @pytest_asyncio.fixture
 async def server_without_gate(gate_disabled_config):
-    """Create server with gate disabled."""
+    """Create server with gate disabled and unique collection."""
     srv = MemoryRAGServer(gate_disabled_config)
     await srv.initialize()
     yield srv
+
+    # Cleanup
     await srv.close()
+    if hasattr(srv.store, 'client') and srv.store.client:
+        try:
+            srv.store.client.delete_collection(gate_disabled_config.qdrant_collection_name)
+        except Exception:
+            pass  # Ignore cleanup errors
 
 
 @pytest_asyncio.fixture
 async def server_strict_gate(strict_gate_config):
-    """Create server with strict gate."""
+    """Create server with strict gate and unique collection."""
     srv = MemoryRAGServer(strict_gate_config)
     await srv.initialize()
     yield srv
+
+    # Cleanup
     await srv.close()
+    if hasattr(srv.store, 'client') and srv.store.client:
+        try:
+            srv.store.client.delete_collection(strict_gate_config.qdrant_collection_name)
+        except Exception:
+            pass  # Ignore cleanup errors
 
 
 @pytest.mark.asyncio
