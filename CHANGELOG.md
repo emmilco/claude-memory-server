@@ -84,6 +84,13 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Bug Fixes
 
+- **FIX-INTEGRATION-RACE: Embedding Cache Race Condition** (2025-11-21)
+  - Fixed segmentation fault during concurrent operations test cleanup
+  - Made EmbeddingCache.close() thread-safe with proper lock usage
+  - Added grace period (0.1s) in server.close() for pending operations
+  - Files: src/embeddings/cache.py, src/core/server.py
+  - Result: All 14 concurrent operations tests pass reliably
+
 - **BUG-031 & BUG-032: Documentation Metrics Accuracy** (2025-11-21)
   - Updated CLAUDE.md test count from 2,723 to ~2,740 (varies by environment)
   - Corrected coverage metrics: 59.6% overall, 71.2% core modules (was incorrectly 67%)

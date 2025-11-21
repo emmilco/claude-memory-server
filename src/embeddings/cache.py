@@ -465,7 +465,18 @@ class EmbeddingCache:
 
     def close(self) -> None:
         """Close the cache database connection."""
-        if self.conn:
-            self.conn.close()
-            self.conn = None
-            logger.info("Embedding cache closed")
+        with self._db_lock:
+            if self.conn:
+                try:
+                    # Commit any pending transactions before closing
+                    self.conn.commit()
+                except Exception as e:
+                    logger.debug(f"Error committing on close (may be expected): {e}")
+
+                try:
+                    self.conn.close()
+                except Exception as e:
+                    logger.error(f"Error closing connection: {e}")
+                finally:
+                    self.conn = None
+                    logger.info("Embedding cache closed")
