@@ -96,6 +96,14 @@ A pre-commit hook enforces CHANGELOG updates:
   - Updated test_config.py to reflect SQLite is no longer a valid backend option
   - Files: 4 integration tests, 8 unit tests (all passing after fix)
 
+- **BUG-028: Dict vs Object Type Mismatch in Health Components** (2025-11-21)
+  - Fixed health_scorer.py and health_jobs.py accessing dict keys with object notation
+  - Changed `memory.content` to `memory.get('content')` for all dict memory objects
+  - Added proper enum conversion for lifecycle_state and context_level string values
+  - Added datetime parsing for created_at and last_accessed string values
+  - Files: src/memory/health_scorer.py, src/memory/health_jobs.py
+  - Result: 6+ integration tests now pass in test_health_dashboard_integration.py
+
 - **BUG-024: Tests Importing Removed Modules** (2025-11-21)
   - Fixed 11 test files that failed collection due to importing removed modules
   - Updated tests to use QdrantMemoryStore instead of removed SQLiteMemoryStore
@@ -998,7 +1006,6 @@ A pre-commit hook enforces CHANGELOG updates:
   - Registered `update_memory` and `get_memory_by_id` MCP tools in `src/mcp_server.py`
   - Comprehensive test suite: 15 unit tests + 15 integration tests (100% passing)
   - Features: partial updates, automatic embedding regeneration, timestamp preservation, read-only mode protection
->>>>>>> FEAT-047
 
 - **PERF-006: Test Suite Performance Optimization - Phases 2 & 3**
   - Added session-scoped test fixtures in `tests/conftest.py` for reusable resources
