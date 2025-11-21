@@ -84,6 +84,11 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Bug Fixes
 
+- **BUG-030: Invalid Qdrant Point IDs in Test Fixtures** (2025-11-21)
+  - Fixed tests/unit/test_backup_export.py to use valid UUID IDs instead of invalid string IDs
+  - Replaced id="test-1" and id="test-2" with id=str(uuid.uuid4())
+  - Resolves "400 Bad Request: value test-1 is not a valid point ID" errors
+
 - **BUG-024: Tests Importing Removed Modules** (2025-11-21)
   - Fixed 11 test files that failed collection due to importing removed modules
   - Updated tests to use QdrantMemoryStore instead of removed SQLiteMemoryStore

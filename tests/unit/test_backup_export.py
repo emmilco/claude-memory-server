@@ -5,6 +5,7 @@ import pytest_asyncio
 from pathlib import Path
 import json
 import tempfile
+import uuid
 from datetime import datetime, UTC
 
 from src.backup.exporter import DataExporter
@@ -27,7 +28,7 @@ async def temp_store():
     # Add some test memories
     memories = [
             MemoryUnit(
-                id="test-1",
+                id=str(uuid.uuid4()),
                 content="Test memory 1",
                 category=MemoryCategory.PREFERENCE,
                 context_level=ContextLevel.USER_PREFERENCE,
@@ -41,7 +42,7 @@ async def temp_store():
                 lifecycle_state=LifecycleState.ACTIVE,
             ),
             MemoryUnit(
-                id="test-2",
+                id=str(uuid.uuid4()),
                 content="Test memory 2",
                 category=MemoryCategory.FACT,
                 context_level=ContextLevel.PROJECT_CONTEXT,
