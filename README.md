@@ -403,8 +403,8 @@ Claude has access to these tools:
 | Parsing | 1-6ms per file (Rust) |
 | Embedding | ~30ms per text |
 | Embedding (cached) | <1ms |
-| Tests | 427/427 passing ✅ |
-| Code Coverage | 61.47% (active code) |
+| Tests | 2723 passing ✅ |
+| Code Coverage | 67% (80-85% core) |
 
 ## Project Structure
 
@@ -427,7 +427,7 @@ claude-memory-server/
 │   └── config.py          # Configuration
 ├── rust_core/             # Rust parsing module
 │   └── src/parsing.rs     # Tree-sitter parsing
-├── tests/                 # 68 tests (all passing)
+├── tests/                 # 2723 tests
 ├── docker-compose.yml     # Qdrant setup
 └── README.md              # This file
 ```
@@ -664,19 +664,34 @@ See [PERFORMANCE_BENCHMARK_REPORT.md](PERFORMANCE_BENCHMARK_REPORT.md) for detai
 
 ## Supported Languages
 
-Code search currently supports:
+Code search supports **17 file formats** (14 programming languages + 3 configuration formats):
+
+**Programming Languages:**
 - Python (.py)
 - JavaScript (.js, .jsx)
 - TypeScript (.ts, .tsx)
 - Java (.java)
 - Go (.go)
 - Rust (.rs)
+- Ruby (.rb)
+- Swift (.swift)
+- Kotlin (.kt, .kts)
+- PHP (.php)
+- C (.c, .h)
+- C++ (.cpp, .cc, .cxx, .hpp, .hxx, .hh)
+- C# (.cs)
+- SQL (.sql)
+
+**Configuration Files:**
+- JSON (.json)
+- YAML (.yaml, .yml)
+- TOML (.toml)
 
 More languages can be added via tree-sitter grammars.
 
 ## Contributing
 
-See [EXECUTABLE_DEVELOPMENT_CHECKLIST.md](EXECUTABLE_DEVELOPMENT_CHECKLIST.md) for development status and roadmap.
+See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for development guide and contributing instructions.
 
 ### Current Status
 - ✅ Phase 1: Foundation (100% complete)

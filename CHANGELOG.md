@@ -84,13 +84,56 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Added - 2025-11-20
 
+- **REF-012: Production Hardening Additions**
+  - Added `requirements-lock.txt` with exact version pins for reproducible builds
+  - Added `archived_docs/README.md` explaining outdated metrics in archived documentation
+  - Added resource limits to `docker-compose.yml` (CPU: 2.0 max, Memory: 2G max)
+  - Added dependency upper bounds to `requirements.txt` (e.g., `pydantic>=2.0.0,<3.0.0`)
+  - Created: `requirements-lock.txt`, `archived_docs/README.md`
+
 - **start_dashboard MCP Tool**
   - Added `start_dashboard` MCP tool to launch web dashboard from Claude
   - Starts dashboard server in background process with configurable port/host
   - Returns dashboard URL and process ID for monitoring
   - Modified: `src/mcp_server.py`, `src/core/server.py`
 
+### Changed - 2025-11-20
+
+- **REF-012: Requirements with Upper Bounds**
+  - Updated all 29 dependencies in requirements.txt with upper version bounds
+  - Prevents breaking changes from major version updates (e.g., pydantic 3.0, numpy 2.0)
+  - Hybrid approach: ranges for development, lock file for production
+  - Modified: `requirements.txt`
+
+### Removed - 2025-11-20
+
+- **REF-012: Broken/Unused Code Cleanup**
+  - Removed `setup.sh` (broken imports referencing non-existent `database` module)
+  - Removed `src/schema.sql` (unused, project uses Qdrant/ORM not raw SQL)
+  - Deleted: `setup.sh`, `src/schema.sql`
+
+### Planning - 2025-11-20
+
+- **REF-013: Server Refactoring Strategy**
+  - Created planning doc for refactoring 5155-line `server.py`
+  - Proposed: Extract MCP tool handlers to `src/core/handlers/` directory
+  - Target: server.py <1000 lines, each handler 200-400 lines
+  - Created: `planning_docs/REF-013_server_refactoring_plan.md`
+
+- **REF-014: Dependency Upper Bounds Analysis**
+  - Created planning doc analyzing dependency version constraints
+  - Documented risk of breaking changes from major versions
+  - Recommended hybrid approach (ranges + lock file)
+  - Created: `planning_docs/REF-014_dependency_upper_bounds.md`
+
 ### Fixed - 2025-11-20
+
+- **REF-012: Code Review Fixes (Recommendations 1-10)**
+  - Fixed SUPPORTED_EXTENSIONS missing .rb, .swift, .kt, .kts, .php (parsers existed but files weren't indexed)
+  - Fixed README.md metrics (2723 tests, 67% coverage, 17 file formats)
+  - Fixed README.md archived doc reference pointing to non-existent file
+  - Fixed TODO.md by removing completed bug entries (BUG-023, BUG-017, BUG-024)
+  - Modified: `src/memory/incremental_indexer.py`, `README.md`, `TODO.md`
 
 - **BUG-024: Quality Score Artificially Low (Missing Query Logging)**
   - Fixed health monitoring quality score stuck at 40/100 due to missing relevance tracking

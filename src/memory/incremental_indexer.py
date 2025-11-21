@@ -231,6 +231,7 @@ class IncrementalIndexer(BaseCodeIndexer):
     # Supported file extensions
     SUPPORTED_EXTENSIONS = {
         ".py", ".js", ".jsx", ".ts", ".tsx", ".java", ".go", ".rs",
+        ".rb", ".swift", ".kt", ".kts", ".php",
         ".json", ".yaml", ".yml", ".toml",
         ".c", ".h", ".cpp", ".cc", ".cxx", ".hpp", ".hxx", ".hh",
         ".cs", ".sql"
