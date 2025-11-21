@@ -146,12 +146,21 @@ class QdrantMemoryStore(MemoryStore):
         except ConnectionError as e:
             logger.error(f"Connection error during retrieval: {e}")
             raise RetrievalError(f"Failed to connect to Qdrant: {e}")
+        except OSError as e:
+            # OSError covers socket errors, connection refused, etc.
+            logger.error(f"Network error during retrieval: {e}")
+            raise RetrievalError(f"Qdrant connection error: {e}")
         except ValueError as e:
             logger.error(f"Invalid filter or query: {e}")
             raise RetrievalError(f"Invalid search parameters: {e}")
         except Exception as e:
+            # Check if it's a connection-related error by string matching
+            error_str = str(e).lower()
+            if any(keyword in error_str for keyword in ['connection', 'refused', 'timeout', 'unreachable', 'qdrant']):
+                logger.error(f"Connection-related error during retrieval: {e}")
+                raise RetrievalError(f"Failed to connect to Qdrant: {e}")
             logger.error(f"Unexpected error during retrieval: {e}")
-            raise RetrievalError(f"Failed to retrieve memories: {e}")
+            raise RetrievalError(f"Failed to retrieve memories from Qdrant: {e}")
 
     async def delete(self, memory_id: str) -> bool:
         """Delete a memory by its ID."""

@@ -333,6 +333,44 @@ class PythonParser:
         end_byte = node.end_byte
         return content[start_byte:end_byte]
 
+    def extract_functions(self, content: str, file_path: str) -> List[Dict[str, Any]]:
+        """
+        Extract functions from code content (test-compatible interface).
+
+        This method provides a simpler interface for testing.
+        It attempts to detect language from file extension.
+
+        Args:
+            content: Source code content
+            file_path: File path (used to detect language)
+
+        Returns:
+            List of function dictionaries
+        """
+        # Detect language from file extension
+        ext_to_lang = {
+            '.py': 'python',
+            '.js': 'javascript',
+            '.ts': 'typescript',
+            '.java': 'java',
+            '.go': 'go',
+            '.rs': 'rust',
+            '.php': 'php',
+            '.rb': 'ruby',
+            '.swift': 'swift',
+            '.kt': 'kotlin',
+        }
+
+        language = 'python'  # default
+        for ext, lang in ext_to_lang.items():
+            if file_path.endswith(ext):
+                language = lang
+                break
+
+        # Parse and filter for just functions
+        all_units = self.parse_content(content, language, file_path)
+        return [u for u in all_units if u.get('unit_type') == 'function']
+
 
 # Singleton instance
 _parser_instance = None

@@ -276,6 +276,16 @@ class MemoryRAGServer:
 
             logger.info("Server initialized successfully")
 
+        except (ImportError, ModuleNotFoundError) as e:
+            # Missing dependency - provide actionable error message
+            logger.error(f"Missing dependency during initialization: {e}")
+            missing_module = str(e).split("'")[1] if "'" in str(e) else "unknown"
+            error_msg = (
+                f"Failed to initialize server - missing required dependency: {missing_module}. "
+                f"Solution: Install dependencies with 'pip install -r requirements.txt' or "
+                f"'pip install {missing_module}'. Check requirements.txt for full dependency list."
+            )
+            raise ImportError(error_msg) from e
         except Exception as e:
             logger.error(f"Failed to initialize server: {e}")
             raise
@@ -2416,9 +2426,29 @@ class MemoryRAGServer:
                 "matched_keywords": quality_info["matched_keywords"],
             }
 
+        except RetrievalError:
+            # Re-raise RetrievalError as-is (already has good error messages from store layer)
+            raise
+        except (ConnectionError, OSError) as e:
+            # Network/connection failures - provide actionable error message
+            logger.error(f"Network error during code search: {e}")
+            error_msg = (
+                f"Failed to connect to Qdrant vector database: {str(e)}. "
+                f"Please ensure Qdrant is running at {self.config.qdrant_url}. "
+                f"Solution: Run 'docker-compose up -d' to start Qdrant, or check your "
+                f"CLAUDE_RAG_QDRANT_URL environment variable."
+            )
+            raise RetrievalError(error_msg)
         except Exception as e:
+            # Generic error with actionable guidance
             logger.error(f"Failed to search code: {e}")
-            raise RetrievalError(f"Failed to search code: {e}")
+            error_type = type(e).__name__
+            error_msg = (
+                f"Code search failed ({error_type}): {str(e)}. "
+                f"Solution: Check that Qdrant is running and accessible, "
+                f"or try using SQLite backend (CLAUDE_RAG_STORAGE_BACKEND=sqlite)."
+            )
+            raise RetrievalError(error_msg)
 
     async def find_similar_code(
         self,

@@ -22,11 +22,12 @@
 **Impact:** Core functionality appears broken, poor user experience
 **Investigation Required:** Check embedding timing, vector store indexing delay, similarity threshold
 
-### BUG-019: Docker Container Shows "Unhealthy" Despite Working ⚠️ LOW
-**Component:** `docker-compose.yml` healthcheck
-**Issue:** `docker ps` shows Qdrant as "(unhealthy)" even though fully functional
-**Impact:** User confusion, unnecessary container restarts
-**Fix:** Update Docker healthcheck configuration
+- [x] **BUG-019**: Docker Container Shows "Unhealthy" Despite Working ✅ **FIXED**
+  - **Error:** `docker ps` shows Qdrant as "(unhealthy)", health check exits with -1
+  - **Root Cause:** Health check uses `curl` command which doesn't exist in Qdrant container
+  - **Location:** `docker-compose.yml` and `planning_docs/TEST-006_docker_compose.yml`
+  - **Fix:** Changed health check from `curl -f http://localhost:6333/` to TCP socket test: `timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/6333' || exit 1`
+  - **Result:** Container now shows "(healthy)" status, ExitCode: 0, FailingStreak: 0
 
 ### BUG-020: Inconsistent Return Value Structures ⚠️ MEDIUM
 **Component:** API design consistency
@@ -73,6 +74,7 @@
 **Full E2E Test Report:** See `E2E_TEST_REPORT.md` for detailed findings
 **Bug Hunt Report:** See `planning_docs/BUG-HUNT_2025-11-21_comprehensive_report.md`
 **Fix Execution:** See `planning_docs/BUG-024-026_execution_summary.md`
+**Full E2E Test Plan:** See `planning_docs/TEST-006_e2e_test_plan.md`, `planning_docs/TEST-006_e2e_bug_tracker.md`, and `planning_docs/TEST-006_e2e_testing_guide.md` for comprehensive manual testing documentation
 
 ---
 
@@ -513,6 +515,29 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - [ ] Recommendations: "Enable quantization" or "Collection too large"
   - [ ] CLI command: `python -m src.cli perf-report`
   - **Impact:** Maintain quality at scale, early warning system
+
+- [ ] **TEST-006**: Comprehensive E2E Manual Testing (~10-15 hours) 🔄 **IN PROGRESS**
+  - [x] Create comprehensive test plan (200+ test scenarios)
+  - [x] Create bug tracker template with pre-populated known bugs
+  - [x] Create execution guide and documentation
+  - [x] Build Docker orchestration infrastructure (10 parallel agents)
+  - [x] Fix Qdrant health check (BUG-019)
+  - [x] Verify test agent execution and result collection
+  - [ ] Implement automated test logic (currently MANUAL_REQUIRED placeholders)
+  - [ ] Execute full E2E test plan (200+ test scenarios)
+  - [ ] Test all 16 MCP tools for functionality and UX
+  - [ ] Test all 28+ CLI commands end-to-end
+  - [ ] Validate installation on clean system (<5 min setup)
+  - [ ] Verify performance benchmarks (7-13ms search, 10-20 files/sec indexing)
+  - [ ] Test multi-language support (all 17 file formats)
+  - [ ] Assess UX quality (error messages, consistency, polish)
+  - [ ] Catalogue all bugs in bug tracker (anything requiring workaround = bug)
+  - [ ] Test critical known bugs: BUG-018 (memory retrieval), BUG-022 (zero units), BUG-015 (health check)
+  - [ ] Generate final production readiness report
+  - **Planning Docs:** `planning_docs/TEST-006_*.md` (13 files: test plan, bug tracker, guide, orchestration, Dockerfiles, status, etc.)
+  - **Infrastructure Status:** ✅ Docker orchestration working (see `TEST-006_infrastructure_status.md`)
+  - **Impact:** Verify production readiness, identify all quality issues before release
+  - **Success Criteria:** Zero critical bugs, all core features work without workarounds, performance meets benchmarks
 
 - [x] **DOC-004**: Update README with code search examples ✅ **COMPLETE**
 - [ ] **DOC-005**: Add performance tuning guide for large codebases
