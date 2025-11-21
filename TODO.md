@@ -2,21 +2,6 @@
 
 ## 🚨 CRITICAL BUGS FOUND IN E2E TESTING (2025-11-20)
 
-### ~~BUG-023: Test Suite Collection Errors~~ ✅ **FIXED** (2025-11-20)
-**Component:** Test suite (pytest)
-**Issue:** 45 tests failing to collect, preventing test execution
-**Root Cause:** Missing `pytest-asyncio` dependency + syntax error in test_ruby_parsing.py
-**Fix Applied:**
-  1. Added `pytest-asyncio>=0.21.0` to requirements.txt
-  2. Fixed indentation in tests/unit/test_ruby_parsing.py line 234-235
-**Result:** ✅ All 2723 tests now collect successfully
-**Verification:** Run `pytest tests/ --collect-only -q` shows "2723 tests collected"
-**Files Changed:**
-  - requirements.txt (added pytest-asyncio)
-  - tests/unit/test_ruby_parsing.py (fixed indentation)
-**Discovery:** 2025-11-20 during documentation audit (DOC-008)
-**Resolution Time:** ~30 minutes
-
 ### BUG-015: Health Check False Negative for Qdrant ⚠️ HIGH
 **Component:** `src/cli/health_command.py:143`
 **Issue:** Health check reports Qdrant as unreachable even when functional
@@ -29,17 +14,6 @@
 **Issue:** `list_memories()` returns `total: 0` when memories exist in results array
 **Impact:** Breaks pagination, incorrect analytics
 **Fix:** Update method to properly count and return total
-
-### ~~BUG-017: Documentation Claims Incorrect API Parameter Names~~ ✅ **VERIFIED CORRECT** (2025-11-20)
-**Component:** Documentation (README.md, API.md)
-**Investigation Result:** All documentation examples use correct names
-**Findings:**
-  - `index_codebase(directory_path=...)` ✅ Correct (checked all docs)
-  - `opt_in_cross_project()` ✅ Correct (no opt_in_project() references found)
-  - `get_stats()` ✅ Correct when used (only for cache.get_stats(), not server)
-  - `get_status()` ✅ Correct for server status
-**Verification Method:** grep -rn across README.md, docs/*.md
-**Status:** No fixes needed - documentation is accurate
 
 ### BUG-018: Memory Retrieval Not Finding Recently Stored Memories ⚠️ HIGH
 **Component:** Semantic search / memory retrieval
@@ -75,16 +49,6 @@
 **Investigation Required:** Check parser configuration, semantic unit extraction logic
 
 **Full E2E Test Report:** See `E2E_TEST_REPORT.md` for detailed findings
-
-### ~~BUG-024: Quality Score Artificially Low (Missing Query Logging)~~ ✅ FIXED
-**Component:** Health monitoring / metrics collection
-**Issue:** Health score quality component stuck at 40/100 due to missing query relevance logging
-**Root Cause:** `find_similar_code()`, `search_all_projects()`, `search_git_history()` not calling `metrics_collector.log_query()` with relevance scores
-**Impact:** Quality score calculation defaults to 0.0 for avg_relevance (60% weight), resulting in artificially low 40/100 score
-**Fix Applied:** Added query logging with relevance scores to all three methods
-**Expected Result:** Quality score should reach 60-90/100 range with normal usage
-**Modified:** `src/core/server.py` (lines 2534-2542, 2686-2694, 3455-3517)
-**Status:** ✅ Fixed (2025-11-20)
 
 ---
 
