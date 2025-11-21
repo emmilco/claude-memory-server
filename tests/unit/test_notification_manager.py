@@ -13,11 +13,11 @@ from src.memory.notification_manager import (
 )
 
 
-class TestNotificationBackend(NotificationBackend):
-    """Test backend that records notifications."""
+class MockNotificationBackend(NotificationBackend):
+    """Mock backend that records notifications."""
 
     def __init__(self):
-        """Initialize test backend."""
+        """Initialize mock backend."""
         self.notifications: List[Tuple[str, str, str]] = []
 
     async def notify(self, title: str, message: str, level: str = "info") -> None:
@@ -28,7 +28,7 @@ class TestNotificationBackend(NotificationBackend):
 @pytest.fixture
 def test_backend():
     """Create test backend."""
-    return TestNotificationBackend()
+    return MockNotificationBackend()
 
 
 @pytest.fixture
@@ -270,7 +270,7 @@ async def test_notify_cancelled(manager, test_backend):
 @pytest.mark.asyncio
 async def test_multiple_backends(test_backend):
     """Test notifications sent to multiple backends."""
-    backend2 = TestNotificationBackend()
+    backend2 = MockNotificationBackend()
     manager = NotificationManager(backends=[test_backend, backend2])
 
     await manager.notify_started(
@@ -287,7 +287,7 @@ async def test_multiple_backends(test_backend):
 @pytest.mark.asyncio
 async def test_add_backend(manager, test_backend):
     """Test adding backend dynamically."""
-    backend2 = TestNotificationBackend()
+    backend2 = MockNotificationBackend()
     manager.add_backend(backend2)
 
     await manager.notify_started(

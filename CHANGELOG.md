@@ -82,6 +82,45 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ## [Unreleased]
 
+### Bug Fixes
+
+- **BUG-024: Tests Importing Removed Modules** (2025-11-21)
+  - Fixed 11 test files that failed collection due to importing removed modules
+  - Updated tests to use QdrantMemoryStore instead of removed SQLiteMemoryStore
+  - Deleted obsolete tests (test_retrieval_gate.py, test_consolidation_integration.py)
+  - Updated CLI commands (git_index_command.py, git_search_command.py)
+  - Result: 2677 tests now collect successfully (up from 2569 with 11 errors)
+
+- **BUG-025: PythonParser Optional Language Import Failure** (2025-11-21)
+  - Fixed parser failing when optional language parsers (php/ruby/swift/kotlin) missing
+  - Implemented lazy imports for individual language parsers
+  - Parser now initializes with available languages, skips missing ones gracefully
+  - Files: src/memory/python_parser.py
+
+- **BUG-026: Test Helper Class Naming** (2025-11-21)
+  - Renamed TestNotificationBackend → MockNotificationBackend (2 files)
+  - Removed pytest collection warnings
+  - Files: tests/unit/test_background_indexer.py, tests/unit/test_notification_manager.py
+
+- **BUG-022: Code Indexer Zero Units** (2025-11-21)
+  - Resolved by fixing BUG-025 (parser initialization failure)
+  - Verified: Parser now extracts semantic units correctly
+
+- **BUG-021: PHP Parser Warning** (2025-11-21)
+  - Duplicate of BUG-025, resolved by lazy imports
+
+- **BUG-015: Health Check False Negative** (2025-11-21)
+  - Verified already fixed: code uses correct `/` endpoint
+  - Health check works correctly with Qdrant
+
+### Documentation
+
+- Added comprehensive bug hunt report: planning_docs/BUG-HUNT_2025-11-21_comprehensive_report.md
+- Added fix execution summary: planning_docs/BUG-024-026_execution_summary.md
+- Updated TODO.md with all bug statuses
+
+## [Unreleased - Previous]
+
 ### Added - 2025-11-20
 
 - **REF-012: Production Hardening Additions**

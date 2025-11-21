@@ -6,7 +6,7 @@ from rich.table import Table
 from rich.panel import Panel
 
 from src.config import get_config
-from src.store.sqlite_store import SQLiteMemoryStore
+from src.store.qdrant_store import QdrantMemoryStore
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -41,7 +41,7 @@ class GitSearchCommand:
         try:
             # Initialize storage
             with console.status("[bold green]Searching..."):
-                store = SQLiteMemoryStore(config)
+                store = QdrantMemoryStore(config)
                 await store.initialize()
 
                 # Parse date filters

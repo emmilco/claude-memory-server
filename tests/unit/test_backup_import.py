@@ -10,21 +10,22 @@ from datetime import datetime, UTC
 from src.backup.exporter import DataExporter
 from src.backup.importer import DataImporter, ConflictStrategy
 from src.core.models import MemoryUnit, MemoryCategory, ContextLevel, MemoryScope, LifecycleState
-from src.store.sqlite_store import SQLiteMemoryStore
+from src.store.qdrant_store import QdrantMemoryStore
 from src.config import ServerConfig
 
 
 @pytest_asyncio.fixture
 async def temp_store():
-    """Create a temporary SQLite store for testing."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        from unittest.mock import MagicMock
-        config = MagicMock()
-        config.sqlite_path_expanded = Path(tmpdir) / "test.db"
-        store = SQLiteMemoryStore(config)
-        await store.initialize()
-        yield store
-        await store.close()
+    """Create a temporary Qdrant store for testing."""
+    config = ServerConfig(
+        storage_backend="qdrant",
+        qdrant_url="http://localhost:6333",
+        qdrant_collection_name="test_backup_import",
+    )
+    store = QdrantMemoryStore(config)
+    await store.initialize()
+    yield store
+    await store.close()
 
 
 @pytest.mark.asyncio

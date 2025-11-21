@@ -6,23 +6,26 @@ import tempfile
 from datetime import datetime, UTC, timedelta
 from pathlib import Path
 
-from src.store.sqlite_store import SQLiteMemoryStore
+from src.store.qdrant_store import QdrantMemoryStore
 from src.config import ServerConfig
 
 
 @pytest.fixture
 def config():
     """Create test configuration."""
-    config = ServerConfig()
-    config.sqlite_path = ":memory:"  # Use in-memory database
-    config.enable_git_indexing = True
+    config = ServerConfig(
+        storage_backend="qdrant",
+        qdrant_url="http://localhost:6333",
+        qdrant_collection_name="test_git_storage",
+        enable_git_indexing=True,
+    )
     return config
 
 
 @pytest_asyncio.fixture
 async def store(config):
-    """Create and initialize SQLite store."""
-    store = SQLiteMemoryStore(config)
+    """Create and initialize Qdrant store."""
+    store = QdrantMemoryStore(config)
     await store.initialize()
     yield store
     await store.close()

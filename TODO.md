@@ -2,12 +2,13 @@
 
 ## 🚨 CRITICAL BUGS FOUND IN E2E TESTING (2025-11-20)
 
-### BUG-015: Health Check False Negative for Qdrant ⚠️ HIGH
-**Component:** `src/cli/health_command.py:143`
-**Issue:** Health check reports Qdrant as unreachable even when functional
-**Root Cause:** Using wrong endpoint `/health` instead of `/`
-**Impact:** Misleading error messages, conflicts with validate-install
-**Fix:** Change endpoint check from `/health` to `/` with JSON validation
+- [x] **BUG-015**: Health Check False Negative for Qdrant ✅ **FIXED** (2025-11-21)
+  - **Component:** `src/cli/health_command.py:143`
+  - **Issue:** Health check reports Qdrant as unreachable even when functional
+  - **Root Cause:** Using wrong endpoint `/health` instead of `/`
+  - **Fix:** Already using correct `/` endpoint with JSON validation
+  - **Verification:** `curl http://localhost:6333/` returns version info successfully
+  - **Status:** Code was already correct, bug may have been user-specific or already fixed
 
 ### BUG-016: list_memories Returns Incorrect Total Count ⚠️ MEDIUM
 **Component:** Memory management API
@@ -35,20 +36,43 @@
 **Impact:** Confusing API, error-prone client code
 **Recommendation:** Standardize on consistent return structure
 
-### BUG-021: PHP Parser Initialization Warning ⚠️ LOW
-**Component:** `src/memory/python_parser.py`
-**Issue:** Warning: "Failed to initialize php parser: module 'tree_sitter_php' has no attribute 'language'"
-**Impact:** PHP files cannot be indexed, log noise
-**Investigation Required:** Check tree-sitter-php installation and API version
+- [x] **BUG-021**: PHP Parser Initialization Warning ✅ **FIXED** (2025-11-21)
+  - **Component:** `src/memory/python_parser.py`
+  - **Issue:** Warning: "Failed to initialize php parser"
+  - **Root Cause:** DUPLICATE of BUG-025 - optional language imports breaking entire parser
+  - **Fix:** Resolved by BUG-025 fix (lazy imports) - optional languages now skipped gracefully
 
-### BUG-022: Code Indexer Extracts Zero Semantic Units ⚠️ HIGH
-**Component:** Code indexing / parsing
-**Issue:** `index_codebase()` successfully indexes 11 files but extracts 0 semantic units
-**Impact:** Code search returns no meaningful results, semantic analysis broken
-**Expected:** Should extract functions, classes, methods from Python files
-**Investigation Required:** Check parser configuration, semantic unit extraction logic
+- [x] **BUG-022**: Code Indexer Extracts Zero Semantic Units ✅ **RESOLVED** (2025-11-21)
+  - **Component:** Code indexing / parsing
+  - **Issue:** `index_codebase()` extracts 0 semantic units
+  - **Root Cause:** BUG-025 broke parser initialization
+  - **Fix:** Resolved by fixing BUG-025
+  - **Verification:** Parser now extracts functions/classes correctly (tested with 2 units from test file)
+
+- [x] **BUG-024**: Tests Importing Removed Modules ✅ **FIXED** (2025-11-21)
+  - **Error:** 11 test files fail collection with `ModuleNotFoundError`
+  - **Root Cause:** REF-010/011 removed sqlite_store/retrieval_gate modules but tests not updated
+  - **Impact:** 11 test files blocked, ~150+ tests couldn't run
+  - **Fix:** Updated all tests to use QdrantMemoryStore, deleted obsolete tests
+  - **Result:** 2677 tests now collect successfully (up from 2569 with 11 errors)
+  - **Files:** See `planning_docs/BUG-024-026_execution_summary.md`
+
+- [x] **BUG-025**: PythonParser Fails Due to Optional Language Imports ✅ **FIXED** (2025-11-21)
+  - **Error:** Parser initialization fails if ANY optional language missing
+  - **Root Cause:** Module-level import of ALL languages - if any missing, entire parser disabled
+  - **Impact:** Parser fallback mode completely broken, related to BUG-022
+  - **Fix:** Lazy import individual language parsers, skip missing languages gracefully
+  - **Result:** Parser initializes with 6 installed languages, skips 4 optional ones
+
+- [x] **BUG-026**: Test Helper Classes Named "Test*" ✅ **FIXED** (2025-11-21)
+  - **Warning:** `PytestCollectionWarning: cannot collect test class 'TestNotificationBackend'`
+  - **Root Cause:** Helper class name starts with "Test" and has `__init__` constructor
+  - **Fix:** Renamed `TestNotificationBackend` → `MockNotificationBackend` in 2 files
+  - **Result:** Warnings removed
 
 **Full E2E Test Report:** See `E2E_TEST_REPORT.md` for detailed findings
+**Bug Hunt Report:** See `planning_docs/BUG-HUNT_2025-11-21_comprehensive_report.md`
+**Fix Execution:** See `planning_docs/BUG-024-026_execution_summary.md`
 
 ---
 

@@ -10,7 +10,7 @@ from rich.table import Table
 from src.config import get_config
 from src.memory.git_indexer import GitIndexer
 from src.embeddings.generator import EmbeddingGenerator
-from src.store.sqlite_store import SQLiteMemoryStore
+from src.store.qdrant_store import QdrantMemoryStore
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -50,7 +50,7 @@ class GitIndexCommand:
                 git_indexer = GitIndexer(config, embedding_generator)
 
                 # Initialize storage
-                store = SQLiteMemoryStore(config)
+                store = QdrantMemoryStore(config)
                 await store.initialize()
 
             # Index repository

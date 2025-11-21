@@ -4,48 +4,46 @@ import pytest
 import pytest_asyncio
 from src.config import ServerConfig
 from src.store.readonly_wrapper import ReadOnlyStoreWrapper
-from src.store.sqlite_store import SQLiteMemoryStore
+from src.store.qdrant_store import QdrantMemoryStore
 from src.core.models import MemoryUnit, MemoryCategory, MemoryScope, SearchFilters
 from src.core.exceptions import ReadOnlyError
-from pathlib import Path
-import tempfile
 
 
 @pytest.fixture
 def test_config():
-    """Create test configuration with temporary database."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        db_path = str(Path(tmpdir) / "test.db")
-        yield ServerConfig(
-            storage_backend="sqlite",
-            sqlite_path=db_path,
-        )
+    """Create test configuration with Qdrant."""
+    return ServerConfig(
+        storage_backend="qdrant",
+        qdrant_url="http://localhost:6333",
+        qdrant_collection_name="test_readonly_mode",
+        read_only_mode=False,
+    )
 
 
 @pytest_asyncio.fixture
-async def sqlite_store(test_config):
-    """Create a SQLite store for testing."""
-    store = SQLiteMemoryStore(test_config)
+async def qdrant_store(test_config):
+    """Create a Qdrant store for testing."""
+    store = QdrantMemoryStore(test_config)
     await store.initialize()
     yield store
     await store.close()
 
 
 @pytest_asyncio.fixture
-async def readonly_store(sqlite_store):
+async def readonly_store(qdrant_store):
     """Create a read-only wrapped store."""
-    return ReadOnlyStoreWrapper(sqlite_store)
+    return ReadOnlyStoreWrapper(qdrant_store)
 
 
 class TestReadOnlyModeBasic:
     """Basic read-only mode tests."""
 
     @pytest.mark.asyncio
-    async def test_readonly_wrapper_creation(self, sqlite_store):
+    async def test_readonly_wrapper_creation(self, qdrant_store):
         """Test that ReadOnlyStoreWrapper can be created."""
-        wrapper = ReadOnlyStoreWrapper(sqlite_store)
+        wrapper = ReadOnlyStoreWrapper(qdrant_store)
         assert wrapper is not None
-        assert wrapper.wrapped_store is sqlite_store
+        assert wrapper.wrapped_store is qdrant_store
 
     @pytest.mark.asyncio
     async def test_readonly_wrapper_initialization(self, readonly_store):
@@ -115,11 +113,11 @@ class TestReadOnlyModeAllowsReads:
     """Test that read operations work in read-only mode."""
 
     @pytest.mark.asyncio
-    async def test_retrieve_works_in_readonly_mode(self, sqlite_store):
+    async def test_retrieve_works_in_readonly_mode(self, qdrant_store):
         """Test that retrieve() works in read-only mode."""
         # First, add some data to the underlying store
-        await sqlite_store.initialize()
-        memory_id = await sqlite_store.store(
+        await qdrant_store.initialize()
+        memory_id = await qdrant_store.store(
             content="test content",
             embedding=[0.1] * 384,
             metadata={
@@ -130,7 +128,7 @@ class TestReadOnlyModeAllowsReads:
         )
 
         # Now wrap it in read-only mode
-        readonly = ReadOnlyStoreWrapper(sqlite_store)
+        readonly = ReadOnlyStoreWrapper(qdrant_store)
 
         # Retrieve should work
         results = await readonly.retrieve(
@@ -142,9 +140,9 @@ class TestReadOnlyModeAllowsReads:
         assert results[0][0].content == "test content"
 
     @pytest.mark.asyncio
-    async def test_search_with_filters_works(self, sqlite_store):
+    async def test_search_with_filters_works(self, qdrant_store):
         """Test that search_with_filters() works in read-only mode."""
-        await sqlite_store.initialize()
+        await qdrant_store.initialize()
 
         # Add data
         await sqlite_store.store(
@@ -158,7 +156,7 @@ class TestReadOnlyModeAllowsReads:
         )
 
         # Wrap in read-only
-        readonly = ReadOnlyStoreWrapper(sqlite_store)
+        readonly = ReadOnlyStoreWrapper(qdrant_store)
 
         # Search with filters
         filters = SearchFilters(category=MemoryCategory.PREFERENCE)
@@ -171,12 +169,12 @@ class TestReadOnlyModeAllowsReads:
         assert len(results) > 0
 
     @pytest.mark.asyncio
-    async def test_get_by_id_works(self, sqlite_store):
+    async def test_get_by_id_works(self, qdrant_store):
         """Test that get_by_id() works in read-only mode."""
-        await sqlite_store.initialize()
+        await qdrant_store.initialize()
 
         # Add data
-        memory_id = await sqlite_store.store(
+        memory_id = await qdrant_store.store(
             content="test content for get",
             embedding=[0.3] * 384,
             metadata={
@@ -187,7 +185,7 @@ class TestReadOnlyModeAllowsReads:
         )
 
         # Wrap in read-only
-        readonly = ReadOnlyStoreWrapper(sqlite_store)
+        readonly = ReadOnlyStoreWrapper(qdrant_store)
 
         # Get by ID
         memory = await readonly.get_by_id(memory_id)
@@ -196,13 +194,13 @@ class TestReadOnlyModeAllowsReads:
         assert memory.content == "test content for get"
 
     @pytest.mark.asyncio
-    async def test_count_works(self, sqlite_store):
+    async def test_count_works(self, qdrant_store):
         """Test that count() works in read-only mode."""
-        await sqlite_store.initialize()
+        await qdrant_store.initialize()
 
         # Add some data
         for i in range(3):
-            await sqlite_store.store(
+            await qdrant_store.store(
                 content=f"content {i}",
                 embedding=[0.1 * i] * 384,
                 metadata={
@@ -213,7 +211,7 @@ class TestReadOnlyModeAllowsReads:
             )
 
         # Wrap in read-only
-        readonly = ReadOnlyStoreWrapper(sqlite_store)
+        readonly = ReadOnlyStoreWrapper(qdrant_store)
 
         # Count should work
         count = await readonly.count()
@@ -260,14 +258,14 @@ class TestReadOnlyModeIntegration:
     """Integration tests for read-only mode."""
 
     @pytest.mark.asyncio
-    async def test_readonly_mode_preserves_existing_data(self, sqlite_store):
+    async def test_readonly_mode_preserves_existing_data(self, qdrant_store):
         """Test that read-only mode doesn't affect existing data."""
-        await sqlite_store.initialize()
+        await qdrant_store.initialize()
 
         # Add data before wrapping
         original_ids = []
         for i in range(5):
-            memory_id = await sqlite_store.store(
+            memory_id = await qdrant_store.store(
                 content=f"original content {i}",
                 embedding=[0.1 * i] * 384,
                 metadata={
@@ -279,7 +277,7 @@ class TestReadOnlyModeIntegration:
             original_ids.append(memory_id)
 
         # Wrap in read-only
-        readonly = ReadOnlyStoreWrapper(sqlite_store)
+        readonly = ReadOnlyStoreWrapper(qdrant_store)
 
         # Verify all data is still accessible
         for memory_id in original_ids:

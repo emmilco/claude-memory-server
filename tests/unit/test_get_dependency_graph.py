@@ -5,31 +5,32 @@ import pytest_asyncio
 import json
 from pathlib import Path
 
-from src.store.sqlite_store import SQLiteMemoryStore
+from src.store.qdrant_store import QdrantMemoryStore
 from src.core.server import MemoryRAGServer
 from src.core.exceptions import ValidationError
 from src.config import ServerConfig
 
 
 @pytest_asyncio.fixture
-async def sqlite_store():
-    """Create a temporary SQLite store for testing."""
+async def qdrant_store():
+    """Create a temporary Qdrant store for testing."""
     config = ServerConfig(
-        storage_backend="sqlite",
-        sqlite_path=":memory:",  # In-memory database
+        storage_backend="qdrant",
+        qdrant_url="http://localhost:6333",
+        qdrant_collection_name="test_dependency_graph",
     )
-    store = SQLiteMemoryStore(config)
+    store = QdrantMemoryStore(config)
     await store.initialize()
     yield store
     await store.close()
 
 
 @pytest_asyncio.fixture
-async def sample_dependency_graph(sqlite_store):
+async def sample_dependency_graph(qdrant_store):
     """Create sample indexed code with dependencies for testing."""
     # Store Python files with dependencies
     # File A -> imports B and C
-    await sqlite_store.store(
+    await qdrant_store.store(
         content="from utils import helper\nfrom models import User",
         embedding=[0.1] * 384,
         metadata={
@@ -54,7 +55,7 @@ async def sample_dependency_graph(sqlite_store):
     )
 
     # File B (utils.py)
-    await sqlite_store.store(
+    await qdrant_store.store(
         content="def helper(): pass",
         embedding=[0.2] * 384,
         metadata={
@@ -79,7 +80,7 @@ async def sample_dependency_graph(sqlite_store):
     )
 
     # File C (models.py)
-    await sqlite_store.store(
+    await qdrant_store.store(
         content="class User: pass",
         embedding=[0.3] * 384,
         metadata={
@@ -104,7 +105,7 @@ async def sample_dependency_graph(sqlite_store):
     )
 
     # File D (JavaScript file for language filtering tests)
-    await sqlite_store.store(
+    await qdrant_store.store(
         content="const test = require('./lib')",
         embedding=[0.4] * 384,
         metadata={
@@ -129,7 +130,7 @@ async def sample_dependency_graph(sqlite_store):
     )
 
     # File E (lib.js)
-    await sqlite_store.store(
+    await qdrant_store.store(
         content="module.exports = {}",
         embedding=[0.5] * 384,
         metadata={
@@ -160,7 +161,7 @@ async def sample_dependency_graph(sqlite_store):
 async def circular_dependency_graph(sqlite_store):
     """Create sample graph with circular dependencies."""
     # A -> B -> C -> A (circular)
-    await sqlite_store.store(
+    await qdrant_store.store(
         content="from b import func_b",
         embedding=[0.1] * 384,
         metadata={
@@ -180,7 +181,7 @@ async def circular_dependency_graph(sqlite_store):
         },
     )
 
-    await sqlite_store.store(
+    await qdrant_store.store(
         content="from c import func_c",
         embedding=[0.2] * 384,
         metadata={
@@ -200,7 +201,7 @@ async def circular_dependency_graph(sqlite_store):
         },
     )
 
-    await sqlite_store.store(
+    await qdrant_store.store(
         content="from a import func_a",
         embedding=[0.3] * 384,
         metadata={
