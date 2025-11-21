@@ -84,6 +84,12 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Bug Fixes
 
+- **BUG-031 & BUG-032: Documentation Metrics Accuracy** (2025-11-21)
+  - Updated CLAUDE.md test count from 2,723 to ~2,740 (varies by environment)
+  - Corrected coverage metrics: 59.6% overall, 71.2% core modules (was incorrectly 67%)
+  - Added clarity on core modules definition (core, store, memory, embeddings)
+  - Added note about test count variability across environments
+
 - **BUG-024: Tests Importing Removed Modules** (2025-11-21)
   - Fixed 11 test files that failed collection due to importing removed modules
   - Updated tests to use QdrantMemoryStore instead of removed SQLiteMemoryStore

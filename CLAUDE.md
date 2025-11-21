@@ -28,7 +28,7 @@ A Model Context Protocol (MCP) server providing persistent memory, documentation
 - **Embeddings:** all-MiniLM-L6-v2 (384 dimensions) with parallel generation
 - **Search:** Hybrid (BM25 + vector) with 3 fusion strategies, query synonyms, reranking
 - **Framework:** MCP (Model Context Protocol) - 16 MCP tools + 28 CLI commands
-- **Testing:** pytest with 2723 tests (collection verified, pass rate TBD) - 67% coverage
+- **Testing:** pytest with ~2,740 tests (varies by environment) - Overall: 59.6% | Core modules: 71.2%
 - **Languages Supported:** Python, JS, TS, Java, Go, Rust, Ruby, Swift, Kotlin, PHP, C, C++, C#, SQL, JSON, YAML, TOML (17 total)
 
 ## Essential Files
@@ -466,10 +466,11 @@ python -m src.mcp_server
 ## Current State (Auto-Update This Section)
 
 ### Metrics
-- **Test Status:** ✅ 2723 tests collected successfully (BUG-023 fixed)
-- **Pass Rate:** Run `pytest tests/` to verify (collection errors resolved)
-- **Coverage:** 67% overall on passing tests (80-85% core modules target)
+- **Test Status:** ✅ ~2,740 tests collected (varies by environment: 2,677-2,744 range)
+- **Pass Rate:** Run `pytest tests/` to verify (2,721 passing typical)
+- **Coverage:** Overall: 59.6% | Core modules: 71.2% (target: 80-85%)
   - **Note:** Coverage excludes 14 impractical-to-test files per `.coveragerc` (CLI/TUI/schedulers)
+  - Core modules = src/core, src/store, src/memory, src/embeddings
 - **Modules:** 159 Python modules totaling ~4MB production code
 - **Languages:** 17 file formats (14 languages + 3 config types)
 - **Commands:** 16 MCP tools + 28 CLI commands (updated 2025-11-20)
