@@ -84,6 +84,13 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Bug Fixes
 
+- **FIX-TAGGING-SYSTEM-POOLING: Tagging System Integration Tests Collection Pooling** (2025-11-22)
+  - Updated test_tagging_system.py config fixture to use collection pooling from conftest
+  - Changed config fixture to accept unique_qdrant_collection parameter
+  - Removed manual collection deletion from store fixture cleanup
+  - Leverages session-scoped resources to prevent Qdrant deadlocks during parallel execution
+  - Fixes multiple ERROR tests in tagging system functionality
+
 - **FIX-RETRIEVAL-GATE-POOLING: Retrieval Gate Integration Tests Collection Pooling** (2025-11-22)
   - Updated test_retrieval_gate.py config fixtures to use collection pooling from conftest
   - Changed gate_enabled_config, gate_disabled_config, and strict_gate_config fixtures to accept unique_qdrant_collection
