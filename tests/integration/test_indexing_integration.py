@@ -68,11 +68,15 @@ class UserManager {
 
 
 @pytest.fixture
-def config():
-    """Create test configuration with unique collection name."""
+def config(unique_qdrant_collection):
+    """Create test configuration with pooled collection name.
+
+    Uses the unique_qdrant_collection fixture from conftest.py to leverage
+    collection pooling and prevent Qdrant deadlocks during parallel test execution.
+    """
     return ServerConfig(
         qdrant_url="http://localhost:6333",
-        qdrant_collection_name=f"test_code_{uuid.uuid4().hex[:8]}",
+        qdrant_collection_name=unique_qdrant_collection,
         embedding_model="all-MiniLM-L6-v2",
     )
 
@@ -140,13 +144,8 @@ async def test_index_python_file_end_to_end(temp_dir, config):
             print(f"  - {memory.metadata['unit_name']} (score: {score:.3f})")
 
     finally:
-        # Cleanup: delete test collection
+        # Cleanup (collection cleanup handled by unique_qdrant_collection autouse fixture)
         await indexer.close()
-        if store.client:
-            try:
-                store.client.delete_collection(config.qdrant_collection_name)
-            except:
-                pass
 
 
 @pytest.mark.integration
@@ -221,12 +220,8 @@ class Helper:
             assert len(results) > 0, "Should find Python code"
 
     finally:
+        # Collection cleanup handled by unique_qdrant_collection autouse fixture
         await indexer.close()
-        if store.client:
-            try:
-                store.client.delete_collection(config.qdrant_collection_name)
-            except:
-                pass
 
 
 @pytest.mark.integration
@@ -305,12 +300,8 @@ class NewClass:
         assert found_new, "Should find new code"
 
     finally:
+        # Collection cleanup handled by unique_qdrant_collection autouse fixture
         await indexer.close()
-        if store.client:
-            try:
-                store.client.delete_collection(config.qdrant_collection_name)
-            except:
-                pass
 
 
 @pytest.mark.integration
@@ -357,9 +348,5 @@ async def test_delete_file_index(temp_dir, config):
         assert not found_from_file, "Should not find deleted file units"
 
     finally:
+        # Collection cleanup handled by unique_qdrant_collection autouse fixture
         await indexer.close()
-        if store.client:
-            try:
-                store.client.delete_collection(config.qdrant_collection_name)
-            except:
-                pass
