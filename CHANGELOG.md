@@ -84,6 +84,12 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Bug Fixes
 
+- **FIX-PROVENANCE-TRUST-POOLING: Provenance & Trust Integration Tests Collection Pooling** (2025-11-22)
+  - Updated test_provenance_trust_integration.py test_store fixture to use collection pooling from conftest
+  - Changed test_store fixture to accept qdrant_client and unique_qdrant_collection parameters
+  - Leverages session-scoped resources to prevent Qdrant deadlocks during parallel execution
+  - Fixes multiple ERROR tests in provenance and trust signal functionality
+
 - **FIX-PROACTIVE-SUGGESTIONS-POOLING: Proactive Suggestions Integration Tests Collection Pooling** (2025-11-22)
   - Updated test_proactive_suggestions.py server fixture to use collection pooling from conftest
   - Changed server fixture to accept qdrant_client and unique_qdrant_collection parameters
