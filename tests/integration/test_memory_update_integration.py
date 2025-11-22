@@ -17,14 +17,17 @@ from src.core.exceptions import ReadOnlyError
 
 
 @pytest_asyncio.fixture
-async def test_server(tmp_path):
-    """Create a test server with Qdrant backend and unique collection."""
-    collection = f"test_update_{uuid.uuid4().hex[:8]}"
+async def test_server(tmp_path, qdrant_client, unique_qdrant_collection):
+    """Create a test server with pooled collection.
 
+    Uses the session-scoped qdrant_client and unique_qdrant_collection
+    fixtures from conftest.py to leverage collection pooling and prevent
+    Qdrant deadlocks during parallel test execution.
+    """
     config = ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
-        qdrant_collection_name=collection,
+        qdrant_collection_name=unique_qdrant_collection,
         read_only_mode=False,
         embedding_model="all-MiniLM-L6-v2",
     )
@@ -34,11 +37,7 @@ async def test_server(tmp_path):
 
     # Cleanup
     await server.close()
-    if hasattr(server.store, 'client') and server.store.client:
-        try:
-            server.store.client.delete_collection(collection)
-        except Exception:
-            pass  # Ignore cleanup errors
+    # Collection cleanup handled by unique_qdrant_collection autouse fixture
 
 
 @pytest_asyncio.fixture
@@ -245,12 +244,12 @@ class TestMemoryUpdateIntegration:
         assert "nonexistent-id" in result["message"]
 
     @pytest.mark.asyncio
-    async def test_update_in_read_only_mode(self, tmp_path):
+    async def test_update_in_read_only_mode(self, tmp_path, unique_qdrant_collection):
         """Test that update fails in read-only mode."""
         config = ServerConfig(
             storage_backend="qdrant",
             qdrant_url="http://localhost:6333",
-            qdrant_collection_name="test_readonly",
+            qdrant_collection_name=unique_qdrant_collection,
             read_only_mode=True,
         )
         server = MemoryRAGServer(config)

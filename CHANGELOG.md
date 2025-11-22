@@ -84,6 +84,13 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Bug Fixes
 
+- **FIX-MEMORY-UPDATE-POOLING: Memory Update Integration Tests Collection Pooling** (2025-11-22)
+  - Updated test_memory_update_integration.py fixtures to use collection pooling from conftest
+  - Changed test_server fixture to accept qdrant_client and unique_qdrant_collection
+  - Updated test_update_in_read_only_mode to use pooled collection instead of hardcoded name
+  - Leverages session-scoped resources to prevent Qdrant deadlocks during parallel execution
+  - Fixes ~12 ERROR tests in memory update integration functionality
+
 - **FIX-CONCURRENT-OPS-POOLING: Concurrent Operations Tests Collection Pooling** (2025-11-22)
   - Updated test_concurrent_operations.py fixtures to use collection pooling from conftest
   - Changed config and server fixtures to accept qdrant_client and unique_qdrant_collection
