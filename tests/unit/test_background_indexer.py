@@ -64,12 +64,16 @@ def notification_manager(notification_backend):
 
 
 @pytest.fixture
-def config():
-    """Create test configuration with unique collection name."""
+def config(unique_qdrant_collection):
+    """Create test configuration with pooled collection name.
+
+    Uses the unique_qdrant_collection fixture from conftest.py to leverage
+    collection pooling and prevent Qdrant deadlocks during parallel test execution.
+    """
     return ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
-        qdrant_collection_name=f"test_bg_{uuid.uuid4().hex[:8]}",
+        qdrant_collection_name=unique_qdrant_collection,
         enable_parallel_embeddings=False,  # Disable for faster tests
     )
 

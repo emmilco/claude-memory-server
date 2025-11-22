@@ -84,6 +84,12 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Bug Fixes
 
+- **FIX-BACKGROUND-INDEXER-POOLING: Background Indexer Unit Tests Collection Pooling** (2025-11-22)
+  - Updated test_background_indexer.py config fixture to use collection pooling from conftest
+  - Changed config fixture to accept unique_qdrant_collection parameter
+  - Leverages session-scoped resources to prevent Qdrant deadlocks during parallel execution
+  - Fixes multiple ERROR tests in background indexer functionality
+
 - **FIX-TAGGING-SYSTEM-POOLING: Tagging System Integration Tests Collection Pooling** (2025-11-22)
   - Updated test_tagging_system.py config fixture to use collection pooling from conftest
   - Changed config fixture to accept unique_qdrant_collection parameter
