@@ -47,15 +47,15 @@ def store(config):
 
 
 @pytest.fixture
-def tag_manager(db_path):
+def tag_manager(session_db_path):
     """Create tag manager."""
-    return TagManager(db_path)
+    return TagManager(session_db_path)
 
 
 @pytest.fixture
-def collection_manager(db_path):
+def collection_manager(session_db_path):
     """Create collection manager."""
-    return CollectionManager(db_path)
+    return CollectionManager(session_db_path)
 
 
 @pytest.fixture

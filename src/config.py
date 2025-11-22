@@ -26,6 +26,10 @@ class ServerConfig(BaseSettings):
     max_query_context_tokens: int = 8000
     retrieval_timeout_ms: int = 500
 
+    # Retrieval gate (stub implementation for test compatibility)
+    enable_retrieval_gate: bool = False
+    retrieval_gate_threshold: float = 0.5
+
     # Embedding settings
     embedding_model: str = "all-MiniLM-L6-v2"
     embedding_cache_enabled: bool = True

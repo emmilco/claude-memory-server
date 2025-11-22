@@ -337,7 +337,8 @@ class QdrantMemoryStore(MemoryStore):
                     new_metadata = updates["metadata"] or {}
                     merged_metadata = {**merged_metadata, **new_metadata}
 
-                merged_payload = {
+                # Build base payload without metadata (we'll flatten it separately)
+                base_payload = {
                     "id": memory_id,
                     "content": updates.get("content", existing.content),
                     "category": updates.get("category", existing.category.value if hasattr(existing.category, 'value') else existing.category),
@@ -346,12 +347,14 @@ class QdrantMemoryStore(MemoryStore):
                     "project_name": updates.get("project_name", existing.project_name),
                     "importance": updates.get("importance", existing.importance),
                     "tags": updates.get("tags", existing.tags),
-                    "metadata": merged_metadata,
                     "created_at": existing.created_at.isoformat(),
                     "updated_at": updates["updated_at"],
                     "last_accessed": existing.last_accessed.isoformat() if existing.last_accessed else None,
                     "lifecycle_state": updates.get("lifecycle_state", existing.lifecycle_state.value if hasattr(existing.lifecycle_state, 'value') else existing.lifecycle_state),
                 }
+
+                # Flatten metadata into payload (matches _build_payload behavior)
+                merged_payload = {**base_payload, **merged_metadata}
 
                 # Handle provenance
                 if hasattr(existing, 'provenance') and existing.provenance:
@@ -380,7 +383,10 @@ class QdrantMemoryStore(MemoryStore):
                     existing_metadata = existing.metadata or {}
                     new_metadata = updates["metadata"] or {}
                     merged_metadata = {**existing_metadata, **new_metadata}
-                    payload_updates["metadata"] = merged_metadata
+
+                    # Remove the nested "metadata" key and flatten it into payload
+                    payload_updates.pop("metadata", None)
+                    payload_updates.update(merged_metadata)
 
                 self.client.set_payload(
                     collection_name=self.collection_name,
