@@ -41,12 +41,16 @@ class TestConfidenceLabels:
 
 
 @pytest_asyncio.fixture
-async def mock_server():
-    """Create a mock server with mocked dependencies and unique collection."""
+async def mock_server(unique_qdrant_collection):
+    """Create a mock server with mocked dependencies and pooled collection.
+
+    Uses the unique_qdrant_collection fixture from conftest.py to leverage
+    collection pooling and prevent Qdrant deadlocks during parallel test execution.
+    """
     config = ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
-        qdrant_collection_name=f"test_conf_{uuid.uuid4().hex[:8]}",
+        qdrant_collection_name=unique_qdrant_collection,
         read_only_mode=False,
         enable_retrieval_gate=False,
     )

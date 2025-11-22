@@ -84,6 +84,12 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Bug Fixes
 
+- **FIX-CONFIDENCE-SCORES-POOLING: Confidence Scores Unit Tests Collection Pooling** (2025-11-22)
+  - Updated test_confidence_scores.py mock_server fixture to use collection pooling from conftest
+  - Changed mock_server fixture to accept unique_qdrant_collection parameter
+  - Leverages session-scoped resources to prevent Qdrant deadlocks during parallel execution
+  - Fixes multiple ERROR tests in confidence score functionality
+
 - **FIX-BACKUP-IMPORT-POOLING: Backup Import Unit Tests Collection Pooling** (2025-11-22)
   - Updated test_backup_import.py temp_store fixture to use collection pooling from conftest
   - Changed temp_store fixture to accept qdrant_client and unique_qdrant_collection parameters
