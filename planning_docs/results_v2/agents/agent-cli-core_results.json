@@ -1,0 +1,101 @@
+{
+  "agent_id": "agent-cli-core",
+  "section": "cli-core",
+  "start_time": "2025-11-21T11:59:05.754502",
+  "tests": [
+    {
+      "test_id": "CLI-001",
+      "start_time": "2025-11-21T11:59:05.780840",
+      "status": "PASS",
+      "notes": "Index command successful - processed files in test directory | found 44 files | includes timing info",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:20.664937"
+    },
+    {
+      "test_id": "CLI-002",
+      "start_time": "2025-11-21T11:59:20.666316",
+      "status": "MANUAL_REQUIRED",
+      "notes": "MANUAL TEST REQUIRED: Search command listed in help. Test actual search after indexing: python -m src.cli search \"authentication\" --project-name test-project. Verify: results returned, relevance scores shown, file paths and line numbers included, and search completes in <1 second.",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:24.768456"
+    },
+    {
+      "test_id": "CLI-003",
+      "start_time": "2025-11-21T11:59:24.769555",
+      "status": "FAIL",
+      "notes": "List command failed: WARNING:root:Rust parsing module not available. Using Python fallback parser (10-20x slower).\nWARNING:src.core.degradation_warnings:Degradation: Rust Parser - Rust parser unavailable, using Python fal",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:28.677025"
+    },
+    {
+      "test_id": "CLI-004",
+      "start_time": "2025-11-21T11:59:28.677304",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Delete command requires valid memory ID - manual test",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:28.677311"
+    },
+    {
+      "test_id": "CLI-005",
+      "start_time": "2025-11-21T11:59:28.677350",
+      "status": "FAIL",
+      "notes": "Export command failed: WARNING:root:Rust parsing module not available. Using Python fallback parser (10-20x slower).\nWARNING:src.core.degradation_warnings:Degradation: Rust Parser - Rust parser unavailable, using Python fal",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:33.003528"
+    },
+    {
+      "test_id": "CLI-006",
+      "start_time": "2025-11-21T11:59:33.004508",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Import command requires valid export file - manual test after export",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:33.004531"
+    },
+    {
+      "test_id": "CLI-007",
+      "start_time": "2025-11-21T11:59:33.004577",
+      "status": "PASS",
+      "notes": "Health check command executed successfully - checked: qdrant, parser, storage, python",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:38.385775"
+    },
+    {
+      "test_id": "CLI-008",
+      "start_time": "2025-11-21T11:59:38.386616",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Watch command runs continuously - requires manual testing",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:38.386635"
+    },
+    {
+      "test_id": "CLI-009",
+      "start_time": "2025-11-21T11:59:38.386668",
+      "status": "FAIL",
+      "notes": "Stats command failed: WARNING:root:Rust parsing module not available. Using Python fallback parser (10-20x slower).\nWARNING:src.core.degradation_warnings:Degradation: Rust Parser - Rust parser unavailable, using Python fal",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:44.818306"
+    }
+  ],
+  "bugs_found": [],
+  "summary": {
+    "total_tests": 9,
+    "passed": 2,
+    "failed": 3,
+    "skipped": 0,
+    "manual_required": 4,
+    "errors": 0,
+    "pass_rate": 22.22222222222222,
+    "bugs_found": 0,
+    "bugs_by_severity": {
+      "CRITICAL": 0,
+      "HIGH": 0,
+      "MEDIUM": 0,
+      "LOW": 0
+    },
+    "estimated_duration_minutes": 60,
+    "critical_bugs_verified": [
+      "BUG-015"
+    ]
+  },
+  "end_time": "2025-11-21T11:59:44.818498"
+}

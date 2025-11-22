@@ -1,0 +1,115 @@
+{
+  "agent_id": "agent-features",
+  "section": "features",
+  "start_time": "2025-11-21T11:59:05.754555",
+  "tests": [
+    {
+      "test_id": "MEM-001",
+      "start_time": "2025-11-21T11:59:05.781076",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Memory lifecycle testing requires MCP client",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:05.781080"
+    },
+    {
+      "test_id": "MEM-002",
+      "start_time": "2025-11-21T11:59:05.781116",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Provenance testing requires MCP client",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:05.781118"
+    },
+    {
+      "test_id": "MEM-003",
+      "start_time": "2025-11-21T11:59:05.781174",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Duplicate detection requires MCP client",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:05.781176"
+    },
+    {
+      "test_id": "MEM-004",
+      "start_time": "2025-11-21T11:59:05.781210",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Memory consolidation requires MCP client",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:05.781211"
+    },
+    {
+      "test_id": "MEM-005",
+      "start_time": "2025-11-21T11:59:05.781239",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test MEM-005 requires manual execution",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:05.781240"
+    },
+    {
+      "test_id": "PROJ-001",
+      "start_time": "2025-11-21T11:59:05.782060",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Cross-project search requires multiple indexed projects",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:05.782064"
+    },
+    {
+      "test_id": "PROJ-002",
+      "start_time": "2025-11-21T11:59:05.782167",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Project isolation requires multiple projects",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:05.782174"
+    },
+    {
+      "test_id": "PROJ-003",
+      "start_time": "2025-11-21T11:59:05.782276",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Consent management requires MCP client",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:05.782278"
+    },
+    {
+      "test_id": "HEALTH-001",
+      "start_time": "2025-11-21T11:59:05.782349",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Health score testing requires MCP client or CLI health command",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:05.782351"
+    },
+    {
+      "test_id": "HEALTH-002",
+      "start_time": "2025-11-21T11:59:05.782404",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Performance metrics require MCP client",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:05.782406"
+    },
+    {
+      "test_id": "HEALTH-003",
+      "start_time": "2025-11-21T11:59:05.782472",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Alerts testing requires MCP client",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:05.782474"
+    }
+  ],
+  "bugs_found": [],
+  "summary": {
+    "total_tests": 11,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "manual_required": 11,
+    "errors": 0,
+    "pass_rate": 0.0,
+    "bugs_found": 0,
+    "bugs_by_severity": {
+      "CRITICAL": 0,
+      "HIGH": 0,
+      "MEDIUM": 0,
+      "LOW": 0
+    },
+    "estimated_duration_minutes": 60,
+    "critical_bugs_verified": []
+  },
+  "end_time": "2025-11-21T11:59:05.782475"
+}

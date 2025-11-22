@@ -2,9 +2,11 @@
 """Test script for MCP tools."""
 
 import asyncio
+import pytest
 from src.core.server import MemoryRAGServer
 from src.config import get_config
 
+@pytest.mark.asyncio
 async def test_code_search():
     """Test code search functionality."""
     config = get_config()
@@ -61,6 +63,7 @@ async def test_code_search():
 
     print("\n" + "=" * 80)
 
+@pytest.mark.asyncio
 async def test_memory_tools():
     """Test memory management tools."""
     config = get_config()
@@ -103,6 +106,7 @@ async def test_memory_tools():
 
     print("\n" + "=" * 80)
 
+@pytest.mark.asyncio
 async def test_project_tools():
     """Test project management tools."""
     config = get_config()

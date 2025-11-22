@@ -1,0 +1,142 @@
+{
+  "agent_id": "agent-code-search",
+  "section": "code-search",
+  "start_time": "2025-11-21T13:12:21.199927",
+  "tests": [
+    {
+      "test_id": "CODE-001",
+      "start_time": "2025-11-21T13:12:21.224008",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Code indexing test - use CLI-001 test results",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.224013"
+    },
+    {
+      "test_id": "CODE-002",
+      "start_time": "2025-11-21T13:12:21.224049",
+      "status": "MANUAL_REQUIRED",
+      "notes": "JavaScript indexing requires test project",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.224051"
+    },
+    {
+      "test_id": "CODE-003",
+      "start_time": "2025-11-21T13:12:21.224101",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Semantic search requires indexed codebase",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.224102"
+    },
+    {
+      "test_id": "CODE-004",
+      "start_time": "2025-11-21T13:12:21.224131",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Similarity search requires indexed codebase",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.224132"
+    },
+    {
+      "test_id": "CODE-005",
+      "start_time": "2025-11-21T13:12:21.224158",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Hybrid search requires indexed codebase",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.224159"
+    },
+    {
+      "test_id": "CODE-006",
+      "start_time": "2025-11-21T13:12:21.224184",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CODE-006 requires manual execution",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.224185"
+    },
+    {
+      "test_id": "CODE-007",
+      "start_time": "2025-11-21T13:12:21.224223",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CODE-007 requires manual execution",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.224225"
+    },
+    {
+      "test_id": "CODE-008",
+      "start_time": "2025-11-21T13:12:21.224255",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CODE-008 requires manual execution",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.224256"
+    },
+    {
+      "test_id": "CODE-009",
+      "start_time": "2025-11-21T13:12:21.224281",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CODE-009 requires manual execution",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.224282"
+    },
+    {
+      "test_id": "CODE-010",
+      "start_time": "2025-11-21T13:12:21.224307",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CODE-010 requires manual execution",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.224308"
+    },
+    {
+      "test_id": "CODE-011",
+      "start_time": "2025-11-21T13:12:21.224338",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CODE-011 requires manual execution",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.224339"
+    },
+    {
+      "test_id": "CODE-012",
+      "start_time": "2025-11-21T13:12:21.224381",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CODE-012 requires manual execution",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.224382"
+    },
+    {
+      "test_id": "CODE-013",
+      "start_time": "2025-11-21T13:12:21.224416",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CODE-013 requires manual execution",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.224416"
+    },
+    {
+      "test_id": "CODE-014",
+      "start_time": "2025-11-21T13:12:21.224450",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CODE-014 requires manual execution",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.224451"
+    }
+  ],
+  "bugs_found": [],
+  "summary": {
+    "total_tests": 14,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "manual_required": 14,
+    "errors": 0,
+    "pass_rate": 0.0,
+    "bugs_found": 0,
+    "bugs_by_severity": {
+      "CRITICAL": 0,
+      "HIGH": 0,
+      "MEDIUM": 0,
+      "LOW": 0
+    },
+    "estimated_duration_minutes": 90,
+    "critical_bugs_verified": [
+      "BUG-022",
+      "BUG-021"
+    ]
+  },
+  "end_time": "2025-11-21T13:12:21.224452"
+}

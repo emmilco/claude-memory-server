@@ -1,6 +1,7 @@
 """Qdrant collection setup and initialization."""
 
 import logging
+import time
 from typing import Optional
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
@@ -41,29 +42,42 @@ class QdrantSetup:
 
     def connect(self) -> QdrantClient:
         """
-        Connect to Qdrant server.
+        Connect to Qdrant server with retry logic.
 
         Returns:
             QdrantClient: Connected Qdrant client.
 
         Raises:
-            QdrantConnectionError: If connection fails.
+            QdrantConnectionError: If connection fails after retries.
         """
-        try:
-            self.client = QdrantClient(
-                url=self.config.qdrant_url,
-                api_key=self.config.qdrant_api_key,
-                timeout=10.0,
-            )
-            # Test connection
-            self.client.get_collections()
-            logger.info(f"Connected to Qdrant at {self.config.qdrant_url}")
-            return self.client
-        except Exception as e:
-            raise QdrantConnectionError(
-                url=self.config.qdrant_url,
-                reason=str(e)
-            )
+        max_retries = 3
+        base_delay = 0.5  # seconds
+
+        for attempt in range(max_retries):
+            try:
+                self.client = QdrantClient(
+                    url=self.config.qdrant_url,
+                    api_key=self.config.qdrant_api_key,
+                    timeout=30.0,  # Increased from 10.0 for parallel tests
+                )
+                # Test connection
+                self.client.get_collections()
+                logger.info(f"Connected to Qdrant at {self.config.qdrant_url}")
+                return self.client
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    delay = base_delay * (2 ** attempt)  # Exponential backoff
+                    logger.warning(
+                        f"Qdrant connection attempt {attempt + 1}/{max_retries} failed: {e}. "
+                        f"Retrying in {delay}s..."
+                    )
+                    time.sleep(delay)
+                else:
+                    # Final attempt failed
+                    raise QdrantConnectionError(
+                        url=self.config.qdrant_url,
+                        reason=str(e)
+                    )
 
     def collection_exists(self) -> bool:
         """

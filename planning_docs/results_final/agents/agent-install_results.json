@@ -1,0 +1,140 @@
+{
+  "agent_id": "agent-install",
+  "section": "installation",
+  "start_time": "2025-11-21T13:12:21.200382",
+  "tests": [
+    {
+      "test_id": "INST-001",
+      "start_time": "2025-11-21T13:12:21.222344",
+      "status": "FAIL",
+      "notes": "setup.py missing critical components: Qdrant startup",
+      "bugs_found": [
+        {
+          "bug_id": "BUG-NEW-001B",
+          "severity": "MEDIUM",
+          "description": "setup.py incomplete - missing: Qdrant startup",
+          "test_id": "INST-001",
+          "impact": "Setup wizard may not handle all installation scenarios"
+        }
+      ],
+      "end_time": "2025-11-21T13:12:21.222534"
+    },
+    {
+      "test_id": "INST-002",
+      "start_time": "2025-11-21T13:12:21.224221",
+      "status": "PASS",
+      "notes": "Python parser fallback exists and functional - successfully parsed test code",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.909175"
+    },
+    {
+      "test_id": "INST-003",
+      "start_time": "2025-11-21T13:12:21.909369",
+      "status": "FAIL",
+      "notes": "SQLite store not found at src/store/sqlite_store.py",
+      "bugs_found": [
+        {
+          "bug_id": "BUG-NEW-003",
+          "severity": "LOW",
+          "description": "SQLite store file missing - backwards compatibility broken",
+          "test_id": "INST-003",
+          "impact": "Users upgrading from older versions may have issues"
+        }
+      ],
+      "end_time": "2025-11-21T13:12:21.909530"
+    },
+    {
+      "test_id": "INST-004",
+      "start_time": "2025-11-21T13:12:21.909694",
+      "status": "PASS",
+      "notes": "Manual installation files present - requirements.txt complete and README has installation instructions",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.912068"
+    },
+    {
+      "test_id": "INST-005",
+      "start_time": "2025-11-21T13:12:21.912246",
+      "status": "PASS",
+      "notes": "Qdrant accessible at http://qdrant:6333 and docker-compose.yml present",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:22.002994"
+    },
+    {
+      "test_id": "INST-006",
+      "start_time": "2025-11-21T13:12:22.003256",
+      "status": "PASS",
+      "notes": "Health check command executed successfully - checked: qdrant, parser, storage, python",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:31.537567"
+    },
+    {
+      "test_id": "INST-007",
+      "start_time": "2025-11-21T13:12:31.538549",
+      "status": "MANUAL_REQUIRED",
+      "notes": "MCP server file exists with proper structure. MANUAL TEST REQUIRED: Register with Claude Code using: claude mcp add --transport stdio --scope user claude-memory-rag -- python src/mcp_server.py",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:31.539619"
+    },
+    {
+      "test_id": "INST-008",
+      "start_time": "2025-11-21T13:12:31.539687",
+      "status": "MANUAL_REQUIRED",
+      "notes": "MANUAL TEST REQUIRED: Upgrade from v3.x to v4.0 requires testing data migration, config preservation, and no data loss. Check CHANGELOG.md for migration guide.",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:31.539710"
+    },
+    {
+      "test_id": "INST-009",
+      "start_time": "2025-11-21T13:12:31.539742",
+      "status": "MANUAL_REQUIRED",
+      "notes": "MANUAL TEST REQUIRED: Verify clean uninstall removes ~/.claude-rag/, stops Qdrant container, removes MCP registration, and leaves no orphaned files.",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:31.539755"
+    },
+    {
+      "test_id": "INST-010",
+      "start_time": "2025-11-21T13:12:31.539785",
+      "status": "PASS",
+      "notes": "No .env.example (system may use environment variables or defaults) | README contains configuration documentation",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:31.540668"
+    }
+  ],
+  "bugs_found": [
+    {
+      "id": "BUG-NEW-001B",
+      "severity": "MEDIUM",
+      "description": "setup.py incomplete - missing: Qdrant startup",
+      "impact": "Setup wizard may not handle all installation scenarios",
+      "test_id": "INST-001",
+      "found_by": "agent-install"
+    },
+    {
+      "id": "BUG-NEW-003",
+      "severity": "LOW",
+      "description": "SQLite store file missing - backwards compatibility broken",
+      "impact": "Users upgrading from older versions may have issues",
+      "test_id": "INST-003",
+      "found_by": "agent-install"
+    }
+  ],
+  "summary": {
+    "total_tests": 10,
+    "passed": 5,
+    "failed": 2,
+    "skipped": 0,
+    "manual_required": 3,
+    "errors": 0,
+    "pass_rate": 50.0,
+    "bugs_found": 2,
+    "bugs_by_severity": {
+      "CRITICAL": 0,
+      "HIGH": 0,
+      "MEDIUM": 1,
+      "LOW": 1
+    },
+    "estimated_duration_minutes": 45,
+    "critical_bugs_verified": []
+  },
+  "end_time": "2025-11-21T13:12:31.540688"
+}

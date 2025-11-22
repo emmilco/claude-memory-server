@@ -1,0 +1,154 @@
+{
+  "agent_id": "agent-quality",
+  "section": "quality",
+  "start_time": "2025-11-21T03:50:50.350113",
+  "tests": [
+    {
+      "test_id": "ERR-001",
+      "start_time": "2025-11-21T03:50:50.354895",
+      "status": "FAIL",
+      "notes": "Error message lacks actionable guidance",
+      "bugs_found": [
+        {
+          "bug_id": "BUG-NEW-ERR-DEPS",
+          "severity": "LOW",
+          "description": "Missing dependency error lacks actionable message",
+          "test_id": "ERR-001"
+        }
+      ],
+      "end_time": "2025-11-21T03:50:50.458090"
+    },
+    {
+      "test_id": "ERR-002",
+      "start_time": "2025-11-21T03:50:50.459337",
+      "status": "PASS",
+      "notes": "All 3 invalid inputs handled gracefully",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:50:50.584996"
+    },
+    {
+      "test_id": "ERR-003",
+      "start_time": "2025-11-21T03:50:50.585169",
+      "status": "FAIL",
+      "notes": "Network failures not handled gracefully",
+      "bugs_found": [
+        {
+          "bug_id": "BUG-NEW-ERR-NETWORK",
+          "severity": "HIGH",
+          "description": "Network failures cause crashes or unclear errors",
+          "test_id": "ERR-003"
+        }
+      ],
+      "end_time": "2025-11-21T03:50:50.645090"
+    },
+    {
+      "test_id": "ERR-004",
+      "start_time": "2025-11-21T03:50:50.645324",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test ERR-004 requires manual execution",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:50:50.645330"
+    },
+    {
+      "test_id": "PERF-001",
+      "start_time": "2025-11-21T03:50:50.654677",
+      "status": "FAIL",
+      "notes": "Failed to index test project: WARNING:root:Rust parsing module not available. Using Python fallback parser (10-20x slower).\nWARNING:src.core.degradation_warnings:Degradation: Rust Parser - Rust parser unavailable, using Python fal",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:51:02.061729"
+    },
+    {
+      "test_id": "PERF-002",
+      "start_time": "2025-11-21T03:51:02.062905",
+      "status": "FAIL",
+      "notes": "Indexing failed: WARNING:root:Rust parsing module not available. Using Python fallback parser (10-20x slower).\nWARNING:src.core.degradation_warnings:Degradation: Rust Parser - Rust parser unavailable, using Python fal",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:51:07.981954"
+    },
+    {
+      "test_id": "PERF-003",
+      "start_time": "2025-11-21T03:51:07.985842",
+      "status": "FAIL",
+      "notes": "Failed to setup test project: WARNING:root:Rust parsing module not available. Using Python fallback parser (10-20x slower).\nWARNING:src.core.degradation_warnings:Degradation: Rust Parser - Rust parser unavailable, using Python fal",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:51:12.681238"
+    },
+    {
+      "test_id": "UX-001",
+      "start_time": "2025-11-21T03:51:12.682193",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test UX-001 requires manual execution - see TEST-006_e2e_test_plan.md for detailed steps",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:51:12.682197"
+    },
+    {
+      "test_id": "UX-002",
+      "start_time": "2025-11-21T03:51:12.682279",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test UX-002 requires manual execution - see TEST-006_e2e_test_plan.md for detailed steps",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:51:12.682281"
+    },
+    {
+      "test_id": "UX-003",
+      "start_time": "2025-11-21T03:51:12.682462",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test UX-003 requires manual execution - see TEST-006_e2e_test_plan.md for detailed steps",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:51:12.682464"
+    },
+    {
+      "test_id": "UX-004",
+      "start_time": "2025-11-21T03:51:12.682566",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test UX-004 requires manual execution - see TEST-006_e2e_test_plan.md for detailed steps",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:51:12.682576"
+    },
+    {
+      "test_id": "UX-005",
+      "start_time": "2025-11-21T03:51:12.682660",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test UX-005 requires manual execution - see TEST-006_e2e_test_plan.md for detailed steps",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:51:12.682662"
+    }
+  ],
+  "bugs_found": [
+    {
+      "id": "BUG-NEW-ERR-DEPS",
+      "severity": "LOW",
+      "description": "Missing dependency error lacks actionable message",
+      "impact": "Unknown",
+      "test_id": "ERR-001",
+      "found_by": "agent-quality"
+    },
+    {
+      "id": "BUG-NEW-ERR-NETWORK",
+      "severity": "HIGH",
+      "description": "Network failures cause crashes or unclear errors",
+      "impact": "Unknown",
+      "test_id": "ERR-003",
+      "found_by": "agent-quality"
+    }
+  ],
+  "summary": {
+    "total_tests": 12,
+    "passed": 1,
+    "failed": 5,
+    "skipped": 0,
+    "manual_required": 6,
+    "errors": 0,
+    "pass_rate": 8.333333333333332,
+    "bugs_found": 2,
+    "bugs_by_severity": {
+      "CRITICAL": 0,
+      "HIGH": 1,
+      "MEDIUM": 0,
+      "LOW": 1
+    },
+    "estimated_duration_minutes": 120,
+    "critical_bugs_verified": []
+  },
+  "end_time": "2025-11-21T03:51:12.682677"
+}

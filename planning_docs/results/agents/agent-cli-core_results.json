@@ -1,0 +1,150 @@
+{
+  "agent_id": "agent-cli-core",
+  "section": "cli-core",
+  "start_time": "2025-11-21T03:50:50.969467",
+  "tests": [
+    {
+      "test_id": "CLI-001",
+      "start_time": "2025-11-21T03:50:51.002946",
+      "status": "FAIL",
+      "notes": "Index command failed with exit code 1: WARNING:root:Rust parsing module not available. Using Python fallback parser (10-20x slower).\nWARNING:src.core.degradation_warnings:Degradation: Rust Parser - Rust parser unavailable, using Python fallback\nTraceback (most recent call last):\n  File \"<frozen runpy>\", line 189, in _run_module_as_main\n ",
+      "bugs_found": [
+        {
+          "bug_id": "BUG-NEW-CLI-001",
+          "severity": "HIGH",
+          "description": "CLI index command failed: WARNING:root:Rust parsing module not available. Using Python fallback parser (10-20x slower).\nWARNING:src.core.degradation_warnings:Degradation: Rust Parser - Rust parser unavailable, using Python fallback\nTraceback (most recent call last):\n  File \"<frozen runpy>\", line 189, in _run_module_as_main\n ",
+          "test_id": "CLI-001",
+          "impact": "Cannot index code via CLI - primary functionality broken"
+        }
+      ],
+      "end_time": "2025-11-21T03:51:02.031652"
+    },
+    {
+      "test_id": "CLI-002",
+      "start_time": "2025-11-21T03:51:02.033647",
+      "status": "FAIL",
+      "notes": "Search command not found in CLI help output",
+      "bugs_found": [
+        {
+          "bug_id": "BUG-NEW-CLI-002",
+          "severity": "HIGH",
+          "description": "Search command missing from CLI - cannot search indexed code",
+          "test_id": "CLI-002",
+          "impact": "Major functionality gap - users cannot search their indexed code via CLI"
+        }
+      ],
+      "end_time": "2025-11-21T03:51:07.963481"
+    },
+    {
+      "test_id": "CLI-003",
+      "start_time": "2025-11-21T03:51:07.964555",
+      "status": "FAIL",
+      "notes": "List command failed: WARNING:root:Rust parsing module not available. Using Python fallback parser (10-20x slower).\nWARNING:src.core.degradation_warnings:Degradation: Rust Parser - Rust parser unavailable, using Python fal",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:51:12.669069"
+    },
+    {
+      "test_id": "CLI-004",
+      "start_time": "2025-11-21T03:51:12.670921",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Delete command requires valid memory ID - manual test",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:51:12.670948"
+    },
+    {
+      "test_id": "CLI-005",
+      "start_time": "2025-11-21T03:51:12.671004",
+      "status": "FAIL",
+      "notes": "Export command failed: WARNING:root:Rust parsing module not available. Using Python fallback parser (10-20x slower).\nWARNING:src.core.degradation_warnings:Degradation: Rust Parser - Rust parser unavailable, using Python fal",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:51:16.844053"
+    },
+    {
+      "test_id": "CLI-006",
+      "start_time": "2025-11-21T03:51:16.844914",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Import command requires valid export file - manual test after export",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:51:16.844975"
+    },
+    {
+      "test_id": "CLI-007",
+      "start_time": "2025-11-21T03:51:16.845099",
+      "status": "FAIL",
+      "notes": "Health check failed with exit code 1: WARNING:root:Rust parsing module not available. Using Python fallback parser (10-20x slower).\nWARNING:src.core.degradation_warnings:Degradation: Rust Parser - Rust parser unavailable, using Python fal",
+      "bugs_found": [
+        {
+          "bug_id": "BUG-NEW-006B",
+          "severity": "MEDIUM",
+          "description": "Health check command failed: WARNING:root:Rust parsing module not available. Using Python fallback parser (10-20x slower).\nWARNING:src.core.degradation_warnings:Degradation: Rust Parser - Rust parser unavailable, using Python fal",
+          "test_id": "INST-006",
+          "impact": "Users cannot verify system health, may have import or configuration issues"
+        }
+      ],
+      "end_time": "2025-11-21T03:51:20.870418"
+    },
+    {
+      "test_id": "CLI-008",
+      "start_time": "2025-11-21T03:51:20.871304",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Watch command runs continuously - requires manual testing",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:51:20.871331"
+    },
+    {
+      "test_id": "CLI-009",
+      "start_time": "2025-11-21T03:51:20.871405",
+      "status": "FAIL",
+      "notes": "Stats command failed: WARNING:root:Rust parsing module not available. Using Python fallback parser (10-20x slower).\nWARNING:src.core.degradation_warnings:Degradation: Rust Parser - Rust parser unavailable, using Python fal",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:51:24.153218"
+    }
+  ],
+  "bugs_found": [
+    {
+      "id": "BUG-NEW-CLI-001",
+      "severity": "HIGH",
+      "description": "CLI index command failed: WARNING:root:Rust parsing module not available. Using Python fallback parser (10-20x slower).\nWARNING:src.core.degradation_warnings:Degradation: Rust Parser - Rust parser unavailable, using Python fallback\nTraceback (most recent call last):\n  File \"<frozen runpy>\", line 189, in _run_module_as_main\n ",
+      "impact": "Cannot index code via CLI - primary functionality broken",
+      "test_id": "CLI-001",
+      "found_by": "agent-cli-core"
+    },
+    {
+      "id": "BUG-NEW-CLI-002",
+      "severity": "HIGH",
+      "description": "Search command missing from CLI - cannot search indexed code",
+      "impact": "Major functionality gap - users cannot search their indexed code via CLI",
+      "test_id": "CLI-002",
+      "found_by": "agent-cli-core"
+    },
+    {
+      "id": "BUG-NEW-006B",
+      "severity": "MEDIUM",
+      "description": "Health check command failed: WARNING:root:Rust parsing module not available. Using Python fallback parser (10-20x slower).\nWARNING:src.core.degradation_warnings:Degradation: Rust Parser - Rust parser unavailable, using Python fal",
+      "impact": "Users cannot verify system health, may have import or configuration issues",
+      "test_id": "CLI-007",
+      "found_by": "agent-cli-core"
+    }
+  ],
+  "summary": {
+    "total_tests": 9,
+    "passed": 0,
+    "failed": 6,
+    "skipped": 0,
+    "manual_required": 3,
+    "errors": 0,
+    "pass_rate": 0.0,
+    "bugs_found": 3,
+    "bugs_by_severity": {
+      "CRITICAL": 0,
+      "HIGH": 2,
+      "MEDIUM": 1,
+      "LOW": 0
+    },
+    "estimated_duration_minutes": 60,
+    "critical_bugs_verified": [
+      "BUG-015"
+    ]
+  },
+  "end_time": "2025-11-21T03:51:24.153250"
+}

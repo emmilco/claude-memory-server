@@ -1,0 +1,219 @@
+{
+  "test_sections": {
+    "installation": {
+      "agent": "agent-install",
+      "description": "Installation & Setup Tests",
+      "test_ids": [
+        "INST-001", "INST-002", "INST-003", "INST-004", "INST-005",
+        "INST-006", "INST-007", "INST-008", "INST-009", "INST-010"
+      ],
+      "estimated_duration_minutes": 45,
+      "priority": "high",
+      "dependencies": []
+    },
+    "mcp-memory": {
+      "agent": "agent-mcp-memory",
+      "description": "MCP Tools - Memory Management",
+      "test_ids": [
+        "MCP-001", "MCP-002", "MCP-003", "MCP-004", "MCP-005",
+        "MCP-006", "MCP-007", "MCP-008", "MCP-009", "MCP-010",
+        "MCP-011", "MCP-012", "MCP-013"
+      ],
+      "estimated_duration_minutes": 60,
+      "priority": "critical",
+      "dependencies": ["installation"],
+      "critical_bugs_to_verify": ["BUG-018", "BUG-016", "BUG-020"]
+    },
+    "mcp-code": {
+      "agent": "agent-mcp-code",
+      "description": "MCP Tools - Code Intelligence",
+      "test_ids": [
+        "MCP-014", "MCP-015", "MCP-016", "MCP-017", "MCP-018",
+        "MCP-019", "MCP-020", "MCP-021", "MCP-022", "MCP-023",
+        "MCP-024"
+      ],
+      "estimated_duration_minutes": 60,
+      "priority": "critical",
+      "dependencies": ["installation"],
+      "critical_bugs_to_verify": ["BUG-022", "BUG-021"]
+    },
+    "mcp-advanced": {
+      "agent": "agent-mcp-advanced",
+      "description": "MCP Tools - Multi-Project & Monitoring",
+      "test_ids": [
+        "MCP-025", "MCP-026", "MCP-027", "MCP-028",
+        "MCP-029", "MCP-030", "MCP-031",
+        "MCP-032", "MCP-033",
+        "MCP-034", "MCP-035"
+      ],
+      "estimated_duration_minutes": 45,
+      "priority": "high",
+      "dependencies": ["installation"],
+      "critical_bugs_to_verify": ["BUG-024"]
+    },
+    "cli-core": {
+      "agent": "agent-cli-core",
+      "description": "CLI Commands - Core",
+      "test_ids": [
+        "CLI-001", "CLI-002", "CLI-003", "CLI-004", "CLI-005",
+        "CLI-006", "CLI-007", "CLI-008", "CLI-009"
+      ],
+      "estimated_duration_minutes": 60,
+      "priority": "high",
+      "dependencies": ["installation"],
+      "critical_bugs_to_verify": ["BUG-015"]
+    },
+    "cli-management": {
+      "agent": "agent-cli-management",
+      "description": "CLI Commands - Memory & Project Management",
+      "test_ids": [
+        "CLI-010", "CLI-011", "CLI-012", "CLI-013", "CLI-014",
+        "CLI-015", "CLI-016", "CLI-017", "CLI-018", "CLI-019",
+        "CLI-020", "CLI-021", "CLI-022", "CLI-023", "CLI-024",
+        "CLI-025", "CLI-026", "CLI-027", "CLI-028", "CLI-029",
+        "CLI-030", "CLI-031", "CLI-032", "CLI-033", "CLI-034"
+      ],
+      "estimated_duration_minutes": 90,
+      "priority": "medium",
+      "dependencies": ["installation"]
+    },
+    "code-search": {
+      "agent": "agent-code-search",
+      "description": "Code Search & Indexing Tests",
+      "test_ids": [
+        "CODE-001", "CODE-002", "CODE-003", "CODE-004",
+        "CODE-005", "CODE-006", "CODE-007", "CODE-008",
+        "CODE-009", "CODE-010", "CODE-011", "CODE-012",
+        "CODE-013", "CODE-014"
+      ],
+      "estimated_duration_minutes": 90,
+      "priority": "critical",
+      "dependencies": ["installation"],
+      "critical_bugs_to_verify": ["BUG-022", "BUG-021"]
+    },
+    "features": {
+      "agent": "agent-features",
+      "description": "Memory, Multi-Project, Health Tests",
+      "test_ids": [
+        "MEM-001", "MEM-002", "MEM-003", "MEM-004", "MEM-005",
+        "PROJ-001", "PROJ-002", "PROJ-003",
+        "HEALTH-001", "HEALTH-002", "HEALTH-003"
+      ],
+      "estimated_duration_minutes": 60,
+      "priority": "high",
+      "dependencies": ["mcp-memory", "mcp-code"]
+    },
+    "ui-config": {
+      "agent": "agent-ui-config",
+      "description": "Dashboard, Configuration, Documentation, Security Tests",
+      "test_ids": [
+        "DASH-001", "DASH-002", "DASH-003", "DASH-004", "DASH-005",
+        "TUI-001",
+        "CFG-001", "CFG-002", "CFG-003", "CFG-004", "CFG-005", "CFG-006",
+        "DOC-001", "DOC-002",
+        "GIT-001", "GIT-002",
+        "SEC-001", "SEC-002", "SEC-003", "SEC-004"
+      ],
+      "estimated_duration_minutes": 90,
+      "priority": "medium",
+      "dependencies": ["installation"]
+    },
+    "quality": {
+      "agent": "agent-quality",
+      "description": "Error Handling, Performance, UX Tests",
+      "test_ids": [
+        "ERR-001", "ERR-002", "ERR-003", "ERR-004",
+        "PERF-001", "PERF-002", "PERF-003",
+        "UX-001", "UX-002", "UX-003", "UX-004", "UX-005"
+      ],
+      "estimated_duration_minutes": 120,
+      "priority": "high",
+      "dependencies": ["mcp-memory", "mcp-code", "cli-core"]
+    }
+  },
+  "parallel_execution_plan": {
+    "wave_1": {
+      "description": "Foundation - Installation and basic setup",
+      "agents": ["agent-install"],
+      "blocking": true,
+      "estimated_duration_minutes": 45
+    },
+    "wave_2": {
+      "description": "Core functionality - MCP tools and CLI commands",
+      "agents": [
+        "agent-mcp-memory",
+        "agent-mcp-code",
+        "agent-mcp-advanced",
+        "agent-cli-core",
+        "agent-cli-management",
+        "agent-code-search"
+      ],
+      "blocking": false,
+      "estimated_duration_minutes": 90
+    },
+    "wave_3": {
+      "description": "Advanced features and quality validation",
+      "agents": [
+        "agent-features",
+        "agent-ui-config",
+        "agent-quality"
+      ],
+      "blocking": false,
+      "estimated_duration_minutes": 120
+    }
+  },
+  "bug_tracking": {
+    "critical_bugs": [
+      {
+        "id": "BUG-018",
+        "description": "Memory Retrieval Not Finding Recently Stored Memories",
+        "test_sections": ["mcp-memory"],
+        "verification_tests": ["MCP-004"]
+      },
+      {
+        "id": "BUG-022",
+        "description": "Code Indexer Extracts Zero Semantic Units",
+        "test_sections": ["mcp-code", "code-search"],
+        "verification_tests": ["MCP-019", "CODE-001", "CODE-003"]
+      },
+      {
+        "id": "BUG-015",
+        "description": "Health Check False Negative for Qdrant",
+        "test_sections": ["cli-core"],
+        "verification_tests": ["CLI-006", "INST-006"]
+      },
+      {
+        "id": "BUG-016",
+        "description": "list_memories Returns Incorrect Total Count",
+        "test_sections": ["mcp-memory"],
+        "verification_tests": ["MCP-007"]
+      },
+      {
+        "id": "BUG-020",
+        "description": "Inconsistent Return Value Structures",
+        "test_sections": ["mcp-memory", "quality"],
+        "verification_tests": ["MCP-013", "UX-004"]
+      },
+      {
+        "id": "BUG-021",
+        "description": "PHP Parser Initialization Warning",
+        "test_sections": ["mcp-code", "code-search"],
+        "verification_tests": ["CODE-003"]
+      },
+      {
+        "id": "BUG-024",
+        "description": "Quality Score Artificially Low",
+        "test_sections": ["mcp-advanced"],
+        "verification_tests": ["MCP-030", "HEALTH-001"]
+      }
+    ]
+  },
+  "agent_config": {
+    "max_parallel_agents": 10,
+    "timeout_per_test_minutes": 10,
+    "retry_failed_tests": true,
+    "max_retries": 2,
+    "collect_logs": true,
+    "screenshot_ui_tests": true
+  }
+}

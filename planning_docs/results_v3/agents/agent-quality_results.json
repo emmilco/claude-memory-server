@@ -1,0 +1,184 @@
+{
+  "agent_id": "agent-quality",
+  "section": "quality",
+  "start_time": "2025-11-21T12:42:27.355756",
+  "tests": [
+    {
+      "test_id": "ERR-001",
+      "start_time": "2025-11-21T12:42:27.378317",
+      "status": "FAIL",
+      "notes": "Error message lacks actionable guidance",
+      "bugs_found": [
+        {
+          "bug_id": "BUG-NEW-ERR-DEPS",
+          "severity": "LOW",
+          "description": "Missing dependency error lacks actionable message",
+          "test_id": "ERR-001"
+        }
+      ],
+      "end_time": "2025-11-21T12:42:27.394915"
+    },
+    {
+      "test_id": "ERR-002",
+      "start_time": "2025-11-21T12:42:27.395664",
+      "status": "PASS",
+      "notes": "All 3 invalid inputs handled gracefully",
+      "bugs_found": [],
+      "end_time": "2025-11-21T12:42:27.481388"
+    },
+    {
+      "test_id": "ERR-003",
+      "start_time": "2025-11-21T12:42:27.481535",
+      "status": "FAIL",
+      "notes": "Network failures not handled gracefully",
+      "bugs_found": [
+        {
+          "bug_id": "BUG-NEW-ERR-NETWORK",
+          "severity": "HIGH",
+          "description": "Network failures cause crashes or unclear errors",
+          "test_id": "ERR-003"
+        }
+      ],
+      "end_time": "2025-11-21T12:42:27.489481"
+    },
+    {
+      "test_id": "ERR-004",
+      "start_time": "2025-11-21T12:42:27.489940",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test ERR-004 requires manual execution",
+      "bugs_found": [],
+      "end_time": "2025-11-21T12:42:27.489947"
+    },
+    {
+      "test_id": "PERF-001",
+      "start_time": "2025-11-21T12:42:27.491237",
+      "status": "FAIL",
+      "notes": "Search latency too slow:\n  Semantic: 1961.9ms (target: 7-13ms, 196.2x slower)\n  Hybrid: 1905.5ms (target: 10-18ms, 136.1x slower)",
+      "bugs_found": [
+        {
+          "bug_id": "BUG-NEW-PERF-LATENCY",
+          "severity": "MEDIUM",
+          "description": "Search latency exceeds targets (semantic: 1961.9ms, hybrid: 1905.5ms)",
+          "test_id": "PERF-001"
+        }
+      ],
+      "end_time": "2025-11-21T12:43:19.095718"
+    },
+    {
+      "test_id": "PERF-002",
+      "start_time": "2025-11-21T12:43:19.095994",
+      "status": "FAIL",
+      "notes": "Indexing speed too slow:\n  5.0 files/sec (target: 10-20)\n  100 files took 19.9s",
+      "bugs_found": [
+        {
+          "bug_id": "BUG-NEW-PERF-INDEXING",
+          "severity": "MEDIUM",
+          "description": "Indexing speed 5.0 files/sec is below target 10-20",
+          "test_id": "PERF-002"
+        }
+      ],
+      "end_time": "2025-11-21T12:43:39.021617"
+    },
+    {
+      "test_id": "PERF-003",
+      "start_time": "2025-11-21T12:43:39.021726",
+      "status": "PASS",
+      "notes": "Concurrent load test passed:\n  5 concurrent threads\n  10 searches per thread\n  50 total operations in 34.8s\n  Throughput: 1.4 ops/sec\n  Avg latency: 3459.6ms",
+      "bugs_found": [],
+      "end_time": "2025-11-21T12:44:17.680411"
+    },
+    {
+      "test_id": "UX-001",
+      "start_time": "2025-11-21T12:44:17.681204",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test UX-001 requires manual execution - see TEST-006_e2e_test_plan.md for detailed steps",
+      "bugs_found": [],
+      "end_time": "2025-11-21T12:44:17.681252"
+    },
+    {
+      "test_id": "UX-002",
+      "start_time": "2025-11-21T12:44:17.681342",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test UX-002 requires manual execution - see TEST-006_e2e_test_plan.md for detailed steps",
+      "bugs_found": [],
+      "end_time": "2025-11-21T12:44:17.681344"
+    },
+    {
+      "test_id": "UX-003",
+      "start_time": "2025-11-21T12:44:17.681455",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test UX-003 requires manual execution - see TEST-006_e2e_test_plan.md for detailed steps",
+      "bugs_found": [],
+      "end_time": "2025-11-21T12:44:17.681457"
+    },
+    {
+      "test_id": "UX-004",
+      "start_time": "2025-11-21T12:44:17.681500",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test UX-004 requires manual execution - see TEST-006_e2e_test_plan.md for detailed steps",
+      "bugs_found": [],
+      "end_time": "2025-11-21T12:44:17.681500"
+    },
+    {
+      "test_id": "UX-005",
+      "start_time": "2025-11-21T12:44:17.681698",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test UX-005 requires manual execution - see TEST-006_e2e_test_plan.md for detailed steps",
+      "bugs_found": [],
+      "end_time": "2025-11-21T12:44:17.681700"
+    }
+  ],
+  "bugs_found": [
+    {
+      "id": "BUG-NEW-ERR-DEPS",
+      "severity": "LOW",
+      "description": "Missing dependency error lacks actionable message",
+      "impact": "Unknown",
+      "test_id": "ERR-001",
+      "found_by": "agent-quality"
+    },
+    {
+      "id": "BUG-NEW-ERR-NETWORK",
+      "severity": "HIGH",
+      "description": "Network failures cause crashes or unclear errors",
+      "impact": "Unknown",
+      "test_id": "ERR-003",
+      "found_by": "agent-quality"
+    },
+    {
+      "id": "BUG-NEW-PERF-LATENCY",
+      "severity": "MEDIUM",
+      "description": "Search latency exceeds targets (semantic: 1961.9ms, hybrid: 1905.5ms)",
+      "impact": "Unknown",
+      "test_id": "PERF-001",
+      "found_by": "agent-quality"
+    },
+    {
+      "id": "BUG-NEW-PERF-INDEXING",
+      "severity": "MEDIUM",
+      "description": "Indexing speed 5.0 files/sec is below target 10-20",
+      "impact": "Unknown",
+      "test_id": "PERF-002",
+      "found_by": "agent-quality"
+    }
+  ],
+  "summary": {
+    "total_tests": 12,
+    "passed": 2,
+    "failed": 4,
+    "skipped": 0,
+    "manual_required": 6,
+    "errors": 0,
+    "pass_rate": 16.666666666666664,
+    "bugs_found": 4,
+    "bugs_by_severity": {
+      "CRITICAL": 0,
+      "HIGH": 1,
+      "MEDIUM": 2,
+      "LOW": 1
+    },
+    "estimated_duration_minutes": 120,
+    "critical_bugs_verified": []
+  },
+  "end_time": "2025-11-21T12:44:17.681702"
+}

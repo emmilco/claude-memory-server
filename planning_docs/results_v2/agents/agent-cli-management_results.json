@@ -1,0 +1,227 @@
+{
+  "agent_id": "agent-cli-management",
+  "section": "cli-management",
+  "start_time": "2025-11-21T11:59:05.763800",
+  "tests": [
+    {
+      "test_id": "CLI-010",
+      "start_time": "2025-11-21T11:59:05.781032",
+      "status": "FAIL",
+      "notes": "Backup command failed: WARNING:root:Rust parsing module not available. Using Python fallback parser (10-20x slower).\nWARNING:src.core.degradation_warnings:Degradation: Rust Parser - Rust parser unavailable, using Python fal",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:14.846417"
+    },
+    {
+      "test_id": "CLI-011",
+      "start_time": "2025-11-21T11:59:14.847460",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Restore command requires valid backup - manual test after backup",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:14.847490"
+    },
+    {
+      "test_id": "CLI-012",
+      "start_time": "2025-11-21T11:59:14.847592",
+      "status": "FAIL",
+      "notes": "Optimize command failed: WARNING:root:Rust parsing module not available. Using Python fallback parser (10-20x slower).\nWARNING:src.core.degradation_warnings:Degradation: Rust Parser - Rust parser unavailable, using Python fal",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:19.382901"
+    },
+    {
+      "test_id": "CLI-013",
+      "start_time": "2025-11-21T11:59:19.388097",
+      "status": "FAIL",
+      "notes": "Verify command failed: WARNING:root:Rust parsing module not available. Using Python fallback parser (10-20x slower).\nWARNING:src.core.degradation_warnings:Degradation: Rust Parser - Rust parser unavailable, using Python fal",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:23.867153"
+    },
+    {
+      "test_id": "CLI-014",
+      "start_time": "2025-11-21T11:59:23.869197",
+      "status": "PASS",
+      "notes": "Help displayed correctly",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:27.858418"
+    },
+    {
+      "test_id": "CLI-015",
+      "start_time": "2025-11-21T11:59:27.858832",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CLI-015 requires manual CLI testing",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:27.858849"
+    },
+    {
+      "test_id": "CLI-016",
+      "start_time": "2025-11-21T11:59:27.858909",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CLI-016 requires manual CLI testing",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:27.858911"
+    },
+    {
+      "test_id": "CLI-017",
+      "start_time": "2025-11-21T11:59:27.858975",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CLI-017 requires manual CLI testing",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:27.858980"
+    },
+    {
+      "test_id": "CLI-018",
+      "start_time": "2025-11-21T11:59:27.859023",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CLI-018 requires manual CLI testing",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:27.859025"
+    },
+    {
+      "test_id": "CLI-019",
+      "start_time": "2025-11-21T11:59:27.859092",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CLI-019 requires manual CLI testing",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:27.859094"
+    },
+    {
+      "test_id": "CLI-020",
+      "start_time": "2025-11-21T11:59:27.859142",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CLI-020 requires manual CLI testing",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:27.859144"
+    },
+    {
+      "test_id": "CLI-021",
+      "start_time": "2025-11-21T11:59:27.859184",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CLI-021 requires manual CLI testing",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:27.859186"
+    },
+    {
+      "test_id": "CLI-022",
+      "start_time": "2025-11-21T11:59:27.859223",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CLI-022 requires manual CLI testing",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:27.859238"
+    },
+    {
+      "test_id": "CLI-023",
+      "start_time": "2025-11-21T11:59:27.859299",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CLI-023 requires manual CLI testing",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:27.859301"
+    },
+    {
+      "test_id": "CLI-024",
+      "start_time": "2025-11-21T11:59:27.859326",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CLI-024 requires manual CLI testing",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:27.859327"
+    },
+    {
+      "test_id": "CLI-025",
+      "start_time": "2025-11-21T11:59:27.859347",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CLI-025 requires manual CLI testing",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:27.859348"
+    },
+    {
+      "test_id": "CLI-026",
+      "start_time": "2025-11-21T11:59:27.859368",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CLI-026 requires manual CLI testing",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:27.859369"
+    },
+    {
+      "test_id": "CLI-027",
+      "start_time": "2025-11-21T11:59:27.859388",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CLI-027 requires manual CLI testing",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:27.859389"
+    },
+    {
+      "test_id": "CLI-028",
+      "start_time": "2025-11-21T11:59:27.859690",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CLI-028 requires manual CLI testing",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:27.859701"
+    },
+    {
+      "test_id": "CLI-029",
+      "start_time": "2025-11-21T11:59:27.859828",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CLI-029 requires manual CLI testing",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:27.859833"
+    },
+    {
+      "test_id": "CLI-030",
+      "start_time": "2025-11-21T11:59:27.859923",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CLI-030 requires manual CLI testing",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:27.859927"
+    },
+    {
+      "test_id": "CLI-031",
+      "start_time": "2025-11-21T11:59:27.859987",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CLI-031 requires manual CLI testing",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:27.860153"
+    },
+    {
+      "test_id": "CLI-032",
+      "start_time": "2025-11-21T11:59:27.860360",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CLI-032 requires manual CLI testing",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:27.860366"
+    },
+    {
+      "test_id": "CLI-033",
+      "start_time": "2025-11-21T11:59:27.860476",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CLI-033 requires manual CLI testing",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:27.860481"
+    },
+    {
+      "test_id": "CLI-034",
+      "start_time": "2025-11-21T11:59:27.860545",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CLI-034 requires manual CLI testing",
+      "bugs_found": [],
+      "end_time": "2025-11-21T11:59:27.860638"
+    }
+  ],
+  "bugs_found": [],
+  "summary": {
+    "total_tests": 25,
+    "passed": 1,
+    "failed": 3,
+    "skipped": 0,
+    "manual_required": 21,
+    "errors": 0,
+    "pass_rate": 4.0,
+    "bugs_found": 0,
+    "bugs_by_severity": {
+      "CRITICAL": 0,
+      "HIGH": 0,
+      "MEDIUM": 0,
+      "LOW": 0
+    },
+    "estimated_duration_minutes": 90,
+    "critical_bugs_verified": []
+  },
+  "end_time": "2025-11-21T11:59:27.860647"
+}

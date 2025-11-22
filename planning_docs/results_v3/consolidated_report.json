@@ -1,0 +1,134 @@
+{
+  "test_session": {
+    "date": "2025-11-21T07:46:15.306696",
+    "version": "4.0",
+    "total_agents": 10
+  },
+  "summary": {
+    "total_tests": 136,
+    "tests_passed": 14,
+    "tests_failed": 13,
+    "tests_skipped": 0,
+    "tests_manual_required": 109,
+    "tests_error": 0,
+    "automated_tests": 27,
+    "pass_rate": 51.85185185185185,
+    "overall_pass_rate": 10.294117647058822,
+    "total_bugs_found": 7,
+    "critical_bugs": 0,
+    "high_bugs": 2,
+    "medium_bugs": 3,
+    "low_bugs": 2
+  },
+  "agent_results": [],
+  "bugs": [
+    {
+      "id": "BUG-NEW-001B",
+      "severity": "MEDIUM",
+      "description": "setup.py incomplete - missing: Qdrant startup",
+      "impact": "Setup wizard may not handle all installation scenarios",
+      "test_id": "INST-001",
+      "found_by_agents": [
+        "agent-install"
+      ],
+      "found_in_tests": [
+        "INST-001"
+      ]
+    },
+    {
+      "id": "BUG-NEW-003",
+      "severity": "LOW",
+      "description": "SQLite store file missing - backwards compatibility broken",
+      "impact": "Users upgrading from older versions may have issues",
+      "test_id": "INST-003",
+      "found_by_agents": [
+        "agent-install"
+      ],
+      "found_in_tests": [
+        "INST-003"
+      ]
+    },
+    {
+      "id": "BUG-NEW-CLI-001",
+      "severity": "HIGH",
+      "description": "CLI index command failed: WARNING:root:Rust parsing module not available. Using Python fallback parser (10-20x slower).\nWARNING:src.core.degradation_warnings:Degradation: Rust Parser - Rust parser unavailable, using Python fallback\nERROR:src.cli.index_command:Indexing failed: [E001] Failed to initialize Qdrant store: [E001]",
+      "impact": "Cannot index code via CLI - primary functionality broken",
+      "test_id": "CLI-001",
+      "found_by_agents": [
+        "agent-cli-core"
+      ],
+      "found_in_tests": [
+        "CLI-001"
+      ]
+    },
+    {
+      "id": "BUG-NEW-ERR-DEPS",
+      "severity": "LOW",
+      "description": "Missing dependency error lacks actionable message",
+      "impact": "Unknown",
+      "test_id": "ERR-001",
+      "found_by_agents": [
+        "agent-quality"
+      ],
+      "found_in_tests": [
+        "ERR-001"
+      ]
+    },
+    {
+      "id": "BUG-NEW-ERR-NETWORK",
+      "severity": "HIGH",
+      "description": "Network failures cause crashes or unclear errors",
+      "impact": "Unknown",
+      "test_id": "ERR-003",
+      "found_by_agents": [
+        "agent-quality"
+      ],
+      "found_in_tests": [
+        "ERR-003"
+      ]
+    },
+    {
+      "id": "BUG-NEW-PERF-LATENCY",
+      "severity": "MEDIUM",
+      "description": "Search latency exceeds targets (semantic: 1961.9ms, hybrid: 1905.5ms)",
+      "impact": "Unknown",
+      "test_id": "PERF-001",
+      "found_by_agents": [
+        "agent-quality"
+      ],
+      "found_in_tests": [
+        "PERF-001"
+      ]
+    },
+    {
+      "id": "BUG-NEW-PERF-INDEXING",
+      "severity": "MEDIUM",
+      "description": "Indexing speed 5.0 files/sec is below target 10-20",
+      "impact": "Unknown",
+      "test_id": "PERF-002",
+      "found_by_agents": [
+        "agent-quality"
+      ],
+      "found_in_tests": [
+        "PERF-002"
+      ]
+    }
+  ],
+  "production_readiness": {
+    "ready": false,
+    "readiness_score": 73.0,
+    "criteria": {
+      "zero_critical_bugs": true,
+      "max_3_high_bugs": true,
+      "pass_rate_above_95": false,
+      "zero_test_failures": false,
+      "zero_test_errors": true,
+      "sufficient_automated_coverage": true
+    },
+    "recommendation": "\u274c NOT READY - 13 test failure(s) must be resolved before release",
+    "blockers": [
+      "Pass rate below 95%",
+      "13 test failure(s) must be resolved"
+    ]
+  }
+}

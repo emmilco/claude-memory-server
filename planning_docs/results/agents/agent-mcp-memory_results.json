@@ -1,0 +1,135 @@
+{
+  "agent_id": "agent-mcp-memory",
+  "section": "mcp-memory",
+  "start_time": "2025-11-21T03:50:51.030957",
+  "tests": [
+    {
+      "test_id": "MCP-001",
+      "start_time": "2025-11-21T03:50:51.069842",
+      "status": "MANUAL_REQUIRED",
+      "notes": "MCP tool testing requires MCP client - use Claude Desktop or MCP test client",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:50:51.069858"
+    },
+    {
+      "test_id": "MCP-002",
+      "start_time": "2025-11-21T03:50:51.069968",
+      "status": "MANUAL_REQUIRED",
+      "notes": "MCP tool testing requires MCP client",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:50:51.069973"
+    },
+    {
+      "test_id": "MCP-003",
+      "start_time": "2025-11-21T03:50:51.070210",
+      "status": "MANUAL_REQUIRED",
+      "notes": "MCP tool testing requires MCP client",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:50:51.070216"
+    },
+    {
+      "test_id": "MCP-004",
+      "start_time": "2025-11-21T03:50:51.070260",
+      "status": "MANUAL_REQUIRED",
+      "notes": "MCP tool testing requires MCP client",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:50:51.070262"
+    },
+    {
+      "test_id": "MCP-005",
+      "start_time": "2025-11-21T03:50:51.070404",
+      "status": "MANUAL_REQUIRED",
+      "notes": "MCP tool testing requires MCP client",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:50:51.070414"
+    },
+    {
+      "test_id": "MCP-006",
+      "start_time": "2025-11-21T03:50:51.070508",
+      "status": "MANUAL_REQUIRED",
+      "notes": "MCP tool testing requires MCP client",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:50:51.070512"
+    },
+    {
+      "test_id": "MCP-007",
+      "start_time": "2025-11-21T03:50:51.070574",
+      "status": "MANUAL_REQUIRED",
+      "notes": "MCP tool testing requires MCP client",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:50:51.070578"
+    },
+    {
+      "test_id": "MCP-008",
+      "start_time": "2025-11-21T03:50:51.070669",
+      "status": "MANUAL_REQUIRED",
+      "notes": "MCP tool testing requires MCP client",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:50:51.070676"
+    },
+    {
+      "test_id": "MCP-009",
+      "start_time": "2025-11-21T03:50:51.070731",
+      "status": "MANUAL_REQUIRED",
+      "notes": "MCP tool testing requires MCP client",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:50:51.070735"
+    },
+    {
+      "test_id": "MCP-010",
+      "start_time": "2025-11-21T03:50:51.070791",
+      "status": "MANUAL_REQUIRED",
+      "notes": "MCP tool testing requires MCP client",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:50:51.070797"
+    },
+    {
+      "test_id": "MCP-011",
+      "start_time": "2025-11-21T03:50:51.070894",
+      "status": "MANUAL_REQUIRED",
+      "notes": "MCP tool testing requires MCP client",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:50:51.070900"
+    },
+    {
+      "test_id": "MCP-012",
+      "start_time": "2025-11-21T03:50:51.071245",
+      "status": "MANUAL_REQUIRED",
+      "notes": "MCP tool testing requires MCP client",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:50:51.071255"
+    },
+    {
+      "test_id": "MCP-013",
+      "start_time": "2025-11-21T03:50:51.071613",
+      "status": "MANUAL_REQUIRED",
+      "notes": "MCP tool testing requires MCP client",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:50:51.071619"
+    }
+  ],
+  "bugs_found": [],
+  "summary": {
+    "total_tests": 13,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "manual_required": 13,
+    "errors": 0,
+    "pass_rate": 0.0,
+    "bugs_found": 0,
+    "bugs_by_severity": {
+      "CRITICAL": 0,
+      "HIGH": 0,
+      "MEDIUM": 0,
+      "LOW": 0
+    },
+    "estimated_duration_minutes": 60,
+    "critical_bugs_verified": [
+      "BUG-018",
+      "BUG-016",
+      "BUG-020"
+    ]
+  },
+  "end_time": "2025-11-21T03:50:51.071621"
+}

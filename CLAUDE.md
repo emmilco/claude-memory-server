@@ -636,3 +636,4 @@ After completing any session, update the following:
 - Include ID references where applicable
 
 Remember: This documentation system is your future self's context. Keep it accurate, organized, and useful.
+- Quadrant doesn't have a dedicated health endpoint

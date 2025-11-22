@@ -95,12 +95,13 @@ A pre-commit hook enforces CHANGELOG updates:
   - Resolves 3 fixture errors in test_tagging_system.py
   - File: tests/integration/test_tagging_system.py
 
-- **TEST-006: Add Retrieval Gate Stub for Test Compatibility** (2025-11-22)
-  - Added `RetrievalGateStub` class to satisfy test expectations after BUG-018 removal
-  - Added stub config parameters: `enable_retrieval_gate` and `retrieval_gate_threshold`
-  - Stub provides threshold property without implementing actual gating logic
-  - Resolves 3 AttributeError failures in retrieval gate initialization tests
-  - Files: src/core/server.py, src/config.py
+- **TEST-006: Remove Retrieval Gate Technical Debt** (2025-11-22)
+  - Removed all retrieval gate stub code and tests (feature removed in BUG-018)
+  - Deleted `RetrievalGateStub` class from src/core/server.py
+  - Removed stub config parameters: `enable_retrieval_gate`, `retrieval_gate_threshold`
+  - Deleted tests/integration/test_retrieval_gate.py (17 tests for non-existent feature)
+  - Prevents confusion for future engineers about removed feature
+  - Files: src/core/server.py, src/config.py, tests/integration/test_retrieval_gate.py (deleted)
 
 - **TEST-006: Fix Metadata Merge Double-Nesting Bug** (2025-11-22)
   - Fixed metadata flattening in `update()` method to prevent double-nesting

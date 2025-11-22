@@ -1,0 +1,187 @@
+{
+  "agent_id": "agent-ui-config",
+  "section": "ui-config",
+  "start_time": "2025-11-21T13:12:21.199883",
+  "tests": [
+    {
+      "test_id": "DASH-001",
+      "start_time": "2025-11-21T13:12:21.220366",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test DASH-001 requires manual execution - see TEST-006_e2e_test_plan.md for detailed steps",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.220370"
+    },
+    {
+      "test_id": "DASH-002",
+      "start_time": "2025-11-21T13:12:21.220397",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test DASH-002 requires manual execution - see TEST-006_e2e_test_plan.md for detailed steps",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.220398"
+    },
+    {
+      "test_id": "DASH-003",
+      "start_time": "2025-11-21T13:12:21.220511",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test DASH-003 requires manual execution - see TEST-006_e2e_test_plan.md for detailed steps",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.220513"
+    },
+    {
+      "test_id": "DASH-004",
+      "start_time": "2025-11-21T13:12:21.220540",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test DASH-004 requires manual execution - see TEST-006_e2e_test_plan.md for detailed steps",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.220541"
+    },
+    {
+      "test_id": "DASH-005",
+      "start_time": "2025-11-21T13:12:21.220563",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test DASH-005 requires manual execution - see TEST-006_e2e_test_plan.md for detailed steps",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.220564"
+    },
+    {
+      "test_id": "TUI-001",
+      "start_time": "2025-11-21T13:12:21.220582",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test TUI-001 requires manual execution - see TEST-006_e2e_test_plan.md for detailed steps",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.220583"
+    },
+    {
+      "test_id": "CFG-001",
+      "start_time": "2025-11-21T13:12:21.220602",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CFG-001 requires manual execution - see TEST-006_e2e_test_plan.md for detailed steps",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.220602"
+    },
+    {
+      "test_id": "CFG-002",
+      "start_time": "2025-11-21T13:12:21.220624",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CFG-002 requires manual execution - see TEST-006_e2e_test_plan.md for detailed steps",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.220625"
+    },
+    {
+      "test_id": "CFG-003",
+      "start_time": "2025-11-21T13:12:21.220644",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CFG-003 requires manual execution - see TEST-006_e2e_test_plan.md for detailed steps",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.220644"
+    },
+    {
+      "test_id": "CFG-004",
+      "start_time": "2025-11-21T13:12:21.220663",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CFG-004 requires manual execution - see TEST-006_e2e_test_plan.md for detailed steps",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.220663"
+    },
+    {
+      "test_id": "CFG-005",
+      "start_time": "2025-11-21T13:12:21.220681",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CFG-005 requires manual execution - see TEST-006_e2e_test_plan.md for detailed steps",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.220681"
+    },
+    {
+      "test_id": "CFG-006",
+      "start_time": "2025-11-21T13:12:21.221722",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test CFG-006 requires manual execution - see TEST-006_e2e_test_plan.md for detailed steps",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.221726"
+    },
+    {
+      "test_id": "DOC-001",
+      "start_time": "2025-11-21T13:12:21.221805",
+      "status": "PASS",
+      "notes": "README exists - manual review required for accuracy",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.221863"
+    },
+    {
+      "test_id": "DOC-002",
+      "start_time": "2025-11-21T13:12:21.221988",
+      "status": "PASS",
+      "notes": "API documentation exists",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.222040"
+    },
+    {
+      "test_id": "GIT-001",
+      "start_time": "2025-11-21T13:12:21.222289",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test GIT-001 requires manual execution - see TEST-006_e2e_test_plan.md for detailed steps",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.222290"
+    },
+    {
+      "test_id": "GIT-002",
+      "start_time": "2025-11-21T13:12:21.222617",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test GIT-002 requires manual execution - see TEST-006_e2e_test_plan.md for detailed steps",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.222618"
+    },
+    {
+      "test_id": "SEC-001",
+      "start_time": "2025-11-21T13:12:21.222817",
+      "status": "PASS",
+      "notes": "All 6 path injection attempts blocked",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.371339"
+    },
+    {
+      "test_id": "SEC-002",
+      "start_time": "2025-11-21T13:12:21.372232",
+      "status": "PASS",
+      "notes": "All 6 command injection attempts blocked",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.466362"
+    },
+    {
+      "test_id": "SEC-003",
+      "start_time": "2025-11-21T13:12:21.466481",
+      "status": "PASS",
+      "notes": "All 6 input validation tests passed",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.551907"
+    },
+    {
+      "test_id": "SEC-004",
+      "start_time": "2025-11-21T13:12:21.552038",
+      "status": "MANUAL_REQUIRED",
+      "notes": "Test SEC-004 requires manual execution",
+      "bugs_found": [],
+      "end_time": "2025-11-21T13:12:21.552039"
+    }
+  ],
+  "bugs_found": [],
+  "summary": {
+    "total_tests": 20,
+    "passed": 5,
+    "failed": 0,
+    "skipped": 0,
+    "manual_required": 15,
+    "errors": 0,
+    "pass_rate": 25.0,
+    "bugs_found": 0,
+    "bugs_by_severity": {
+      "CRITICAL": 0,
+      "HIGH": 0,
+      "MEDIUM": 0,
+      "LOW": 0
+    },
+    "estimated_duration_minutes": 90,
+    "critical_bugs_verified": []
+  },
+  "end_time": "2025-11-21T13:12:21.552041"
+}

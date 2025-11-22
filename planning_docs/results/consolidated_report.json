@@ -1,0 +1,151 @@
+{
+  "test_session": {
+    "date": "2025-11-20T22:51:42.321389",
+    "version": "4.0",
+    "total_agents": 10
+  },
+  "summary": {
+    "total_tests": 136,
+    "tests_passed": 8,
+    "tests_failed": 19,
+    "tests_skipped": 0,
+    "tests_manual_required": 108,
+    "tests_error": 1,
+    "automated_tests": 28,
+    "pass_rate": 28.57142857142857,
+    "overall_pass_rate": 5.88235294117647,
+    "total_bugs_found": 8,
+    "critical_bugs": 0,
+    "high_bugs": 4,
+    "medium_bugs": 2,
+    "low_bugs": 2
+  },
+  "agent_results": [],
+  "bugs": [
+    {
+      "id": "BUG-NEW-001B",
+      "severity": "MEDIUM",
+      "description": "setup.py incomplete - missing: Qdrant startup",
+      "impact": "Setup wizard may not handle all installation scenarios",
+      "test_id": "INST-001",
+      "found_by_agents": [
+        "agent-install"
+      ],
+      "found_in_tests": [
+        "INST-001"
+      ]
+    },
+    {
+      "id": "BUG-NEW-003",
+      "severity": "LOW",
+      "description": "SQLite store file missing - backwards compatibility broken",
+      "impact": "Users upgrading from older versions may have issues",
+      "test_id": "INST-003",
+      "found_by_agents": [
+        "agent-install"
+      ],
+      "found_in_tests": [
+        "INST-003"
+      ]
+    },
+    {
+      "id": "BUG-NEW-004B",
+      "severity": "HIGH",
+      "description": "requirements.txt incomplete - missing: fastapi",
+      "impact": "Manual installation will fail due to missing dependencies",
+      "test_id": "INST-004",
+      "found_by_agents": [
+        "agent-install"
+      ],
+      "found_in_tests": [
+        "INST-004"
+      ]
+    },
+    {
+      "id": "BUG-NEW-006B",
+      "severity": "MEDIUM",
+      "description": "Health check command failed: WARNING:root:Rust parsing module not available. Using Python fallback parser (10-20x slower).\nWARNING:src.core.degradation_warnings:Degradation: Rust Parser - Rust parser unavailable, using Python fal",
+      "impact": "Users cannot verify system health, may have import or configuration issues",
+      "test_id": "INST-006",
+      "found_by_agents": [
+        "agent-install",
+        "agent-cli-core"
+      ],
+      "found_in_tests": [
+        "INST-006",
+        "CLI-007"
+      ]
+    },
+    {
+      "id": "BUG-NEW-CLI-001",
+      "severity": "HIGH",
+      "description": "CLI index command failed: WARNING:root:Rust parsing module not available. Using Python fallback parser (10-20x slower).\nWARNING:src.core.degradation_warnings:Degradation: Rust Parser - Rust parser unavailable, using Python fallback\nTraceback (most recent call last):\n  File \"<frozen runpy>\", line 189, in _run_module_as_main",
+      "impact": "Cannot index code via CLI - primary functionality broken",
+      "test_id": "CLI-001",
+      "found_by_agents": [
+        "agent-cli-core"
+      ],
+      "found_in_tests": [
+        "CLI-001"
+      ]
+    },
+    {
+      "id": "BUG-NEW-CLI-002",
+      "severity": "HIGH",
+      "description": "Search command missing from CLI - cannot search indexed code",
+      "impact": "Major functionality gap - users cannot search their indexed code via CLI",
+      "test_id": "CLI-002",
+      "found_by_agents": [
+        "agent-cli-core"
+      ],
+      "found_in_tests": [
+        "CLI-002"
+      ]
+    },
+    {
+      "id": "BUG-NEW-ERR-DEPS",
+      "severity": "LOW",
+      "description": "Missing dependency error lacks actionable message",
+      "impact": "Unknown",
+      "test_id": "ERR-001",
+      "found_by_agents": [
+        "agent-quality"
+      ],
+      "found_in_tests": [
+        "ERR-001"
+      ]
+    },
+    {
+      "id": "BUG-NEW-ERR-NETWORK",
+      "severity": "HIGH",
+      "description": "Network failures cause crashes or unclear errors",
+      "impact": "Unknown",
+      "test_id": "ERR-003",
+      "found_by_agents": [
+        "agent-quality"
+      ],
+      "found_in_tests": [
+        "ERR-003"
+      ]
+    }
+  ],
+  "production_readiness": {
+    "ready": false,
+    "readiness_score": 59.1,
+    "criteria": {
+      "zero_critical_bugs": true,
+      "max_3_high_bugs": false,
+      "pass_rate_above_95": false,
+      "zero_test_failures": false,
+      "zero_test_errors": false,
+      "sufficient_automated_coverage": true
+    },
+    "recommendation": "\u274c BLOCKED - 1 test error(s) indicate system instability",
+    "blockers": [
+      "4 high-priority bugs found (max: 3)",
+      "Pass rate below 95%",
+      "19 test failure(s) must be resolved",
+      "1 test error(s) must be fixed"
+    ]
+  }
+}

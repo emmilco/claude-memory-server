@@ -1,0 +1,172 @@
+{
+  "agent_id": "agent-install",
+  "section": "installation",
+  "start_time": "2025-11-21T03:50:50.314181",
+  "tests": [
+    {
+      "test_id": "INST-001",
+      "start_time": "2025-11-21T03:50:50.358114",
+      "status": "FAIL",
+      "notes": "setup.py missing critical components: Qdrant startup",
+      "bugs_found": [
+        {
+          "bug_id": "BUG-NEW-001B",
+          "severity": "MEDIUM",
+          "description": "setup.py incomplete - missing: Qdrant startup",
+          "test_id": "INST-001",
+          "impact": "Setup wizard may not handle all installation scenarios"
+        }
+      ],
+      "end_time": "2025-11-21T03:50:50.358552"
+    },
+    {
+      "test_id": "INST-002",
+      "start_time": "2025-11-21T03:50:50.358614",
+      "status": "ERROR",
+      "notes": "Error testing Python parser: 'PythonParser' object has no attribute 'extract_functions'",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:50:50.839163"
+    },
+    {
+      "test_id": "INST-003",
+      "start_time": "2025-11-21T03:50:50.839367",
+      "status": "FAIL",
+      "notes": "SQLite store not found at src/store/sqlite_store.py",
+      "bugs_found": [
+        {
+          "bug_id": "BUG-NEW-003",
+          "severity": "LOW",
+          "description": "SQLite store file missing - backwards compatibility broken",
+          "test_id": "INST-003",
+          "impact": "Users upgrading from older versions may have issues"
+        }
+      ],
+      "end_time": "2025-11-21T03:50:50.839434"
+    },
+    {
+      "test_id": "INST-004",
+      "start_time": "2025-11-21T03:50:50.839484",
+      "status": "FAIL",
+      "notes": "requirements.txt missing critical dependencies: fastapi",
+      "bugs_found": [
+        {
+          "bug_id": "BUG-NEW-004B",
+          "severity": "HIGH",
+          "description": "requirements.txt incomplete - missing: fastapi",
+          "test_id": "INST-004",
+          "impact": "Manual installation will fail due to missing dependencies"
+        }
+      ],
+      "end_time": "2025-11-21T03:50:50.839534"
+    },
+    {
+      "test_id": "INST-005",
+      "start_time": "2025-11-21T03:50:50.839582",
+      "status": "PASS",
+      "notes": "Qdrant accessible at http://qdrant:6333 and docker-compose.yml present",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:50:51.017137"
+    },
+    {
+      "test_id": "INST-006",
+      "start_time": "2025-11-21T03:50:51.017501",
+      "status": "FAIL",
+      "notes": "Health check failed with exit code 1: WARNING:root:Rust parsing module not available. Using Python fallback parser (10-20x slower).\nWARNING:src.core.degradation_warnings:Degradation: Rust Parser - Rust parser unavailable, using Python fal",
+      "bugs_found": [
+        {
+          "bug_id": "BUG-NEW-006B",
+          "severity": "MEDIUM",
+          "description": "Health check command failed: WARNING:root:Rust parsing module not available. Using Python fallback parser (10-20x slower).\nWARNING:src.core.degradation_warnings:Degradation: Rust Parser - Rust parser unavailable, using Python fal",
+          "test_id": "INST-006",
+          "impact": "Users cannot verify system health, may have import or configuration issues"
+        }
+      ],
+      "end_time": "2025-11-21T03:51:02.891054"
+    },
+    {
+      "test_id": "INST-007",
+      "start_time": "2025-11-21T03:51:02.892156",
+      "status": "MANUAL_REQUIRED",
+      "notes": "MCP server file exists with proper structure. MANUAL TEST REQUIRED: Register with Claude Code using: claude mcp add --transport stdio --scope user claude-memory-rag -- python src/mcp_server.py",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:51:02.893371"
+    },
+    {
+      "test_id": "INST-008",
+      "start_time": "2025-11-21T03:51:02.893453",
+      "status": "MANUAL_REQUIRED",
+      "notes": "MANUAL TEST REQUIRED: Upgrade from v3.x to v4.0 requires testing data migration, config preservation, and no data loss. Check CHANGELOG.md for migration guide.",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:51:02.893506"
+    },
+    {
+      "test_id": "INST-009",
+      "start_time": "2025-11-21T03:51:02.893901",
+      "status": "MANUAL_REQUIRED",
+      "notes": "MANUAL TEST REQUIRED: Verify clean uninstall removes ~/.claude-rag/, stops Qdrant container, removes MCP registration, and leaves no orphaned files.",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:51:02.893905"
+    },
+    {
+      "test_id": "INST-010",
+      "start_time": "2025-11-21T03:51:02.893964",
+      "status": "PASS",
+      "notes": "No .env.example (system may use environment variables or defaults) | README contains configuration documentation",
+      "bugs_found": [],
+      "end_time": "2025-11-21T03:51:02.894976"
+    }
+  ],
+  "bugs_found": [
+    {
+      "id": "BUG-NEW-001B",
+      "severity": "MEDIUM",
+      "description": "setup.py incomplete - missing: Qdrant startup",
+      "impact": "Setup wizard may not handle all installation scenarios",
+      "test_id": "INST-001",
+      "found_by": "agent-install"
+    },
+    {
+      "id": "BUG-NEW-003",
+      "severity": "LOW",
+      "description": "SQLite store file missing - backwards compatibility broken",
+      "impact": "Users upgrading from older versions may have issues",
+      "test_id": "INST-003",
+      "found_by": "agent-install"
+    },
+    {
+      "id": "BUG-NEW-004B",
+      "severity": "HIGH",
+      "description": "requirements.txt incomplete - missing: fastapi",
+      "impact": "Manual installation will fail due to missing dependencies",
+      "test_id": "INST-004",
+      "found_by": "agent-install"
+    },
+    {
+      "id": "BUG-NEW-006B",
+      "severity": "MEDIUM",
+      "description": "Health check command failed: WARNING:root:Rust parsing module not available. Using Python fallback parser (10-20x slower).\nWARNING:src.core.degradation_warnings:Degradation: Rust Parser - Rust parser unavailable, using Python fal",
+      "impact": "Users cannot verify system health, may have import or configuration issues",
+      "test_id": "INST-006",
+      "found_by": "agent-install"
+    }
+  ],
+  "summary": {
+    "total_tests": 10,
+    "passed": 2,
+    "failed": 4,
+    "skipped": 0,
+    "manual_required": 3,
+    "errors": 1,
+    "pass_rate": 20.0,
+    "bugs_found": 4,
+    "bugs_by_severity": {
+      "CRITICAL": 0,
+      "HIGH": 1,
+      "MEDIUM": 2,
+      "LOW": 1
+    },
+    "estimated_duration_minutes": 45,
+    "critical_bugs_verified": []
+  },
+  "end_time": "2025-11-21T03:51:02.894982"
+}

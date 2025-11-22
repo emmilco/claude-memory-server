@@ -49,18 +49,6 @@ from src.graph.formatters import DOTFormatter, JSONFormatter, MermaidFormatter
 logger = logging.getLogger(__name__)
 
 
-class RetrievalGateStub:
-    """Stub implementation of RetrievalGate for test compatibility.
-
-    The actual RetrievalGate was removed in BUG-018 as it was blocking valid queries.
-    This stub satisfies test expectations without implementing the gating logic.
-    """
-
-    def __init__(self, threshold: float):
-        """Initialize stub with threshold value."""
-        self.threshold = threshold
-
-
 class MemoryRAGServer:
     """
     MCP Server for memory and RAG operations.
@@ -104,11 +92,6 @@ class MemoryRAGServer:
         self.cross_project_consent: Optional = None  # Cross-project consent manager
         self.suggestion_engine: Optional[SuggestionEngine] = None  # Proactive suggestions
         self.scheduler = None  # APScheduler instance
-
-        # Retrieval gate (stub for test compatibility - actual feature removed in BUG-018)
-        self.retrieval_gate = None
-        if config.enable_retrieval_gate:
-            self.retrieval_gate = RetrievalGateStub(config.retrieval_gate_threshold)
 
         # Statistics
         self.stats = {
