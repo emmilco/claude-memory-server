@@ -47,15 +47,17 @@ def store(config):
 
 
 @pytest.fixture
-def tag_manager(session_db_path):
-    """Create tag manager."""
-    return TagManager(session_db_path)
+def tag_manager(tmp_path):
+    """Create tag manager with function-scoped database for test isolation."""
+    db_path = tmp_path / "tags.db"
+    return TagManager(str(db_path))
 
 
 @pytest.fixture
-def collection_manager(session_db_path):
-    """Create collection manager."""
-    return CollectionManager(session_db_path)
+def collection_manager(tmp_path):
+    """Create collection manager with function-scoped database for test isolation."""
+    db_path = tmp_path / "collections.db"
+    return CollectionManager(str(db_path))
 
 
 @pytest.fixture

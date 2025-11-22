@@ -84,6 +84,12 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Bug Fixes
 
+- **TEST-006: Fix Tagging System Test Isolation** (2025-11-22)
+  - Changed `tag_manager` and `collection_manager` fixtures to use function-scoped `tmp_path`
+  - Prevents tag name collisions across tests by giving each test its own database
+  - Resolves UNIQUE constraint failures: test_descendants_and_ancestors, test_tag_deletion_cascade, test_multiple_tags_on_memory
+  - File: tests/integration/test_tagging_system.py
+
 - **TEST-006: Fix Tagging System Fixture Dependencies** (2025-11-22)
   - Fixed `tag_manager` and `collection_manager` fixtures to use `session_db_path` instead of non-existent `db_path`
   - Resolves 3 fixture errors in test_tagging_system.py
