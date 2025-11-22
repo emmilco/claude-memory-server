@@ -22,6 +22,7 @@ async def create_store(config: ServerConfig) -> MemoryStore:
 
     Raises:
         RuntimeError: If Qdrant cannot be initialized with setup instructions
+        ValueError: If unsupported storage backend is specified
     """
     if config.storage_backend == "qdrant":
         try:
@@ -41,13 +42,8 @@ async def create_store(config: ServerConfig) -> MemoryStore:
                 f"Original error: {e}"
             ) from e
     else:
-        # SQLite is deprecated for code search
-        logger.warning(
-            "⚠️  SQLite backend is deprecated for code search.\n"
-            "   SQLite provides keyword-only search without semantic similarity.\n"
-            "   For proper semantic code search, use Qdrant: docker-compose up -d"
+        raise ValueError(
+            f"Unsupported storage backend: {config.storage_backend}\n"
+            f"Only 'qdrant' is supported. SQLite has been removed.\n"
+            f"Start Qdrant with: docker-compose up -d"
         )
-        from src.store.sqlite_store import SQLiteMemoryStore
-        store = SQLiteMemoryStore(config)
-        await store.initialize()
-        return store

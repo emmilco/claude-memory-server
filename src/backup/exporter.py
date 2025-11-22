@@ -369,7 +369,6 @@ class DataExporter:
             StorageError: If embedding cannot be retrieved
         """
         from src.store.qdrant_store import QdrantMemoryStore
-        from src.store.sqlite_store import SQLiteMemoryStore
 
         try:
             if isinstance(self.store, QdrantMemoryStore):
@@ -383,17 +382,8 @@ class DataExporter:
                     return result[0].vector
                 raise StorageError(f"Embedding not found for memory {memory_id}")
 
-            elif isinstance(self.store, SQLiteMemoryStore):
-                # SQLite: query embedding column directly (stored as JSON text)
-                cursor = self.store.conn.cursor()
-                cursor.execute("SELECT embedding FROM memories WHERE id = ?", (memory_id,))
-                row = cursor.fetchone()
-                if row and row[0]:
-                    return json.loads(row[0])
-                raise StorageError(f"Embedding not found for memory {memory_id}")
-
             else:
-                raise StorageError(f"Unsupported store type: {type(self.store)}")
+                raise StorageError(f"Unsupported store type: {type(self.store)}. Only Qdrant is supported.")
 
         except Exception as e:
             raise StorageError(f"Failed to retrieve embedding for {memory_id}: {e}")

@@ -19,7 +19,7 @@ def create_memory_store(
     This ensures users get proper semantic search capabilities instead of degraded keyword search.
 
     Args:
-        backend: Storage backend type ("qdrant" or "sqlite"). If None, uses config.
+        backend: Storage backend type ("qdrant" only). If None, uses config.
         config: Server configuration. If None, uses global config.
 
     Returns:
@@ -55,20 +55,11 @@ def create_memory_store(
                 f"Original error: {e}"
             ) from e
 
-    elif backend == "sqlite":
-        # SQLite is deprecated for code search
-        logger.warning(
-            "⚠️  SQLite backend is deprecated for code search.\n"
-            "   SQLite provides keyword-only search without semantic similarity.\n"
-            "   For proper semantic code search, use Qdrant: docker-compose up -d"
-        )
-        from src.store.sqlite_store import SQLiteMemoryStore
-        return SQLiteMemoryStore(config)
-
     else:
         raise ValueError(
             f"Unsupported storage backend: {backend}\n"
-            f"Supported backends: 'qdrant' (recommended), 'sqlite' (deprecated)"
+            f"Supported backend: 'qdrant' only. SQLite has been removed.\n"
+            f"Start Qdrant with: docker-compose up -d"
         )
 
 
