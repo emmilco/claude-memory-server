@@ -84,6 +84,12 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Bug Fixes
 
+- **FIX-HYBRID-SEARCH-POOLING: Hybrid Search Integration Tests Collection Pooling** (2025-11-22)
+  - Updated test_hybrid_search_integration.py fixtures to use collection pooling from conftest
+  - Changed server_with_hybrid_search and server_without_hybrid_search fixtures to accept qdrant_client and unique_qdrant_collection
+  - Leverages session-scoped resources to prevent Qdrant deadlocks during parallel execution
+  - Fixes multiple ERROR tests in hybrid search functionality
+
 - **FIX-HEALTH-DASHBOARD-POOLING: Health Dashboard Integration Tests Collection Pooling** (2025-11-22)
   - Updated test_health_dashboard_integration.py temp_db fixture to use collection pooling from conftest
   - Changed temp_db fixture to accept qdrant_client and unique_qdrant_collection parameters

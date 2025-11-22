@@ -13,17 +13,21 @@ from src.config import ServerConfig
 
 
 @pytest_asyncio.fixture
-async def server_with_hybrid_search():
-    """Create a server instance with hybrid search enabled and unique collection."""
+async def server_with_hybrid_search(qdrant_client, unique_qdrant_collection):
+    """Create a server instance with hybrid search enabled and pooled collection.
+
+    Uses the session-scoped qdrant_client and unique_qdrant_collection
+    fixtures from conftest.py to leverage collection pooling and prevent
+    Qdrant deadlocks during parallel test execution.
+    """
     # Create temp directory for test data
     temp_dir = tempfile.mkdtemp()
-    collection = f"test_hybrid_{uuid.uuid4().hex[:8]}"
 
     try:
         config = ServerConfig(
             storage_backend="qdrant",
             qdrant_url="http://localhost:6333",
-            qdrant_collection_name=collection,
+            qdrant_collection_name=unique_qdrant_collection,
             enable_hybrid_search=True,
             hybrid_search_alpha=0.5,
             hybrid_fusion_method="weighted",
@@ -39,27 +43,27 @@ async def server_with_hybrid_search():
 
         # Cleanup
         await server.close()
-        if hasattr(server.store, 'client') and server.store.client:
-            try:
-                server.store.client.delete_collection(collection)
-            except Exception:
-                pass  # Ignore cleanup errors
+        # Collection cleanup handled by unique_qdrant_collection autouse fixture
 
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 @pytest_asyncio.fixture
-async def server_without_hybrid_search():
-    """Create a server instance with hybrid search disabled and unique collection."""
+async def server_without_hybrid_search(qdrant_client, unique_qdrant_collection):
+    """Create a server instance with hybrid search disabled and pooled collection.
+
+    Uses the session-scoped qdrant_client and unique_qdrant_collection
+    fixtures from conftest.py to leverage collection pooling and prevent
+    Qdrant deadlocks during parallel test execution.
+    """
     temp_dir = tempfile.mkdtemp()
-    collection = f"test_nohybrid_{uuid.uuid4().hex[:8]}"
 
     try:
         config = ServerConfig(
             storage_backend="qdrant",
             qdrant_url="http://localhost:6333",
-            qdrant_collection_name=collection,
+            qdrant_collection_name=unique_qdrant_collection,
             enable_hybrid_search=False,
             read_only_mode=False,
         )
@@ -71,11 +75,7 @@ async def server_without_hybrid_search():
 
         # Cleanup
         await server.close()
-        if hasattr(server.store, 'client') and server.store.client:
-            try:
-                server.store.client.delete_collection(collection)
-            except Exception:
-                pass  # Ignore cleanup errors
+        # Collection cleanup handled by unique_qdrant_collection autouse fixture
 
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
