@@ -15,12 +15,16 @@ from src.embeddings.generator import EmbeddingGenerator
 
 
 @pytest.fixture
-def config():
-    """Create test configuration with unique collection."""
+def config(unique_qdrant_collection):
+    """Create test configuration with pooled collection.
+
+    Uses the unique_qdrant_collection from conftest.py to leverage
+    collection pooling and prevent Qdrant deadlocks during parallel execution.
+    """
     return ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
-        qdrant_collection_name=f"test_err_{uuid.uuid4().hex[:8]}",
+        qdrant_collection_name=unique_qdrant_collection,
         read_only_mode=False,
     )
 
@@ -230,11 +234,12 @@ class TestReadOnlyModeEnforcement:
     """Test read-only mode enforcement and errors."""
 
     @pytest.mark.asyncio
-    async def test_readonly_mode_raises_on_write(self):
+    async def test_readonly_mode_raises_on_write(self, unique_qdrant_collection):
         """Test that read-only mode raises error on write attempts."""
         config = ServerConfig(
             storage_backend="qdrant",
             qdrant_url="http://localhost:6333",
+            qdrant_collection_name=unique_qdrant_collection,
             read_only_mode=True,
         )
 
@@ -255,11 +260,12 @@ class TestReadOnlyModeEnforcement:
         await server.close()
 
     @pytest.mark.asyncio
-    async def test_readonly_mode_allows_reads(self):
+    async def test_readonly_mode_allows_reads(self, unique_qdrant_collection):
         """Test that read-only mode allows read operations."""
         config = ServerConfig(
             storage_backend="qdrant",
             qdrant_url="http://localhost:6333",
+            qdrant_collection_name=unique_qdrant_collection,
             read_only_mode=True,
         )
 

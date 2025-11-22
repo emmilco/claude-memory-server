@@ -84,6 +84,13 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Bug Fixes
 
+- **FIX-ERROR-RECOVERY-POOLING: Error Recovery Integration Tests Collection Pooling** (2025-11-22)
+  - Updated test_error_recovery.py fixtures to use collection pooling from conftest
+  - Changed config fixture to accept unique_qdrant_collection parameter
+  - Updated two inline read-only tests to use pooled collections instead of unspecified names
+  - Leverages session-scoped resources to prevent Qdrant deadlocks during parallel execution
+  - Fixes multiple ERROR tests in error recovery and resilience functionality
+
 - **FIX-QDRANT-STORE-POOLING: Qdrant Store Integration Tests Collection Pooling** (2025-11-22)
   - Updated test_qdrant_store.py fixtures to use collection pooling from conftest
   - Changed config and store fixtures to accept qdrant_client and unique_qdrant_collection
