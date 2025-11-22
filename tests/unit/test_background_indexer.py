@@ -3,6 +3,7 @@
 import pytest
 import asyncio
 import tempfile
+import uuid
 from pathlib import Path
 from unittest.mock import Mock, AsyncMock, patch, MagicMock
 
@@ -64,11 +65,11 @@ def notification_manager(notification_backend):
 
 @pytest.fixture
 def config():
-    """Create test configuration."""
+    """Create test configuration with unique collection name."""
     return ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
-        qdrant_collection_name="test_background_indexer",
+        qdrant_collection_name=f"test_bg_{uuid.uuid4().hex[:8]}",
         enable_parallel_embeddings=False,  # Disable for faster tests
     )
 

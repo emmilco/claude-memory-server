@@ -84,6 +84,13 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Bug Fixes
 
+- **FIX-TEST-FIXTURES: Unit Test Fixture Isolation** (2025-11-21)
+  - Applied unique collection pattern to 9 unit test files to prevent test pollution
+  - Added collection cleanup in fixture teardown with graceful error handling
+  - Fixes ~135 test errors across test_server_extended.py, test_git_storage.py, and others
+  - Files: tests/unit/test_server_extended.py, test_git_storage.py, test_indexed_content_visibility.py, test_background_indexer.py, test_confidence_scores.py, test_list_memories.py, test_backup_export.py, test_backup_import.py, test_project_reindexing.py
+  - Pattern: f"test_{prefix}_{uuid.uuid4().hex[:8]}" for unique collection names
+
 - **FIX-INTEGRATION-RACE: Embedding Cache Race Condition** (2025-11-21)
   - Fixed segmentation fault during concurrent operations test cleanup
   - Made EmbeddingCache.close() thread-safe with proper lock usage
