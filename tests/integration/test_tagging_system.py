@@ -3,6 +3,7 @@
 import pytest
 import tempfile
 import asyncio
+import uuid
 from pathlib import Path
 
 from src.tagging.auto_tagger import AutoTagger
@@ -16,18 +17,18 @@ from src.core.models import MemoryUnit, MemoryCategory, ContextLevel, MemoryScop
 
 @pytest.fixture
 def config():
-    """Create test configuration."""
+    """Create test configuration with unique collection."""
     config = ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
-        qdrant_collection_name="test_tagging",
+        qdrant_collection_name=f"test_tag_{uuid.uuid4().hex[:8]}",
     )
     return config
 
 
 @pytest.fixture
 def store(config):
-    """Create and initialize memory store."""
+    """Create and initialize memory store with unique collection."""
     import asyncio
     store_instance = QdrantMemoryStore(config)
 
@@ -38,6 +39,11 @@ def store(config):
 
     # Cleanup
     asyncio.run(store_instance.close())
+    if store_instance.client:
+        try:
+            store_instance.client.delete_collection(config.qdrant_collection_name)
+        except Exception:
+            pass  # Ignore cleanup errors
 
 
 @pytest.fixture

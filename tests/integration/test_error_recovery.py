@@ -3,6 +3,7 @@
 import asyncio
 import pytest
 import pytest_asyncio
+import uuid
 from unittest.mock import AsyncMock, Mock, patch, MagicMock
 from qdrant_client.http.exceptions import UnexpectedResponse
 
@@ -15,11 +16,11 @@ from src.embeddings.generator import EmbeddingGenerator
 
 @pytest.fixture
 def config():
-    """Create test configuration."""
+    """Create test configuration with unique collection."""
     return ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
-        qdrant_collection_name="test_error_recovery",
+        qdrant_collection_name=f"test_err_{uuid.uuid4().hex[:8]}",
         read_only_mode=False,
     )
 

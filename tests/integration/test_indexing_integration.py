@@ -3,6 +3,7 @@
 import pytest
 import asyncio
 import tempfile
+import uuid
 from pathlib import Path
 
 from src.memory.incremental_indexer import IncrementalIndexer
@@ -68,10 +69,10 @@ class UserManager {
 
 @pytest.fixture
 def config():
-    """Create test configuration."""
+    """Create test configuration with unique collection name."""
     return ServerConfig(
         qdrant_url="http://localhost:6333",
-        qdrant_collection_name="test_code_index",
+        qdrant_collection_name=f"test_code_{uuid.uuid4().hex[:8]}",
         embedding_model="all-MiniLM-L6-v2",
     )
 

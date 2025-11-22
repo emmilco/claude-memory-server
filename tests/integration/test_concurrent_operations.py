@@ -3,6 +3,7 @@
 import pytest
 import pytest_asyncio
 import asyncio
+import uuid
 from unittest.mock import AsyncMock, Mock
 
 from src.config import ServerConfig
@@ -12,22 +13,29 @@ from src.core.models import MemoryCategory, MemoryScope
 
 @pytest.fixture
 def config():
-    """Create test configuration."""
+    """Create test configuration with unique collection."""
     return ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
-        qdrant_collection_name="test_concurrent",
+        qdrant_collection_name=f"test_conc_{uuid.uuid4().hex[:8]}",
         read_only_mode=False,
     )
 
 
 @pytest_asyncio.fixture
 async def server(config):
-    """Create server instance."""
+    """Create server instance with unique collection."""
     srv = MemoryRAGServer(config)
     await srv.initialize()
     yield srv
+
+    # Cleanup
     await srv.close()
+    if hasattr(srv.store, 'client') and srv.store.client:
+        try:
+            srv.store.client.delete_collection(config.qdrant_collection_name)
+        except Exception:
+            pass  # Ignore cleanup errors
 
 
 class TestConcurrentWrites:

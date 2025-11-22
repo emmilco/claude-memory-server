@@ -2,6 +2,7 @@
 
 import pytest
 import pytest_asyncio
+import uuid
 from src.core.server import MemoryRAGServer
 from src.config import ServerConfig
 from src.memory.pattern_detector import PatternType
@@ -13,18 +14,27 @@ class TestProactiveSuggestionsIntegration:
 
     @pytest_asyncio.fixture
     async def server(self, tmp_path):
-        """Create a test server with suggestions enabled."""
+        """Create a test server with suggestions enabled and unique collection."""
+        collection = f"test_sugg_{uuid.uuid4().hex[:8]}"
+
         config = ServerConfig(
             storage_backend="qdrant",
             qdrant_url="http://localhost:6333",
-            qdrant_collection_name="test_proactive_suggestions",
+            qdrant_collection_name=collection,
             enable_proactive_suggestions=True,
             proactive_suggestions_threshold=0.90,
         )
         server_instance = MemoryRAGServer(config=config)
         await server_instance.initialize()
         yield server_instance
+
+        # Cleanup
         await server_instance.close()
+        if hasattr(server_instance.store, 'client') and server_instance.store.client:
+            try:
+                server_instance.store.client.delete_collection(collection)
+            except Exception:
+                pass  # Ignore cleanup errors
 
     async def test_analyze_conversation_implementation_request(self, server):
         """Test analyzing a message with implementation request pattern."""

@@ -3,6 +3,7 @@
 import pytest
 import pytest_asyncio
 import asyncio
+import uuid
 from datetime import datetime, UTC
 from pathlib import Path
 from src.core.server import MemoryRAGServer
@@ -17,18 +18,27 @@ from src.core.exceptions import ReadOnlyError
 
 @pytest_asyncio.fixture
 async def test_server(tmp_path):
-    """Create a test server with Qdrant backend."""
+    """Create a test server with Qdrant backend and unique collection."""
+    collection = f"test_update_{uuid.uuid4().hex[:8]}"
+
     config = ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
-        qdrant_collection_name="test_memory_update",
+        qdrant_collection_name=collection,
         read_only_mode=False,
         embedding_model="all-MiniLM-L6-v2",
     )
     server = MemoryRAGServer(config)
     await server.initialize()
     yield server
+
+    # Cleanup
     await server.close()
+    if hasattr(server.store, 'client') and server.store.client:
+        try:
+            server.store.client.delete_collection(collection)
+        except Exception:
+            pass  # Ignore cleanup errors
 
 
 @pytest_asyncio.fixture

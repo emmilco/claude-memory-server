@@ -3,6 +3,7 @@
 import pytest
 import pytest_asyncio
 import asyncio
+import uuid
 from datetime import datetime, UTC, timedelta
 
 from src.config import ServerConfig
@@ -15,11 +16,14 @@ from src.memory.lifecycle_manager import LifecycleManager
 
 @pytest_asyncio.fixture
 async def temp_db():
-    """Create a test Qdrant store."""
+    """Create a test Qdrant store with unique collection per test run."""
+    # Unique collection name to prevent test pollution
+    collection = f"test_health_{uuid.uuid4().hex[:8]}"
+
     config = ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
-        qdrant_collection_name="test_health_dashboard",
+        qdrant_collection_name=collection,
     )
 
     store = QdrantMemoryStore(config)
@@ -27,7 +31,13 @@ async def temp_db():
 
     yield store
 
+    # Cleanup
     await store.close()
+    if store.client:
+        try:
+            store.client.delete_collection(collection)
+        except Exception:
+            pass  # Ignore cleanup errors
 
 
 class TestHealthDashboardIntegration:

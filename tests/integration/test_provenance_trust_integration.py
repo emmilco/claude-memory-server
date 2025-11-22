@@ -3,6 +3,7 @@
 import pytest
 import pytest_asyncio
 import asyncio
+import uuid
 from datetime import datetime, UTC, timedelta
 
 from src.config import ServerConfig
@@ -22,17 +23,26 @@ from src.core.models import (
 
 @pytest_asyncio.fixture
 async def test_store():
-    """Create a test memory store."""
+    """Create a test memory store with unique collection."""
+    collection = f"test_prov_{uuid.uuid4().hex[:8]}"
+
     config = ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
-        qdrant_collection_name="test_provenance",
+        qdrant_collection_name=collection,
     )
 
     store = QdrantMemoryStore(config)
     await store.initialize()
     yield store
+
+    # Cleanup
     await store.close()
+    if store.client:
+        try:
+            store.client.delete_collection(collection)
+        except Exception:
+            pass  # Ignore cleanup errors
 
 
 @pytest.fixture
