@@ -51,12 +51,16 @@ def function_three():
 
 
 @pytest.fixture
-def config():
-    """Create test configuration with unique collection name."""
+def config(unique_qdrant_collection):
+    """Create test configuration with pooled collection name.
+
+    Uses the unique_qdrant_collection fixture from conftest.py to leverage
+    collection pooling and prevent Qdrant deadlocks during parallel test execution.
+    """
     return ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
-        qdrant_collection_name=f"test_icv_{uuid.uuid4().hex[:8]}",
+        qdrant_collection_name=unique_qdrant_collection,
         read_only_mode=False,
         enable_retrieval_gate=False,
     )
@@ -83,11 +87,7 @@ async def server_with_indexed_code(config, test_project_dir):
 
     # Cleanup
     await srv.close()
-    if hasattr(srv.store, 'client') and srv.store.client:
-        try:
-            srv.store.client.delete_collection(config.qdrant_collection_name)
-        except Exception:
-            pass  # Ignore cleanup errors
+    # Collection cleanup handled by unique_qdrant_collection autouse fixture
 
 
 @pytest.mark.asyncio

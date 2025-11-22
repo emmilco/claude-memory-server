@@ -49,13 +49,16 @@ class User {
 
 
 @pytest_asyncio.fixture
-async def server():
-    """Create a test server with Qdrant backend and unique collection."""
-    collection = f"test_ridx_{uuid.uuid4().hex[:8]}"
+async def server(unique_qdrant_collection):
+    """Create a test server with Qdrant backend and pooled collection.
+
+    Uses the unique_qdrant_collection fixture from conftest.py to leverage
+    collection pooling and prevent Qdrant deadlocks during parallel test execution.
+    """
     config = ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
-        qdrant_collection_name=collection,
+        qdrant_collection_name=unique_qdrant_collection,
         embedding_cache_enabled=True,
     )
 
@@ -66,11 +69,7 @@ async def server():
 
     # Cleanup
     await server.close()
-    if hasattr(server.store, 'client') and server.store.client:
-        try:
-            server.store.client.delete_collection(collection)
-        except Exception:
-            pass  # Ignore cleanup errors
+    # Collection cleanup handled by unique_qdrant_collection autouse fixture
 
 
 @pytest.mark.asyncio
