@@ -61,6 +61,7 @@ async def mock_server():
     server.conversation_tracker = AsyncMock()
     server.query_expander = AsyncMock()
     server.hybrid_searcher = None
+    server.metrics_collector = AsyncMock()
 
     # Mock cache to return None (cache miss)
     server.embedding_cache.get = AsyncMock(return_value=None)
