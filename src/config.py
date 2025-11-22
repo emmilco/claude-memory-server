@@ -32,6 +32,9 @@ class ServerConfig(BaseSettings):
     embedding_cache_path: str = "~/.claude-rag/embedding_cache.db"
     embedding_cache_ttl_days: int = 30
 
+    # SQLite for metadata tracking (not for vector storage - Qdrant only)
+    sqlite_path: str = "~/.claude-rag/metadata.db"  # For ProjectIndexTracker metadata
+
     # Parallel embedding generation (PERF-001)
     enable_parallel_embeddings: bool = True  # Use multiprocessing for embeddings
     embedding_parallel_workers: Optional[int] = None  # Auto-detect CPU count if None
@@ -235,6 +238,13 @@ class ServerConfig(BaseSettings):
     def embedding_cache_path_expanded(self) -> Path:
         """Get expanded embedding cache path."""
         path = self.get_expanded_path(self.embedding_cache_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
+
+    @property
+    def sqlite_path_expanded(self) -> Path:
+        """Get expanded SQLite metadata database path."""
+        path = self.get_expanded_path(self.sqlite_path)
         path.parent.mkdir(parents=True, exist_ok=True)
         return path
 

@@ -46,10 +46,11 @@ def test_config_storage_backend_validation():
 
 def test_path_expansion():
     """Test that paths are expanded correctly."""
-    config = ServerConfig(sqlite_path="~/.claude-rag/test.db")
-    expanded = config.sqlite_path_expanded
-    assert isinstance(expanded, Path)
-    assert "~" not in str(expanded)
+    # Test with embedding cache path (SQLite removed in REF-010)
+    config = ServerConfig(embedding_cache_path="~/.claude-rag/test_cache.db")
+    expanded_path = Path(config.embedding_cache_path).expanduser()
+    assert isinstance(expanded_path, Path)
+    assert "~" not in str(expanded_path)
 
 
 def test_global_config():

@@ -303,6 +303,7 @@ class TestGetRecentActivity:
             await mock_server.get_recent_activity()
 
 
+@pytest.mark.skip(reason="SQLite support removed in REF-010 - Qdrant is now required")
 class TestStoreGetRecentActivity:
     """Tests for SQLite store get_recent_activity method."""
 
