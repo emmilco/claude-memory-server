@@ -84,6 +84,12 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Bug Fixes
 
+- **FIX-BACKUP-EXPORT-POOLING: Backup Export Tests Collection Pooling** (2025-11-22)
+  - Updated test_backup_export.py temp_store fixture to use collection pooling from conftest
+  - Leverages session-scoped qdrant_client and unique_qdrant_collection fixtures
+  - Prevents Qdrant connection timeouts during parallel test execution
+  - Fixes 3 ERROR tests: test_export_to_json, test_export_with_project_filter, test_create_portable_archive
+
 - **FIX-TEST-FIXTURES: Unit Test Fixture Isolation** (2025-11-21)
   - Applied unique collection pattern to 9 unit test files to prevent test pollution
   - Added collection cleanup in fixture teardown with graceful error handling
