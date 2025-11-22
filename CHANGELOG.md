@@ -84,6 +84,15 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Bug Fixes
 
+- **TEST-006: Increase Qdrant Docker Resource Limits** (2025-11-22)
+  - Doubled CPU limit from 2.0 to 4.0 cores
+  - Doubled memory limit from 2G to 4G
+  - Doubled CPU reservation from 0.5 to 1.0 cores
+  - Doubled memory reservation from 512M to 1G
+  - Addresses recurring Qdrant overwhelm pattern during parallel test execution
+  - Collection creation speed improved from 30+ seconds (when overwhelmed) to 26-49ms
+  - File: docker-compose.yml
+
 - **FIX-AUTOUSE-FIXTURES: Remove autouse from Qdrant Collection Pooling Fixtures** (2025-11-22)
   - Removed `autouse=True` from `setup_qdrant_pool` and `unique_qdrant_collection` fixtures
   - These fixtures now only run when tests explicitly request them
