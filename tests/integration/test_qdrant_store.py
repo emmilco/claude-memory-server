@@ -17,29 +17,34 @@ from src.core.models import (
 
 
 @pytest.fixture
-def config():
-    """Create test configuration with unique collection name."""
+def config(unique_qdrant_collection):
+    """Create test configuration with pooled collection.
+
+    Uses the unique_qdrant_collection from conftest.py to leverage
+    collection pooling and prevent Qdrant deadlocks during parallel execution.
+    """
     return ServerConfig(
         qdrant_url="http://localhost:6333",
-        qdrant_collection_name=f"test_mem_{uuid.uuid4().hex[:8]}",
+        qdrant_collection_name=unique_qdrant_collection,
     )
 
 
 @pytest_asyncio.fixture
-async def store(config):
-    """Create and initialize Qdrant store with unique collection."""
+async def store(config, qdrant_client):
+    """Create and initialize Qdrant store with pooled collection.
+
+    Uses the session-scoped qdrant_client and unique_qdrant_collection
+    fixtures from conftest.py to leverage collection pooling and prevent
+    Qdrant deadlocks during parallel test execution.
+    """
     test_store = QdrantMemoryStore(config)
     await test_store.initialize()
 
     yield test_store
 
-    # Cleanup after test
+    # Cleanup
     await test_store.close()
-    if test_store.client:
-        try:
-            test_store.client.delete_collection(config.qdrant_collection_name)
-        except Exception:
-            pass  # Ignore cleanup errors
+    # Collection cleanup handled by unique_qdrant_collection autouse fixture
 
 
 @pytest.mark.asyncio
