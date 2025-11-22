@@ -330,6 +330,13 @@ class QdrantMemoryStore(MemoryStore):
 
                 # Merge existing payload with updates
                 existing_dict = existing.model_dump()
+
+                # IMPORTANT: Merge metadata dicts to preserve existing keys
+                merged_metadata = existing.metadata or {}
+                if "metadata" in updates:
+                    new_metadata = updates["metadata"] or {}
+                    merged_metadata = {**merged_metadata, **new_metadata}
+
                 merged_payload = {
                     "id": memory_id,
                     "content": updates.get("content", existing.content),
@@ -339,7 +346,7 @@ class QdrantMemoryStore(MemoryStore):
                     "project_name": updates.get("project_name", existing.project_name),
                     "importance": updates.get("importance", existing.importance),
                     "tags": updates.get("tags", existing.tags),
-                    "metadata": updates.get("metadata", existing.metadata),
+                    "metadata": merged_metadata,
                     "created_at": existing.created_at.isoformat(),
                     "updated_at": updates["updated_at"],
                     "last_accessed": existing.last_accessed.isoformat() if existing.last_accessed else None,
@@ -366,9 +373,18 @@ class QdrantMemoryStore(MemoryStore):
                 )
             else:
                 # Only update payload (no vector change)
+                # IMPORTANT: Merge metadata if it's being updated to preserve existing keys
+                payload_updates = updates.copy()
+                if "metadata" in updates:
+                    # Merge new metadata with existing metadata
+                    existing_metadata = existing.metadata or {}
+                    new_metadata = updates["metadata"] or {}
+                    merged_metadata = {**existing_metadata, **new_metadata}
+                    payload_updates["metadata"] = merged_metadata
+
                 self.client.set_payload(
                     collection_name=self.collection_name,
-                    payload=updates,
+                    payload=payload_updates,
                     points=[memory_id],
                 )
 

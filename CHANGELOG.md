@@ -177,11 +177,17 @@ A pre-commit hook enforces CHANGELOG updates:
   - Fixes multiple ERROR tests in Qdrant store integration functionality
 
 - **FIX-MEMORY-UPDATE-POOLING: Memory Update Integration Tests Collection Pooling** (2025-11-22)
-  - Updated test_memory_update_integration.py fixtures to use collection pooling from conftest
-  - Changed test_server fixture to accept qdrant_client and unique_qdrant_collection
-  - Updated test_update_in_read_only_mode to use pooled collection instead of hardcoded name
+  - Updated test_memory_update_integration.py test_server fixture to use collection pooling from conftest
+  - Changed test_server fixture to accept qdrant_client and unique_qdrant_collection parameters
   - Leverages session-scoped resources to prevent Qdrant deadlocks during parallel execution
-  - Fixes ~12 ERROR tests in memory update integration functionality
+  - Fixes multiple ERROR tests in memory update functionality
+
+- **TEST-006: Collection Pooling Infrastructure and Metadata Merge Fixes** (2025-11-22)
+  - Fixed collection pooling setup to check existence before creating collections (conftest.py)
+  - Fixed metadata dict replacement bug in QdrantMemoryStore.update() - now properly merges metadata
+  - Fixed dict attribute access in test_user_preference_protection test
+  - Prevents Qdrant overload from repeated delete/create cycles
+  - Preserves existing metadata keys when updating memories
 
 - **FIX-CONCURRENT-OPS-POOLING: Concurrent Operations Tests Collection Pooling** (2025-11-22)
   - Updated test_concurrent_operations.py fixtures to use collection pooling from conftest

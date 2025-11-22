@@ -439,26 +439,28 @@ def setup_qdrant_pool(qdrant_client):
         yield
         return
 
-    # Create collection pool
+    # Create collection pool (only if collections don't exist)
     for name in COLLECTION_POOL:
         try:
-            qdrant_client.recreate_collection(
-                collection_name=name,
-                vectors_config=VectorParams(size=384, distance=Distance.COSINE)
-            )
+            # Check if collection exists first
+            collections = qdrant_client.get_collections().collections
+            collection_names = [c.name for c in collections]
+
+            if name not in collection_names:
+                # Create only if doesn't exist
+                qdrant_client.create_collection(
+                    collection_name=name,
+                    vectors_config=VectorParams(size=384, distance=Distance.COSINE)
+                )
         except Exception:
-            # Collection might already exist, continue
+            # Creation failure is not critical - collection might exist
             pass
 
     yield
 
-    # Cleanup pool at end of session
-    for name in COLLECTION_POOL:
-        try:
-            qdrant_client.delete_collection(name)
-        except Exception:
-            # Cleanup failure is not critical
-            pass
+    # NO cleanup - keep pool collections for next test run
+    # Collection pool is persistent across test runs for maximum performance
+    # Tests clear collection contents before use via unique_qdrant_collection fixture
 
 
 @pytest.fixture

@@ -342,7 +342,8 @@ class TestHealthDashboardIntegration:
         # Should not delete USER_PREFERENCE
         memories = await temp_db.get_all_memories()
         assert len(memories) == 1
-        assert memories[0].context_level == ContextLevel.USER_PREFERENCE
+        # get_all_memories returns List[Dict], not List[MemoryUnit]
+        assert memories[0]["context_level"] == ContextLevel.USER_PREFERENCE.value
 
     @pytest.mark.asyncio
     async def test_quick_stats_accuracy(self, temp_db):
