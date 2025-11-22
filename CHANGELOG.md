@@ -84,6 +84,12 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Bug Fixes
 
+- **FIX-GIT-STORAGE-POOLING: Git Storage Tests Collection Pooling** (2025-11-22)
+  - Updated test_git_storage.py fixtures to use collection pooling from conftest
+  - Changed config and store fixtures to accept qdrant_client and unique_qdrant_collection
+  - Leverages session-scoped resources to prevent Qdrant deadlocks
+  - Fixes ~7 ERROR tests in git storage functionality
+
 - **FIX-BACKUP-EXPORT-POOLING: Backup Export Tests Collection Pooling** (2025-11-22)
   - Updated test_backup_export.py temp_store fixture to use collection pooling from conftest
   - Leverages session-scoped qdrant_client and unique_qdrant_collection fixtures

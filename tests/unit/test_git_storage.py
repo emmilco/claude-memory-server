@@ -12,32 +12,36 @@ from src.config import ServerConfig
 
 
 @pytest.fixture
-def config():
-    """Create test configuration with unique collection name."""
-    collection = f"test_git_{uuid.uuid4().hex[:8]}"
+def config(unique_qdrant_collection):
+    """Create test configuration with pooled collection name.
+
+    Uses the unique_qdrant_collection from conftest.py to leverage
+    collection pooling and prevent Qdrant deadlocks during parallel execution.
+    """
     config = ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
-        qdrant_collection_name=collection,
+        qdrant_collection_name=unique_qdrant_collection,
         enable_git_indexing=True,
     )
     return config
 
 
 @pytest_asyncio.fixture
-async def store(config):
-    """Create and initialize Qdrant store with unique collection."""
+async def store(config, qdrant_client):
+    """Create and initialize Qdrant store with pooled collection.
+
+    Uses the session-scoped qdrant_client and unique_qdrant_collection
+    fixtures from conftest.py to leverage collection pooling and prevent
+    Qdrant deadlocks during parallel test execution.
+    """
     store = QdrantMemoryStore(config)
     await store.initialize()
     yield store
 
     # Cleanup
     await store.close()
-    if store.client:
-        try:
-            store.client.delete_collection(config.qdrant_collection_name)
-        except Exception:
-            pass  # Ignore cleanup errors
+    # Collection cleanup handled by unique_qdrant_collection autouse fixture
 
 
 @pytest.fixture
