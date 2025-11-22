@@ -440,12 +440,16 @@ def setup_qdrant_pool(qdrant_client):
         return
 
     # Create collection pool (only if collections don't exist)
+    # Get existing collections ONCE (not in loop - prevents Qdrant overload)
+    try:
+        collections = qdrant_client.get_collections().collections
+        collection_names = [c.name for c in collections]
+    except Exception:
+        # If we can't get collections, assume none exist
+        collection_names = []
+
     for name in COLLECTION_POOL:
         try:
-            # Check if collection exists first
-            collections = qdrant_client.get_collections().collections
-            collection_names = [c.name for c in collections]
-
             if name not in collection_names:
                 # Create only if doesn't exist
                 qdrant_client.create_collection(

@@ -184,9 +184,10 @@ A pre-commit hook enforces CHANGELOG updates:
 
 - **TEST-006: Collection Pooling Infrastructure and Metadata Merge Fixes** (2025-11-22)
   - Fixed collection pooling setup to check existence before creating collections (conftest.py)
+  - Fixed inefficient get_collections() call inside loop - now called once before loop
   - Fixed metadata dict replacement bug in QdrantMemoryStore.update() - now properly merges metadata
   - Fixed dict attribute access in test_user_preference_protection test
-  - Prevents Qdrant overload from repeated delete/create cycles
+  - Prevents Qdrant overload from repeated delete/create cycles and API calls
   - Preserves existing metadata keys when updating memories
 
 - **FIX-CONCURRENT-OPS-POOLING: Concurrent Operations Tests Collection Pooling** (2025-11-22)
