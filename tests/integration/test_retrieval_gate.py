@@ -9,12 +9,16 @@ from src.core.server import MemoryRAGServer
 
 
 @pytest.fixture
-def gate_enabled_config():
-    """Create config with gate enabled and unique collection."""
+def gate_enabled_config(unique_qdrant_collection):
+    """Create config with gate enabled and pooled collection.
+
+    Uses the unique_qdrant_collection fixture from conftest.py to leverage
+    collection pooling and prevent Qdrant deadlocks during parallel test execution.
+    """
     return ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
-        qdrant_collection_name=f"test_gate_en_{uuid.uuid4().hex[:8]}",
+        qdrant_collection_name=unique_qdrant_collection,
         enable_retrieval_gate=True,
         retrieval_gate_threshold=0.5,
         embedding_cache_enabled=False,  # Disable cache for predictable testing
@@ -22,24 +26,32 @@ def gate_enabled_config():
 
 
 @pytest.fixture
-def gate_disabled_config():
-    """Create config with gate disabled and unique collection."""
+def gate_disabled_config(unique_qdrant_collection):
+    """Create config with gate disabled and pooled collection.
+
+    Uses the unique_qdrant_collection fixture from conftest.py to leverage
+    collection pooling and prevent Qdrant deadlocks during parallel test execution.
+    """
     return ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
-        qdrant_collection_name=f"test_gate_dis_{uuid.uuid4().hex[:8]}",
+        qdrant_collection_name=unique_qdrant_collection,
         enable_retrieval_gate=False,
         embedding_cache_enabled=False,
     )
 
 
 @pytest.fixture
-def strict_gate_config():
-    """Create config with strict gate (high threshold) and unique collection."""
+def strict_gate_config(unique_qdrant_collection):
+    """Create config with strict gate (high threshold) and pooled collection.
+
+    Uses the unique_qdrant_collection fixture from conftest.py to leverage
+    collection pooling and prevent Qdrant deadlocks during parallel test execution.
+    """
     return ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
-        qdrant_collection_name=f"test_gate_str_{uuid.uuid4().hex[:8]}",
+        qdrant_collection_name=unique_qdrant_collection,
         enable_retrieval_gate=True,
         retrieval_gate_threshold=0.8,
         embedding_cache_enabled=False,
@@ -48,50 +60,38 @@ def strict_gate_config():
 
 @pytest_asyncio.fixture
 async def server_with_gate(gate_enabled_config):
-    """Create server with gate enabled and unique collection."""
+    """Create server with gate enabled and pooled collection."""
     srv = MemoryRAGServer(gate_enabled_config)
     await srv.initialize()
     yield srv
 
     # Cleanup
     await srv.close()
-    if hasattr(srv.store, 'client') and srv.store.client:
-        try:
-            srv.store.client.delete_collection(gate_enabled_config.qdrant_collection_name)
-        except Exception:
-            pass  # Ignore cleanup errors
+    # Collection cleanup handled by unique_qdrant_collection autouse fixture
 
 
 @pytest_asyncio.fixture
 async def server_without_gate(gate_disabled_config):
-    """Create server with gate disabled and unique collection."""
+    """Create server with gate disabled and pooled collection."""
     srv = MemoryRAGServer(gate_disabled_config)
     await srv.initialize()
     yield srv
 
     # Cleanup
     await srv.close()
-    if hasattr(srv.store, 'client') and srv.store.client:
-        try:
-            srv.store.client.delete_collection(gate_disabled_config.qdrant_collection_name)
-        except Exception:
-            pass  # Ignore cleanup errors
+    # Collection cleanup handled by unique_qdrant_collection autouse fixture
 
 
 @pytest_asyncio.fixture
 async def server_strict_gate(strict_gate_config):
-    """Create server with strict gate and unique collection."""
+    """Create server with strict gate and pooled collection."""
     srv = MemoryRAGServer(strict_gate_config)
     await srv.initialize()
     yield srv
 
     # Cleanup
     await srv.close()
-    if hasattr(srv.store, 'client') and srv.store.client:
-        try:
-            srv.store.client.delete_collection(strict_gate_config.qdrant_collection_name)
-        except Exception:
-            pass  # Ignore cleanup errors
+    # Collection cleanup handled by unique_qdrant_collection autouse fixture
 
 
 @pytest.mark.asyncio

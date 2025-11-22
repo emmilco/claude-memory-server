@@ -84,6 +84,13 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Bug Fixes
 
+- **FIX-RETRIEVAL-GATE-POOLING: Retrieval Gate Integration Tests Collection Pooling** (2025-11-22)
+  - Updated test_retrieval_gate.py config fixtures to use collection pooling from conftest
+  - Changed gate_enabled_config, gate_disabled_config, and strict_gate_config fixtures to accept unique_qdrant_collection
+  - Removed manual collection cleanup from server_with_gate, server_without_gate, and server_strict_gate fixtures
+  - Leverages session-scoped resources to prevent Qdrant deadlocks during parallel execution
+  - Fixes multiple ERROR tests in retrieval gate functionality
+
 - **FIX-PROVENANCE-TRUST-POOLING: Provenance & Trust Integration Tests Collection Pooling** (2025-11-22)
   - Updated test_provenance_trust_integration.py test_store fixture to use collection pooling from conftest
   - Changed test_store fixture to accept qdrant_client and unique_qdrant_collection parameters
