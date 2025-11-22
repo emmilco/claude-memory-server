@@ -3,6 +3,7 @@
 import pytest
 import pytest_asyncio
 import tempfile
+import uuid
 from datetime import datetime, UTC, timedelta
 from pathlib import Path
 
@@ -12,11 +13,12 @@ from src.config import ServerConfig
 
 @pytest.fixture
 def config():
-    """Create test configuration."""
+    """Create test configuration with unique collection name."""
+    collection = f"test_git_{uuid.uuid4().hex[:8]}"
     config = ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
-        qdrant_collection_name="test_git_storage",
+        qdrant_collection_name=collection,
         enable_git_indexing=True,
     )
     return config
@@ -24,11 +26,18 @@ def config():
 
 @pytest_asyncio.fixture
 async def store(config):
-    """Create and initialize Qdrant store."""
+    """Create and initialize Qdrant store with unique collection."""
     store = QdrantMemoryStore(config)
     await store.initialize()
     yield store
+
+    # Cleanup
     await store.close()
+    if store.client:
+        try:
+            store.client.delete_collection(config.qdrant_collection_name)
+        except Exception:
+            pass  # Ignore cleanup errors
 
 
 @pytest.fixture

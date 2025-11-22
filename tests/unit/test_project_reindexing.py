@@ -4,6 +4,7 @@ import pytest
 import pytest_asyncio
 import tempfile
 import shutil
+import uuid
 from pathlib import Path
 
 from src.core.server import MemoryRAGServer
@@ -49,11 +50,12 @@ class User {
 
 @pytest_asyncio.fixture
 async def server():
-    """Create a test server with Qdrant backend."""
+    """Create a test server with Qdrant backend and unique collection."""
+    collection = f"test_ridx_{uuid.uuid4().hex[:8]}"
     config = ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
-        qdrant_collection_name="test_project_reindexing",
+        qdrant_collection_name=collection,
         embedding_cache_enabled=True,
     )
 
@@ -62,7 +64,13 @@ async def server():
 
     yield server
 
+    # Cleanup
     await server.close()
+    if hasattr(server.store, 'client') and server.store.client:
+        try:
+            server.store.client.delete_collection(collection)
+        except Exception:
+            pass  # Ignore cleanup errors
 
 
 @pytest.mark.asyncio

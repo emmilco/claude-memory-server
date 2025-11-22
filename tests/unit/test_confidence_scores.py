@@ -2,6 +2,7 @@
 
 import pytest
 import pytest_asyncio
+import uuid
 from unittest.mock import AsyncMock, Mock, patch
 from src.core.server import MemoryRAGServer
 from src.core.models import MemoryUnit, ContextLevel, MemoryCategory, MemoryScope
@@ -41,11 +42,11 @@ class TestConfidenceLabels:
 
 @pytest_asyncio.fixture
 async def mock_server():
-    """Create a mock server with mocked dependencies."""
+    """Create a mock server with mocked dependencies and unique collection."""
     config = ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
-        qdrant_collection_name="test_confidence_scores",
+        qdrant_collection_name=f"test_conf_{uuid.uuid4().hex[:8]}",
         read_only_mode=False,
         enable_retrieval_gate=False,
     )

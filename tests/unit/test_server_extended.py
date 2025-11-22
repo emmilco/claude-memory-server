@@ -2,6 +2,7 @@
 
 import pytest
 import pytest_asyncio
+import uuid
 from pathlib import Path
 from src.config import ServerConfig
 from src.core.server import MemoryRAGServer
@@ -10,10 +11,11 @@ from src.core.exceptions import ReadOnlyError, ValidationError
 
 @pytest.fixture
 def config():
-    """Create test configuration."""
+    """Create test configuration with unique collection name."""
     return ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
+        qdrant_collection_name=f"test_ext_{uuid.uuid4().hex[:8]}",
         read_only_mode=False,
         enable_retrieval_gate=False,  # Disable gate for predictable test results
     )
@@ -21,10 +23,11 @@ def config():
 
 @pytest.fixture
 def readonly_config():
-    """Create read-only test configuration."""
+    """Create read-only test configuration with unique collection name."""
     return ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
+        qdrant_collection_name=f"test_ro_{uuid.uuid4().hex[:8]}",
         read_only_mode=True,
         enable_retrieval_gate=False,  # Disable gate for predictable test results
     )
@@ -32,20 +35,34 @@ def readonly_config():
 
 @pytest_asyncio.fixture
 async def server(config):
-    """Create server instance."""
+    """Create server instance with unique collection."""
     srv = MemoryRAGServer(config)
     await srv.initialize()
     yield srv
+
+    # Cleanup
     await srv.close()
+    if hasattr(srv.store, 'client') and srv.store.client:
+        try:
+            srv.store.client.delete_collection(config.qdrant_collection_name)
+        except Exception:
+            pass  # Ignore cleanup errors
 
 
 @pytest_asyncio.fixture
 async def readonly_server(readonly_config):
-    """Create read-only server instance."""
+    """Create read-only server instance with unique collection."""
     srv = MemoryRAGServer(readonly_config)
     await srv.initialize()
     yield srv
+
+    # Cleanup
     await srv.close()
+    if hasattr(srv.store, 'client') and srv.store.client:
+        try:
+            srv.store.client.delete_collection(readonly_config.qdrant_collection_name)
+        except Exception:
+            pass  # Ignore cleanup errors
 
 
 class TestCodeSearch:

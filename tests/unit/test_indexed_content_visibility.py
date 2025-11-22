@@ -2,6 +2,7 @@
 
 import pytest
 import pytest_asyncio
+import uuid
 from pathlib import Path
 import tempfile
 import shutil
@@ -51,11 +52,11 @@ def function_three():
 
 @pytest.fixture
 def config():
-    """Create test configuration."""
+    """Create test configuration with unique collection name."""
     return ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
-        qdrant_collection_name="test_indexed_content_visibility",
+        qdrant_collection_name=f"test_icv_{uuid.uuid4().hex[:8]}",
         read_only_mode=False,
         enable_retrieval_gate=False,
     )
@@ -63,7 +64,7 @@ def config():
 
 @pytest_asyncio.fixture
 async def server_with_indexed_code(config, test_project_dir):
-    """Create server instance with indexed code."""
+    """Create server instance with indexed code and unique collection."""
     srv = MemoryRAGServer(config)
     await srv.initialize()
 
@@ -79,7 +80,14 @@ async def server_with_indexed_code(config, test_project_dir):
     )
 
     yield srv
+
+    # Cleanup
     await srv.close()
+    if hasattr(srv.store, 'client') and srv.store.client:
+        try:
+            srv.store.client.delete_collection(config.qdrant_collection_name)
+        except Exception:
+            pass  # Ignore cleanup errors
 
 
 @pytest.mark.asyncio
