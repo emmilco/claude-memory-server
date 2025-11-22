@@ -110,26 +110,28 @@ class TestHealthMaintenanceJobs:
 
         # 5 old ACTIVE memories (should be archived)
         for i in range(5):
-            mem = MagicMock()
-            mem.id = f"old-active-{i}"
-            mem.lifecycle_state = LifecycleState.ACTIVE
-            mem.content = f"Old content {i}"
-            mem.created_at = datetime.now(UTC) - timedelta(days=200)
-            mem.last_accessed = datetime.now(UTC) - timedelta(days=190)
-            mem.use_count = 0
-            mem.context_level = ContextLevel.SESSION_STATE
+            mem = {
+                'id': f"old-active-{i}",
+                'lifecycle_state': LifecycleState.ACTIVE,
+                'content': f"Old content {i}",
+                'created_at': datetime.now(UTC) - timedelta(days=200),
+                'last_accessed': datetime.now(UTC) - timedelta(days=190),
+                'use_count': 0,
+                'context_level': ContextLevel.SESSION_STATE,
+            }
             memories.append(mem)
 
         # 3 recent ACTIVE memories (should NOT be archived)
         for i in range(3):
-            mem = MagicMock()
-            mem.id = f"recent-active-{i}"
-            mem.lifecycle_state = LifecycleState.ACTIVE
-            mem.content = f"Recent content {i}"
-            mem.created_at = datetime.now(UTC) - timedelta(days=3)
-            mem.last_accessed = datetime.now(UTC) - timedelta(days=1)
-            mem.use_count = 5
-            mem.context_level = ContextLevel.SESSION_STATE
+            mem = {
+                'id': f"recent-active-{i}",
+                'lifecycle_state': LifecycleState.ACTIVE,
+                'content': f"Recent content {i}",
+                'created_at': datetime.now(UTC) - timedelta(days=3),
+                'last_accessed': datetime.now(UTC) - timedelta(days=1),
+                'use_count': 5,
+                'context_level': ContextLevel.SESSION_STATE,
+            }
             memories.append(mem)
 
         mock_store.get_all_memories = AsyncMock(return_value=memories)
@@ -147,14 +149,15 @@ class TestHealthMaintenanceJobs:
         # Create old ACTIVE memories
         memories = []
         for i in range(3):
-            mem = MagicMock()
-            mem.id = f"old-{i}"
-            mem.lifecycle_state = LifecycleState.ACTIVE
-            mem.content = f"Old content {i}"
-            mem.created_at = datetime.now(UTC) - timedelta(days=200)
-            mem.last_accessed = datetime.now(UTC) - timedelta(days=190)
-            mem.use_count = 0
-            mem.context_level = ContextLevel.SESSION_STATE
+            mem = {
+                'id': f"old-{i}",
+                'lifecycle_state': LifecycleState.ACTIVE,
+                'content': f"Old content {i}",
+                'created_at': datetime.now(UTC) - timedelta(days=200),
+                'last_accessed': datetime.now(UTC) - timedelta(days=190),
+                'use_count': 0,
+                'context_level': ContextLevel.SESSION_STATE,
+            }
             memories.append(mem)
 
         mock_store.get_all_memories = AsyncMock(return_value=memories)
@@ -176,19 +179,21 @@ class TestHealthMaintenanceJobs:
         memories = []
 
         # Already ARCHIVED
-        mem = MagicMock()
-        mem.id = "already-archived"
-        mem.lifecycle_state = LifecycleState.ARCHIVED
-        mem.content = "Archived content"
-        mem.created_at = datetime.now(UTC) - timedelta(days=200)
+        mem = {
+            'id': "already-archived",
+            'lifecycle_state': LifecycleState.ARCHIVED,
+            'content': "Archived content",
+            'created_at': datetime.now(UTC) - timedelta(days=200),
+        }
         memories.append(mem)
 
         # Already STALE
-        mem = MagicMock()
-        mem.id = "already-stale"
-        mem.lifecycle_state = LifecycleState.STALE
-        mem.content = "Stale content"
-        mem.created_at = datetime.now(UTC) - timedelta(days=300)
+        mem = {
+            'id': "already-stale",
+            'lifecycle_state': LifecycleState.STALE,
+            'content': "Stale content",
+            'created_at': datetime.now(UTC) - timedelta(days=300),
+        }
         memories.append(mem)
 
         mock_store.get_all_memories = AsyncMock(return_value=memories)
@@ -203,14 +208,15 @@ class TestHealthMaintenanceJobs:
     async def test_weekly_archival_job_error_handling(self, jobs, mock_store):
         """Test weekly archival job error handling."""
         # Create one old memory
-        mem = MagicMock()
-        mem.id = "old-mem"
-        mem.lifecycle_state = LifecycleState.ACTIVE
-        mem.content = "Old content"
-        mem.created_at = datetime.now(UTC) - timedelta(days=200)
-        mem.last_accessed = datetime.now(UTC) - timedelta(days=190)
-        mem.use_count = 0
-        mem.context_level = ContextLevel.SESSION_STATE
+        mem = {
+            'id': "old-mem",
+            'lifecycle_state': LifecycleState.ACTIVE,
+            'content': "Old content",
+            'created_at': datetime.now(UTC) - timedelta(days=200),
+            'last_accessed': datetime.now(UTC) - timedelta(days=190),
+            'use_count': 0,
+            'context_level': ContextLevel.SESSION_STATE,
+        }
 
         mock_store.get_all_memories = AsyncMock(return_value=[mem])
         mock_store.update_lifecycle_state = AsyncMock(
@@ -245,34 +251,37 @@ class TestHealthMaintenanceJobs:
 
         # 5 old STALE memories with low usage (should be deleted)
         for i in range(5):
-            mem = MagicMock()
-            mem.id = f"stale-{i}"
-            mem.lifecycle_state = LifecycleState.STALE
-            mem.content = f"Stale content {i}"
-            mem.created_at = datetime.now(UTC) - timedelta(days=200)
-            mem.use_count = 1
-            mem.context_level = ContextLevel.SESSION_STATE
+            mem = {
+                'id': f"stale-{i}",
+                'lifecycle_state': LifecycleState.STALE,
+                'content': f"Stale content {i}",
+                'created_at': datetime.now(UTC) - timedelta(days=200),
+                'use_count': 1,
+                'context_level': ContextLevel.SESSION_STATE,
+            }
             memories.append(mem)
 
         # 2 old STALE memories with high usage (should NOT be deleted)
         for i in range(2):
-            mem = MagicMock()
-            mem.id = f"stale-used-{i}"
-            mem.lifecycle_state = LifecycleState.STALE
-            mem.content = f"Used content {i}"
-            mem.created_at = datetime.now(UTC) - timedelta(days=200)
-            mem.use_count = 10
-            mem.context_level = ContextLevel.SESSION_STATE
+            mem = {
+                'id': f"stale-used-{i}",
+                'lifecycle_state': LifecycleState.STALE,
+                'content': f"Used content {i}",
+                'created_at': datetime.now(UTC) - timedelta(days=200),
+                'use_count': 10,
+                'context_level': ContextLevel.SESSION_STATE,
+            }
             memories.append(mem)
 
         # 1 old STALE USER_PREFERENCE (should NOT be deleted)
-        mem = MagicMock()
-        mem.id = "stale-pref"
-        mem.lifecycle_state = LifecycleState.STALE
-        mem.content = "Preference"
-        mem.created_at = datetime.now(UTC) - timedelta(days=200)
-        mem.use_count = 0
-        mem.context_level = ContextLevel.USER_PREFERENCE
+        mem = {
+            'id': "stale-pref",
+            'lifecycle_state': LifecycleState.STALE,
+            'content': "Preference",
+            'created_at': datetime.now(UTC) - timedelta(days=200),
+            'use_count': 0,
+            'context_level': ContextLevel.USER_PREFERENCE,
+        }
         memories.append(mem)
 
         mock_store.get_all_memories = AsyncMock(return_value=memories)
@@ -290,13 +299,14 @@ class TestHealthMaintenanceJobs:
         # Create old STALE memories
         memories = []
         for i in range(3):
-            mem = MagicMock()
-            mem.id = f"stale-{i}"
-            mem.lifecycle_state = LifecycleState.STALE
-            mem.content = f"Stale content {i}"
-            mem.created_at = datetime.now(UTC) - timedelta(days=200)
-            mem.use_count = 1
-            mem.context_level = ContextLevel.SESSION_STATE
+            mem = {
+                'id': f"stale-{i}",
+                'lifecycle_state': LifecycleState.STALE,
+                'content': f"Stale content {i}",
+                'created_at': datetime.now(UTC) - timedelta(days=200),
+                'use_count': 1,
+                'context_level': ContextLevel.SESSION_STATE,
+            }
             memories.append(mem)
 
         mock_store.get_all_memories = AsyncMock(return_value=memories)
@@ -318,23 +328,25 @@ class TestHealthMaintenanceJobs:
         memories = []
 
         # STALE memory older than min_age (should be deleted)
-        mem = MagicMock()
-        mem.id = "old-stale"
-        mem.lifecycle_state = LifecycleState.STALE
-        mem.content = "Old stale"
-        mem.created_at = datetime.now(UTC) - timedelta(days=200)
-        mem.use_count = 1
-        mem.context_level = ContextLevel.SESSION_STATE
+        mem = {
+            'id': "old-stale",
+            'lifecycle_state': LifecycleState.STALE,
+            'content': "Old stale",
+            'created_at': datetime.now(UTC) - timedelta(days=200),
+            'use_count': 1,
+            'context_level': ContextLevel.SESSION_STATE,
+        }
         memories.append(mem)
 
         # STALE memory younger than min_age (should NOT be deleted)
-        mem = MagicMock()
-        mem.id = "young-stale"
-        mem.lifecycle_state = LifecycleState.STALE
-        mem.content = "Young stale"
-        mem.created_at = datetime.now(UTC) - timedelta(days=100)
-        mem.use_count = 1
-        mem.context_level = ContextLevel.SESSION_STATE
+        mem = {
+            'id': "young-stale",
+            'lifecycle_state': LifecycleState.STALE,
+            'content': "Young stale",
+            'created_at': datetime.now(UTC) - timedelta(days=100),
+            'use_count': 1,
+            'context_level': ContextLevel.SESSION_STATE,
+        }
         memories.append(mem)
 
         mock_store.get_all_memories = AsyncMock(return_value=memories)
@@ -349,13 +361,14 @@ class TestHealthMaintenanceJobs:
     async def test_monthly_cleanup_job_error_handling(self, jobs, mock_store):
         """Test monthly cleanup job error handling."""
         # Create one STALE memory
-        mem = MagicMock()
-        mem.id = "stale-mem"
-        mem.lifecycle_state = LifecycleState.STALE
-        mem.content = "Stale content"
-        mem.created_at = datetime.now(UTC) - timedelta(days=200)
-        mem.use_count = 1
-        mem.context_level = ContextLevel.SESSION_STATE
+        mem = {
+            'id': "stale-mem",
+            'lifecycle_state': LifecycleState.STALE,
+            'content': "Stale content",
+            'created_at': datetime.now(UTC) - timedelta(days=200),
+            'use_count': 1,
+            'context_level': ContextLevel.SESSION_STATE,
+        }
 
         mock_store.get_all_memories = AsyncMock(return_value=[mem])
         mock_store.delete_memory = AsyncMock(side_effect=Exception("Delete error"))
@@ -374,11 +387,12 @@ class TestHealthMaintenanceJobs:
         # Mock get_all_memories for health scorer
         memories = []
         for i in range(10):
-            mem = MagicMock()
-            mem.id = f"mem-{i}"
-            mem.lifecycle_state = LifecycleState.ACTIVE
-            mem.content = f"Content {i}"
-            mem.created_at = datetime.now(UTC)
+            mem = {
+                'id': f"mem-{i}",
+                'lifecycle_state': LifecycleState.ACTIVE,
+                'content': f"Content {i}",
+                'created_at': datetime.now(UTC),
+            }
             memories.append(mem)
 
         mock_store.get_all_memories = AsyncMock(return_value=memories)
