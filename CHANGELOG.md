@@ -84,6 +84,13 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Bug Fixes
 
+- **FIX-PROACTIVE-SUGGESTIONS-POOLING: Proactive Suggestions Integration Tests Collection Pooling** (2025-11-22)
+  - Updated test_proactive_suggestions.py server fixture to use collection pooling from conftest
+  - Changed server fixture to accept qdrant_client and unique_qdrant_collection parameters
+  - Updated test_disabled_server_returns_disabled_message to use pooled collection
+  - Leverages session-scoped resources to prevent Qdrant deadlocks during parallel execution
+  - Fixes multiple ERROR tests in proactive suggestions functionality
+
 - **FIX-INDEXING-INTEGRATION-POOLING: Indexing Integration Tests Collection Pooling** (2025-11-22)
   - Updated test_indexing_integration.py config fixture to use collection pooling from conftest
   - Changed config fixture to accept unique_qdrant_collection parameter

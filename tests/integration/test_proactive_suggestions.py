@@ -13,14 +13,17 @@ class TestProactiveSuggestionsIntegration:
     """Integration tests for proactive suggestion system."""
 
     @pytest_asyncio.fixture
-    async def server(self, tmp_path):
-        """Create a test server with suggestions enabled and unique collection."""
-        collection = f"test_sugg_{uuid.uuid4().hex[:8]}"
+    async def server(self, tmp_path, qdrant_client, unique_qdrant_collection):
+        """Create a test server with suggestions enabled and pooled collection.
 
+        Uses the session-scoped qdrant_client and unique_qdrant_collection
+        fixtures from conftest.py to leverage collection pooling and prevent
+        Qdrant deadlocks during parallel test execution.
+        """
         config = ServerConfig(
             storage_backend="qdrant",
             qdrant_url="http://localhost:6333",
-            qdrant_collection_name=collection,
+            qdrant_collection_name=unique_qdrant_collection,
             enable_proactive_suggestions=True,
             proactive_suggestions_threshold=0.90,
         )
@@ -30,11 +33,7 @@ class TestProactiveSuggestionsIntegration:
 
         # Cleanup
         await server_instance.close()
-        if hasattr(server_instance.store, 'client') and server_instance.store.client:
-            try:
-                server_instance.store.client.delete_collection(collection)
-            except Exception:
-                pass  # Ignore cleanup errors
+        # Collection cleanup handled by unique_qdrant_collection autouse fixture
 
     async def test_analyze_conversation_implementation_request(self, server):
         """Test analyzing a message with implementation request pattern."""
@@ -129,12 +128,12 @@ class TestProactiveSuggestionsIntegration:
         assert result["enabled"] is True
         assert result["high_confidence_threshold"] == 0.85
 
-    async def test_disabled_server_returns_disabled_message(self, tmp_path):
+    async def test_disabled_server_returns_disabled_message(self, tmp_path, unique_qdrant_collection):
         """Test that disabled server returns appropriate message."""
         config = ServerConfig(
             storage_backend="qdrant",
             qdrant_url="http://localhost:6333",
-            qdrant_collection_name="test_proactive_disabled",
+            qdrant_collection_name=unique_qdrant_collection,
             enable_proactive_suggestions=False,
         )
         server_instance = MemoryRAGServer(config=config)
@@ -145,6 +144,7 @@ class TestProactiveSuggestionsIntegration:
         assert "disabled" in result["message"].lower()
 
         await server_instance.close()
+        # Collection cleanup handled by unique_qdrant_collection autouse fixture
 
     async def test_end_to_end_with_indexed_code(self, server):
         """Test proactive suggestions with actual indexed code."""
