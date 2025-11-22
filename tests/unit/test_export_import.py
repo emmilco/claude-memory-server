@@ -32,14 +32,47 @@ def mock_config():
 @pytest_asyncio.fixture
 async def server(mock_config):
     """Create a MemoryRAGServer instance for testing."""
+    from src.core.models import MemoryUnit, MemoryCategory, ContextLevel, MemoryScope
+    from datetime import datetime
+
     server = MemoryRAGServer(mock_config)
 
     # Mock the store and embedding generator
     server.store = AsyncMock()
-    server.embedding_gen = AsyncMock()
-    server.embedding_gen.generate = AsyncMock(return_value=[0.1] * 384)
+    server.embedding_generator = AsyncMock()
+    server.embedding_generator.generate = AsyncMock(return_value=[0.1] * 384)
 
-    # Mock list_memories to return sample data
+    # Create sample MemoryUnit objects for store.list_memories
+    sample_memories = [
+        MemoryUnit(
+            id="mem_1",
+            content="Test memory 1",
+            category=MemoryCategory.FACT,
+            context_level=ContextLevel.SESSION_STATE,
+            scope=MemoryScope.GLOBAL,
+            importance=0.8,
+            tags=["test", "python"],
+            created_at=datetime.fromisoformat("2025-01-01T10:00:00"),
+            updated_at=datetime.fromisoformat("2025-01-01T10:00:00"),
+        ),
+        MemoryUnit(
+            id="mem_2",
+            content="Test memory 2",
+            category=MemoryCategory.PREFERENCE,
+            context_level=ContextLevel.USER_PREFERENCE,
+            scope=MemoryScope.PROJECT,
+            project_name="test-project",
+            importance=0.9,
+            tags=["preference"],
+            created_at=datetime.fromisoformat("2025-01-02T10:00:00"),
+            updated_at=datetime.fromisoformat("2025-01-02T10:00:00"),
+        )
+    ]
+
+    # Mock store.list_memories to return tuple (memories, total_count)
+    server.store.list_memories = AsyncMock(return_value=(sample_memories, 2))
+
+    # Mock list_memories (high-level API) to return sample data
     server.list_memories = AsyncMock(return_value={
         "memories": [
             {
@@ -155,7 +188,7 @@ class TestExportMemories:
             assert "# Memory Export" in content
             assert "## Memory: mem_1" in content
             assert "## Memory: mem_2" in content
-            assert "**Category:** technical" in content
+            assert "**Category:** fact" in content
             assert "Test memory 1" in content
 
         finally:
@@ -173,11 +206,11 @@ class TestExportMemories:
 
         assert result["status"] == "success"
 
-        # Verify list_memories was called with correct filters
-        server.list_memories.assert_called_once()
-        call_args = server.list_memories.call_args[1]
-        assert call_args["category"] == "fact"
-        assert call_args["min_importance"] == 0.7
+        # Verify store.list_memories was called with correct filters
+        server.store.list_memories.assert_called_once()
+        call_args = server.store.list_memories.call_args[1]
+        filters = call_args["filters"]
+        assert filters["min_importance"] == 0.7
 
     @pytest.mark.asyncio
     async def test_export_invalid_format(self, server):

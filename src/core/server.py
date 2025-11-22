@@ -1567,8 +1567,8 @@ class MemoryRAGServer:
                             # Build updates
                             updates = {
                                 "content": mem_data["content"],
-                                "category": mem_data.get("category", "general"),
-                                "context_level": mem_data.get("context_level", "SESSION"),
+                                "category": mem_data.get("category", "fact"),
+                                "context_level": mem_data.get("context_level", "SESSION_STATE"),
                                 "importance": mem_data.get("importance", 0.5),
                                 "tags": mem_data.get("tags", []),
                             }
@@ -1618,8 +1618,8 @@ class MemoryRAGServer:
                         # Create memory request
                         request = StoreMemoryRequest(
                             content=mem_data["content"],
-                            category=mem_data.get("category", "general"),
-                            context_level=mem_data.get("context_level", "SESSION"),
+                            category=mem_data.get("category", "fact"),
+                            context_level=mem_data.get("context_level", "SESSION_STATE"),
                             importance=mem_data.get("importance", 0.5),
                             tags=mem_data.get("tags", []),
                             metadata=mem_data.get("metadata", {}),
