@@ -84,6 +84,12 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Bug Fixes
 
+- **FIX-BACKUP-IMPORT-POOLING: Backup Import Unit Tests Collection Pooling** (2025-11-22)
+  - Updated test_backup_import.py temp_store fixture to use collection pooling from conftest
+  - Changed temp_store fixture to accept qdrant_client and unique_qdrant_collection parameters
+  - Leverages session-scoped resources to prevent Qdrant deadlocks during parallel execution
+  - Fixes multiple ERROR tests in backup import functionality
+
 - **FIX-BACKGROUND-INDEXER-POOLING: Background Indexer Unit Tests Collection Pooling** (2025-11-22)
   - Updated test_background_indexer.py config fixture to use collection pooling from conftest
   - Changed config fixture to accept unique_qdrant_collection parameter
