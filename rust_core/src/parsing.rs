@@ -387,10 +387,16 @@ impl CodeParser {
         match Query::new(&lang.get_language(), lang.function_query()) {
             Ok(function_query) => {
                 let mut cursor = QueryCursor::new();
-                let mut captures = cursor.captures(&function_query, tree.root_node(), source_code.as_bytes());
+                let mut matches = cursor.matches(&function_query, tree.root_node(), source_code.as_bytes());
 
-                while let Some((match_, _)) = captures.next() {
-                    if let Some(capture) = match_.captures.first() {
+                // Find the capture index for "@function" (last capture in the query)
+                let function_capture_idx = function_query.capture_names().iter()
+                    .position(|name| *name == "function")
+                    .unwrap_or(function_query.capture_names().len().saturating_sub(1));
+
+                while let Some(match_) = matches.next() {
+                    // Only process the @function capture, not @name/@params/@body
+                    if let Some(capture) = match_.captures.iter().find(|c| c.index as usize == function_capture_idx) {
                         let node = capture.node;
                         let name = node
                             .utf8_text(source_code.as_bytes())
@@ -424,10 +430,16 @@ impl CodeParser {
         match Query::new(&lang.get_language(), lang.class_query()) {
             Ok(class_query) => {
                 let mut cursor = QueryCursor::new();
-                let mut captures = cursor.captures(&class_query, tree.root_node(), source_code.as_bytes());
+                let mut matches = cursor.matches(&class_query, tree.root_node(), source_code.as_bytes());
 
-                while let Some((match_, _)) = captures.next() {
-                    if let Some(capture) = match_.captures.first() {
+                // Find the capture index for "@class" (last capture in the query)
+                let class_capture_idx = class_query.capture_names().iter()
+                    .position(|name| *name == "class")
+                    .unwrap_or(class_query.capture_names().len().saturating_sub(1));
+
+                while let Some(match_) = matches.next() {
+                    // Only process the @class capture, not @name/@body
+                    if let Some(capture) = match_.captures.iter().find(|c| c.index as usize == class_capture_idx) {
                         let node = capture.node;
                         let name = node
                             .utf8_text(source_code.as_bytes())
