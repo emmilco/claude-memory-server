@@ -15,15 +15,17 @@ from src.memory.lifecycle_manager import LifecycleManager
 
 
 @pytest_asyncio.fixture
-async def temp_db():
-    """Create a test Qdrant store with unique collection per test run."""
-    # Unique collection name to prevent test pollution
-    collection = f"test_health_{uuid.uuid4().hex[:8]}"
+async def temp_db(qdrant_client, unique_qdrant_collection):
+    """Create a test Qdrant store with pooled collection.
 
+    Uses the session-scoped qdrant_client and unique_qdrant_collection
+    fixtures from conftest.py to leverage collection pooling and prevent
+    Qdrant deadlocks during parallel test execution.
+    """
     config = ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
-        qdrant_collection_name=collection,
+        qdrant_collection_name=unique_qdrant_collection,
     )
 
     store = QdrantMemoryStore(config)
@@ -33,11 +35,7 @@ async def temp_db():
 
     # Cleanup
     await store.close()
-    if store.client:
-        try:
-            store.client.delete_collection(collection)
-        except Exception:
-            pass  # Ignore cleanup errors
+    # Collection cleanup handled by unique_qdrant_collection autouse fixture
 
 
 class TestHealthDashboardIntegration:

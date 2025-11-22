@@ -84,6 +84,12 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Bug Fixes
 
+- **FIX-HEALTH-DASHBOARD-POOLING: Health Dashboard Integration Tests Collection Pooling** (2025-11-22)
+  - Updated test_health_dashboard_integration.py temp_db fixture to use collection pooling from conftest
+  - Changed temp_db fixture to accept qdrant_client and unique_qdrant_collection parameters
+  - Leverages session-scoped resources to prevent Qdrant deadlocks during parallel execution
+  - Fixes multiple ERROR tests in health dashboard and lifecycle management functionality
+
 - **FIX-ERROR-RECOVERY-POOLING: Error Recovery Integration Tests Collection Pooling** (2025-11-22)
   - Updated test_error_recovery.py fixtures to use collection pooling from conftest
   - Changed config fixture to accept unique_qdrant_collection parameter
