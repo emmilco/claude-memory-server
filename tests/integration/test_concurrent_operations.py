@@ -12,30 +12,35 @@ from src.core.models import MemoryCategory, MemoryScope
 
 
 @pytest.fixture
-def config():
-    """Create test configuration with unique collection."""
+def config(unique_qdrant_collection):
+    """Create test configuration with pooled collection.
+
+    Uses the unique_qdrant_collection from conftest.py to leverage
+    collection pooling and prevent Qdrant deadlocks during parallel execution.
+    """
     return ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
-        qdrant_collection_name=f"test_conc_{uuid.uuid4().hex[:8]}",
+        qdrant_collection_name=unique_qdrant_collection,
         read_only_mode=False,
     )
 
 
 @pytest_asyncio.fixture
-async def server(config):
-    """Create server instance with unique collection."""
+async def server(config, qdrant_client):
+    """Create server instance with pooled collection.
+
+    Uses the session-scoped qdrant_client and unique_qdrant_collection
+    fixtures from conftest.py to leverage collection pooling and prevent
+    Qdrant deadlocks during parallel test execution.
+    """
     srv = MemoryRAGServer(config)
     await srv.initialize()
     yield srv
 
     # Cleanup
     await srv.close()
-    if hasattr(srv.store, 'client') and srv.store.client:
-        try:
-            srv.store.client.delete_collection(config.qdrant_collection_name)
-        except Exception:
-            pass  # Ignore cleanup errors
+    # Collection cleanup handled by unique_qdrant_collection autouse fixture
 
 
 class TestConcurrentWrites:
