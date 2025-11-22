@@ -25,7 +25,23 @@ async def qdrant_store(test_config):
     """Create a Qdrant store for testing."""
     store = QdrantMemoryStore(test_config)
     await store.initialize()
+
+    # Clean up any existing data before test
+    try:
+        await store.client.delete_collection(collection_name=test_config.qdrant_collection_name)
+    except Exception:
+        pass  # Collection might not exist yet
+
+    await store.initialize()  # Recreate clean collection
+
     yield store
+
+    # Clean up after test
+    try:
+        await store.client.delete_collection(collection_name=test_config.qdrant_collection_name)
+    except Exception:
+        pass
+
     await store.close()
 
 
@@ -145,7 +161,7 @@ class TestReadOnlyModeAllowsReads:
         await qdrant_store.initialize()
 
         # Add data
-        await sqlite_store.store(
+        await qdrant_store.store(
             content="preference data",
             embedding=[0.2] * 384,
             metadata={

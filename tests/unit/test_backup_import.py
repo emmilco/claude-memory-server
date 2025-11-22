@@ -40,6 +40,9 @@ async def temp_store(qdrant_client, unique_qdrant_collection):
 @pytest.mark.asyncio
 async def test_import_from_json(temp_store):
     """Test importing memories from JSON."""
+    # Use valid UUID for Qdrant
+    test_id = str(uuid.uuid4())
+
     # Create test data
     test_data = {
         "version": "1.0.0",
@@ -50,7 +53,7 @@ async def test_import_from_json(temp_store):
         "memory_count": 1,
         "memories": [
             {
-                "id": "import-test-1",
+                "id": test_id,
                 "content": "Imported memory",
                 "category": "preference",
                 "context_level": "USER_PREFERENCE",
@@ -87,20 +90,23 @@ async def test_import_from_json(temp_store):
         assert stats["errors"] == 0
 
         # Verify memory was stored
-        memory = await temp_store.get_by_id("import-test-1")
+        memory = await temp_store.get_by_id(test_id)
         assert memory.content == "Imported memory"
 
 
 @pytest.mark.asyncio
 async def test_import_conflict_keep_newer(temp_store):
     """Test import conflict resolution: keep newer."""
+    # Use valid UUID for Qdrant
+    test_id = str(uuid.uuid4())
+
     # Store an existing memory
     old_time = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
     await temp_store.store(
         content="Old content",
         embedding=[0.1] * 384,
         metadata={
-            "id": "conflict-test",
+            "id": test_id,
             "category": MemoryCategory.PREFERENCE.value,
             "context_level": ContextLevel.USER_PREFERENCE.value,
             "scope": MemoryScope.GLOBAL.value,
@@ -125,7 +131,7 @@ async def test_import_conflict_keep_newer(temp_store):
         "memory_count": 1,
         "memories": [
             {
-                "id": "conflict-test",
+                "id": test_id,
                 "content": "New content",
                 "category": "preference",
                 "context_level": "USER_PREFERENCE",
@@ -161,7 +167,7 @@ async def test_import_conflict_keep_newer(temp_store):
         assert stats["conflict_resolutions"]["kept_newer"] == 1
 
         # Verify new content was kept
-        memory = await temp_store.get_by_id("conflict-test")
+        memory = await temp_store.get_by_id(test_id)
         assert memory.content == "New content"
 
 
@@ -217,13 +223,16 @@ async def test_import_dry_run(temp_store):
 @pytest.mark.asyncio
 async def test_import_from_archive(temp_store):
     """Test importing from portable archive."""
+    # Use valid UUID for Qdrant
+    test_id = str(uuid.uuid4())
+
     # First create an archive by storing a memory
     now = datetime.now(UTC)
     await temp_store.store(
         content="Archive memory",
         embedding=[0.4] * 384,
         metadata={
-            "id": "archive-test",
+            "id": test_id,
             "category": MemoryCategory.PREFERENCE.value,
             "context_level": ContextLevel.USER_PREFERENCE.value,
             "scope": MemoryScope.GLOBAL.value,
@@ -244,7 +253,7 @@ async def test_import_from_archive(temp_store):
         await exporter.create_portable_archive(archive_path)
 
         # Clear the store
-        await temp_store.delete("archive-test")
+        await temp_store.delete(test_id)
 
         # Import from archive
         importer = DataImporter(temp_store)
@@ -255,5 +264,5 @@ async def test_import_from_archive(temp_store):
         assert stats["imported"] == 1
 
         # Verify memory was restored
-        restored = await temp_store.get_by_id("archive-test")
+        restored = await temp_store.get_by_id(test_id)
         assert restored.content == "Archive memory"

@@ -213,7 +213,7 @@ class TestStorageChecks:
 
             mock_result = MagicMock()
             mock_result.returncode = 0
-            mock_result.stdout = '{"status":"ok"}'
+            mock_result.stdout = '{"version":"v1.0.0"}'
 
             with patch('subprocess.run', return_value=mock_result):
                 success, backend, message = await cmd.check_storage_backend()

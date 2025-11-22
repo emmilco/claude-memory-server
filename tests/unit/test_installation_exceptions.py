@@ -57,7 +57,7 @@ class TestDependencyError:
             raise DependencyError("test-package", "test context")
         except DependencyError as e:
             assert e.docs_url is not None
-            assert "setup.md" in e.docs_url
+            assert "TROUBLESHOOTING.md" in e.docs_url
             error_str = str(e)
             assert "Docs:" in error_str
 
@@ -95,7 +95,6 @@ class TestDockerNotRunningError:
         assert "Docker" in error_message
         assert "Qdrant" in error_message
         assert "Docker Desktop" in error_message
-        assert "SQLite" in error_message
         assert "Solution:" in error_message
 
     @patch("platform.system")
@@ -109,7 +108,6 @@ class TestDockerNotRunningError:
         error_message = str(exc_info.value)
         assert "Docker" in error_message
         assert "systemctl" in error_message
-        assert "SQLite" in error_message
 
     @patch("platform.system")
     def test_docker_error_windows(self, mock_system):
@@ -129,18 +127,9 @@ class TestDockerNotRunningError:
             raise DockerNotRunningError()
         except DockerNotRunningError as e:
             assert e.docs_url is not None
-            assert "docker-setup" in e.docs_url.lower()
+            assert "SETUP.md" in e.docs_url
             error_str = str(e)
             assert "Docs:" in error_str
-
-    def test_docker_error_mentions_fallback(self):
-        """Test DockerNotRunningError mentions SQLite fallback."""
-        with pytest.raises(DockerNotRunningError) as exc_info:
-            raise DockerNotRunningError()
-
-        error_message = str(exc_info.value)
-        assert "SQLite" in error_message
-        assert "fall back" in error_message.lower()
 
 
 class TestRustBuildError:
@@ -182,7 +171,7 @@ class TestRustBuildError:
             raise RustBuildError("build failed")
         except RustBuildError as e:
             assert e.docs_url is not None
-            assert "rust-parser" in e.docs_url.lower()
+            assert "TROUBLESHOOTING.md" in e.docs_url
             error_str = str(e)
             assert "Docs:" in error_str
 
@@ -247,4 +236,4 @@ class TestExceptionFormatting:
         """Test docs_url attribute is accessible."""
         error = DependencyError("test-package")
         assert error.docs_url is not None
-        assert "http" in error.docs_url
+        assert "docs/" in error.docs_url

@@ -234,7 +234,9 @@ class DebouncedFileWatcher(FileSystemEventHandler):
             return
 
         file_path = Path(event.src_path)
-        if self._should_process(file_path):
+        # For deleted files, check extension without checking if file exists
+        # (since the file is already deleted, is_file() would return False)
+        if file_path.suffix in self.patterns:
             logger.debug(f"File deleted: {file_path}")
             self.stats["events_processed"] += 1
 

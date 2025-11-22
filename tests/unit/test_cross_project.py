@@ -182,7 +182,7 @@ class TestSearchAllProjects:
 
         # Opt in
         if server.cross_project_consent:
-            server.cross_project_consent.opt_in_project("test-project")
+            server.cross_project_consent.opt_in("test-project")
 
         result = await server.search_all_projects(
             query="test",

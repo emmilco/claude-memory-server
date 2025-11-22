@@ -637,3 +637,4 @@ After completing any session, update the following:
 
 Remember: This documentation system is your future self's context. Keep it accurate, organized, and useful.
 - Quadrant doesn't have a dedicated health endpoint
+- Think of yourself as a code owner maintaining a production codebase. Don't leave behind tech debt. Don't accept incomplete features. Don't accept failing test cases.

@@ -452,7 +452,11 @@ class IncrementalIndexer(BaseCodeIndexer):
         }
 
         def should_include_file(file_path: Path) -> bool:
-            """Check if file should be indexed (not in excluded directories)."""
+            """Check if file should be indexed (not in excluded directories or hidden)."""
+            # Skip hidden files (files starting with .)
+            if file_path.name.startswith('.'):
+                return False
+
             # Get relative path from dir_path to check only subdirectories being indexed
             try:
                 rel_path = file_path.relative_to(dir_path)

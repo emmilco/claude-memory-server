@@ -25,16 +25,6 @@ python tests/manual/test_all_features.py
 
 ---
 
-### test_mcp_tools.py
-Initial test script for MCP tools (deprecated - use test_all_features.py instead).
-
-**Usage:**
-```bash
-python tests/manual/test_mcp_tools.py
-```
-
----
-
 ### debug_search.py
 Debug script for investigating search_code results.
 

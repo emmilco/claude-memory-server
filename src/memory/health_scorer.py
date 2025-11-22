@@ -170,7 +170,14 @@ class HealthScorer:
             all_memories = await self.store.get_all_memories()
 
             for memory in all_memories:
-                state = memory.get('lifecycle_state', LifecycleState.ACTIVE)
+                # Support both dict and object (MemoryUnit) access patterns
+                if hasattr(memory, 'lifecycle_state'):
+                    state = memory.lifecycle_state
+                elif isinstance(memory, dict):
+                    state = memory.get('lifecycle_state', LifecycleState.ACTIVE)
+                else:
+                    state = getattr(memory, 'lifecycle_state', LifecycleState.ACTIVE)
+
                 if isinstance(state, str):
                     # Convert string to LifecycleState enum
                     try:
@@ -243,7 +250,14 @@ class HealthScorer:
             duplicate_count = 0
 
             for memory in all_memories:
-                content = memory.get('content', '').strip().lower()
+                # Support both dict and object (MemoryUnit) access patterns
+                if hasattr(memory, 'content'):
+                    content = memory.content.strip().lower()
+                elif isinstance(memory, dict):
+                    content = memory.get('content', '').strip().lower()
+                else:
+                    content = getattr(memory, 'content', '').strip().lower()
+
                 if content in content_map:
                     duplicate_count += 1
                 else:

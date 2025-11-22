@@ -5,7 +5,7 @@ import sys
 import time
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.core.server import MemoryRAGServer
 from src.config import get_config

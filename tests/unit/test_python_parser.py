@@ -17,7 +17,7 @@ class TestPythonParserInitialization:
     def test_parser_has_all_languages(self):
         """Test that parser initializes all supported languages."""
         parser = get_parser()
-        expected_languages = ["python", "javascript", "typescript", "java", "go", "rust"]
+        expected_languages = ["python", "javascript", "typescript", "java", "go", "rust", "swift", "kotlin"]
         assert set(parser.parsers.keys()) == set(expected_languages)
 
     def test_parser_languages_initialized(self):

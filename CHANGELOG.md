@@ -84,6 +84,33 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Bug Fixes
 
+- **TEST-006: Implement Project Reindexing clear_existing Flag** (2025-11-22)
+  - Implemented filter-based deletion in QdrantMemoryStore for code units by project
+  - Added delete_code_units_by_project() method to properly clear existing index
+  - Updated reindex_project() to use new deletion method instead of logging warning
+  - Fixed 3 failing tests: test_reindex_with_clear_existing, test_reindex_with_both_flags, test_reindex_multiple_projects
+  - Files: src/store/qdrant_store.py, src/core/server.py
+
+- **TEST-006: Fix Python Parser Test for Swift/Kotlin Support** (2025-11-22)
+  - Added 'swift' and 'kotlin' to expected_languages list
+  - Python parser now supports 8 languages (was 6)
+  - Files: tests/unit/test_python_parser.py
+
+- **TEST-006: Fix Installation Exception Tests for Post-REF-010 Changes** (2025-11-22)
+  - Removed SQLite fallback assertions (Qdrant now required per REF-010)
+  - Updated docs_url expectations to match current error messages
+  - Deleted obsolete test_docker_error_mentions_fallback test
+  - Fixed 7 failing tests in test_installation_exceptions.py
+  - Files: tests/unit/test_installation_exceptions.py
+
+- **TEST-006: Clean Up Obsolete Manual Test Scripts** (2025-11-22)
+  - Deleted tests/manual/test_mcp_tools.py (called non-existent APIs: code_search(), search_memories())
+  - Fixed tests/manual/eval_test.py to run as standalone script (removed pytest fixture dependency)
+  - Updated tests/manual/README.md to remove reference to deleted test
+  - Added tests/manual to pytest norecursedirs to exclude from pytest collection (manual scripts are run standalone)
+  - Follows code owner philosophy: no technical debt, no failing tests, clean codebase
+  - Files: tests/manual/test_mcp_tools.py (deleted), tests/manual/eval_test.py, tests/manual/README.md, pytest.ini
+
 - **TEST-006: Fix Tagging System Test Isolation** (2025-11-22)
   - Changed `tag_manager` and `collection_manager` fixtures to use function-scoped `tmp_path`
   - Prevents tag name collisions across tests by giving each test its own database

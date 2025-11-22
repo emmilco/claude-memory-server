@@ -45,13 +45,19 @@ class TestGetDashboardStats:
             },
         ])
 
-        # Mock SQLite conn for global count
-        mock_server.store.conn = MagicMock()
-        mock_cursor = MagicMock()
-        mock_cursor.fetchone.return_value = (10,)
-        mock_server.store.conn.execute.return_value = mock_cursor
+        # Mock Qdrant client for global count
+        mock_count_result = MagicMock()
+        mock_count_result.count = 10
+        # Create a proper mock for the client.count method
+        mock_server.store.client = MagicMock()
+        mock_server.store.client.count = AsyncMock(return_value=mock_count_result)
+        mock_server.store.collection_name = "test_collection"
 
-        result = await mock_server.get_dashboard_stats()
+        # Patch Qdrant imports to prevent import errors
+        with patch("qdrant_client.models.Filter"), \
+             patch("qdrant_client.models.FieldCondition"), \
+             patch("qdrant_client.models.IsNullCondition"):
+            result = await mock_server.get_dashboard_stats()
 
         assert result["status"] == "success"
         assert result["total_memories"] == 150
@@ -69,13 +75,19 @@ class TestGetDashboardStats:
         mock_server.store.count = AsyncMock(return_value=25)
         mock_server.store.get_all_projects = AsyncMock(return_value=[])
 
-        # Mock SQLite conn for global count
-        mock_server.store.conn = MagicMock()
-        mock_cursor = MagicMock()
-        mock_cursor.fetchone.return_value = (25,)
-        mock_server.store.conn.execute.return_value = mock_cursor
+        # Mock Qdrant client for global count
+        mock_count_result = MagicMock()
+        mock_count_result.count = 25
+        # Create a proper mock for the client.count method
+        mock_server.store.client = MagicMock()
+        mock_server.store.client.count = AsyncMock(return_value=mock_count_result)
+        mock_server.store.collection_name = "test_collection"
 
-        result = await mock_server.get_dashboard_stats()
+        # Patch Qdrant imports to prevent import errors
+        with patch("qdrant_client.models.Filter"), \
+             patch("qdrant_client.models.FieldCondition"), \
+             patch("qdrant_client.models.IsNullCondition"):
+            result = await mock_server.get_dashboard_stats()
 
         assert result["status"] == "success"
         assert result["total_memories"] == 25
@@ -138,15 +150,24 @@ class TestGetDashboardStats:
             "lifecycle_states": {"ACTIVE": 140},
         })
 
-        # No conn attribute (Qdrant backend)
-        delattr(mock_server.store, 'conn') if hasattr(mock_server.store, 'conn') else None
+        # Mock Qdrant client for global count
+        mock_count_result = MagicMock()
+        mock_count_result.count = 10
+        # Create a proper mock for the client.count method
+        mock_server.store.client = MagicMock()
+        mock_server.store.client.count = AsyncMock(return_value=mock_count_result)
+        mock_server.store.collection_name = "test_collection"
 
-        result = await mock_server.get_dashboard_stats()
+        # Patch Qdrant imports to prevent import errors
+        with patch("qdrant_client.models.Filter"), \
+             patch("qdrant_client.models.FieldCondition"), \
+             patch("qdrant_client.models.IsNullCondition"):
+            result = await mock_server.get_dashboard_stats()
 
         assert result["status"] == "success"
         assert result["total_memories"] == 150
-        # Global count calculated as total - project totals
-        assert result["global_memories"] == 10  # 150 - 140
+        # Global count from Qdrant client
+        assert result["global_memories"] == 10
 
     @pytest.mark.asyncio
     async def test_get_dashboard_stats_storage_error(self, mock_server):

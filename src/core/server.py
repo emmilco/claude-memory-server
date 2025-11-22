@@ -3010,9 +3010,13 @@ class MemoryRAGServer:
 
                 # Delete all CODE memories for this project
                 # Code units are stored with category="code", scope="project"
-                # TODO: Implement query-based deletion for Qdrant
-                logger.warning("Clear existing index not yet fully supported for Qdrant store")
-                units_deleted = 0
+                if hasattr(self.store, 'delete_code_units_by_project'):
+                    units_deleted = await self.store.delete_code_units_by_project(project_name)
+                    logger.info(f"Deleted {units_deleted} existing code units for project: {project_name}")
+                else:
+                    # Fallback for stores that don't support bulk deletion
+                    logger.warning("Store doesn't support bulk deletion, clear_existing not fully available")
+                    units_deleted = 0
 
             # Step 2: Clear embedding cache if requested
             if bypass_cache and self.embedding_cache:

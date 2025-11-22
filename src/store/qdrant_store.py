@@ -181,6 +181,74 @@ class QdrantMemoryStore(MemoryStore):
         except Exception as e:
             raise StorageError(f"Failed to delete memory: {e}")
 
+    async def delete_code_units_by_project(self, project_name: str) -> int:
+        """
+        Delete all CODE category memories for a specific project.
+
+        Args:
+            project_name: Name of the project whose code units should be deleted.
+
+        Returns:
+            Number of units deleted.
+
+        Raises:
+            StorageError: If deletion fails.
+        """
+        if self.client is None:
+            await self.initialize()
+
+        try:
+            # First, count how many units will be deleted by scrolling
+            filter_conditions = Filter(
+                must=[
+                    FieldCondition(
+                        key="category",
+                        match=MatchValue(value="code")
+                    ),
+                    FieldCondition(
+                        key="scope",
+                        match=MatchValue(value="project")
+                    ),
+                    FieldCondition(
+                        key="project_name",
+                        match=MatchValue(value=project_name)
+                    ),
+                ]
+            )
+
+            # Count units before deletion
+            offset = None
+            count = 0
+
+            while True:
+                results, offset = self.client.scroll(
+                    collection_name=self.collection_name,
+                    scroll_filter=filter_conditions,
+                    limit=100,
+                    offset=offset,
+                    with_payload=False,
+                    with_vectors=False,
+                )
+
+                count += len(results)
+
+                if offset is None:
+                    break
+
+            # Delete using filter
+            if count > 0:
+                self.client.delete(
+                    collection_name=self.collection_name,
+                    points_selector=filter_conditions,
+                )
+                logger.info(f"Deleted {count} code units for project: {project_name}")
+
+            return count
+
+        except Exception as e:
+            logger.error(f"Failed to delete code units for project {project_name}: {e}")
+            raise StorageError(f"Failed to delete code units: {e}")
+
     async def batch_store(
         self,
         items: List[Tuple[str, List[float], Dict[str, Any]]],
@@ -591,7 +659,7 @@ class QdrantMemoryStore(MemoryStore):
             must_conditions = [
                 FieldCondition(
                     key="category",
-                    match=MatchValue(value="context")
+                    match=MatchValue(value="code")  # Fixed: code is stored with category="code", not "context"
                 )
             ]
 
@@ -701,7 +769,7 @@ class QdrantMemoryStore(MemoryStore):
             must_conditions = [
                 FieldCondition(
                     key="category",
-                    match=MatchValue(value="context")
+                    match=MatchValue(value="code")  # Fixed: code is stored with category="code", not "context"
                 )
             ]
 
