@@ -84,6 +84,13 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ### Bug Fixes
 
+- **FIX-AUTOUSE-FIXTURES: Remove autouse from Qdrant Collection Pooling Fixtures** (2025-11-22)
+  - Removed `autouse=True` from `setup_qdrant_pool` and `unique_qdrant_collection` fixtures
+  - These fixtures now only run when tests explicitly request them
+  - Fixes test hangs caused by Qdrant connection attempts on non-Qdrant tests
+  - Dramatically improves test startup time for unit tests that don't need Qdrant
+  - `unique_qdrant_collection` now explicitly depends on `setup_qdrant_pool` to ensure pool is created
+
 - **FIX-REMAINING-TESTS-POOLING: Final Batch of Collection Pooling Fixes** (2025-11-22)
   - Updated test_indexed_content_visibility.py, test_list_memories.py, test_project_reindexing.py, test_server_extended.py
   - Changed config fixtures to accept unique_qdrant_collection parameter
