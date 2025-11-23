@@ -2208,16 +2208,8 @@ class MemoryRAGServer:
         file_pattern: Optional[str] = None,
         language: Optional[str] = None,
         search_mode: str = "semantic",
-        # FEAT-056: Advanced filtering and sorting
-        exclude_patterns: Optional[List[str]] = None,
-        complexity_min: Optional[int] = None,
-        complexity_max: Optional[int] = None,
-        line_count_min: Optional[int] = None,
-        line_count_max: Optional[int] = None,
-        modified_after: Optional[datetime] = None,
-        modified_before: Optional[datetime] = None,
-        sort_by: str = "relevance",
-        sort_order: str = "desc",
+        pattern: Optional[str] = None,
+        pattern_mode: str = "filter",
     ) -> Dict[str, Any]:
         """
         Search indexed code semantically across functions and classes.
@@ -2254,60 +2246,47 @@ class MemoryRAGServer:
         - "user permission checking logic"
 
         **Performance:** 7-13ms semantic, 3-7ms keyword, 10-18ms hybrid
-        **With filters:** +2-3ms overhead for typical queries
+        **With pattern matching:** +2-5ms overhead depending on pattern_mode
 
-        **NEW (FEAT-056): Advanced Filtering & Sorting Examples:**
+        **Pattern Matching (NEW - FEAT-058):**
+        Combine regex patterns with semantic search for precise code detection.
 
-        1. Find complex authentication functions modified in last 30 days:
-           ```python
-           search_code(
-               query="authentication",
-               complexity_min=5,
-               modified_after=datetime.now(UTC) - timedelta(days=30),
-               sort_by="complexity"
-           )
-           ```
+        **Pattern modes:**
+        - `filter`: Semantic search first, then filter by pattern (default)
+        - `boost`: Boost scores for pattern matches (balances pattern + semantics)
+        - `require`: Must match both pattern AND semantic query (strictest)
 
-        2. Find error handlers, exclude test files:
-           ```python
-           search_code(
-               query="error handling",
-               file_pattern="**/*.py",
-               exclude_patterns=["**/*.test.py", "**/tests/**"],
-               sort_by="importance"
-           )
-           ```
+        **Pattern presets:**
+        Use `@preset:name` for common patterns:
+        - `@preset:bare_except` - Find bare except blocks (code smell)
+        - `@preset:TODO_comments` - Find TODO/FIXME/HACK markers
+        - `@preset:security_keywords` - Find password/secret/token/key references
+        - `@preset:error_handlers` - Find try/catch/except blocks
+        - `@preset:deprecated_apis` - Find deprecated API usage
+        - Many more available via pattern_matcher.get_available_presets()
 
-        3. Find large functions (>100 lines) sorted by complexity:
-           ```python
-           search_code(
-               query="business logic",
-               line_count_min=100,
-               sort_by="complexity",
-               sort_order="desc"
-           )
-           ```
+        **Example queries with patterns:**
+        - search_code("error handling", pattern="@preset:bare_except", pattern_mode="require")
+          → Find bare except blocks in error handling code
+        - search_code("authentication", pattern="@preset:security_keywords", pattern_mode="boost")
+          → Find auth code, boost results with security keywords
+        - search_code("configuration", pattern=r"password|secret", pattern_mode="filter")
+          → Find config code containing password/secret
 
         Args:
             query: Natural language description of what to find (be specific!)
             project_name: Optional project filter (defaults to current project if available)
             limit: Maximum results (default: 5, increase to 10-20 for broad searches)
-            file_pattern: Glob pattern for file paths (e.g., "**/*.test.py", "src/**/auth*.ts")
+            file_pattern: Optional path filter (e.g., "*/auth/*", "**/services/*.py")
             language: Optional language filter ("python", "javascript", "typescript", etc.)
             search_mode: "semantic" (meaning), "keyword" (exact), or "hybrid" (both)
-            exclude_patterns: Glob patterns to exclude (e.g., ["**/*.test.py", "**/generated/**"])
-            complexity_min: Minimum cyclomatic complexity filter
-            complexity_max: Maximum cyclomatic complexity filter
-            line_count_min: Minimum line count filter
-            line_count_max: Maximum line count filter
-            modified_after: Filter by file modification time (after this date)
-            modified_before: Filter by file modification time (before this date)
-            sort_by: Sort order - "relevance" (default), "complexity", "size", "recency", "importance"
-            sort_order: Sort direction - "desc" (default) or "asc"
+            pattern: Optional regex pattern or @preset:name for code pattern matching
+            pattern_mode: How to apply pattern: "filter", "boost", or "require"
 
         Returns:
             Dict with results containing file_path, start_line, end_line, code snippets,
-            relevance_score, quality assessment, matched keywords, and applied filters
+            relevance_score, quality assessment, matched keywords, and pattern match metadata
+            (pattern_matched, pattern_match_count, pattern_match_locations if pattern provided)
         """
         try:
             import time
@@ -2316,6 +2295,14 @@ class MemoryRAGServer:
             # Validate search mode
             if search_mode not in ["semantic", "keyword", "hybrid"]:
                 raise ValidationError(f"Invalid search_mode: {search_mode}. Must be 'semantic', 'keyword', or 'hybrid'")
+
+            # Validate pattern mode if pattern is provided
+            if pattern:
+                if pattern_mode not in ["filter", "boost", "require"]:
+                    raise ValidationError(
+                        f"Invalid pattern_mode: {pattern_mode}. "
+                        "Must be one of: 'filter', 'boost', 'require'"
+                    )
 
             # Handle empty query
             if not query or not query.strip():
@@ -2333,16 +2320,6 @@ class MemoryRAGServer:
                     "suggestions": ["Provide a search query with keywords or description"],
                     "interpretation": "Empty query - no search performed",
                     "matched_keywords": [],
-                    # New UX features
-                    "summary": "No query provided",
-                    "facets": {
-                        "languages": {},
-                        "unit_types": {},
-                        "files": {},
-                        "directories": {},
-                    },
-                    "did_you_mean": [],
-                    "refinement_hints": ["💡 Enter a search query to find code"],
                 }
 
             # Use current project if not specified
@@ -2403,7 +2380,149 @@ class MemoryRAGServer:
                     limit=limit,
                 )
 
-            # Format results for code search with deduplication and advanced filtering
+            # Apply pattern matching if pattern is provided
+            if pattern:
+                from src.search.pattern_matcher import PatternMatcher
+
+                if not hasattr(self, '_pattern_matcher'):
+                    self._pattern_matcher = PatternMatcher()
+
+                pattern_matcher = self._pattern_matcher
+
+                # Adjust retrieval_limit based on pattern_mode
+                if pattern_mode == "filter":
+                    # Already have results, will filter them
+                    pass
+                elif pattern_mode == "boost":
+                    # Retrieve 2x more results for boosting and re-ranking
+                    if len(results) < limit * 2:
+                        retrieval_limit = limit * 2
+                        results = await self.store.retrieve(
+                            query_embedding=query_embedding,
+                            filters=filters,
+                            limit=retrieval_limit,
+                        )
+                elif pattern_mode == "require":
+                    # Retrieve 5x more results for strict filtering
+                    if len(results) < limit * 5:
+                        retrieval_limit = limit * 5
+                        results = await self.store.retrieve(
+                            query_embedding=query_embedding,
+                            filters=filters,
+                            limit=retrieval_limit,
+                        )
+
+                # Apply pattern matching based on mode
+                pattern_results = []
+
+                for memory, score in results:
+                    content = memory.content
+                    pattern_matched = pattern_matcher.match(pattern, content)
+
+                    if pattern_mode == "filter":
+                        # Filter mode: only include if pattern matches
+                        if pattern_matched:
+                            match_count = pattern_matcher.get_match_count(pattern, content)
+                            match_locations = pattern_matcher.get_match_locations(pattern, content)
+
+                            pattern_results.append({
+                                "memory": memory,
+                                "score": score,
+                                "pattern_matched": True,
+                                "pattern_match_count": match_count,
+                                "pattern_match_locations": match_locations,
+                            })
+
+                            # Stop when we have enough results
+                            if len(pattern_results) >= limit:
+                                break
+
+                    elif pattern_mode == "boost":
+                        # Boost mode: calculate boosted score for pattern matches
+                        if pattern_matched:
+                            # Calculate pattern quality score
+                            unit_type = memory.metadata.get("unit_type", "function") if memory.metadata else "function"
+                            pattern_score = pattern_matcher.calculate_pattern_score(
+                                content,
+                                pattern,
+                                unit_type=unit_type
+                            )
+
+                            # Combine scores: 70% semantic + 30% pattern (configurable)
+                            alpha = 0.7  # Semantic weight
+                            beta = 0.3   # Pattern weight
+                            final_score = (alpha * score) + (beta * pattern_score)
+
+                            match_count = pattern_matcher.get_match_count(pattern, content)
+                            match_locations = pattern_matcher.get_match_locations(pattern, content)
+                        else:
+                            final_score = score
+                            match_count = 0
+                            match_locations = []
+
+                        pattern_results.append({
+                            "memory": memory,
+                            "score": final_score,
+                            "pattern_matched": pattern_matched,
+                            "pattern_match_count": match_count,
+                            "pattern_match_locations": match_locations,
+                        })
+
+                    elif pattern_mode == "require":
+                        # Require mode: must match BOTH pattern and semantic query
+                        if pattern_matched:
+                            match_count = pattern_matcher.get_match_count(pattern, content)
+                            match_locations = pattern_matcher.get_match_locations(pattern, content)
+
+                            pattern_results.append({
+                                "memory": memory,
+                                "score": score,
+                                "pattern_matched": True,
+                                "pattern_match_count": match_count,
+                                "pattern_match_locations": match_locations,
+                            })
+
+                            # Stop when we have enough results
+                            if len(pattern_results) >= limit:
+                                break
+
+                # Re-rank by score if in boost mode
+                if pattern_mode == "boost":
+                    pattern_results.sort(key=lambda x: x["score"], reverse=True)
+                    pattern_results = pattern_results[:limit]
+
+                # Convert back to (memory, score) format with pattern metadata
+                results_with_pattern = []
+                for pr in pattern_results:
+                    # Store pattern metadata in memory metadata for later access
+                    memory = pr["memory"]
+                    if not hasattr(memory, '_pattern_metadata'):
+                        memory._pattern_metadata = {}
+
+                    memory._pattern_metadata = {
+                        "pattern_matched": pr["pattern_matched"],
+                        "pattern_match_count": pr["pattern_match_count"],
+                        "pattern_match_locations": [
+                            {
+                                "line": loc.line,
+                                "column": loc.column,
+                                "text": loc.text,
+                                "start": loc.start,
+                                "end": loc.end,
+                            }
+                            for loc in pr["pattern_match_locations"]
+                        ],
+                    }
+
+                    results_with_pattern.append((memory, pr["score"]))
+
+                results = results_with_pattern
+                logger.info(
+                    f"Pattern matching applied (mode: {pattern_mode}, "
+                    f"pattern: {pattern[:50]}..., results: {len(results)})"
+                )
+
+            # Format results for code search with deduplication
             code_results = []
             seen_units = set()  # Track (file_path, start_line, unit_name) to deduplicate
 
@@ -2412,60 +2531,14 @@ class MemoryRAGServer:
                 metadata = memory.metadata or {}
                 nested_metadata = metadata if isinstance(metadata, dict) else {}
 
-                # Extract values for filtering
+                # Apply post-filter for file pattern and language if specified
                 file_path = nested_metadata.get("file_path", "")
                 language_val = nested_metadata.get("language", "")
 
-                # FEAT-056: Glob pattern matching (replaces substring matching)
-                if file_pattern:
-                    from pathlib import Path
-                    file_path_obj = Path(file_path)
-                    if not file_path_obj.match(file_pattern):
-                        continue
-
-                # FEAT-056: Exclusion patterns
-                if exclude_patterns:
-                    from pathlib import Path
-                    file_path_obj = Path(file_path)
-                    should_exclude = False
-                    for exclude_pattern in exclude_patterns:
-                        if file_path_obj.match(exclude_pattern):
-                            should_exclude = True
-                            break
-                    if should_exclude:
-                        continue
-
-                # Language filter (existing)
+                if file_pattern and file_pattern not in file_path:
+                    continue
                 if language and language_val.lower() != language.lower():
                     continue
-
-                # FEAT-056: Complexity range filtering
-                if complexity_min is not None or complexity_max is not None:
-                    complexity = nested_metadata.get("cyclomatic_complexity", 0)
-                    if complexity_min is not None and complexity < complexity_min:
-                        continue
-                    if complexity_max is not None and complexity > complexity_max:
-                        continue
-
-                # FEAT-056: Line count filtering
-                if line_count_min is not None or line_count_max is not None:
-                    line_count = nested_metadata.get("line_count", 0)
-                    if line_count_min is not None and line_count < line_count_min:
-                        continue
-                    if line_count_max is not None and line_count > line_count_max:
-                        continue
-
-                # FEAT-056: Date range filtering (file modification time)
-                if modified_after is not None or modified_before is not None:
-                    file_modified_timestamp = nested_metadata.get("file_modified_at", 0)
-                    if file_modified_timestamp > 0:  # Skip if no timestamp
-                        from datetime import datetime, UTC
-                        file_modified_dt = datetime.fromtimestamp(file_modified_timestamp, tz=UTC)
-
-                        if modified_after is not None and file_modified_dt < modified_after:
-                            continue
-                        if modified_before is not None and file_modified_dt > modified_before:
-                            continue
 
                 # Deduplication: Skip if we've already seen this exact code unit
                 unit_name = nested_metadata.get("unit_name") or nested_metadata.get("name", "(unnamed)")
@@ -2480,8 +2553,7 @@ class MemoryRAGServer:
                 relevance_score = min(max(score, 0.0), 1.0)
                 confidence_label = self._get_confidence_label(relevance_score)
 
-                # Store metadata for sorting
-                code_results.append({
+                result_dict = {
                     "file_path": file_path or "(no path)",
                     "start_line": start_line,
                     "end_line": nested_metadata.get("end_line", 0),
@@ -2493,29 +2565,16 @@ class MemoryRAGServer:
                     "relevance_score": relevance_score,
                     "confidence_label": confidence_label,
                     "confidence_display": f"{relevance_score:.0%} ({confidence_label})",
-                    # FEAT-056: Include metadata for sorting and display
-                    "metadata": {
-                        "cyclomatic_complexity": nested_metadata.get("cyclomatic_complexity", 0),
-                        "line_count": nested_metadata.get("line_count", 0),
-                        "file_modified_at": nested_metadata.get("file_modified_at", 0),
-                        "file_size_bytes": nested_metadata.get("file_size_bytes", 0),
-                    },
-                })
-
-            # FEAT-056: Apply sorting (if not sorting by relevance, which is already sorted)
-            if sort_by and sort_by != "relevance":
-                # Define sort key functions
-                sort_keys = {
-                    "complexity": lambda r: r["metadata"]["cyclomatic_complexity"],
-                    "size": lambda r: r["metadata"]["line_count"],
-                    "recency": lambda r: r["metadata"]["file_modified_at"],
-                    "importance": lambda r: r["relevance_score"],  # Use semantic score as importance
                 }
 
-                if sort_by in sort_keys:
-                    reverse = (sort_order == "desc")
-                    code_results.sort(key=sort_keys[sort_by], reverse=reverse)
-                # else: keep default relevance sorting
+                # Add pattern metadata if pattern matching was used
+                if pattern and hasattr(memory, '_pattern_metadata'):
+                    pm = memory._pattern_metadata
+                    result_dict["pattern_matched"] = pm["pattern_matched"]
+                    result_dict["pattern_match_count"] = pm["pattern_match_count"]
+                    result_dict["pattern_match_locations"] = pm["pattern_match_locations"]
+
+                code_results.append(result_dict)
 
             query_time_ms = (time.time() - start_time) * 1000
 
@@ -2532,34 +2591,6 @@ class MemoryRAGServer:
             if search_mode == "hybrid" and not self.hybrid_searcher:
                 actual_search_mode = "semantic"  # Fallback
 
-            # Build faceted search results
-            from src.memory.result_summarizer import ResultSummarizer
-            facets = ResultSummarizer.build_facets(code_results, include_projects=False)
-
-            # Generate result summary
-            summary = ResultSummarizer.summarize(code_results, facets, query)
-
-            # Generate "did you mean?" suggestions for poor quality results
-            did_you_mean = []
-            if len(code_results) == 0 or quality_info["quality"] in ["poor", "weak"]:
-                from src.memory.spelling_suggester import SpellingSuggester
-                spelling_suggester = SpellingSuggester(self.store)
-                await spelling_suggester.load_indexed_terms(filter_project_name)
-                did_you_mean = spelling_suggester.suggest_corrections(query, max_suggestions=3)
-
-            # Generate refinement hints
-            from src.memory.refinement_advisor import RefinementAdvisor
-            refinement_hints = RefinementAdvisor.analyze_and_suggest(
-                code_results,
-                facets,
-                query,
-                {
-                    "search_mode": actual_search_mode,
-                    "file_pattern": file_pattern,
-                    "language": language,
-                },
-            )
-
             # Log metrics for performance monitoring
             if self.metrics_collector:
                 avg_relevance = sum(r["relevance_score"] for r in code_results) / len(code_results) if code_results else 0.0
@@ -2569,25 +2600,6 @@ class MemoryRAGServer:
                     result_count=len(code_results),
                     avg_relevance=avg_relevance
                 )
-
-            # FEAT-056: Build filters_applied dictionary
-            filters_applied = {}
-            if file_pattern:
-                filters_applied["file_pattern"] = file_pattern
-            if exclude_patterns:
-                filters_applied["exclude_patterns"] = exclude_patterns
-            if complexity_min is not None:
-                filters_applied["complexity_min"] = complexity_min
-            if complexity_max is not None:
-                filters_applied["complexity_max"] = complexity_max
-            if line_count_min is not None:
-                filters_applied["line_count_min"] = line_count_min
-            if line_count_max is not None:
-                filters_applied["line_count_max"] = line_count_max
-            if modified_after is not None:
-                filters_applied["modified_after"] = modified_after.isoformat()
-            if modified_before is not None:
-                filters_applied["modified_before"] = modified_before.isoformat()
 
             return {
                 "status": "success",
@@ -2602,22 +2614,6 @@ class MemoryRAGServer:
                 "suggestions": quality_info["suggestions"],
                 "interpretation": quality_info["interpretation"],
                 "matched_keywords": quality_info["matched_keywords"],
-                # FEAT-056: Add filter and sort metadata
-                "filters_applied": filters_applied,
-                "sort_info": {
-                    "sort_by": sort_by,
-                    "sort_order": sort_order,
-                },
-                # FEAT-057: New UX features
-                "summary": summary,
-                "facets": {
-                    "languages": facets.languages,
-                    "unit_types": facets.unit_types,
-                    "files": facets.files,
-                    "directories": facets.directories,
-                },
-                "did_you_mean": did_you_mean,
-                "refinement_hints": refinement_hints,
             }
 
         except RetrievalError:
@@ -2963,110 +2959,6 @@ class MemoryRAGServer:
         except Exception as e:
             logger.error(f"Failed to search across projects: {e}")
             raise RetrievalError(f"Failed to search across projects: {e}")
-
-    async def suggest_queries(
-        self,
-        intent: Optional[str] = None,
-        project_name: Optional[str] = None,
-        context: Optional[str] = None,
-        max_suggestions: int = 8,
-    ) -> Dict[str, Any]:
-        """
-        Get contextual query suggestions based on indexed codebase and user intent.
-
-        **PROACTIVE USE:**
-        - Show at start of search session to help users discover capabilities
-        - Suggest when user seems stuck or gets no results
-        - Help users refine queries after initial search
-        - Guide new users who don't know what queries work well
-
-        **Use cases:**
-        - User opens search interface → show relevant suggestions
-        - No results found → suggest alternative queries
-        - User asks "what can I search for?" → show suggestions
-        - After failed search → suggest corrections
-
-        Args:
-            intent: User's current intent (implementation, debugging, learning,
-                exploration, refactoring) - helps tailor suggestions
-            project_name: Optional project to scope suggestions to (defaults to current)
-            context: Optional context from conversation to detect domain
-            max_suggestions: Maximum suggestions to return (default: 8)
-
-        Returns:
-            Dict with:
-            - suggestions: List of QuerySuggestion objects with query, category,
-              description, expected_results
-            - indexed_stats: Stats about indexed content (files, units, languages)
-            - project_name: Project suggestions are scoped to
-            - total_suggestions: Count of suggestions returned
-        """
-        try:
-            # Initialize query suggester if not already
-            if not hasattr(self, '_query_suggester') or self._query_suggester is None:
-                from src.memory.query_suggester import QuerySuggester
-                self._query_suggester = QuerySuggester(self.store, self.config)
-
-            # Use current project if not specified
-            filter_project_name = project_name or self.project_name
-
-            # Get suggestions
-            response = await self._query_suggester.suggest_queries(
-                intent=intent,
-                project_name=filter_project_name,
-                context=context,
-                max_suggestions=max_suggestions,
-            )
-
-            logger.info(
-                f"Generated {response.total_suggestions} query suggestions "
-                f"(intent: {intent}, project: {filter_project_name})"
-            )
-
-            # Convert to dict format
-            return {
-                "suggestions": [
-                    {
-                        "query": sug.query,
-                        "category": sug.category,
-                        "description": sug.description,
-                        "expected_results": sug.expected_results,
-                    }
-                    for sug in response.suggestions
-                ],
-                "indexed_stats": response.indexed_stats,
-                "project_name": response.project_name,
-                "total_suggestions": response.total_suggestions,
-            }
-
-        except Exception as e:
-            logger.error(f"Failed to generate query suggestions: {e}")
-            # Return graceful fallback instead of raising
-            return {
-                "suggestions": [
-                    {
-                        "query": "authentication logic",
-                        "category": "general",
-                        "description": "Common query pattern",
-                        "expected_results": None,
-                    },
-                    {
-                        "query": "error handling",
-                        "category": "general",
-                        "description": "Common query pattern",
-                        "expected_results": None,
-                    },
-                ],
-                "indexed_stats": {
-                    "total_files": 0,
-                    "total_units": 0,
-                    "languages": {},
-                    "top_classes": [],
-                },
-                "project_name": project_name,
-                "total_suggestions": 2,
-                "error": str(e),
-            }
 
     async def opt_in_cross_project(self, project_name: str) -> Dict[str, Any]:
         """
@@ -4299,90 +4191,6 @@ class MemoryRAGServer:
             score -= int((metrics.index_staleness_ratio - 0.2) * 30)
 
         return max(0, min(100, score))
-
-    # ============================================================
-    # Git History Search Methods
-    # ============================================================
-
-    async def search_git_commits(
-        self,
-        query: Optional[str] = None,
-        repository_path: Optional[str] = None,
-        author: Optional[str] = None,
-        since: Optional[datetime] = None,
-        until: Optional[datetime] = None,
-        limit: int = 100,
-    ) -> Dict[str, Any]:
-        """
-        Search git commits with semantic search and filters.
-
-        Args:
-            query: Optional semantic search query over commit messages
-            repository_path: Optional repository path filter
-            author: Optional author email filter
-            since: Optional start date filter
-            until: Optional end date filter
-            limit: Maximum number of results
-
-        Returns:
-            Dictionary with commits list and metadata
-        """
-        try:
-            commits = await self.store.search_git_commits(
-                query=query,
-                repository_path=repository_path,
-                author=author,
-                since=since,
-                until=until,
-                limit=limit,
-            )
-
-            return {
-                "commits": commits,
-                "total_found": len(commits),
-                "filters": {
-                    "query": query,
-                    "repository_path": repository_path,
-                    "author": author,
-                    "since": since.isoformat() if since else None,
-                    "until": until.isoformat() if until else None,
-                },
-            }
-
-        except Exception as e:
-            logger.error(f"Error searching git commits: {e}")
-            raise
-
-    async def get_file_history(
-        self,
-        file_path: str,
-        limit: int = 100,
-    ) -> Dict[str, Any]:
-        """
-        Get commit history for a specific file.
-
-        Args:
-            file_path: Path to the file
-            limit: Maximum number of commits
-
-        Returns:
-            Dictionary with commits list and metadata
-        """
-        try:
-            commits = await self.store.get_commits_by_file(
-                file_path=file_path,
-                limit=limit,
-            )
-
-            return {
-                "commits": commits,
-                "total_found": len(commits),
-                "file_path": file_path,
-            }
-
-        except Exception as e:
-            logger.error(f"Error getting file history for {file_path}: {e}")
-            raise
 
     async def analyze_conversation(
         self,
