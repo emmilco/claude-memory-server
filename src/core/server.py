@@ -2208,6 +2208,8 @@ class MemoryRAGServer:
         file_pattern: Optional[str] = None,
         language: Optional[str] = None,
         search_mode: str = "semantic",
+        pattern: Optional[str] = None,
+        pattern_mode: str = "filter",
     ) -> Dict[str, Any]:
         """
         Search indexed code semantically across functions and classes.
@@ -2244,6 +2246,32 @@ class MemoryRAGServer:
         - "user permission checking logic"
 
         **Performance:** 7-13ms semantic, 3-7ms keyword, 10-18ms hybrid
+        **With pattern matching:** +2-5ms overhead depending on pattern_mode
+
+        **Pattern Matching (NEW - FEAT-058):**
+        Combine regex patterns with semantic search for precise code detection.
+
+        **Pattern modes:**
+        - `filter`: Semantic search first, then filter by pattern (default)
+        - `boost`: Boost scores for pattern matches (balances pattern + semantics)
+        - `require`: Must match both pattern AND semantic query (strictest)
+
+        **Pattern presets:**
+        Use `@preset:name` for common patterns:
+        - `@preset:bare_except` - Find bare except blocks (code smell)
+        - `@preset:TODO_comments` - Find TODO/FIXME/HACK markers
+        - `@preset:security_keywords` - Find password/secret/token/key references
+        - `@preset:error_handlers` - Find try/catch/except blocks
+        - `@preset:deprecated_apis` - Find deprecated API usage
+        - Many more available via pattern_matcher.get_available_presets()
+
+        **Example queries with patterns:**
+        - search_code("error handling", pattern="@preset:bare_except", pattern_mode="require")
+          → Find bare except blocks in error handling code
+        - search_code("authentication", pattern="@preset:security_keywords", pattern_mode="boost")
+          → Find auth code, boost results with security keywords
+        - search_code("configuration", pattern=r"password|secret", pattern_mode="filter")
+          → Find config code containing password/secret
 
         Args:
             query: Natural language description of what to find (be specific!)
@@ -2252,10 +2280,13 @@ class MemoryRAGServer:
             file_pattern: Optional path filter (e.g., "*/auth/*", "**/services/*.py")
             language: Optional language filter ("python", "javascript", "typescript", etc.)
             search_mode: "semantic" (meaning), "keyword" (exact), or "hybrid" (both)
+            pattern: Optional regex pattern or @preset:name for code pattern matching
+            pattern_mode: How to apply pattern: "filter", "boost", or "require"
 
         Returns:
             Dict with results containing file_path, start_line, end_line, code snippets,
-            relevance_score, quality assessment, and matched keywords
+            relevance_score, quality assessment, matched keywords, and pattern match metadata
+            (pattern_matched, pattern_match_count, pattern_match_locations if pattern provided)
         """
         try:
             import time
@@ -2264,6 +2295,14 @@ class MemoryRAGServer:
             # Validate search mode
             if search_mode not in ["semantic", "keyword", "hybrid"]:
                 raise ValidationError(f"Invalid search_mode: {search_mode}. Must be 'semantic', 'keyword', or 'hybrid'")
+
+            # Validate pattern mode if pattern is provided
+            if pattern:
+                if pattern_mode not in ["filter", "boost", "require"]:
+                    raise ValidationError(
+                        f"Invalid pattern_mode: {pattern_mode}. "
+                        "Must be one of: 'filter', 'boost', 'require'"
+                    )
 
             # Handle empty query
             if not query or not query.strip():
@@ -2341,6 +2380,148 @@ class MemoryRAGServer:
                     limit=limit,
                 )
 
+            # Apply pattern matching if pattern is provided
+            if pattern:
+                from src.search.pattern_matcher import PatternMatcher
+
+                if not hasattr(self, '_pattern_matcher'):
+                    self._pattern_matcher = PatternMatcher()
+
+                pattern_matcher = self._pattern_matcher
+
+                # Adjust retrieval_limit based on pattern_mode
+                if pattern_mode == "filter":
+                    # Already have results, will filter them
+                    pass
+                elif pattern_mode == "boost":
+                    # Retrieve 2x more results for boosting and re-ranking
+                    if len(results) < limit * 2:
+                        retrieval_limit = limit * 2
+                        results = await self.store.retrieve(
+                            query_embedding=query_embedding,
+                            filters=filters,
+                            limit=retrieval_limit,
+                        )
+                elif pattern_mode == "require":
+                    # Retrieve 5x more results for strict filtering
+                    if len(results) < limit * 5:
+                        retrieval_limit = limit * 5
+                        results = await self.store.retrieve(
+                            query_embedding=query_embedding,
+                            filters=filters,
+                            limit=retrieval_limit,
+                        )
+
+                # Apply pattern matching based on mode
+                pattern_results = []
+
+                for memory, score in results:
+                    content = memory.content
+                    pattern_matched = pattern_matcher.match(pattern, content)
+
+                    if pattern_mode == "filter":
+                        # Filter mode: only include if pattern matches
+                        if pattern_matched:
+                            match_count = pattern_matcher.get_match_count(pattern, content)
+                            match_locations = pattern_matcher.get_match_locations(pattern, content)
+
+                            pattern_results.append({
+                                "memory": memory,
+                                "score": score,
+                                "pattern_matched": True,
+                                "pattern_match_count": match_count,
+                                "pattern_match_locations": match_locations,
+                            })
+
+                            # Stop when we have enough results
+                            if len(pattern_results) >= limit:
+                                break
+
+                    elif pattern_mode == "boost":
+                        # Boost mode: calculate boosted score for pattern matches
+                        if pattern_matched:
+                            # Calculate pattern quality score
+                            unit_type = memory.metadata.get("unit_type", "function") if memory.metadata else "function"
+                            pattern_score = pattern_matcher.calculate_pattern_score(
+                                content,
+                                pattern,
+                                unit_type=unit_type
+                            )
+
+                            # Combine scores: 70% semantic + 30% pattern (configurable)
+                            alpha = 0.7  # Semantic weight
+                            beta = 0.3   # Pattern weight
+                            final_score = (alpha * score) + (beta * pattern_score)
+
+                            match_count = pattern_matcher.get_match_count(pattern, content)
+                            match_locations = pattern_matcher.get_match_locations(pattern, content)
+                        else:
+                            final_score = score
+                            match_count = 0
+                            match_locations = []
+
+                        pattern_results.append({
+                            "memory": memory,
+                            "score": final_score,
+                            "pattern_matched": pattern_matched,
+                            "pattern_match_count": match_count,
+                            "pattern_match_locations": match_locations,
+                        })
+
+                    elif pattern_mode == "require":
+                        # Require mode: must match BOTH pattern and semantic query
+                        if pattern_matched:
+                            match_count = pattern_matcher.get_match_count(pattern, content)
+                            match_locations = pattern_matcher.get_match_locations(pattern, content)
+
+                            pattern_results.append({
+                                "memory": memory,
+                                "score": score,
+                                "pattern_matched": True,
+                                "pattern_match_count": match_count,
+                                "pattern_match_locations": match_locations,
+                            })
+
+                            # Stop when we have enough results
+                            if len(pattern_results) >= limit:
+                                break
+
+                # Re-rank by score if in boost mode
+                if pattern_mode == "boost":
+                    pattern_results.sort(key=lambda x: x["score"], reverse=True)
+                    pattern_results = pattern_results[:limit]
+
+                # Convert back to (memory, score) format with pattern metadata
+                results_with_pattern = []
+                for pr in pattern_results:
+                    # Store pattern metadata in memory metadata for later access
+                    memory = pr["memory"]
+                    if not hasattr(memory, '_pattern_metadata'):
+                        memory._pattern_metadata = {}
+
+                    memory._pattern_metadata = {
+                        "pattern_matched": pr["pattern_matched"],
+                        "pattern_match_count": pr["pattern_match_count"],
+                        "pattern_match_locations": [
+                            {
+                                "line": loc.line,
+                                "column": loc.column,
+                                "text": loc.text,
+                                "start": loc.start,
+                                "end": loc.end,
+                            }
+                            for loc in pr["pattern_match_locations"]
+                        ],
+                    }
+
+                    results_with_pattern.append((memory, pr["score"]))
+
+                results = results_with_pattern
+                logger.info(
+                    f"Pattern matching applied (mode: {pattern_mode}, "
+                    f"pattern: {pattern[:50]}..., results: {len(results)})"
+                )
+
             # Format results for code search with deduplication
             code_results = []
             seen_units = set()  # Track (file_path, start_line, unit_name) to deduplicate
@@ -2372,7 +2553,7 @@ class MemoryRAGServer:
                 relevance_score = min(max(score, 0.0), 1.0)
                 confidence_label = self._get_confidence_label(relevance_score)
 
-                code_results.append({
+                result_dict = {
                     "file_path": file_path or "(no path)",
                     "start_line": start_line,
                     "end_line": nested_metadata.get("end_line", 0),
@@ -2384,7 +2565,16 @@ class MemoryRAGServer:
                     "relevance_score": relevance_score,
                     "confidence_label": confidence_label,
                     "confidence_display": f"{relevance_score:.0%} ({confidence_label})",
-                })
+                }
+
+                # Add pattern metadata if pattern matching was used
+                if pattern and hasattr(memory, '_pattern_metadata'):
+                    pm = memory._pattern_metadata
+                    result_dict["pattern_matched"] = pm["pattern_matched"]
+                    result_dict["pattern_match_count"] = pm["pattern_match_count"]
+                    result_dict["pattern_match_locations"] = pm["pattern_match_locations"]
+
+                code_results.append(result_dict)
 
             query_time_ms = (time.time() - start_time) * 1000
 
