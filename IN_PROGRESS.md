@@ -1,7 +1,7 @@
 # IN_PROGRESS - Active Work
 
 **Maximum Concurrent Tasks: 6**
-**Current Active: 0/6**
+**Current Active: 1/6**
 
 ---
 
@@ -15,7 +15,33 @@
 
 ## Active Tasks
 
-<!-- No tasks currently in progress -->
+### [UX-038]: Trend Charts and Sparklines
+**Started**: 2025-11-22
+**Assigned**: Data Visualization Specialist
+**Branch**: .worktrees/UX-038
+**Blocked By**: None
+**Status**: Nearly Complete
+
+**Progress Notes**:
+- 2025-11-22: Created worktree, reviewed existing implementation
+- 2025-11-22: Enhanced Chart.js charts with zoom/pan interactivity
+- 2025-11-22: Added dark mode support and better tooltips
+- 2025-11-22: Improved responsive design and visual polish
+- 2025-11-22: Added planning document and updated CHANGELOG
+- 2025-11-22: ~95% complete, testing remaining
+
+**Next Steps**:
+- [x] Enhanced chart interactivity (zoom, pan, hover)
+- [x] Improved visual design and responsiveness
+- [x] Added hint text and performance insights
+- [x] Dark mode support for charts
+- [x] Planning document created
+- [x] CHANGELOG updated
+- [ ] Test with live dashboard server
+- [ ] Run verify-complete.py
+- [ ] Move to REVIEW.md
+
+**See**: planning_docs/UX-038_trend_charts_implementation.md
 
 ---
 

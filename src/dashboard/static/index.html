@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/dist/tippy.css">
     <!-- Chart.js for trend visualizations (UX-038) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 </head>
 <body>
     <!-- Toast Container -->
@@ -162,14 +163,17 @@
                     <div class="trend-chart-wrapper">
                         <h3>Memory Growth</h3>
                         <canvas id="memory-trend-chart"></canvas>
+                        <div class="chart-hint">💡 Scroll to zoom • Drag to pan</div>
                     </div>
                     <div class="trend-chart-wrapper">
                         <h3>Search Activity</h3>
                         <canvas id="search-trend-chart"></canvas>
+                        <div class="chart-hint">💡 Scroll to zoom • Drag to pan</div>
                     </div>
                     <div class="trend-chart-wrapper">
                         <h3>Performance (Latency)</h3>
                         <canvas id="latency-trend-chart"></canvas>
+                        <div class="chart-hint">💡 Scroll to zoom • Drag to pan • Hover for insights</div>
                     </div>
                 </div>
             </section>

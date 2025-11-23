@@ -400,19 +400,21 @@ header h1 {
     font-style: italic;
 }
 
-/* Trend Charts Styles (UX-038) */
+/* Trend Charts Styles (UX-038 Enhanced) */
 .trends-card {
     border-left: 4px solid #FF9800;
 }
 
 .trends-controls {
     margin: 20px 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
 .trends-controls label {
     font-weight: 600;
     color: var(--text-primary);
-    margin-right: 10px;
 }
 
 .trends-controls select {
@@ -422,6 +424,18 @@ header h1 {
     background: var(--card-bg);
     color: var(--text-primary);
     font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.trends-controls select:hover {
+    border-color: var(--accent-color);
+}
+
+.trends-controls select:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
 }
 
 .trends-container {
@@ -431,21 +445,45 @@ header h1 {
     margin-top: 20px;
 }
 
+@media (max-width: 768px) {
+    .trends-container {
+        grid-template-columns: 1fr;
+    }
+}
+
 .trend-chart-wrapper {
-    background: var(--bg-color);
-    padding: 20px;
-    border-radius: 8px;
+    background: var(--card-bg);
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+    border: 1px solid var(--border-color);
+}
+
+.trend-chart-wrapper:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
 }
 
 .trend-chart-wrapper h3 {
-    font-size: 1rem;
-    color: var(--text-secondary);
-    margin-bottom: 16px;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+    margin-bottom: 20px;
     text-align: center;
+    font-weight: 600;
 }
 
 .trend-chart-wrapper canvas {
-    max-height: 250px;
+    max-height: 280px;
+    cursor: crosshair;
+}
+
+.chart-hint {
+    margin-top: 12px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    text-align: center;
+    font-style: italic;
 }
 
 

@@ -1392,7 +1392,7 @@ async function loadTrends() {
     }
 }
 
-// Render all trend charts
+// Render all trend charts with enhanced interactivity (UX-038)
 function renderTrendCharts(data) {
     const { dates, metrics } = data;
 
@@ -1401,31 +1401,89 @@ function renderTrendCharts(data) {
     if (searchTrendChart) searchTrendChart.destroy();
     if (latencyTrendChart) latencyTrendChart.destroy();
 
-    // Chart.js default config
+    // Get current theme for chart colors
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
+    const textColor = isDark ? '#e0e0e0' : '#333333';
+
+    // Enhanced Chart.js config with better interactivity
     const commonOptions = {
         responsive: true,
         maintainAspectRatio: true,
+        interaction: {
+            mode: 'index',
+            intersect: false
+        },
         plugins: {
             legend: {
-                display: false
+                display: true,
+                position: 'top',
+                labels: {
+                    color: textColor,
+                    padding: 15,
+                    font: {
+                        size: 12,
+                        weight: '500'
+                    }
+                }
+            },
+            tooltip: {
+                enabled: true,
+                backgroundColor: isDark ? 'rgba(45, 45, 45, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                titleColor: textColor,
+                bodyColor: textColor,
+                borderColor: isDark ? '#404040' : '#e0e0e0',
+                borderWidth: 1,
+                padding: 12,
+                displayColors: true,
+                callbacks: {
+                    title: function(context) {
+                        return context[0].label || '';
+                    }
+                }
+            },
+            zoom: {
+                pan: {
+                    enabled: true,
+                    mode: 'x'
+                },
+                zoom: {
+                    wheel: {
+                        enabled: true
+                    },
+                    pinch: {
+                        enabled: true
+                    },
+                    mode: 'x'
+                }
             }
         },
         scales: {
             x: {
                 grid: {
-                    color: 'rgba(0, 0, 0, 0.05)'
+                    color: gridColor,
+                    drawBorder: false
+                },
+                ticks: {
+                    color: textColor,
+                    maxRotation: 45,
+                    minRotation: 0
                 }
             },
             y: {
                 beginAtZero: true,
                 grid: {
-                    color: 'rgba(0, 0, 0, 0.05)'
+                    color: gridColor,
+                    drawBorder: false
+                },
+                ticks: {
+                    color: textColor
                 }
             }
         }
     };
 
-    // Memory Growth Chart
+    // Memory Growth Chart with enhanced visuals
     const memoryCtx = document.getElementById('memory-trend-chart').getContext('2d');
     memoryTrendChart = new Chart(memoryCtx, {
         type: 'line',
@@ -1435,32 +1493,75 @@ function renderTrendCharts(data) {
                 label: 'Total Memories',
                 data: metrics.memory_count,
                 borderColor: '#2196F3',
-                backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                backgroundColor: 'rgba(33, 150, 243, 0.15)',
                 tension: 0.4,
                 fill: true,
-                borderWidth: 2
+                borderWidth: 3,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                pointBackgroundColor: '#2196F3',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointHoverBackgroundColor: '#1976D2',
+                pointHoverBorderColor: '#fff',
+                pointHoverBorderWidth: 3
             }]
         },
-        options: commonOptions
+        options: {
+            ...commonOptions,
+            plugins: {
+                ...commonOptions.plugins,
+                tooltip: {
+                    ...commonOptions.plugins.tooltip,
+                    callbacks: {
+                        label: function(context) {
+                            return `Memories: ${formatNumber(context.parsed.y)}`;
+                        }
+                    }
+                }
+            }
+        }
     });
 
-    // Search Activity Chart
+    // Search Activity Chart with gradient bars
     const searchCtx = document.getElementById('search-trend-chart').getContext('2d');
+    const searchGradient = searchCtx.createLinearGradient(0, 0, 0, 400);
+    searchGradient.addColorStop(0, 'rgba(76, 175, 80, 0.8)');
+    searchGradient.addColorStop(1, 'rgba(76, 175, 80, 0.3)');
+
     searchTrendChart = new Chart(searchCtx, {
         type: 'bar',
         data: {
             labels: dates,
             datasets: [{
-                label: 'Searches',
+                label: 'Searches per Day',
                 data: metrics.search_volume,
-                backgroundColor: '#4CAF50',
-                borderWidth: 0
+                backgroundColor: searchGradient,
+                borderColor: '#4CAF50',
+                borderWidth: 1,
+                borderRadius: 4,
+                hoverBackgroundColor: '#66BB6A',
+                hoverBorderColor: '#388E3C',
+                hoverBorderWidth: 2
             }]
         },
-        options: commonOptions
+        options: {
+            ...commonOptions,
+            plugins: {
+                ...commonOptions.plugins,
+                tooltip: {
+                    ...commonOptions.plugins.tooltip,
+                    callbacks: {
+                        label: function(context) {
+                            return `Searches: ${formatNumber(context.parsed.y)}`;
+                        }
+                    }
+                }
+            }
+        }
     });
 
-    // Performance (Latency) Chart
+    // Performance (Latency) Chart with area fill
     const latencyCtx = document.getElementById('latency-trend-chart').getContext('2d');
     latencyTrendChart = new Chart(latencyCtx, {
         type: 'line',
@@ -1470,10 +1571,18 @@ function renderTrendCharts(data) {
                 label: 'Avg Latency (ms)',
                 data: metrics.avg_latency,
                 borderColor: '#FF9800',
-                backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                backgroundColor: 'rgba(255, 152, 0, 0.15)',
                 tension: 0.4,
                 fill: true,
-                borderWidth: 2
+                borderWidth: 3,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                pointBackgroundColor: '#FF9800',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointHoverBackgroundColor: '#F57C00',
+                pointHoverBorderColor: '#fff',
+                pointHoverBorderWidth: 3
             }]
         },
         options: {
@@ -1485,7 +1594,30 @@ function renderTrendCharts(data) {
                     beginAtZero: true,
                     title: {
                         display: true,
-                        text: 'Milliseconds'
+                        text: 'Milliseconds',
+                        color: textColor,
+                        font: {
+                            size: 12,
+                            weight: '600'
+                        }
+                    }
+                }
+            },
+            plugins: {
+                ...commonOptions.plugins,
+                tooltip: {
+                    ...commonOptions.plugins.tooltip,
+                    callbacks: {
+                        label: function(context) {
+                            return `Latency: ${context.parsed.y.toFixed(2)}ms`;
+                        },
+                        afterLabel: function(context) {
+                            const value = context.parsed.y;
+                            if (value < 10) return '✓ Excellent';
+                            if (value < 20) return '✓ Good';
+                            if (value < 50) return '⚠ Fair';
+                            return '⚠ Needs optimization';
+                        }
                     }
                 }
             }
