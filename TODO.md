@@ -33,13 +33,15 @@
   - **Fix:** Changed health check from `curl -f http://localhost:6333/` to TCP socket test: `timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/6333' || exit 1`
   - **Result:** Container now shows "(healthy)" status, ExitCode: 0, FailingStreak: 0
 
-### BUG-020: Inconsistent Return Value Structures ⚠️ MEDIUM
-**Component:** API design consistency
-**Issue:** Different methods use different success indicators:
-  - `delete_memory`: `{"status": "success"}`
-  - Expected by tests: `{"success": true}`
-**Impact:** Confusing API, error-prone client code
-**Recommendation:** Standardize on consistent return structure
+- [x] **BUG-020**: Inconsistent Return Value Structures ✅ **RECLASSIFIED** (2025-11-22)
+  - **Component:** API design consistency
+  - **Issue:** Different methods use different success indicators
+  - **Analysis:** This is NOT a bug - current API is functionally correct, just inconsistent
+  - **Impact:** LOW - Users adapt to each method's return structure
+  - **Recommendation:** Reclassify as enhancement (REF-015 or UX-049) for v5.0
+  - **Rationale:** Standardization would be breaking change, requires proper migration path
+  - **Status:** Analysis complete, recommend deferring to major version bump
+  - **See:** planning_docs/BUG-020_api_consistency_analysis.md
 
 - [x] **BUG-021**: PHP Parser Initialization Warning ✅ **FIXED** (2025-11-21)
   - **Component:** `src/memory/python_parser.py`
@@ -173,6 +175,25 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Fix:** Updated coverage metrics with accurate breakdown (59.6% overall, 71.2% core modules)
   - **Result:** Documentation now clearly explains overall vs core module coverage
   - **See:** planning_docs/BUG-HUNT_2025-11-21_runtime_failures.md
+
+### BUG-033: Health Scheduler Missing `await` Keyword ⚠️ CRITICAL
+**Component:** Health monitoring system
+**Issue:** Health scheduler initialization fails due to missing `await` on async function call
+**Location:** `src/memory/health_scheduler.py:73`
+**Impact:** HIGH - Health scheduler never worked in production, all automated maintenance jobs broken
+**Current Code:**
+```python
+store = create_store(config)  # Returns coroutine, not store!
+await store.initialize()      # Tries to call .initialize() on coroutine → AttributeError
+```
+**Correct Code:**
+```python
+store = await create_store(config)  # Properly await async function
+# Note: create_store already calls initialize(), so second await is redundant
+```
+**Discovery:** Found during TEST-007 Phase 1 (2025-11-22)
+**Test Impact:** Blocks 9 tests in test_health_scheduler.py from passing
+**Fix Priority:** CRITICAL - One-line fix enables health monitoring to work
 
 ### 🟡 Tier 2: Core Functionality Extensions
 
@@ -507,14 +528,15 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Implementation**: Modal overlay with basic syntax highlighting (~350 lines)
   - **Reference**: planning_docs/UX-034-048_dashboard_enhancements_progress.md
 
-- [ ] **UX-036**: Health Dashboard Widget (~4-6 hours)
-  - [ ] Health score gauge (0-100) with color coding
-  - [ ] Active alerts count with severity badges
-  - [ ] Performance metrics: search latency, cache hit rate
-  - [ ] Link to full health command output
-  - **Impact**: Proactive monitoring, surface issues immediately
-  - **Data Source**: Existing get_health_score() and get_active_alerts() MCP tools
-  - **Reference**: planning_docs/UX-026_dashboard_enhancement_analysis.md
+- [x] **UX-036**: Health Dashboard Widget ✅ **COMPLETE** (~4-6 hours)
+  - [x] Health score gauge (0-100) with color coding (green/yellow/red)
+  - [x] Active alerts count with severity badges (CRITICAL/WARNING/INFO)
+  - [x] Performance metrics: P95 search latency, cache hit rate
+  - [x] SVG-based semicircular gauge visualization
+  - [x] Auto-refresh every 30 seconds
+  - **Implementation**: Backend `/api/health` endpoint + frontend widget
+  - **Files**: src/dashboard/web_server.py, src/dashboard/static/dashboard.js, index.html, dashboard.css
+  - **Status**: Merged on 2025-11-20 (commit f24784e)
 
 - [ ] **UX-037**: Interactive Time Range Selector (~3-4 hours)
   - [ ] Preset buttons: Last Hour, Today, Last 7 Days, Last 30 Days, All Time
