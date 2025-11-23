@@ -76,6 +76,7 @@
                     <option value="24h">Last 24 Hours</option>
                     <option value="7d">Last 7 Days</option>
                     <option value="30d">Last 30 Days</option>
+                    <option value="custom">Custom Range</option>
                 </select>
                 <button id="clear-filters" class="btn-secondary" data-tippy-content="Clear all active filters and show everything. Press 'c' to clear.">Clear Filters</button>
             </div>
@@ -85,6 +86,23 @@
                 <button class="time-btn" data-range="7d" data-tippy-content="Show last 7 days">7D</button>
                 <button class="time-btn" data-range="30d" data-tippy-content="Show last 30 days">30D</button>
                 <button class="time-btn active" data-range="" data-tippy-content="Show all time">All</button>
+                <button class="time-btn" data-range="custom" data-tippy-content="Choose custom date range">Custom</button>
+            </div>
+            <!-- Custom Date Picker (UX-037) -->
+            <div id="custom-date-picker" class="custom-date-picker" style="display: none;">
+                <div class="custom-date-inputs">
+                    <div class="date-input-group">
+                        <label for="start-date">Start Date:</label>
+                        <input type="date" id="start-date" aria-label="Start date" data-tippy-content="Select the start date for your custom range">
+                    </div>
+                    <div class="date-input-group">
+                        <label for="end-date">End Date:</label>
+                        <input type="date" id="end-date" aria-label="End date" data-tippy-content="Select the end date for your custom range">
+                    </div>
+                    <button id="apply-custom-range" class="btn-primary" data-tippy-content="Apply the custom date range">Apply Range</button>
+                    <button id="cancel-custom-range" class="btn-secondary" data-tippy-content="Cancel and go back to preset ranges">Cancel</button>
+                </div>
+                <div id="date-validation-error" class="date-validation-error" style="display: none;"></div>
             </div>
             <div id="filter-badge" class="filter-badge" style="display: none;"></div>
         </section>

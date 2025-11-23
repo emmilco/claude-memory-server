@@ -51,6 +51,17 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Added - 2025-11-22
+- **UX-037: Interactive Time Range Selector**
+  - Custom date picker with start/end date inputs
+  - Date validation (start before end, no future dates)
+  - Preset buttons (1H, Today, 7D, 30D, All, Custom)
+  - localStorage persistence for custom date ranges
+  - Time-filtered API endpoints (/api/stats, /api/activity)
+  - Responsive mobile design for date inputs
+  - All dashboard components update with selected time range
+  - Files: src/dashboard/static/index.html, dashboard.js, dashboard.css, src/dashboard/web_server.py
+
 ### Fixed - 2025-11-22
 - **BUG-033: Health Scheduler Missing `await` Keyword**
   - Fixed critical async bug in `health_scheduler.py:73` - missing `await` on `create_store()`

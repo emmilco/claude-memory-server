@@ -167,7 +167,25 @@ function initializeFilters() {
     });
 
     document.getElementById('filter-date-range').addEventListener('change', (e) => {
-        filters.dateRange = e.target.value;
+        const range = e.target.value;
+        filters.dateRange = range;
+
+        // Show/hide custom date picker based on selection (UX-037)
+        if (range === 'custom') {
+            document.getElementById('custom-date-picker').style.display = 'block';
+            // Also activate the custom button
+            document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector('.time-btn[data-range="custom"]').classList.add('active');
+        } else {
+            document.getElementById('custom-date-picker').style.display = 'none';
+            // Update button states
+            document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+            const matchingBtn = document.querySelector(`.time-btn[data-range="${range}"]`);
+            if (matchingBtn) {
+                matchingBtn.classList.add('active');
+            }
+        }
+
         applyFilters();
     });
 
@@ -237,12 +255,23 @@ function applyFilters() {
 }
 
 /**
- * Check if timestamp is within date range
+ * Check if timestamp is within date range (UX-037 enhanced for custom ranges)
  */
 function isWithinDateRange(timestamp, range) {
     if (!timestamp || !range) return true;
 
     const date = new Date(timestamp);
+
+    // Handle custom date range
+    if (range === 'custom' && filters.customStartDate && filters.customEndDate) {
+        const startDate = new Date(filters.customStartDate);
+        const endDate = new Date(filters.customEndDate);
+        // Set end date to end of day
+        endDate.setHours(23, 59, 59, 999);
+        return date >= startDate && date <= endDate;
+    }
+
+    // Handle preset ranges
     const now = new Date();
     const diffMs = now - date;
 
@@ -411,6 +440,8 @@ function initializeOfflineDetection() {
 function initializeTimeRange() {
     // Load saved time range from localStorage
     const savedRange = localStorage.getItem('dashboard-time-range') || '';
+    const savedStartDate = localStorage.getItem('dashboard-custom-start') || '';
+    const savedEndDate = localStorage.getItem('dashboard-custom-end') || '';
 
     // Set active button
     document.querySelectorAll('.time-btn').forEach(btn => {
@@ -428,10 +459,36 @@ function initializeTimeRange() {
         dropdown.value = savedRange;
     }
 
+    // Restore custom dates if saved
+    if (savedStartDate) {
+        document.getElementById('start-date').value = savedStartDate;
+    }
+    if (savedEndDate) {
+        document.getElementById('end-date').value = savedEndDate;
+    }
+
+    // Show custom date picker if custom range is active
+    if (savedRange === 'custom') {
+        document.getElementById('custom-date-picker').style.display = 'block';
+    }
+
     // Add click handlers to time range buttons
     document.querySelectorAll('.time-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const range = btn.getAttribute('data-range');
+
+            // Handle "custom" button
+            if (range === 'custom') {
+                // Show custom date picker
+                document.getElementById('custom-date-picker').style.display = 'block';
+                // Update button states
+                document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                return;
+            }
+
+            // Hide custom date picker for preset ranges
+            document.getElementById('custom-date-picker').style.display = 'none';
 
             // Update button states
             document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
@@ -451,6 +508,98 @@ function initializeTimeRange() {
             applyFilters();
         });
     });
+
+    // Custom date picker event handlers (UX-037)
+    document.getElementById('apply-custom-range').addEventListener('click', applyCustomDateRange);
+    document.getElementById('cancel-custom-range').addEventListener('click', cancelCustomDateRange);
+}
+
+/**
+ * Apply custom date range (UX-037)
+ */
+function applyCustomDateRange() {
+    const startDate = document.getElementById('start-date').value;
+    const endDate = document.getElementById('end-date').value;
+    const errorContainer = document.getElementById('date-validation-error');
+
+    // Validate dates
+    if (!startDate || !endDate) {
+        errorContainer.textContent = 'Please select both start and end dates';
+        errorContainer.style.display = 'block';
+        return;
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (start > end) {
+        errorContainer.textContent = 'Start date must be before end date';
+        errorContainer.style.display = 'block';
+        return;
+    }
+
+    if (end > new Date()) {
+        errorContainer.textContent = 'End date cannot be in the future';
+        errorContainer.style.display = 'block';
+        return;
+    }
+
+    // Clear any validation errors
+    errorContainer.style.display = 'none';
+
+    // Save custom dates to localStorage
+    localStorage.setItem('dashboard-custom-start', startDate);
+    localStorage.setItem('dashboard-custom-end', endDate);
+    localStorage.setItem('dashboard-time-range', 'custom');
+
+    // Update filter
+    filters.dateRange = 'custom';
+    filters.customStartDate = startDate;
+    filters.customEndDate = endDate;
+
+    // Update dropdown
+    const dropdown = document.getElementById('filter-date-range');
+    if (dropdown) {
+        dropdown.value = 'custom';
+    }
+
+    // Apply filters and reload data
+    applyFilters();
+    loadData();
+
+    showToast(`Custom range applied: ${formatDate(startDate)} to ${formatDate(endDate)}`, 'success');
+}
+
+/**
+ * Cancel custom date range and return to preset ranges
+ */
+function cancelCustomDateRange() {
+    // Hide custom date picker
+    document.getElementById('custom-date-picker').style.display = 'none';
+
+    // Clear validation errors
+    document.getElementById('date-validation-error').style.display = 'none';
+
+    // Activate "All Time" button
+    document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('.time-btn[data-range=""]').classList.add('active');
+
+    // Reset filter
+    filters.dateRange = '';
+    delete filters.customStartDate;
+    delete filters.customEndDate;
+    localStorage.setItem('dashboard-time-range', '');
+
+    // Apply filters
+    applyFilters();
+}
+
+/**
+ * Format date for display (YYYY-MM-DD → Month DD, YYYY)
+ */
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 /**
@@ -676,11 +825,17 @@ async function loadData() {
 }
 
 /**
- * Load dashboard statistics
+ * Load dashboard statistics (UX-037: added time range support)
  */
 async function loadDashboardStats() {
     try {
-        const data = await fetchWithRetry(`${API_BASE}/api/stats`);
+        // Build URL with time range parameters (UX-037)
+        let url = `${API_BASE}/api/stats`;
+        if (filters.dateRange === 'custom' && filters.customStartDate && filters.customEndDate) {
+            url += `?start_date=${filters.customStartDate}&end_date=${filters.customEndDate}`;
+        }
+
+        const data = await fetchWithRetry(url);
 
         if (data.status === 'success') {
             // Store original data for filtering
@@ -717,11 +872,17 @@ async function loadDashboardStats() {
 }
 
 /**
- * Load recent activity
+ * Load recent activity (UX-037: added time range support)
  */
 async function loadRecentActivity() {
     try {
-        const data = await fetchWithRetry(`${API_BASE}/api/activity?limit=20`);
+        // Build URL with time range parameters (UX-037)
+        let url = `${API_BASE}/api/activity?limit=20`;
+        if (filters.dateRange === 'custom' && filters.customStartDate && filters.customEndDate) {
+            url += `&start_date=${filters.customStartDate}&end_date=${filters.customEndDate}`;
+        }
+
+        const data = await fetchWithRetry(url);
 
         if (data.status === 'success') {
             // Store original data for filtering
