@@ -89,6 +89,64 @@ The retrieval gate is a failed optimization. Better approach:
 - Updated: `CHANGELOG.md`
 
 ### Next Steps
-- Consider removing retrieval gate entirely from codebase (src/router.py)
-- Remove gate configuration options from config.py
-- Update documentation to remove gate references
+- ✅ Consider removing retrieval gate entirely from codebase (src/router.py) - DONE (2025-11-20)
+- ✅ Remove gate configuration options from config.py - DONE (2025-11-20)
+- ✅ Update documentation to remove gate references - DONE (2025-11-20)
+
+## Regression Testing (2025-11-22)
+
+**Status:** ✅ Complete
+**Implementation Time:** 1 hour
+
+### Test Coverage Added
+Created comprehensive regression test suite in `tests/integration/test_bug_018_regression.py`:
+
+1. **test_immediate_retrieval_after_storage**
+   - Core regression test - stores a memory and immediately retrieves it
+   - Verifies the stored memory is found in results
+   - Checks all metadata is preserved
+
+2. **test_multiple_immediate_retrievals**
+   - Stores 3 memories in succession
+   - Verifies all are immediately retrievable
+   - Tests for batching/indexing delay issues
+
+3. **test_retrieval_with_filters_after_storage**
+   - Stores memories with different categories
+   - Tests filtered retrieval works immediately
+   - Ensures filtering doesn't block immediate retrieval
+
+4. **test_high_importance_immediate_retrieval**
+   - Tests importance filtering on immediate retrieval
+   - Verifies high-importance memories aren't blocked
+
+5. **test_no_artificial_delay_in_retrieval**
+   - Measures retrieval latency (should be < 100ms)
+   - Ensures no sleep() or artificial delays
+   - Verifies performance remains optimal
+
+6. **test_concurrent_store_and_retrieve**
+   - Tests 10 concurrent store-retrieve operations
+   - Ensures no race conditions or locking issues
+   - Verifies concurrent access works correctly
+
+### Test Results
+- All 6 tests passing
+- Total execution time: 6.70 seconds
+- Coverage: Immediate retrieval, filtering, importance, concurrency
+
+### Files Changed
+- Created: `tests/integration/test_bug_018_regression.py` (287 lines, 6 tests)
+- Updated: `CHANGELOG.md` (added BUG-018 entry)
+- Updated: `planning_docs/BUG-018_memory_retrieval_investigation.md` (this file)
+
+### Impact
+- Prevents regression of BUG-018
+- Comprehensive test coverage for store-retrieve workflow
+- Documents expected behavior for future developers
+- Catches potential issues with:
+  - Qdrant indexing delays
+  - Filtering logic
+  - Importance thresholds
+  - Concurrent operations
+  - Performance degradation

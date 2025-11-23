@@ -51,6 +51,14 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Fixed - 2025-11-22
+- **BUG-018: Memory Retrieval Not Finding Recently Stored Memories**
+  - Added comprehensive regression tests to prevent recurrence
+  - Root cause was RetrievalGate blocking queries (already fixed on 2025-11-20)
+  - Fix verified: memories are now immediately retrievable after storage
+  - Test suite: 6 regression tests covering immediate retrieval, concurrent operations, filtering
+  - Files: tests/integration/test_bug_018_regression.py
+
 ### Added - 2025-11-22
 - **SPEC.md: Normative YAML Behavioral Specification**
   - Complete rewrite from descriptive to normative format
