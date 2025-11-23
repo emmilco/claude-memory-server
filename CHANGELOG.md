@@ -49,6 +49,31 @@ Organize entries under these headers in chronological order (newest first):
 - `### Removed - YYYY-MM-DD` - Removed features (rare)
 - `### Planning - YYYY-MM-DD` - Strategic planning, TODO updates (optional)
 
+## [Unreleased]
+
+### Added - 2025-11-22
+- **Workflow Infrastructure: Complete Multi-Agent Development System**
+  - Created workflow tracking files: `IN_PROGRESS.md`, `REVIEW.md` with 6-task capacity management
+  - Created progressive disclosure guides: `GETTING_STARTED.md`, `TESTING_GUIDE.md`, `TASK_WORKFLOW.md`, `DEBUGGING.md`, `ADVANCED.md`
+  - Created automation scripts: `scripts/verify-complete.py`, `scripts/setup.py`, `scripts/status-dashboard.py`
+  - Refactored `CLAUDE.md` to hub-and-spoke navigation (703→397 lines)
+  - Archived comprehensive reference to `archived_docs/CLAUDE_FULL_REFERENCE.md`
+  - Total: 3,958 lines of workflow documentation for coordinated development
+
+### Changed - 2025-11-22
+- **BUG-024: Git Worktree Indexing Support**
+  - Added `.worktrees/` to excluded directories in `incremental_indexer.py`
+  - Prevents indexing of git worktree directories used for parallel development
+- **Parallel Embedding Generator Initialization**
+  - Re-enabled indexer initialization in `server.py:index_codebase()`
+  - Required for parallel embedding generator to function correctly
+
+### Planning - 2025-11-22
+- **MCP RAG Tool Enhancements (FEAT-056 through FEAT-062)**
+  - Created 7 implementation plans for advanced filtering, UX improvements, pattern detection, structural queries, quality metrics, git integration, architecture visualization
+  - Created 5 additional plans: PERF-007 (connection pooling), REF-012 (rollback), REF-013 (server split), REF-014 (repository pattern), TEST-007 (coverage)
+  - Documents: `planning_docs/FEAT-056_*.md` through `planning_docs/TEST-007_*.md`
+
 ### Examples
 
 **Good Entry (Concise):**

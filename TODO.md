@@ -239,6 +239,115 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Use case:** "Export dependency graph for visualization in Graphviz"
   - **Enhances:** Existing dependency tools (get_file_dependencies, etc.)
 
+#### MCP RAG Tool Enhancements
+
+**Based on empirical evaluation (QA review + architecture discovery tasks), these enhancements address critical gaps in the MCP RAG semantic search capabilities.**
+
+**Phase 1: Quick Wins (2 weeks)**
+
+- [ ] **FEAT-056**: Advanced Filtering & Sorting (~1 week) 🔥🔥
+  - **Current Gap:** No way to filter by file pattern, complexity, date ranges, or sort by relevance
+  - **Problem:** QA review needed grep for pattern matching ("find all *.test.py files with TODO"), architecture discovery needed complexity filters
+  - **Proposed Solution:**
+    - [ ] Add `file_pattern` parameter to search_code (glob patterns like "*.test.py", "src/**/auth*.ts")
+    - [ ] Add `complexity_min` / `complexity_max` filters (cyclomatic complexity, line count)
+    - [ ] Add `modified_after` / `modified_before` date range filters
+    - [ ] Add `sort_by` parameter: relevance (default), complexity, size, recency, importance
+    - [ ] Add `exclude_patterns` to filter out test files, generated code, etc.
+  - **Impact:** Eliminates 40% of grep usage, enables precise filtering, 3x faster targeted searches
+  - **Use case:** "Find complex authentication functions modified in last 30 days" or "Show all error handlers sorted by complexity"
+  - **Tests:** 15-20 tests for filtering, sorting, and edge cases
+  - **See:** planning_docs/FEAT-056_advanced_filtering_plan.md
+
+- [ ] **FEAT-057**: Better UX & Discoverability (~1 week) 🔥
+  - **Current Gap:** No query suggestions, result summaries, or interactive refinement
+  - **Problem:** Users don't know what queries work well, results lack context, no guidance for improvement
+  - **Proposed Solution:**
+    - [ ] Add `suggest_queries()` MCP tool - Returns query suggestions based on codebase and intent
+    - [ ] Add faceted search results (show file counts by language, category, project)
+    - [ ] Add result summaries (e.g., "Found 15 functions across 8 files in 3 projects")
+    - [ ] Add "Did you mean?" suggestions for typos/synonyms
+    - [ ] Add interactive refinement hints ("Try narrowing with file_pattern=*.py")
+  - **Impact:** Reduced learning curve, better discoverability, improved query success rate
+  - **Use case:** User asks "show me auth code" → System suggests refinements and shows distribution
+  - **Tests:** 10-15 tests for suggestions, facets, summaries
+  - **See:** planning_docs/FEAT-057_ux_discoverability_plan.md
+
+- [ ] **FEAT-058**: Pattern Detection (Regex + Semantic Hybrid) (~1 week) 🔥🔥
+  - **Current Gap:** No way to combine regex patterns with semantic search
+  - **Problem:** QA review needed "find except: blocks" (regex) but only in error handling code (semantic)
+  - **Proposed Solution:**
+    - [ ] Add `pattern` parameter to search_code (regex pattern)
+    - [ ] Add `pattern_mode`: "filter" (semantic first, regex filter), "boost" (regex match boosts score), "require" (must match both)
+    - [ ] Add common pattern presets: error_handlers, TODO_comments, security_keywords, deprecated_apis
+    - [ ] Combine tree-sitter AST patterns with semantic similarity
+  - **Impact:** Eliminates 60% of grep usage, enables precise code smell detection, 10x faster QA reviews
+  - **Use case:** "Find all TODO markers in authentication code" or "Show error handlers with bare except:"
+  - **Tests:** 15-20 tests for pattern modes, presets, hybrid search
+  - **See:** planning_docs/FEAT-058_pattern_detection_plan.md
+
+**Phase 2: Structural Analysis (4 weeks)**
+
+- [ ] **FEAT-059**: Structural/Relational Queries (~2 weeks) 🔥🔥🔥
+  - **Current Gap:** No call graph analysis, dependency traversal, or relationship queries
+  - **Problem:** Architecture discovery needed "find all callers of this function" and "show dependency chains" - impossible with current tools
+  - **Proposed Solution:**
+    - [ ] Add `find_callers(function_name, project)` - Find all functions calling this function
+    - [ ] Add `find_callees(function_name, project)` - Find all functions called by this function
+    - [ ] Add `find_implementations(interface_name)` - Find all implementations of interface/trait
+    - [ ] Add `find_dependencies(file_path)` - Get dependency graph for a file (imports/requires)
+    - [ ] Add `find_dependents(file_path)` - Get reverse dependencies (what imports this file)
+    - [ ] Add `get_call_chain(from_function, to_function)` - Show call path between functions
+  - **Impact:** Enables architectural analysis, refactoring planning, impact analysis - transforms discovery from 45min → 5min
+  - **Use case:** "Show me all callers of authenticate()" or "What's the call chain from main() to database?"
+  - **Tests:** 25-30 tests for call graph, dependencies, edge cases
+  - **See:** planning_docs/FEAT-059_structural_queries_plan.md
+
+- [ ] **FEAT-060**: Code Quality Metrics & Hotspots (~2 weeks) 🔥🔥
+  - **Current Gap:** No code quality analysis, duplication detection, or complexity metrics
+  - **Problem:** QA review manually searched for code smells, complex functions, duplicates - took 30+ minutes
+  - **Proposed Solution:**
+    - [ ] Add `find_quality_hotspots(project)` - Returns top 20 issues: high complexity, duplicates, long functions, deep nesting
+    - [ ] Add `find_duplicates(similarity_threshold=0.85)` - Semantic duplicate detection
+    - [ ] Add `get_complexity_report(file_or_project)` - Cyclomatic complexity breakdown
+    - [ ] Add quality metrics to search results (complexity, duplication score, maintainability index)
+    - [ ] Add filters: `min_complexity`, `has_duplicates`, `long_functions` (>100 lines)
+  - **Impact:** Automated code review, 60x faster than manual (30min → 30sec), objective quality metrics
+  - **Use case:** "Show me the most complex functions in this project" or "Find duplicate authentication logic"
+  - **Tests:** 20-25 tests for metrics, hotspots, duplication
+  - **See:** planning_docs/FEAT-060_quality_metrics_plan.md
+
+- [ ] **FEAT-061**: Git/Historical Integration (~1 week) 🔥
+  - **Current Gap:** No git history, change frequency, or churn analysis
+  - **Problem:** Architecture discovery couldn't identify "frequently changed files" or "recent refactorings"
+  - **Proposed Solution:**
+    - [ ] Add `search_git_history(query, since, until)` - Semantic search over commit messages and diffs
+    - [ ] Add `get_change_frequency(file_or_function)` - How often does this change? (commits/month)
+    - [ ] Add `get_churn_hotspots(project)` - Files with highest change frequency
+    - [ ] Add `get_recent_changes(project, days=30)` - Recent modifications with semantic context
+    - [ ] Add `blame_search(pattern)` - Who wrote code matching this pattern?
+  - **Impact:** Understand evolution, identify unstable code, find domain experts
+  - **Use case:** "Show files changed most frequently in auth code" or "Who worked on the API layer recently?"
+  - **Tests:** 15-20 tests for git integration, change analysis
+  - **See:** planning_docs/FEAT-061_git_integration_plan.md
+
+**Phase 3: Visualization (4-6 weeks)**
+
+- [ ] **FEAT-062**: Architecture Visualization & Diagrams (~4-6 weeks) 🔥
+  - **Current Gap:** No visual representation of architecture, dependencies, or call graphs
+  - **Problem:** Architecture discovery relied on mental modeling - difficult to understand complex systems, explain to others, or document
+  - **Proposed Solution:**
+    - [ ] Add `visualize_architecture(project)` - Generate architecture diagram (components, layers, boundaries)
+    - [ ] Add `visualize_dependencies(file_or_module)` - Dependency graph with depth control
+    - [ ] Add `visualize_call_graph(function_name)` - Call graph showing function relationships
+    - [ ] Export formats: Graphviz DOT, Mermaid, D3.js JSON, PNG/SVG images
+    - [ ] Interactive web viewer with zoom, pan, filtering
+    - [ ] Highlight patterns: circular dependencies, deep nesting, tight coupling
+  - **Impact:** 10x faster architecture understanding, shareable diagrams, documentation automation
+  - **Use case:** "Show me the architecture diagram for this project" or "Visualize dependencies for the auth module"
+  - **Tests:** 20-25 tests for visualization, exports, patterns
+  - **See:** planning_docs/FEAT-062_architecture_visualization_plan.md
+
 ### 🟢 Tier 3: UX Improvements & Performance Optimizations
 
 **User experience and performance improvements**
@@ -552,6 +661,100 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
 - [ ] **REF-008**: Remove deprecated API usage
   - Update to latest Qdrant APIs
   - Update to latest MCP SDK
+
+- [ ] **REF-013**: Split Monolithic Core Server (~4-6 months) 🔥🔥🔥
+  - **Current State:** `src/core/server.py` is 5,192 lines - violates Single Responsibility Principle
+  - **Problem:** Difficult to test, understand, modify, and maintain. High coupling, low cohesion.
+  - **Impact:** Slows down development, increases bug risk, makes onboarding difficult
+  - **Proposed Solution:** Extract into domain-specific service modules:
+    - `MemoryService` - Memory storage, retrieval, lifecycle management
+    - `CodeIndexingService` - Code indexing, search, similar code
+    - `HealthService` - Monitoring, metrics, alerts, remediation
+    - `CrossProjectService` - Multi-repository search and consent
+    - `QueryService` - Query expansion, intent detection, hybrid search
+  - **Approach:**
+    - [ ] Create service interfaces with clear contracts
+    - [ ] Extract one service at a time (incremental refactor)
+    - [ ] Maintain 100% backward compatibility during transition
+    - [ ] Add integration tests for each service
+    - [ ] Update MCP server to use new services
+    - [ ] Remove deprecated monolithic methods
+  - **Success Criteria:** No file >1000 lines, clear separation of concerns, improved test coverage
+  - **Priority:** Critical for long-term maintainability
+  - **See:** `planning_docs/REF-013_split_server_implementation_plan.md`
+
+- [ ] **TEST-007**: Increase Test Coverage to 80%+ (~2-3 months) 🔥🔥
+  - **Current State:** 63.68% overall coverage (7,291 of 20,076 lines uncovered)
+  - **Critical Gaps:**
+    - `src/core/security_logger.py` - 0% (99 lines) 🔴 CRITICAL
+    - `src/dashboard/web_server.py` - 0% (299 lines) 🔴 CRITICAL
+    - `src/memory/health_scheduler.py` - 0% (172 lines) 🔴 CRITICAL
+    - `src/memory/duplicate_detector.py` - 0% (93 lines)
+    - `src/router/retrieval_predictor.py` - 0% (82 lines)
+    - 20+ modules below 60% coverage
+  - **Target:** 80%+ for core modules (src/core, src/store, src/memory, src/embeddings)
+  - **Approach:**
+    - [ ] Phase 1: Critical modules (security_logger, web_server, health_scheduler) - 0% → 80%
+    - [ ] Phase 2: Low coverage modules (<30%) to 60%+
+    - [ ] Phase 3: Medium coverage modules (60-79%) to 80%+
+    - [ ] Add missing integration tests for end-to-end workflows
+    - [ ] Add edge case and error path tests
+  - **Impact:** Increased confidence, fewer regressions, better code quality
+  - **Priority:** High - essential for production readiness
+  - **See:** `planning_docs/TEST-007_coverage_improvement_plan.md`
+
+- [ ] **REF-014**: Extract Qdrant-Specific Logic (~1-2 months) 🔥
+  - **Current State:** Qdrant-specific code leaks into business logic
+  - **Problem:** 2,328-line `qdrant_store.py` with complex Qdrant queries, tight coupling
+  - **Impact:** Difficult to swap backends, test business logic, understand data flow
+  - **Proposed Solution:** Repository pattern with clear domain models
+    - [ ] Define domain repository interface (independent of Qdrant)
+    - [ ] Create domain models for search results, filters, pagination
+    - [ ] Implement mapper layer (domain models ↔ Qdrant models)
+    - [ ] Refactor QdrantStore to implement domain repository
+    - [ ] Update business logic to use domain models only
+    - [ ] Add integration tests with mock repository
+  - **Benefits:** Cleaner architecture, easier testing, potential for alternative backends
+  - **Priority:** High - improves architecture quality
+  - **See:** `planning_docs/REF-014_repository_pattern_plan.md`
+
+- [ ] **PERF-007**: Add Connection Pooling for Qdrant (~5 days) 📋 **PLANNED**
+  - **Current State:** No connection pool management, potential connection exhaustion
+  - **Problem:** Under high load, connections may not be reused efficiently
+  - **Proposed Solution:** Implement connection pooling with health checks and retry logic
+    - [ ] Phase 1: Core connection pool implementation (Day 1-2)
+      - [ ] Create `src/store/connection_pool.py` with QdrantConnectionPool class
+      - [ ] Implement async acquire/release with timeout
+      - [ ] Add connection recycling (age-based)
+      - [ ] Write unit tests (15-20 tests)
+    - [ ] Phase 2: Health checks & monitoring (Day 2-3)
+      - [ ] Implement ConnectionHealthChecker (fast/medium/deep checks)
+      - [ ] Add ConnectionPoolMonitor for metrics collection
+      - [ ] Background health check scheduler
+      - [ ] Write tests (10-15 tests)
+    - [ ] Phase 3: Retry logic integration (Day 3-4)
+      - [ ] Create RetryStrategy with exponential backoff + jitter
+      - [ ] Integrate retry into QdrantMemoryStore operations
+      - [ ] Add operation-specific timeouts
+      - [ ] Write tests (15-20 tests)
+    - [ ] Phase 4: Integration & testing (Day 4-5)
+      - [ ] Refactor QdrantSetup and QdrantMemoryStore to use pool
+      - [ ] Integration tests (15-20 tests)
+      - [ ] Update documentation
+    - [ ] Phase 5: Load testing & validation (Day 5)
+      - [ ] Create benchmark script for pool performance
+      - [ ] Run baseline vs pool comparison tests
+      - [ ] Validate performance targets (throughput, latency, connection count)
+  - **Configuration:** 11 new config options (pool size, retry, timeouts, health checks)
+  - **Benefits:** Better resource utilization, improved throughput, reduced latency
+  - **Impact:** Supports higher concurrent request volumes, better reliability
+  - **Performance Targets:**
+    - Pool acquire latency: <1ms avg, <5ms P95
+    - Maintain throughput: ≥55K ops/sec
+    - Maintain P95 search latency: ≤4ms
+    - Connection count bounded by pool_size
+  - **Priority:** Medium - important for production scale
+  - **See:** `planning_docs/PERF-007_connection_pooling_plan.md` (28KB comprehensive plan)
 
 - [x] **REF-002**: Add Structured Logging ✅ **COMPLETE** (~1 hour)
   - Created `src/logging/structured_logger.py` with JSON formatter

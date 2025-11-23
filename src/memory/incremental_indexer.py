@@ -448,7 +448,8 @@ class IncrementalIndexer(BaseCodeIndexer):
         # BUG-022: Previous logic filtered ALL paths with dots (broke git worktrees, .config dirs, etc)
         EXCLUDED_DIRS = {
             ".git", ".venv", "venv", ".virtualenv", "__pycache__",
-            "node_modules", ".pytest_cache", ".mypy_cache", ".tox"
+            "node_modules", ".pytest_cache", ".mypy_cache", ".tox",
+            ".worktrees",  # Git worktrees for parallel development
         }
 
         def should_include_file(file_path: Path) -> bool:

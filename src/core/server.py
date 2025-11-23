@@ -2910,9 +2910,8 @@ class MemoryRAGServer:
                 project_name=index_project_name,
             )
 
-            # Initialize indexer (it will use the same store connection)
-            # Skip initialization since store is already initialized
-            # await indexer.initialize()
+            # Initialize indexer (needed for parallel embedding generator)
+            await indexer.initialize()
 
             # Index directory
             logger.info(f"Indexing codebase: {dir_path} (project: {index_project_name})")
