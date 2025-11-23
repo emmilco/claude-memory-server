@@ -51,6 +51,17 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Added - 2025-11-22
+- **FEAT-057: Better UX & Discoverability for MCP RAG**
+  - Added `suggest_queries()` MCP tool - Provides contextual query suggestions based on intent, project content, and domain
+  - Enhanced `search_code()` with faceted search results showing distribution by language, unit type, file, and directory
+  - Added natural language result summaries (e.g., "Found 15 functions across 8 files in Python")
+  - Added "Did you mean?" spelling suggestions for typos using difflib and common programming term corrections
+  - Added interactive refinement hints guiding users to narrow/broaden searches or try different modes
+  - Files: src/memory/query_suggester.py, src/memory/result_summarizer.py, src/memory/spelling_suggester.py, src/memory/refinement_advisor.py
+  - Tests: 65+ comprehensive tests (unit + integration) covering all UX features
+  - Backward compatible: All existing search_code response fields preserved
+
 ### Fixed - 2025-11-22
 - **BUG-018: Memory Retrieval Not Finding Recently Stored Memories**
   - Added comprehensive regression tests to prevent recurrence
