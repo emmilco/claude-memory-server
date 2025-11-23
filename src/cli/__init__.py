@@ -20,6 +20,7 @@ from src.cli.verify_command import verify_command
 from src.cli.consolidate_command import consolidate_command
 from src.cli.repository_command import add_repository_parser, RepositoryCommand
 from src.cli.workspace_command import add_workspace_parser, WorkspaceCommand
+from src.cli.perf_command import perf_report_command, perf_history_command
 
 
 def setup_logging(level: str = "INFO"):
@@ -384,6 +385,68 @@ def create_parser() -> argparse.ArgumentParser:
         help="Filter by category (preference, fact, event, workflow, context)",
     )
 
+    # Performance regression detection commands
+    perf_report_parser = subparsers.add_parser(
+        "perf-report",
+        help="Show performance regression report",
+        epilog="""
+Examples:
+  # Generate performance report (last 7 days)
+  claude-rag perf-report
+
+  # Generate report for last 30 days
+  claude-rag perf-report --period-days 30
+
+This report shows:
+  - Current metrics vs baselines
+  - Detected regressions with severity
+  - Actionable recommendations for fixes
+        """,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    perf_report_parser.add_argument(
+        "--period-days",
+        "-d",
+        type=int,
+        default=7,
+        help="Number of days to analyze (default: 7)",
+    )
+
+    perf_history_parser = subparsers.add_parser(
+        "perf-history",
+        help="Show historical performance metrics",
+        epilog="""
+Examples:
+  # Show all metrics history (last 30 days)
+  claude-rag perf-history
+
+  # Show specific metric history
+  claude-rag perf-history --metric search_latency_p95
+
+  # Show last 7 days
+  claude-rag perf-history --days 7
+
+Available metrics:
+  - search_latency_p50, search_latency_p95, search_latency_p99
+  - indexing_throughput
+  - cache_hit_rate
+        """,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    perf_history_parser.add_argument(
+        "--metric",
+        "-m",
+        type=str,
+        help="Specific metric to show (or all if not specified)",
+    )
+    perf_history_parser.add_argument(
+        "--days",
+        "-d",
+        type=int,
+        default=30,
+        help="Number of days of history (default: 30)",
+    )
+
     # Repository command
     add_repository_parser(subparsers)
 
@@ -463,6 +526,12 @@ async def main_async(args):
     elif args.command in ("workspace", "ws"):
         cmd = WorkspaceCommand()
         await cmd.run(args)
+    elif args.command == "perf-report":
+        exit_code = await perf_report_command(period_days=args.period_days)
+        sys.exit(exit_code)
+    elif args.command == "perf-history":
+        exit_code = await perf_history_command(metric=args.metric, days=args.days)
+        sys.exit(exit_code)
     else:
         print("No command specified. Use --help for usage information.")
         sys.exit(1)

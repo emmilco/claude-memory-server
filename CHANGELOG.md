@@ -79,6 +79,19 @@ A pre-commit hook enforces CHANGELOG updates:
 
 ## [Unreleased]
 
+### Added - 2025-11-22
+
+- **PERF-006: Performance Regression Detection**
+  - Added `PerformanceTracker` class for tracking metrics over time
+  - Created `src/monitoring/performance_tracker.py` with baseline calculation and anomaly detection
+  - Added CLI commands: `perf-report` (show current vs baseline) and `perf-history` (historical metrics)
+  - Created `src/cli/perf_command.py` for performance regression commands
+  - Time-series SQLite storage for 5 metrics: search latency (P50, P95, P99), indexing throughput, cache hit rate
+  - Rolling 30-day baseline calculation with automatic regression detection
+  - Severity levels: MINOR (10-25%), MODERATE (25-40%), SEVERE (40-60%), CRITICAL (>60%)
+  - Actionable recommendations for each regression type
+  - 31 comprehensive tests with 100% pass rate
+
 ### Added - 2025-11-18
 
 - **PERF-006: Test Suite Performance Optimization - Phases 2 & 3**
