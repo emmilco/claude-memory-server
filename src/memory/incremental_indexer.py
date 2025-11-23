@@ -936,6 +936,42 @@ class IncrementalIndexer(BaseCodeIndexer):
                 "import_count": import_metadata.get("import_count", 0),
             }
 
+            # FEAT-056: Add complexity metrics and file metadata
+            try:
+                # Complexity metrics (from ImportanceScore if available)
+                if importance_score:
+                    unit_metadata["cyclomatic_complexity"] = importance_score.cyclomatic_complexity
+                    unit_metadata["line_count"] = importance_score.line_count
+                    unit_metadata["nesting_depth"] = importance_score.nesting_depth
+                    unit_metadata["parameter_count"] = importance_score.parameter_count
+                else:
+                    # Fallback values if importance scorer not available
+                    unit_metadata["cyclomatic_complexity"] = 0
+                    unit_metadata["line_count"] = len(unit.content.splitlines())
+                    unit_metadata["nesting_depth"] = 0
+                    unit_metadata["parameter_count"] = 0
+
+                # File metadata (modification time, size, indexed timestamp)
+                file_stats = file_path.stat()
+                unit_metadata["file_modified_at"] = file_stats.st_mtime  # Unix timestamp
+                unit_metadata["file_size_bytes"] = file_stats.st_size
+
+                # Add indexed timestamp
+                from datetime import datetime, UTC
+                unit_metadata["indexed_at"] = datetime.now(UTC).isoformat()
+            except (OSError, IOError) as e:
+                # If file stats fail, use fallback values
+                logger.warning(f"Failed to get file stats for {file_path}: {e}, using defaults")
+                if not importance_score:
+                    unit_metadata["cyclomatic_complexity"] = 0
+                    unit_metadata["line_count"] = len(unit.content.splitlines())
+                    unit_metadata["nesting_depth"] = 0
+                    unit_metadata["parameter_count"] = 0
+                unit_metadata["file_modified_at"] = 0
+                unit_metadata["file_size_bytes"] = 0
+                from datetime import datetime, UTC
+                unit_metadata["indexed_at"] = datetime.now(UTC).isoformat()
+
             # Generate deterministic ID for this code unit
             # Format: hash(project_name + file_path + start_line + unit_name)
             import hashlib

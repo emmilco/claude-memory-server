@@ -2208,6 +2208,16 @@ class MemoryRAGServer:
         file_pattern: Optional[str] = None,
         language: Optional[str] = None,
         search_mode: str = "semantic",
+        # FEAT-056: Advanced filtering and sorting
+        exclude_patterns: Optional[List[str]] = None,
+        complexity_min: Optional[int] = None,
+        complexity_max: Optional[int] = None,
+        line_count_min: Optional[int] = None,
+        line_count_max: Optional[int] = None,
+        modified_after: Optional[datetime] = None,
+        modified_before: Optional[datetime] = None,
+        sort_by: str = "relevance",
+        sort_order: str = "desc",
     ) -> Dict[str, Any]:
         """
         Search indexed code semantically across functions and classes.
@@ -2244,18 +2254,60 @@ class MemoryRAGServer:
         - "user permission checking logic"
 
         **Performance:** 7-13ms semantic, 3-7ms keyword, 10-18ms hybrid
+        **With filters:** +2-3ms overhead for typical queries
+
+        **NEW (FEAT-056): Advanced Filtering & Sorting Examples:**
+
+        1. Find complex authentication functions modified in last 30 days:
+           ```python
+           search_code(
+               query="authentication",
+               complexity_min=5,
+               modified_after=datetime.now(UTC) - timedelta(days=30),
+               sort_by="complexity"
+           )
+           ```
+
+        2. Find error handlers, exclude test files:
+           ```python
+           search_code(
+               query="error handling",
+               file_pattern="**/*.py",
+               exclude_patterns=["**/*.test.py", "**/tests/**"],
+               sort_by="importance"
+           )
+           ```
+
+        3. Find large functions (>100 lines) sorted by complexity:
+           ```python
+           search_code(
+               query="business logic",
+               line_count_min=100,
+               sort_by="complexity",
+               sort_order="desc"
+           )
+           ```
 
         Args:
             query: Natural language description of what to find (be specific!)
             project_name: Optional project filter (defaults to current project if available)
             limit: Maximum results (default: 5, increase to 10-20 for broad searches)
-            file_pattern: Optional path filter (e.g., "*/auth/*", "**/services/*.py")
+            file_pattern: Glob pattern for file paths (e.g., "**/*.test.py", "src/**/auth*.ts")
             language: Optional language filter ("python", "javascript", "typescript", etc.)
             search_mode: "semantic" (meaning), "keyword" (exact), or "hybrid" (both)
+            exclude_patterns: Glob patterns to exclude (e.g., ["**/*.test.py", "**/generated/**"])
+            complexity_min: Minimum cyclomatic complexity filter
+            complexity_max: Maximum cyclomatic complexity filter
+            line_count_min: Minimum line count filter
+            line_count_max: Maximum line count filter
+            modified_after: Filter by file modification time (after this date)
+            modified_before: Filter by file modification time (before this date)
+            sort_by: Sort order - "relevance" (default), "complexity", "size", "recency", "importance"
+            sort_order: Sort direction - "desc" (default) or "asc"
 
         Returns:
             Dict with results containing file_path, start_line, end_line, code snippets,
-            relevance_score, quality assessment, and matched keywords
+            relevance_score, quality assessment, matched keywords, and applied filters
         """
         try:
             import time
@@ -2341,7 +2393,7 @@ class MemoryRAGServer:
                     limit=limit,
                 )
 
-            # Format results for code search with deduplication
+            # Format results for code search with deduplication and advanced filtering
             code_results = []
             seen_units = set()  # Track (file_path, start_line, unit_name) to deduplicate
 
@@ -2350,14 +2402,60 @@ class MemoryRAGServer:
                 metadata = memory.metadata or {}
                 nested_metadata = metadata if isinstance(metadata, dict) else {}
 
-                # Apply post-filter for file pattern and language if specified
+                # Extract values for filtering
                 file_path = nested_metadata.get("file_path", "")
                 language_val = nested_metadata.get("language", "")
 
-                if file_pattern and file_pattern not in file_path:
-                    continue
+                # FEAT-056: Glob pattern matching (replaces substring matching)
+                if file_pattern:
+                    from pathlib import Path
+                    file_path_obj = Path(file_path)
+                    if not file_path_obj.match(file_pattern):
+                        continue
+
+                # FEAT-056: Exclusion patterns
+                if exclude_patterns:
+                    from pathlib import Path
+                    file_path_obj = Path(file_path)
+                    should_exclude = False
+                    for exclude_pattern in exclude_patterns:
+                        if file_path_obj.match(exclude_pattern):
+                            should_exclude = True
+                            break
+                    if should_exclude:
+                        continue
+
+                # Language filter (existing)
                 if language and language_val.lower() != language.lower():
                     continue
+
+                # FEAT-056: Complexity range filtering
+                if complexity_min is not None or complexity_max is not None:
+                    complexity = nested_metadata.get("cyclomatic_complexity", 0)
+                    if complexity_min is not None and complexity < complexity_min:
+                        continue
+                    if complexity_max is not None and complexity > complexity_max:
+                        continue
+
+                # FEAT-056: Line count filtering
+                if line_count_min is not None or line_count_max is not None:
+                    line_count = nested_metadata.get("line_count", 0)
+                    if line_count_min is not None and line_count < line_count_min:
+                        continue
+                    if line_count_max is not None and line_count > line_count_max:
+                        continue
+
+                # FEAT-056: Date range filtering (file modification time)
+                if modified_after is not None or modified_before is not None:
+                    file_modified_timestamp = nested_metadata.get("file_modified_at", 0)
+                    if file_modified_timestamp > 0:  # Skip if no timestamp
+                        from datetime import datetime, UTC
+                        file_modified_dt = datetime.fromtimestamp(file_modified_timestamp, tz=UTC)
+
+                        if modified_after is not None and file_modified_dt < modified_after:
+                            continue
+                        if modified_before is not None and file_modified_dt > modified_before:
+                            continue
 
                 # Deduplication: Skip if we've already seen this exact code unit
                 unit_name = nested_metadata.get("unit_name") or nested_metadata.get("name", "(unnamed)")
@@ -2372,6 +2470,7 @@ class MemoryRAGServer:
                 relevance_score = min(max(score, 0.0), 1.0)
                 confidence_label = self._get_confidence_label(relevance_score)
 
+                # Store metadata for sorting
                 code_results.append({
                     "file_path": file_path or "(no path)",
                     "start_line": start_line,
@@ -2384,7 +2483,29 @@ class MemoryRAGServer:
                     "relevance_score": relevance_score,
                     "confidence_label": confidence_label,
                     "confidence_display": f"{relevance_score:.0%} ({confidence_label})",
+                    # FEAT-056: Include metadata for sorting and display
+                    "metadata": {
+                        "cyclomatic_complexity": nested_metadata.get("cyclomatic_complexity", 0),
+                        "line_count": nested_metadata.get("line_count", 0),
+                        "file_modified_at": nested_metadata.get("file_modified_at", 0),
+                        "file_size_bytes": nested_metadata.get("file_size_bytes", 0),
+                    },
                 })
+
+            # FEAT-056: Apply sorting (if not sorting by relevance, which is already sorted)
+            if sort_by and sort_by != "relevance":
+                # Define sort key functions
+                sort_keys = {
+                    "complexity": lambda r: r["metadata"]["cyclomatic_complexity"],
+                    "size": lambda r: r["metadata"]["line_count"],
+                    "recency": lambda r: r["metadata"]["file_modified_at"],
+                    "importance": lambda r: r["relevance_score"],  # Use semantic score as importance
+                }
+
+                if sort_by in sort_keys:
+                    reverse = (sort_order == "desc")
+                    code_results.sort(key=sort_keys[sort_by], reverse=reverse)
+                # else: keep default relevance sorting
 
             query_time_ms = (time.time() - start_time) * 1000
 
@@ -2411,6 +2532,25 @@ class MemoryRAGServer:
                     avg_relevance=avg_relevance
                 )
 
+            # FEAT-056: Build filters_applied dictionary
+            filters_applied = {}
+            if file_pattern:
+                filters_applied["file_pattern"] = file_pattern
+            if exclude_patterns:
+                filters_applied["exclude_patterns"] = exclude_patterns
+            if complexity_min is not None:
+                filters_applied["complexity_min"] = complexity_min
+            if complexity_max is not None:
+                filters_applied["complexity_max"] = complexity_max
+            if line_count_min is not None:
+                filters_applied["line_count_min"] = line_count_min
+            if line_count_max is not None:
+                filters_applied["line_count_max"] = line_count_max
+            if modified_after is not None:
+                filters_applied["modified_after"] = modified_after.isoformat()
+            if modified_before is not None:
+                filters_applied["modified_before"] = modified_before.isoformat()
+
             return {
                 "status": "success",
                 "results": code_results,
@@ -2424,6 +2564,12 @@ class MemoryRAGServer:
                 "suggestions": quality_info["suggestions"],
                 "interpretation": quality_info["interpretation"],
                 "matched_keywords": quality_info["matched_keywords"],
+                # FEAT-056: Add filter and sort metadata
+                "filters_applied": filters_applied,
+                "sort_info": {
+                    "sort_by": sort_by,
+                    "sort_order": sort_order,
+                },
             }
 
         except RetrievalError:

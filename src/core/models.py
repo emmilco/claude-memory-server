@@ -228,6 +228,102 @@ class AdvancedSearchFilters(BaseModel):
         return [tag.strip().lower() for tag in v if tag.strip()]
 
 
+class CodeSearchFilters(BaseModel):
+    """
+    Advanced filtering options specifically for code search.
+
+    FEAT-056: Extends search_code with glob patterns, complexity filters,
+    date ranges, and multi-criteria sorting.
+    """
+
+    # Glob pattern matching (NOT substring)
+    file_pattern: Optional[str] = Field(
+        default=None,
+        description="Glob pattern for file paths (e.g., '**/*.test.py', 'src/**/auth*.ts')"
+    )
+
+    # Exclusion patterns
+    exclude_patterns: Optional[List[str]] = Field(
+        default=None,
+        description="Glob patterns to exclude (e.g., ['**/*.test.py', '**/generated/**'])"
+    )
+
+    # Complexity filters
+    complexity_min: Optional[int] = Field(
+        default=None,
+        ge=0,
+        description="Minimum cyclomatic complexity"
+    )
+    complexity_max: Optional[int] = Field(
+        default=None,
+        ge=0,
+        description="Maximum cyclomatic complexity"
+    )
+
+    # Line count filters
+    line_count_min: Optional[int] = Field(default=None, ge=0)
+    line_count_max: Optional[int] = Field(default=None, ge=0)
+
+    # Date range filters (file modification time)
+    modified_after: Optional[datetime] = Field(
+        default=None,
+        description="Filter by file modification time (after this date)"
+    )
+    modified_before: Optional[datetime] = Field(
+        default=None,
+        description="Filter by file modification time (before this date)"
+    )
+
+    # Sorting
+    sort_by: Optional[str] = Field(
+        default="relevance",
+        description="Sort order: relevance, complexity, size, recency, importance"
+    )
+    sort_order: Optional[str] = Field(
+        default="desc",
+        description="Sort direction: asc or desc"
+    )
+
+    model_config = ConfigDict(use_enum_values=False)
+
+    @field_validator("sort_by")
+    @classmethod
+    def validate_sort_by(cls, v: Optional[str]) -> str:
+        """Validate sort_by parameter."""
+        if v is None:
+            return "relevance"
+        allowed = ["relevance", "complexity", "size", "recency", "importance"]
+        if v not in allowed:
+            raise ValueError(f"sort_by must be one of: {', '.join(allowed)}")
+        return v
+
+    @field_validator("sort_order")
+    @classmethod
+    def validate_sort_order(cls, v: Optional[str]) -> str:
+        """Validate sort_order parameter."""
+        if v is None:
+            return "desc"
+        if v not in ["asc", "desc"]:
+            raise ValueError("sort_order must be 'asc' or 'desc'")
+        return v
+
+    @field_validator("complexity_min", "complexity_max")
+    @classmethod
+    def validate_complexity(cls, v: Optional[int]) -> Optional[int]:
+        """Validate complexity bounds."""
+        if v is not None and v < 0:
+            raise ValueError("Complexity values must be non-negative")
+        return v
+
+    @field_validator("line_count_min", "line_count_max")
+    @classmethod
+    def validate_line_count(cls, v: Optional[int]) -> Optional[int]:
+        """Validate line count bounds."""
+        if v is not None and v < 0:
+            raise ValueError("Line count values must be non-negative")
+        return v
+
+
 class TrustSignals(BaseModel):
     """Trust signals and explanations for a search result."""
 

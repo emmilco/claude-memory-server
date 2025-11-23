@@ -167,15 +167,68 @@ async def list_tools() -> List[Tool]:
         # Code Search Tools
         Tool(
             name="search_code",
-            description="Search indexed code semantically across functions and classes",
+            description=(
+                "Search indexed code semantically across functions and classes. "
+                "FEAT-056: Now supports advanced filtering (glob patterns, complexity, dates) and sorting."
+            ),
             inputSchema={
                 "type": "object",
                 "properties": {
                     "query": {"type": "string", "description": "Search query"},
                     "project_name": {"type": "string", "description": "Project filter"},
                     "limit": {"type": "number", "description": "Max results (default: 5)"},
-                    "file_pattern": {"type": "string", "description": "File path pattern"},
+                    "file_pattern": {
+                        "type": "string",
+                        "description": "Glob pattern for file paths (e.g., '**/*.test.py', 'src/**/auth*.ts')"
+                    },
                     "language": {"type": "string", "description": "Language filter"},
+                    "search_mode": {
+                        "type": "string",
+                        "enum": ["semantic", "keyword", "hybrid"],
+                        "description": "Search mode (default: semantic)"
+                    },
+                    # FEAT-056: Advanced filtering parameters
+                    "exclude_patterns": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Glob patterns to exclude (e.g., ['**/*.test.py', '**/generated/**'])"
+                    },
+                    "complexity_min": {
+                        "type": "integer",
+                        "description": "Minimum cyclomatic complexity"
+                    },
+                    "complexity_max": {
+                        "type": "integer",
+                        "description": "Maximum cyclomatic complexity"
+                    },
+                    "line_count_min": {
+                        "type": "integer",
+                        "description": "Minimum line count"
+                    },
+                    "line_count_max": {
+                        "type": "integer",
+                        "description": "Maximum line count"
+                    },
+                    "modified_after": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "Filter by file modification time (ISO 8601 format)"
+                    },
+                    "modified_before": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "Filter by file modification time (ISO 8601 format)"
+                    },
+                    "sort_by": {
+                        "type": "string",
+                        "enum": ["relevance", "complexity", "size", "recency", "importance"],
+                        "description": "Sort order (default: relevance)"
+                    },
+                    "sort_order": {
+                        "type": "string",
+                        "enum": ["asc", "desc"],
+                        "description": "Sort direction (default: desc)"
+                    },
                 },
                 "required": ["query"],
             },
@@ -394,15 +447,35 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
             ]
 
         elif name == "search_code":
+            # FEAT-056: Parse datetime strings for modified_after/modified_before
+            from datetime import datetime
+            if "modified_after" in arguments and isinstance(arguments["modified_after"], str):
+                arguments["modified_after"] = datetime.fromisoformat(arguments["modified_after"])
+            if "modified_before" in arguments and isinstance(arguments["modified_before"], str):
+                arguments["modified_before"] = datetime.fromisoformat(arguments["modified_before"])
+
             result = await memory_server.search_code(**arguments)
             if not result["results"]:
                 return [TextContent(type="text", text="No code found matching your query.")]
 
-            output = f"✅ Found {result['total_found']} code snippets:\n\n"
+            output = f"✅ Found {result['total_found']} code snippets"
+            # FEAT-056: Show applied filters
+            if result.get("filters_applied"):
+                output += f" (with {len(result['filters_applied'])} filters)"
+            output += ":\n\n"
+
             for i, code in enumerate(result["results"], 1):
                 output += f"{i}. {code['unit_name']} ({code['unit_type']})\n"
                 output += f"   File: {code['file_path']}:{code['start_line']}\n"
-                output += f"   Relevance: {code['relevance_score']:.2%}\n\n"
+                output += f"   Relevance: {code['relevance_score']:.2%}"
+                # FEAT-056: Show complexity if available
+                if "metadata" in code and code["metadata"].get("cyclomatic_complexity"):
+                    output += f" | Complexity: {code['metadata']['cyclomatic_complexity']}"
+                output += "\n\n"
+
+            # FEAT-056: Show sort info if not default
+            if result.get("sort_info") and result["sort_info"].get("sort_by") != "relevance":
+                output += f"\n(Sorted by: {result['sort_info']['sort_by']} {result['sort_info']['sort_order']})\n"
 
             return [TextContent(type="text", text=output)]
 
