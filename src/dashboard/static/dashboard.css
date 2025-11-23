@@ -909,6 +909,81 @@ footer a:hover {
     transform: scale(0.95);
 }
 
+/* Custom Date Picker (UX-037) */
+.custom-date-picker {
+    margin-top: 16px;
+    padding: 16px;
+    background-color: var(--bg-color);
+    border-radius: 8px;
+    border: 2px solid var(--border-color);
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        max-height: 0;
+        padding: 0;
+    }
+    to {
+        opacity: 1;
+        max-height: 200px;
+        padding: 16px;
+    }
+}
+
+.custom-date-inputs {
+    display: flex;
+    gap: 16px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.date-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    min-width: 150px;
+}
+
+.date-input-group label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.date-input-group input[type="date"] {
+    padding: 10px;
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    background-color: var(--card-bg);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    font-family: inherit;
+    transition: border-color 0.2s ease;
+}
+
+.date-input-group input[type="date"]:focus {
+    outline: none;
+    border-color: var(--accent-color);
+}
+
+.date-input-group input[type="date"]:hover {
+    border-color: var(--text-secondary);
+}
+
+.date-validation-error {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background-color: rgba(244, 67, 54, 0.1);
+    border-left: 4px solid #f44336;
+    border-radius: 4px;
+    color: #f44336;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
 /* Empty state for filtered results */
 .empty-state {
     text-align: center;
@@ -1332,5 +1407,20 @@ footer a:hover {
 
     .metadata-label {
         width: 100px;
+    }
+
+    /* Responsive custom date picker (UX-037) */
+    .custom-date-inputs {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .date-input-group {
+        min-width: 100%;
+    }
+
+    #apply-custom-range,
+    #cancel-custom-range {
+        width: 100%;
     }
 }

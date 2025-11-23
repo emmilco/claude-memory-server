@@ -79,15 +79,21 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         self.end_headers()
 
     def _handle_api_stats(self):
-        """Handle /api/stats endpoint."""
+        """Handle /api/stats endpoint (UX-037: added time range support)."""
         try:
             if not self.rag_server or not self.event_loop:
                 self._send_error_response(500, "Server not initialized")
                 return
 
+            # Parse query parameters for time filtering (UX-037)
+            parsed_path = urlparse(self.path)
+            params = parse_qs(parsed_path.query)
+            start_date = params.get('start_date', [None])[0]
+            end_date = params.get('end_date', [None])[0]
+
             # Run async method in the dedicated event loop
             future = asyncio.run_coroutine_threadsafe(
-                self.rag_server.get_dashboard_stats(),
+                self.rag_server.get_dashboard_stats(start_date=start_date, end_date=end_date),
                 self.event_loop
             )
             result = future.result(timeout=10)  # 10 second timeout
@@ -98,7 +104,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             self._send_error_response(500, str(e))
 
     def _handle_api_activity(self, query_string: str):
-        """Handle /api/activity endpoint."""
+        """Handle /api/activity endpoint (UX-037: added time range support)."""
         try:
             if not self.rag_server or not self.event_loop:
                 self._send_error_response(500, "Server not initialized")
@@ -108,12 +114,16 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             params = parse_qs(query_string)
             limit = int(params.get('limit', ['20'])[0])
             project_name = params.get('project', [None])[0]
+            start_date = params.get('start_date', [None])[0]  # UX-037
+            end_date = params.get('end_date', [None])[0]  # UX-037
 
             # Run async method in the dedicated event loop
             future = asyncio.run_coroutine_threadsafe(
                 self.rag_server.get_recent_activity(
                     limit=limit,
-                    project_name=project_name
+                    project_name=project_name,
+                    start_date=start_date,
+                    end_date=end_date
                 ),
                 self.event_loop
             )
