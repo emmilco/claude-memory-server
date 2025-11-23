@@ -176,24 +176,14 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Result:** Documentation now clearly explains overall vs core module coverage
   - **See:** planning_docs/BUG-HUNT_2025-11-21_runtime_failures.md
 
-### BUG-033: Health Scheduler Missing `await` Keyword ⚠️ CRITICAL
-**Component:** Health monitoring system
-**Issue:** Health scheduler initialization fails due to missing `await` on async function call
-**Location:** `src/memory/health_scheduler.py:73`
-**Impact:** HIGH - Health scheduler never worked in production, all automated maintenance jobs broken
-**Current Code:**
-```python
-store = create_store(config)  # Returns coroutine, not store!
-await store.initialize()      # Tries to call .initialize() on coroutine → AttributeError
-```
-**Correct Code:**
-```python
-store = await create_store(config)  # Properly await async function
-# Note: create_store already calls initialize(), so second await is redundant
-```
-**Discovery:** Found during TEST-007 Phase 1 (2025-11-22)
-**Test Impact:** Blocks 9 tests in test_health_scheduler.py from passing
-**Fix Priority:** CRITICAL - One-line fix enables health monitoring to work
+- [x] **BUG-033**: Health Scheduler Missing `await` Keyword ✅ **FIXED** (2025-11-22)
+  - **Component:** Health monitoring system
+  - **Issue:** Health scheduler initialization failed due to missing `await` on async function call
+  - **Location:** `src/memory/health_scheduler.py:73`
+  - **Root Cause:** Missing `await` on `create_store()` call, redundant `await store.initialize()`
+  - **Fix:** Added `await` to `create_store()`, removed redundant initialization, fixed scheduler restart
+  - **Result:** All 33 tests passing, coverage improved from 0% to 90.12%
+  - **Impact:** Health scheduler now works in production, all maintenance jobs functional
 
 ### 🟡 Tier 2: Core Functionality Extensions
 
