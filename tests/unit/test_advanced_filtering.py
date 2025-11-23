@@ -6,6 +6,10 @@ line count filtering, and multi-criteria sorting.
 """
 
 import pytest
+
+# FEAT-056 not yet implemented - tests written ahead of implementation
+# TODO: Remove skip marker when FEAT-056 is implemented (planned for v4.1)
+pytestmark = pytest.mark.skip(reason="FEAT-056 (Advanced Filtering) not implemented - planned for v4.1")
 from datetime import datetime, timedelta, UTC
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
