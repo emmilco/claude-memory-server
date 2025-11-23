@@ -45,6 +45,9 @@ from src.monitoring.health_reporter import HealthReporter
 from src.monitoring.capacity_planner import CapacityPlanner
 from src.graph import DependencyGraph, GraphNode, GraphEdge
 from src.graph.formatters import DOTFormatter, JSONFormatter, MermaidFormatter
+from src.analysis.quality_analyzer import QualityAnalyzer, CodeQualityMetrics, QualityHotspot
+from src.analysis.complexity_analyzer import ComplexityAnalyzer
+from src.memory.duplicate_detector import DuplicateDetector
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +95,11 @@ class MemoryRAGServer:
         self.cross_project_consent: Optional = None  # Cross-project consent manager
         self.suggestion_engine: Optional[SuggestionEngine] = None  # Proactive suggestions
         self.scheduler = None  # APScheduler instance
+
+        # Quality analysis (FEAT-060)
+        self.complexity_analyzer: Optional[ComplexityAnalyzer] = None
+        self.quality_analyzer: Optional[QualityAnalyzer] = None
+        self.duplicate_detector: Optional[DuplicateDetector] = None
 
         # Statistics
         self.stats = {
@@ -261,6 +269,15 @@ class MemoryRAGServer:
             else:
                 self.suggestion_engine = None
                 logger.info("Proactive suggestions disabled")
+
+            # Initialize quality analysis components (FEAT-060)
+            self.complexity_analyzer = ComplexityAnalyzer()
+            self.quality_analyzer = QualityAnalyzer(complexity_analyzer=self.complexity_analyzer)
+            self.duplicate_detector = DuplicateDetector(
+                store=self.store,
+                embedding_generator=self.embedding_generator
+            )
+            logger.info("Quality analysis components initialized")
 
             # Collect initial metrics snapshot (defer if requested for fast startup)
             if self.metrics_collector and not defer_preload:
@@ -2208,6 +2225,12 @@ class MemoryRAGServer:
         file_pattern: Optional[str] = None,
         language: Optional[str] = None,
         search_mode: str = "semantic",
+        min_complexity: Optional[int] = None,
+        max_complexity: Optional[int] = None,
+        has_duplicates: Optional[bool] = None,
+        long_functions: Optional[bool] = None,
+        maintainability_min: Optional[int] = None,
+        include_quality_metrics: bool = True,
     ) -> Dict[str, Any]:
         """
         Search indexed code semantically across functions and classes.
@@ -2252,10 +2275,16 @@ class MemoryRAGServer:
             file_pattern: Optional path filter (e.g., "*/auth/*", "**/services/*.py")
             language: Optional language filter ("python", "javascript", "typescript", etc.)
             search_mode: "semantic" (meaning), "keyword" (exact), or "hybrid" (both)
+            min_complexity: Optional minimum complexity filter (FEAT-060)
+            max_complexity: Optional maximum complexity filter (FEAT-060)
+            has_duplicates: Optional duplicate filter (True/False) (FEAT-060)
+            long_functions: Optional long function filter (True/False) (FEAT-060)
+            maintainability_min: Optional minimum maintainability index (0-100) (FEAT-060)
+            include_quality_metrics: Include quality metrics in results (default: True) (FEAT-060)
 
         Returns:
             Dict with results containing file_path, start_line, end_line, code snippets,
-            relevance_score, quality assessment, and matched keywords
+            relevance_score, quality assessment, quality_metrics, and matched keywords
         """
         try:
             import time
@@ -2372,7 +2401,7 @@ class MemoryRAGServer:
                 relevance_score = min(max(score, 0.0), 1.0)
                 confidence_label = self._get_confidence_label(relevance_score)
 
-                code_results.append({
+                result_dict = {
                     "file_path": file_path or "(no path)",
                     "start_line": start_line,
                     "end_line": nested_metadata.get("end_line", 0),
@@ -2384,7 +2413,58 @@ class MemoryRAGServer:
                     "relevance_score": relevance_score,
                     "confidence_label": confidence_label,
                     "confidence_display": f"{relevance_score:.0%} ({confidence_label})",
-                })
+                }
+
+                # Calculate quality metrics (FEAT-060)
+                if include_quality_metrics:
+                    # Build code unit dict
+                    code_unit = {
+                        "content": memory.content,
+                        "signature": nested_metadata.get("signature", ""),
+                        "unit_type": nested_metadata.get("unit_type", "function"),
+                        "language": language_val,
+                    }
+
+                    # Calculate duplication score
+                    duplication_score = await self.duplicate_detector.calculate_duplication_score(
+                        memory
+                    )
+
+                    # Calculate quality metrics
+                    quality_metrics = self.quality_analyzer.calculate_quality_metrics(
+                        code_unit=code_unit,
+                        duplication_score=duplication_score,
+                    )
+
+                    # Add quality metrics to result
+                    result_dict["quality_metrics"] = {
+                        "cyclomatic_complexity": quality_metrics.cyclomatic_complexity,
+                        "line_count": quality_metrics.line_count,
+                        "nesting_depth": quality_metrics.nesting_depth,
+                        "parameter_count": quality_metrics.parameter_count,
+                        "has_documentation": quality_metrics.has_documentation,
+                        "duplication_score": round(quality_metrics.duplication_score, 2),
+                        "maintainability_index": quality_metrics.maintainability_index,
+                        "quality_flags": quality_metrics.quality_flags,
+                    }
+
+                    # Apply quality filters (FEAT-060)
+                    if min_complexity is not None and quality_metrics.cyclomatic_complexity < min_complexity:
+                        continue
+                    if max_complexity is not None and quality_metrics.cyclomatic_complexity > max_complexity:
+                        continue
+                    if has_duplicates is not None:
+                        is_duplicate = quality_metrics.duplication_score > 0.85
+                        if is_duplicate != has_duplicates:
+                            continue
+                    if long_functions is not None:
+                        is_long = quality_metrics.line_count > 100
+                        if is_long != long_functions:
+                            continue
+                    if maintainability_min is not None and quality_metrics.maintainability_index < maintainability_min:
+                        continue
+
+                code_results.append(result_dict)
 
             query_time_ms = (time.time() - start_time) * 1000
 
@@ -5161,6 +5241,386 @@ class MemoryRAGServer:
         else:  # mermaid
             formatter = MermaidFormatter(include_metadata=include_metadata)
             return formatter.format(graph, title="Dependency Graph")
+
+    async def find_quality_hotspots(
+        self,
+        project_name: Optional[str] = None,
+        max_results: int = 20,
+    ) -> Dict[str, Any]:
+        """
+        Find code quality hotspots across all categories.
+
+        Identifies top quality issues in the codebase including:
+        - High cyclomatic complexity (>10)
+        - Long functions (>100 lines)
+        - Deep nesting (>4 levels)
+        - Semantic duplicates (>0.85 similarity)
+        - Missing documentation
+        - High parameter count (>5)
+
+        Args:
+            project_name: Optional project filter (defaults to current project)
+            max_results: Maximum number of hotspots to return (default: 20)
+
+        Returns:
+            Dict containing:
+            - hotspots: List of quality issues sorted by severity
+            - summary: Statistics about scanned code and issues found
+        """
+        try:
+            # Use current project if not specified
+            filter_project_name = project_name or self.project_name
+            if not filter_project_name:
+                raise ValidationError("Project name required for quality analysis")
+
+            logger.info(f"Finding quality hotspots in project '{filter_project_name}'...")
+
+            # Get all code units for the project
+            filters = SearchFilters(
+                scope=MemoryScope.PROJECT,
+                project_name=filter_project_name,
+                category=MemoryCategory.CODE,
+                context_level=ContextLevel.PROJECT_CONTEXT,
+                tags=["code"],
+            )
+
+            # Retrieve all code memories (use large limit to get everything)
+            dummy_embedding = await self._get_embedding("code")
+            all_results = await self.store.retrieve(
+                query_embedding=dummy_embedding,
+                filters=filters,
+                limit=10000,  # Get all code units
+            )
+
+            logger.info(f"Analyzing {len(all_results)} code units for quality issues...")
+
+            # Analyze each code unit and collect hotspots
+            all_hotspots = []
+            severity_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+
+            for memory, _ in all_results:
+                # Build code unit dict from memory
+                code_unit = {
+                    "content": memory.content,
+                    "signature": memory.metadata.get("signature", ""),
+                    "unit_type": memory.metadata.get("unit_type", "function"),
+                    "language": memory.metadata.get("language", "python"),
+                    "file_path": memory.metadata.get("file_path", "unknown"),
+                    "unit_name": memory.metadata.get("unit_name", "unknown"),
+                    "start_line": memory.metadata.get("start_line", 0),
+                    "end_line": memory.metadata.get("end_line", 0),
+                }
+
+                # Calculate duplication score
+                duplication_score = await self.duplicate_detector.calculate_duplication_score(
+                    memory
+                )
+
+                # Calculate quality metrics
+                quality_metrics = self.quality_analyzer.calculate_quality_metrics(
+                    code_unit=code_unit,
+                    duplication_score=duplication_score,
+                )
+
+                # Analyze for hotspots
+                hotspots = self.quality_analyzer.analyze_for_hotspots(
+                    code_unit=code_unit,
+                    quality_metrics=quality_metrics,
+                )
+
+                # Add hotspots to collection and update counts
+                for hotspot in hotspots:
+                    all_hotspots.append(hotspot)
+                    severity_counts[hotspot.severity.value] += 1
+
+            # Sort hotspots by severity (critical > high > medium > low)
+            severity_order = {"critical": 4, "high": 3, "medium": 2, "low": 1}
+            all_hotspots.sort(
+                key=lambda h: (severity_order.get(h.severity.value, 0), h.metric_value),
+                reverse=True
+            )
+
+            # Limit to max_results
+            top_hotspots = all_hotspots[:max_results]
+
+            logger.info(
+                f"Found {len(all_hotspots)} quality issues "
+                f"(critical: {severity_counts['critical']}, high: {severity_counts['high']}, "
+                f"medium: {severity_counts['medium']}, low: {severity_counts['low']})"
+            )
+
+            return {
+                "status": "success",
+                "hotspots": [h.to_dict() for h in top_hotspots],
+                "summary": {
+                    "total_scanned": len(all_results),
+                    "total_issues": len(all_hotspots),
+                    "critical_count": severity_counts["critical"],
+                    "high_count": severity_counts["high"],
+                    "medium_count": severity_counts["medium"],
+                    "low_count": severity_counts["low"],
+                    "project_name": filter_project_name,
+                },
+            }
+
+        except Exception as e:
+            logger.error(f"Error finding quality hotspots: {e}")
+            raise RetrievalError(f"Failed to find quality hotspots: {e}")
+
+    async def find_duplicates(
+        self,
+        project_name: Optional[str] = None,
+        similarity_threshold: float = 0.85,
+        category: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Find and cluster duplicate code using semantic similarity.
+
+        Groups similar code into clusters and identifies the best version
+        (canonical member) based on documentation and complexity.
+
+        Args:
+            project_name: Optional project filter (defaults to current project)
+            similarity_threshold: Minimum similarity for duplicates (0.75-0.95, default: 0.85)
+            category: Optional category filter ("function", "class", etc.)
+
+        Returns:
+            Dict containing:
+            - clusters: List of duplicate clusters with canonical member and similar code
+            - summary: Statistics about duplicates found
+        """
+        try:
+            # Validate threshold
+            if not 0.75 <= similarity_threshold <= 0.95:
+                raise ValidationError("Similarity threshold must be between 0.75 and 0.95")
+
+            # Use current project if not specified
+            filter_project_name = project_name or self.project_name
+            if not filter_project_name:
+                raise ValidationError("Project name required for duplicate detection")
+
+            logger.info(
+                f"Finding duplicates in project '{filter_project_name}' "
+                f"(threshold: {similarity_threshold:.2f})..."
+            )
+
+            # Cluster duplicates
+            clusters = await self.duplicate_detector.cluster_duplicates(
+                min_threshold=similarity_threshold,
+                project_name=filter_project_name,
+            )
+
+            # Calculate summary statistics
+            total_duplicates = sum(c.cluster_size for c in clusters)
+            avg_cluster_size = total_duplicates / len(clusters) if clusters else 0
+
+            logger.info(
+                f"Found {len(clusters)} duplicate clusters "
+                f"(total duplicates: {total_duplicates}, avg cluster size: {avg_cluster_size:.1f})"
+            )
+
+            return {
+                "status": "success",
+                "clusters": [c.to_dict() for c in clusters],
+                "summary": {
+                    "total_duplicates": total_duplicates,
+                    "cluster_count": len(clusters),
+                    "average_cluster_size": round(avg_cluster_size, 1),
+                    "similarity_threshold": similarity_threshold,
+                    "project_name": filter_project_name,
+                },
+            }
+
+        except Exception as e:
+            logger.error(f"Error finding duplicates: {e}")
+            raise RetrievalError(f"Failed to find duplicates: {e}")
+
+    async def get_complexity_report(
+        self,
+        scope: str = "project",
+        scope_name: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Generate comprehensive complexity analysis report.
+
+        Provides complexity statistics, distribution, and identifies
+        the most complex functions in the codebase.
+
+        Args:
+            scope: "project" or "file" (default: "project")
+            scope_name: Project name or file path (defaults to current project)
+
+        Returns:
+            Dict containing:
+            - scope: Analysis scope (project or file)
+            - scope_name: Name of analyzed scope
+            - total_units: Number of code units analyzed
+            - average_complexity: Average cyclomatic complexity
+            - median_complexity: Median cyclomatic complexity
+            - max_complexity: Maximum complexity found
+            - distribution: Complexity distribution histogram
+            - top_complex: Top 10 most complex functions
+            - maintainability_index: Project-level maintainability score
+            - recommendations: Actionable suggestions
+        """
+        try:
+            # Validate scope
+            if scope not in ["project", "file"]:
+                raise ValidationError("Scope must be 'project' or 'file'")
+
+            # Use current project if not specified
+            filter_scope_name = scope_name or self.project_name
+            if not filter_scope_name:
+                raise ValidationError("Scope name required for complexity analysis")
+
+            logger.info(f"Generating complexity report for {scope} '{filter_scope_name}'...")
+
+            # Build filters based on scope
+            if scope == "project":
+                filters = SearchFilters(
+                    scope=MemoryScope.PROJECT,
+                    project_name=filter_scope_name,
+                    category=MemoryCategory.CODE,
+                    context_level=ContextLevel.PROJECT_CONTEXT,
+                    tags=["code"],
+                )
+            else:  # file scope
+                filters = SearchFilters(
+                    category=MemoryCategory.CODE,
+                    context_level=ContextLevel.PROJECT_CONTEXT,
+                    tags=["code"],
+                )
+
+            # Retrieve code memories
+            dummy_embedding = await self._get_embedding("code")
+            all_results = await self.store.retrieve(
+                query_embedding=dummy_embedding,
+                filters=filters,
+                limit=10000,
+            )
+
+            # Filter by file if file scope
+            if scope == "file":
+                all_results = [
+                    (mem, score) for mem, score in all_results
+                    if mem.metadata.get("file_path") == filter_scope_name
+                ]
+
+            if not all_results:
+                return {
+                    "status": "success",
+                    "scope": scope,
+                    "scope_name": filter_scope_name,
+                    "total_units": 0,
+                    "message": "No code units found in specified scope",
+                }
+
+            logger.info(f"Analyzing complexity for {len(all_results)} code units...")
+
+            # Analyze complexity for all units
+            complexities = []
+            maintainability_scores = []
+            complex_functions = []
+
+            for memory, _ in all_results:
+                # Build code unit dict
+                code_unit = {
+                    "content": memory.content,
+                    "signature": memory.metadata.get("signature", ""),
+                    "unit_type": memory.metadata.get("unit_type", "function"),
+                    "language": memory.metadata.get("language", "python"),
+                }
+
+                # Calculate complexity metrics
+                complexity_metrics = self.complexity_analyzer.analyze(code_unit)
+
+                # Calculate maintainability index
+                mi = self.quality_analyzer.calculate_maintainability_index(
+                    complexity_metrics.cyclomatic_complexity,
+                    complexity_metrics.line_count,
+                    complexity_metrics.has_documentation,
+                )
+
+                # Collect data
+                complexities.append(complexity_metrics.cyclomatic_complexity)
+                maintainability_scores.append(mi)
+                complex_functions.append({
+                    "file_path": memory.metadata.get("file_path", "unknown"),
+                    "unit_name": memory.metadata.get("unit_name", "unknown"),
+                    "complexity": complexity_metrics.cyclomatic_complexity,
+                    "line_count": complexity_metrics.line_count,
+                    "nesting_depth": complexity_metrics.nesting_depth,
+                    "maintainability_index": mi,
+                })
+
+            # Calculate statistics
+            average_complexity = sum(complexities) / len(complexities)
+            sorted_complexities = sorted(complexities)
+            median_complexity = sorted_complexities[len(sorted_complexities) // 2]
+            max_complexity = max(complexities)
+
+            # Build distribution histogram
+            distribution = {
+                "0-5": sum(1 for c in complexities if c <= 5),
+                "6-10": sum(1 for c in complexities if 6 <= c <= 10),
+                "11-20": sum(1 for c in complexities if 11 <= c <= 20),
+                ">20": sum(1 for c in complexities if c > 20),
+            }
+
+            # Get top 10 most complex functions
+            complex_functions.sort(key=lambda f: f["complexity"], reverse=True)
+            top_complex = complex_functions[:10]
+
+            # Calculate project-level maintainability index (weighted average)
+            project_mi = int(sum(maintainability_scores) / len(maintainability_scores))
+
+            # Generate recommendations
+            recommendations = []
+            critical_count = distribution[">20"]
+            high_count = distribution["11-20"]
+
+            if critical_count > 0:
+                recommendations.append(
+                    f"{critical_count} functions have critical complexity (>20). Consider refactoring."
+                )
+            if high_count > 0:
+                recommendations.append(
+                    f"{high_count} functions have high complexity (11-20). Monitor for growth."
+                )
+
+            if project_mi >= 85:
+                recommendations.append(f"Project maintainability is excellent ({project_mi}/100).")
+            elif project_mi >= 65:
+                recommendations.append(
+                    f"Project maintainability is moderate ({project_mi}/100). Target: >80."
+                )
+            else:
+                recommendations.append(
+                    f"Project maintainability is low ({project_mi}/100). Refactoring recommended."
+                )
+
+            logger.info(
+                f"Complexity report complete: avg={average_complexity:.1f}, "
+                f"median={median_complexity}, max={max_complexity}, MI={project_mi}"
+            )
+
+            return {
+                "status": "success",
+                "scope": scope,
+                "scope_name": filter_scope_name,
+                "total_units": len(all_results),
+                "average_complexity": round(average_complexity, 1),
+                "median_complexity": median_complexity,
+                "max_complexity": max_complexity,
+                "distribution": distribution,
+                "top_complex": top_complex,
+                "maintainability_index": project_mi,
+                "recommendations": recommendations,
+            }
+
+        except Exception as e:
+            logger.error(f"Error generating complexity report: {e}")
+            raise RetrievalError(f"Failed to generate complexity report: {e}")
 
     async def close(self) -> None:
         """Clean up resources."""

@@ -1,7 +1,7 @@
 # IN_PROGRESS - Active Work
 
 **Maximum Concurrent Tasks: 6**
-**Current Active: 0/6**
+**Current Active: 1/6**
 
 ---
 
@@ -15,7 +15,58 @@
 
 ## Active Tasks
 
-<!-- No tasks currently in progress -->
+### [FEAT-060]: Code Quality Metrics & Hotspots
+**Started**: 2025-11-22
+**Assigned**: Claude Code Agent
+**Branch**: .worktrees/FEAT-060
+**Blocked By**: None
+**Status**: In Progress (70% Complete - Phases 1-7 Done)
+
+**Progress Notes**:
+- 2025-11-22 AM: Phases 1-3 Complete - QualityAnalyzer and DuplicateDetector enhancements
+- 2025-11-22 PM: Phases 4-7 Complete - All 3 MCP tools + enhanced search_code() implemented
+- 2025-11-22 PM: Started testing - Created test_quality_analyzer.py with 20+ unit tests
+- 2025-11-22 PM: Updated CHANGELOG.md with FEAT-060 entry
+
+**Completed (Phases 1-7 of 10)**:
+- [x] Phase 1-3: QualityAnalyzer module (src/analysis/quality_analyzer.py)
+  - CodeQualityMetrics and QualityHotspot dataclasses
+  - Maintainability index calculation (Microsoft formula)
+  - Complexity and maintainability classification
+  - Quality flag detection (6 categories)
+  - Hotspot analysis logic
+- [x] Phase 1-3: DuplicateDetector enhancements (src/memory/duplicate_detector.py)
+  - DuplicateCluster and DuplicateMember dataclasses
+  - cluster_duplicates() with union-find algorithm
+  - calculate_duplication_score() method
+  - Canonical member selection (best quality)
+- [x] Phase 4: find_quality_hotspots() MCP tool (src/core/server.py:5182-5305)
+  - Analyzes all code units in project
+  - Returns top 20 issues sorted by severity
+  - Summary statistics by severity level
+- [x] Phase 5: find_duplicates() MCP tool (src/core/server.py:5307-5373)
+  - Clusters duplicate code with configurable threshold
+  - Returns clusters with canonical member
+- [x] Phase 6: get_complexity_report() MCP tool (src/core/server.py:5375-5560)
+  - Complexity distribution histogram
+  - Top 10 most complex functions
+  - Project-level maintainability index
+  - Actionable recommendations
+- [x] Phase 7: Enhanced search_code() with quality metrics
+  - Quality metrics in search results (optional, default: True)
+  - 5 new quality filters (min/max complexity, duplicates, long functions, maintainability)
+  - Backward compatible
+- [x] Testing: tests/unit/test_quality_analyzer.py (20+ tests)
+- [x] Documentation: Updated CHANGELOG.md and planning doc
+
+**Next Steps (Phases 8-10)**:
+- [ ] Phase 8: Performance optimization (cache metrics, batch calculations, <10% overhead)
+- [ ] Phase 9: Integration testing (25 tests, large project testing, edge cases)
+- [ ] Phase 10: Documentation (API.md, README.md examples) and validation
+- [ ] Run verify-complete.py
+- [ ] Ready for merge
+
+**See**: planning_docs/FEAT-060_quality_metrics_plan.md
 
 ---
 
