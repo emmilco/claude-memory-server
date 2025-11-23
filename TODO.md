@@ -10,11 +10,13 @@
   - **Verification:** `curl http://localhost:6333/` returns version info successfully
   - **Status:** Code was already correct, bug may have been user-specific or already fixed
 
-### BUG-016: list_memories Returns Incorrect Total Count ⚠️ MEDIUM
-**Component:** Memory management API
-**Issue:** `list_memories()` returns `total: 0` when memories exist in results array
-**Impact:** Breaks pagination, incorrect analytics
-**Fix:** Update method to properly count and return total
+- [x] **BUG-016**: list_memories Returns Incorrect Total Count ✅ **FIXED** (2025-11-22)
+  - **Component:** Memory management API
+  - **Issue:** `list_memories()` returns `total: 0` when memories exist in results array
+  - **Root Cause:** Was a symptom of BUG-018 (RetrievalGate blocking queries)
+  - **Fix:** Resolved as duplicate - BUG-018 fix (removing RetrievalGate) resolved this issue
+  - **Verification:** All 16 tests in `test_list_memories.py` pass, total_count correctly populated
+  - **Status:** Already fixed, no code changes needed
 
 ### BUG-018: Memory Retrieval Not Finding Recently Stored Memories ⚠️ HIGH
 **Component:** Semantic search / memory retrieval
@@ -228,16 +230,16 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Discovered:** TEST-006 Round 4 - all 27 remaining failures require this feature
   - **See:** planning_docs/TEST-006_ROUND4_COMPLETE.md
 
-- [ ] **FEAT-048**: Dependency Graph Visualization (~2-3 days) 🔥
-  - [ ] Implement `get_dependency_graph` MCP tool
-  - [ ] Export formats: DOT (Graphviz), JSON (D3.js), Mermaid
-  - [ ] Filter by depth, file pattern, language
-  - [ ] Highlight circular dependencies
-  - [ ] Include node metadata (file size, unit count, last modified)
-  - [ ] Tests: graph generation, format validation, circular detection
+- [x] **FEAT-048**: Dependency Graph Visualization ✅ **COMPLETE** (2025-11-18)
+  - [x] Implement `get_dependency_graph` MCP tool
+  - [x] Export formats: DOT (Graphviz), JSON (D3.js), Mermaid
+  - [x] Filter by depth, file pattern, language
+  - [x] Highlight circular dependencies
+  - [x] Include node metadata (file size, unit count, last modified)
+  - [x] Tests: 84 comprehensive tests (100% passing)
   - **Impact:** Architecture visualization and understanding
   - **Use case:** "Export dependency graph for visualization in Graphviz"
-  - **Enhances:** Existing dependency tools (get_file_dependencies, etc.)
+  - **See:** planning_docs/FEAT-048_dependency_graph_visualization.md, planning_docs/FEAT-048_example_outputs.md
 
 #### MCP RAG Tool Enhancements
 
