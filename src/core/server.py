@@ -2333,6 +2333,16 @@ class MemoryRAGServer:
                     "suggestions": ["Provide a search query with keywords or description"],
                     "interpretation": "Empty query - no search performed",
                     "matched_keywords": [],
+                    # New UX features
+                    "summary": "No query provided",
+                    "facets": {
+                        "languages": {},
+                        "unit_types": {},
+                        "files": {},
+                        "directories": {},
+                    },
+                    "did_you_mean": [],
+                    "refinement_hints": ["💡 Enter a search query to find code"],
                 }
 
             # Use current project if not specified
@@ -2522,6 +2532,34 @@ class MemoryRAGServer:
             if search_mode == "hybrid" and not self.hybrid_searcher:
                 actual_search_mode = "semantic"  # Fallback
 
+            # Build faceted search results
+            from src.memory.result_summarizer import ResultSummarizer
+            facets = ResultSummarizer.build_facets(code_results, include_projects=False)
+
+            # Generate result summary
+            summary = ResultSummarizer.summarize(code_results, facets, query)
+
+            # Generate "did you mean?" suggestions for poor quality results
+            did_you_mean = []
+            if len(code_results) == 0 or quality_info["quality"] in ["poor", "weak"]:
+                from src.memory.spelling_suggester import SpellingSuggester
+                spelling_suggester = SpellingSuggester(self.store)
+                await spelling_suggester.load_indexed_terms(filter_project_name)
+                did_you_mean = spelling_suggester.suggest_corrections(query, max_suggestions=3)
+
+            # Generate refinement hints
+            from src.memory.refinement_advisor import RefinementAdvisor
+            refinement_hints = RefinementAdvisor.analyze_and_suggest(
+                code_results,
+                facets,
+                query,
+                {
+                    "search_mode": actual_search_mode,
+                    "file_pattern": file_pattern,
+                    "language": language,
+                },
+            )
+
             # Log metrics for performance monitoring
             if self.metrics_collector:
                 avg_relevance = sum(r["relevance_score"] for r in code_results) / len(code_results) if code_results else 0.0
@@ -2570,6 +2608,16 @@ class MemoryRAGServer:
                     "sort_by": sort_by,
                     "sort_order": sort_order,
                 },
+                # FEAT-057: New UX features
+                "summary": summary,
+                "facets": {
+                    "languages": facets.languages,
+                    "unit_types": facets.unit_types,
+                    "files": facets.files,
+                    "directories": facets.directories,
+                },
+                "did_you_mean": did_you_mean,
+                "refinement_hints": refinement_hints,
             }
 
         except RetrievalError:
@@ -2915,6 +2963,110 @@ class MemoryRAGServer:
         except Exception as e:
             logger.error(f"Failed to search across projects: {e}")
             raise RetrievalError(f"Failed to search across projects: {e}")
+
+    async def suggest_queries(
+        self,
+        intent: Optional[str] = None,
+        project_name: Optional[str] = None,
+        context: Optional[str] = None,
+        max_suggestions: int = 8,
+    ) -> Dict[str, Any]:
+        """
+        Get contextual query suggestions based on indexed codebase and user intent.
+
+        **PROACTIVE USE:**
+        - Show at start of search session to help users discover capabilities
+        - Suggest when user seems stuck or gets no results
+        - Help users refine queries after initial search
+        - Guide new users who don't know what queries work well
+
+        **Use cases:**
+        - User opens search interface → show relevant suggestions
+        - No results found → suggest alternative queries
+        - User asks "what can I search for?" → show suggestions
+        - After failed search → suggest corrections
+
+        Args:
+            intent: User's current intent (implementation, debugging, learning,
+                exploration, refactoring) - helps tailor suggestions
+            project_name: Optional project to scope suggestions to (defaults to current)
+            context: Optional context from conversation to detect domain
+            max_suggestions: Maximum suggestions to return (default: 8)
+
+        Returns:
+            Dict with:
+            - suggestions: List of QuerySuggestion objects with query, category,
+              description, expected_results
+            - indexed_stats: Stats about indexed content (files, units, languages)
+            - project_name: Project suggestions are scoped to
+            - total_suggestions: Count of suggestions returned
+        """
+        try:
+            # Initialize query suggester if not already
+            if not hasattr(self, '_query_suggester') or self._query_suggester is None:
+                from src.memory.query_suggester import QuerySuggester
+                self._query_suggester = QuerySuggester(self.store, self.config)
+
+            # Use current project if not specified
+            filter_project_name = project_name or self.project_name
+
+            # Get suggestions
+            response = await self._query_suggester.suggest_queries(
+                intent=intent,
+                project_name=filter_project_name,
+                context=context,
+                max_suggestions=max_suggestions,
+            )
+
+            logger.info(
+                f"Generated {response.total_suggestions} query suggestions "
+                f"(intent: {intent}, project: {filter_project_name})"
+            )
+
+            # Convert to dict format
+            return {
+                "suggestions": [
+                    {
+                        "query": sug.query,
+                        "category": sug.category,
+                        "description": sug.description,
+                        "expected_results": sug.expected_results,
+                    }
+                    for sug in response.suggestions
+                ],
+                "indexed_stats": response.indexed_stats,
+                "project_name": response.project_name,
+                "total_suggestions": response.total_suggestions,
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to generate query suggestions: {e}")
+            # Return graceful fallback instead of raising
+            return {
+                "suggestions": [
+                    {
+                        "query": "authentication logic",
+                        "category": "general",
+                        "description": "Common query pattern",
+                        "expected_results": None,
+                    },
+                    {
+                        "query": "error handling",
+                        "category": "general",
+                        "description": "Common query pattern",
+                        "expected_results": None,
+                    },
+                ],
+                "indexed_stats": {
+                    "total_files": 0,
+                    "total_units": 0,
+                    "languages": {},
+                    "top_classes": [],
+                },
+                "project_name": project_name,
+                "total_suggestions": 2,
+                "error": str(e),
+            }
 
     async def opt_in_cross_project(self, project_name: str) -> Dict[str, Any]:
         """
