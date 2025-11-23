@@ -52,6 +52,25 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Added - 2025-11-22
+- **SPEC.md: Normative YAML Behavioral Specification**
+  - Complete rewrite from descriptive to normative format
+  - 56 behavioral requirements across 10 major features (F001-F010)
+  - RFC 2119 requirement types (MUST/SHOULD/MAY)
+  - Given/When/Then acceptance criteria for all requirements
+  - Test references linking requirements to test files
+  - Machine-readable YAML format for automated validation
+  - Performance benchmarks (targets vs actuals)
+  - Compliance tracking (100% of requirements marked passing)
+
+- **scripts/validate-spec.py: SPEC.md Validation Script**
+  - Validates YAML syntax and structure
+  - Verifies all requirements have required fields
+  - Checks test file references exist
+  - Detects compliance discrepancies
+  - JSON output mode for CI/CD integration
+  - Verbose mode for detailed diagnostics
+  - Color-coded terminal output
+
 - **Workflow Infrastructure: Complete Multi-Agent Development System**
   - Created workflow tracking files: `IN_PROGRESS.md`, `REVIEW.md` with 6-task capacity management
   - Created progressive disclosure guides: `GETTING_STARTED.md`, `TESTING_GUIDE.md`, `TASK_WORKFLOW.md`, `DEBUGGING.md`, `ADVANCED.md`
@@ -61,6 +80,11 @@ Organize entries under these headers in chronological order (newest first):
   - Total: 3,958 lines of workflow documentation for coordinated development
 
 ### Changed - 2025-11-22
+- **Integrated Spec Validation into Quality Gates**
+  - Added SpecValidationGate to scripts/verify-complete.py
+  - SPEC.md validation now runs as part of task completion verification
+  - Ensures specification stays synchronized with implementation
+
 - **BUG-024: Git Worktree Indexing Support**
   - Added `.worktrees/` to excluded directories in `incremental_indexer.py`
   - Prevents indexing of git worktree directories used for parallel development

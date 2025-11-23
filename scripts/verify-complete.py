@@ -230,6 +230,53 @@ class DocumentationGate(VerificationGate):
             return False, f"Error checking documentation: {str(e)}"
 
 
+class SpecValidationGate(VerificationGate):
+    """Verify SPEC.md is valid."""
+
+    def __init__(self):
+        super().__init__(
+            "Specification",
+            "SPEC.md must be valid and compliant"
+        )
+
+    def run(self) -> Tuple[bool, str]:
+        try:
+            # Run the validation script
+            result = subprocess.run(
+                ["python", "scripts/validate-spec.py"],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+
+            if result.returncode == 0:
+                # Extract compliance percentage from output
+                output = result.stdout
+                if "Compliance:" in output:
+                    for line in output.split('\n'):
+                        if "Compliance:" in line:
+                            return True, f"SPEC.md valid ({line.strip()})"
+                return True, "SPEC.md is valid"
+            else:
+                # Extract first few issues
+                output = result.stdout
+                issues = []
+                for line in output.split('\n'):
+                    if line.strip().startswith('-'):
+                        issues.append(line.strip())
+                        if len(issues) >= 3:
+                            break
+
+                if issues:
+                    return False, f"SPEC.md has issues:\n  " + "\n  ".join(issues)
+                return False, "SPEC.md validation failed (see output above)"
+
+        except subprocess.TimeoutExpired:
+            return False, "Spec validation timed out"
+        except Exception as e:
+            return False, f"Error validating spec: {str(e)}"
+
+
 class QdrantHealthGate(VerificationGate):
     """Verify Qdrant is running."""
 
@@ -302,6 +349,7 @@ def main():
     gates: List[VerificationGate] = [
         QdrantHealthGate(),
         SyntaxGate(),
+        SpecValidationGate(),
         TestsGate(fast_mode=fast_mode),
         CoverageGate(threshold=80),
         DocumentationGate(),
