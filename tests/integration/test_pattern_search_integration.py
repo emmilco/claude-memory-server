@@ -5,7 +5,7 @@ from pathlib import Path
 
 from src.core.server import MemoryRAGServer
 from src.config import ServerConfig
-from src.memory.incremental_indexer import IncrementalCodeIndexer
+from src.memory.incremental_indexer import IncrementalIndexer
 
 
 # Sample code files for testing
@@ -83,7 +83,7 @@ class TestPatternSearchIntegration:
         await server.initialize()
 
         # Index the code
-        indexer = IncrementalCodeIndexer(
+        indexer = IncrementalIndexer(
             store=server.store,
             embedding_generator=server.embedding_generator,
             config=server.config,
