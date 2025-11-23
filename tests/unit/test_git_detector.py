@@ -11,9 +11,8 @@ from src.memory.git_detector import (
     get_repository_name,
 )
 
-# Skip all tests in this module - git storage feature not yet implemented
-# See TODO.md FEAT-055 and planning_docs/TEST-006_ROUND4_COMPLETE.md
-pytestmark = pytest.mark.skip(reason="Git storage feature not implemented (FEAT-055)")
+# Git storage feature implemented in FEAT-055
+# Tests enabled as of 2025-11-22
 
 
 @pytest.fixture

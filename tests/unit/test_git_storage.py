@@ -10,9 +10,8 @@ from pathlib import Path
 from src.store.qdrant_store import QdrantMemoryStore
 from src.config import ServerConfig
 
-# Skip all tests in this module - git storage feature not yet implemented
-# See TODO.md FEAT-055 and planning_docs/TEST-006_ROUND4_COMPLETE.md
-pytestmark = pytest.mark.skip(reason="Git storage feature not implemented (FEAT-055)")
+# Git storage feature implemented in FEAT-055
+# Tests enabled as of 2025-11-22
 
 
 @pytest.fixture
@@ -272,7 +271,7 @@ class TestSearchGitCommits:
 
     @pytest.mark.asyncio
     async def test_search_by_query(self, store):
-        """Test FTS text search."""
+        """Test semantic search over commit messages."""
         commits = [
             {
                 "commit_hash": "commit1",
@@ -309,8 +308,11 @@ class TestSearchGitCommits:
         await store.store_git_commits(commits)
 
         results = await store.search_git_commits(query="authentication")
-        assert len(results) == 1
-        assert results[0]["commit_hash"] == "commit1"
+        # Semantic search should return results (may include both due to similar embeddings)
+        assert len(results) >= 1
+        # The commit with "authentication" should be in the results
+        commit_hashes = [r["commit_hash"] for r in results]
+        assert "commit1" in commit_hashes
 
     @pytest.mark.asyncio
     async def test_search_by_repository(self, store):
@@ -658,7 +660,7 @@ class TestErrorHandling:
     @pytest.mark.asyncio
     async def test_store_commit_uninitialized_store(self, config, sample_commit):
         """Test storing commits with uninitialized store."""
-        store = SQLiteMemoryStore(config)
+        store = QdrantMemoryStore(config)
         # Don't initialize
 
         with pytest.raises(Exception):  # StorageError
@@ -667,7 +669,7 @@ class TestErrorHandling:
     @pytest.mark.asyncio
     async def test_search_commits_uninitialized_store(self, config):
         """Test searching commits with uninitialized store."""
-        store = SQLiteMemoryStore(config)
+        store = QdrantMemoryStore(config)
 
         with pytest.raises(Exception):  # StorageError
             await store.search_git_commits()

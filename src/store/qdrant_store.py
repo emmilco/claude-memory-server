@@ -2326,3 +2326,494 @@ class QdrantMemoryStore(MemoryStore):
         except Exception as e:
             logger.error(f"Error retrieving recent activity: {e}")
             raise StorageError(f"Failed to retrieve recent activity: {e}")
+
+    # ============================================================
+    # Git History Storage and Search (FEAT-055)
+    # ============================================================
+
+    async def store_git_commits(
+        self,
+        commits: List[Dict[str, Any]],
+    ) -> int:
+        """
+        Store git commits for semantic search over history.
+
+        Args:
+            commits: List of commit data dictionaries with:
+                - commit_hash: str - Git commit SHA
+                - repository_path: str - Repository path
+                - author_name: str - Commit author name
+                - author_email: str - Commit author email
+                - author_date: datetime - Author date
+                - committer_name: str - Committer name
+                - committer_date: datetime - Committer date
+                - message: str - Commit message
+                - message_embedding: List[float] - Embedding of commit message
+                - branch_names: List[str] - Branches containing this commit
+                - tags: List[str] - Tags pointing to this commit
+                - parent_hashes: List[str] - Parent commit hashes
+                - stats: Dict[str, int] - Commit statistics
+
+        Returns:
+            Number of commits stored
+
+        Raises:
+            StorageError: If storage operation fails
+        """
+        if not self.client:
+            raise StorageError("Store not initialized")
+
+        if not commits:
+            return 0
+
+        try:
+            import hashlib
+            points = []
+
+            for commit_data in commits:
+                commit_hash = commit_data["commit_hash"]
+                message_embedding = commit_data["message_embedding"]
+
+                # Convert datetime objects to Unix timestamps for Qdrant range filters
+                author_date = commit_data["author_date"]
+                if isinstance(author_date, datetime):
+                    author_date = author_date.timestamp()
+
+                committer_date = commit_data.get("committer_date")
+                if isinstance(committer_date, datetime):
+                    committer_date = committer_date.timestamp()
+
+                # Build payload for git commit
+                payload = {
+                    "type": "git_commit",
+                    "commit_hash": commit_hash,
+                    "repository_path": commit_data["repository_path"],
+                    "author_name": commit_data["author_name"],
+                    "author_email": commit_data["author_email"],
+                    "author_date": author_date,
+                    "committer_name": commit_data.get("committer_name"),
+                    "committer_date": committer_date,
+                    "message": commit_data["message"],
+                    "branch_names": commit_data.get("branch_names", []),
+                    "tags": commit_data.get("tags", []),
+                    "parent_hashes": commit_data.get("parent_hashes", []),
+                    "stats": commit_data.get("stats", {}),
+                }
+
+                # Generate deterministic UUID from commit hash for Qdrant point ID
+                # This allows us to have consistent IDs across re-indexes
+                import uuid
+                point_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"git-commit-{commit_hash}"))
+                payload["id"] = point_id
+
+                # Create point with deterministic UUID as ID
+                point = PointStruct(
+                    id=point_id,
+                    vector=message_embedding,
+                    payload=payload,
+                )
+                points.append(point)
+
+            # Batch upsert all commits
+            self.client.upsert(
+                collection_name=self.collection_name,
+                points=points,
+            )
+
+            logger.info(f"Stored {len(commits)} git commits")
+            return len(commits)
+
+        except Exception as e:
+            logger.error(f"Error storing git commits: {e}")
+            raise StorageError(f"Failed to store git commits: {e}")
+
+    async def store_git_file_changes(
+        self,
+        file_changes: List[Dict[str, Any]],
+    ) -> int:
+        """
+        Store git file changes for file-level history tracking.
+
+        Args:
+            file_changes: List of file change data dictionaries with:
+                - id: str - Unique ID (commit_hash:file_path)
+                - commit_hash: str - Commit hash
+                - file_path: str - File path
+                - change_type: str - added|modified|deleted|renamed
+                - lines_added: int - Number of lines added
+                - lines_deleted: int - Number of lines deleted
+                - diff_content: Optional[str] - Diff content
+                - diff_embedding: Optional[List[float]] - Embedding of diff
+
+        Returns:
+            Number of file changes stored
+
+        Raises:
+            StorageError: If storage operation fails
+        """
+        if not self.client:
+            raise StorageError("Store not initialized")
+
+        if not file_changes:
+            return 0
+
+        try:
+            points = []
+
+            for change_data in file_changes:
+                change_id = change_data["id"]  # This is commit_hash:file_path
+
+                # Use diff embedding if available, otherwise use empty vector
+                diff_embedding = change_data.get("diff_embedding")
+                if not diff_embedding:
+                    # Create zero vector for file changes without diffs
+                    diff_embedding = [0.0] * 384
+
+                # Build payload for file change
+                payload = {
+                    "type": "git_file_change",
+                    "commit_hash": change_data["commit_hash"],
+                    "file_path": change_data["file_path"],
+                    "change_type": change_data["change_type"],
+                    "lines_added": change_data["lines_added"],
+                    "lines_deleted": change_data["lines_deleted"],
+                    "diff_content": change_data.get("diff_content"),
+                }
+
+                # Generate deterministic UUID from change ID for Qdrant point ID
+                import uuid
+                point_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"git-file-change-{change_id}"))
+                payload["id"] = point_id
+
+                # Create point with deterministic UUID as ID
+                point = PointStruct(
+                    id=point_id,
+                    vector=diff_embedding,
+                    payload=payload,
+                )
+                points.append(point)
+
+            # Batch upsert all file changes
+            self.client.upsert(
+                collection_name=self.collection_name,
+                points=points,
+            )
+
+            logger.info(f"Stored {len(file_changes)} git file changes")
+            return len(file_changes)
+
+        except Exception as e:
+            logger.error(f"Error storing git file changes: {e}")
+            raise StorageError(f"Failed to store git file changes: {e}")
+
+    async def search_git_commits(
+        self,
+        query: Optional[str] = None,
+        repository_path: Optional[str] = None,
+        author: Optional[str] = None,
+        since: Optional[datetime] = None,
+        until: Optional[datetime] = None,
+        limit: int = 100,
+    ) -> List[Dict[str, Any]]:
+        """
+        Search git commits with optional filters.
+
+        Args:
+            query: Optional text query for semantic search over commit messages
+            repository_path: Optional repository path filter
+            author: Optional author email filter
+            since: Optional start date filter
+            until: Optional end date filter
+            limit: Maximum number of results
+
+        Returns:
+            List of commit dictionaries
+
+        Raises:
+            StorageError: If search operation fails
+        """
+        if not self.client:
+            raise StorageError("Store not initialized")
+
+        try:
+            # Build filter conditions
+            must_conditions = [
+                FieldCondition(key="type", match=MatchValue(value="git_commit"))
+            ]
+
+            if repository_path:
+                must_conditions.append(
+                    FieldCondition(
+                        key="repository_path",
+                        match=MatchValue(value=repository_path)
+                    )
+                )
+
+            if author:
+                must_conditions.append(
+                    FieldCondition(
+                        key="author_email",
+                        match=MatchValue(value=author)
+                    )
+                )
+
+            if since or until:
+                # Date range filter - convert to Unix timestamps for Qdrant
+                date_range = {}
+                if since:
+                    date_range["gte"] = since.timestamp()
+                if until:
+                    date_range["lte"] = until.timestamp()
+
+                if date_range:
+                    must_conditions.append(
+                        FieldCondition(
+                            key="author_date",
+                            range=Range(**date_range)
+                        )
+                    )
+
+            search_filter = Filter(must=must_conditions) if must_conditions else None
+
+            results = []
+
+            if query:
+                # Semantic search over commit messages
+                from src.embeddings.generator import EmbeddingGenerator
+
+                generator = EmbeddingGenerator(self.config)
+                query_embedding = await generator.generate(query)
+
+                search_results = self.client.search(
+                    collection_name=self.collection_name,
+                    query_vector=query_embedding,
+                    query_filter=search_filter,
+                    limit=limit,
+                    with_payload=True,
+                    with_vectors=True,  # Include vectors for message_embedding
+                )
+
+                for result in search_results:
+                    payload = result.payload
+                    vector = result.vector if hasattr(result, 'vector') else []
+                    results.append(self._deserialize_commit(payload, vector))
+
+            else:
+                # No query - just filter and scroll
+                offset = None
+                collected = 0
+
+                while collected < limit:
+                    scroll_results, next_offset = self.client.scroll(
+                        collection_name=self.collection_name,
+                        scroll_filter=search_filter,
+                        limit=min(100, limit - collected),
+                        offset=offset,
+                        with_payload=True,
+                        with_vectors=True,  # Include vectors for message_embedding
+                    )
+
+                    if not scroll_results:
+                        break
+
+                    for point in scroll_results:
+                        payload = point.payload
+                        vector = point.vector if hasattr(point, 'vector') else []
+                        results.append(self._deserialize_commit(payload, vector))
+                        collected += 1
+
+                    offset = next_offset
+                    if offset is None:
+                        break
+
+            # Sort by author_date descending (newest first)
+            results.sort(key=lambda x: x.get("author_date", ""), reverse=True)
+
+            return results[:limit]
+
+        except Exception as e:
+            logger.error(f"Error searching git commits: {e}")
+            raise StorageError(f"Failed to search git commits: {e}")
+
+    async def get_git_commit(
+        self,
+        commit_hash: str,
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Retrieve a specific git commit by hash.
+
+        Args:
+            commit_hash: Git commit SHA
+
+        Returns:
+            Commit dictionary or None if not found
+
+        Raises:
+            StorageError: If retrieval operation fails
+        """
+        if not self.client:
+            raise StorageError("Store not initialized")
+
+        try:
+            # Search by commit_hash field since we use UUIDs for point IDs
+            search_filter = Filter(
+                must=[
+                    FieldCondition(key="type", match=MatchValue(value="git_commit")),
+                    FieldCondition(key="commit_hash", match=MatchValue(value=commit_hash)),
+                ]
+            )
+
+            results, _ = self.client.scroll(
+                collection_name=self.collection_name,
+                scroll_filter=search_filter,
+                limit=1,
+                with_payload=True,
+                with_vectors=True,  # Need vectors to get message_embedding
+            )
+
+            if not results:
+                return None
+
+            point = results[0]
+            payload = point.payload
+            vector = point.vector if hasattr(point, 'vector') else []
+
+            return self._deserialize_commit(payload, vector)
+
+        except Exception as e:
+            logger.error(f"Error retrieving git commit {commit_hash}: {e}")
+            raise StorageError(f"Failed to retrieve git commit: {e}")
+
+    async def get_commits_by_file(
+        self,
+        file_path: str,
+        limit: int = 100,
+    ) -> List[Dict[str, Any]]:
+        """
+        Get commits that modified a specific file.
+
+        Args:
+            file_path: File path to search for
+            limit: Maximum number of results
+
+        Returns:
+            List of commit dictionaries with file change info
+
+        Raises:
+            StorageError: If retrieval operation fails
+        """
+        if not self.client:
+            raise StorageError("Store not initialized")
+
+        try:
+            # First, find file changes for this file
+            search_filter = Filter(
+                must=[
+                    FieldCondition(key="type", match=MatchValue(value="git_file_change")),
+                    FieldCondition(key="file_path", match=MatchValue(value=file_path)),
+                ]
+            )
+
+            file_changes = []
+            offset = None
+            collected = 0
+
+            while collected < limit:
+                scroll_results, next_offset = self.client.scroll(
+                    collection_name=self.collection_name,
+                    scroll_filter=search_filter,
+                    limit=min(100, limit - collected),
+                    offset=offset,
+                    with_payload=True,
+                    with_vectors=False,
+                )
+
+                if not scroll_results:
+                    break
+
+                for point in scroll_results:
+                    payload = point.payload
+                    file_changes.append({
+                        "commit_hash": payload["commit_hash"],
+                        "change_type": payload["change_type"],
+                        "lines_added": payload["lines_added"],
+                        "lines_deleted": payload["lines_deleted"],
+                    })
+                    collected += 1
+
+                offset = next_offset
+                if offset is None:
+                    break
+
+            # Now get the commits for these changes
+            commit_hashes = [fc["commit_hash"] for fc in file_changes]
+
+            if not commit_hashes:
+                return []
+
+            # Retrieve commits by hash
+            commits_dict = {}
+            for commit_hash in commit_hashes:
+                commit = await self.get_git_commit(commit_hash)
+                if commit:
+                    commits_dict[commit_hash] = commit
+
+            # Merge file change info with commit info
+            results = []
+            for file_change in file_changes:
+                commit_hash = file_change["commit_hash"]
+                if commit_hash in commits_dict:
+                    commit = commits_dict[commit_hash].copy()
+                    commit["change_type"] = file_change["change_type"]
+                    commit["lines_added"] = file_change["lines_added"]
+                    commit["lines_deleted"] = file_change["lines_deleted"]
+                    results.append(commit)
+
+            # Sort by author_date descending (newest first)
+            results.sort(key=lambda x: x.get("author_date", ""), reverse=True)
+
+            return results[:limit]
+
+        except Exception as e:
+            logger.error(f"Error getting commits by file {file_path}: {e}")
+            raise StorageError(f"Failed to get commits by file: {e}")
+
+    def _deserialize_commit(
+        self,
+        payload: Dict[str, Any],
+        vector: Optional[List[float]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Deserialize a commit payload from storage.
+
+        Args:
+            payload: Raw payload from Qdrant
+            vector: Vector embedding (optional)
+
+        Returns:
+            Deserialized commit dictionary
+        """
+        # Convert Unix timestamps back to ISO format strings
+        author_date = payload["author_date"]
+        if isinstance(author_date, (int, float)):
+            author_date = datetime.fromtimestamp(author_date, tz=UTC).isoformat()
+
+        committer_date = payload.get("committer_date")
+        if committer_date and isinstance(committer_date, (int, float)):
+            committer_date = datetime.fromtimestamp(committer_date, tz=UTC).isoformat()
+
+        return {
+            "commit_hash": payload["commit_hash"],
+            "repository_path": payload["repository_path"],
+            "author_name": payload["author_name"],
+            "author_email": payload["author_email"],
+            "author_date": author_date,
+            "committer_name": payload.get("committer_name"),
+            "committer_date": committer_date,
+            "message": payload["message"],
+            "message_embedding": vector if vector else [],
+            "branch_names": payload.get("branch_names", []),
+            "tags": payload.get("tags", []),
+            "parent_hashes": payload.get("parent_hashes", []),
+            "stats": payload.get("stats", {}),
+        }
