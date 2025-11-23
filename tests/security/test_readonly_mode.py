@@ -10,12 +10,17 @@ from src.core.exceptions import ReadOnlyError
 
 
 @pytest.fixture
-def test_config():
+def test_config(request):
     """Create test configuration with Qdrant."""
+    # Use unique collection name per test to avoid conflicts in parallel execution
+    import uuid
+    unique_suffix = str(uuid.uuid4())[:8]
+    collection_name = f"test_readonly_mode_{unique_suffix}"
+
     return ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
-        qdrant_collection_name="test_readonly_mode",
+        qdrant_collection_name=collection_name,
         read_only_mode=False,
     )
 
