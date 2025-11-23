@@ -51,6 +51,17 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Added - 2025-11-22
+- **FEAT-055: Git Storage and History Search**
+  - Added git commit storage with semantic search over commit messages
+  - Added file change tracking with diff content storage
+  - Added date range filtering (Unix timestamp-based)
+  - Added MCP tools: `search_git_commits`, `get_file_history`
+  - Created git indexer for automated repository indexing
+  - Created git detector for repository metadata extraction
+  - Files: src/store/qdrant_store.py, src/memory/git_indexer.py, src/memory/git_detector.py, src/mcp_server.py, src/core/server.py
+  - Tests: 76 tests covering storage, indexing, detection, and error handling
+
 ### Fixed - 2025-11-22
 - **BUG-018: Memory Retrieval Not Finding Recently Stored Memories**
   - Added comprehensive regression tests to prevent recurrence

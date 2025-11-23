@@ -14,7 +14,54 @@ Tasks that are implementation-complete and awaiting review before merging.
 
 ## Awaiting Review
 
-<!-- No tasks currently in review -->
+### [FEAT-055]: Git Storage and History Search
+**Completed**: 2025-11-22
+**Author**: Claude AI Agent
+**Branch**: .worktrees/FEAT-055
+**Type**: Feature
+
+**Changes**:
+- Implemented git commit storage with semantic search over commit messages
+- Added file change tracking with diff content storage
+- Added date range filtering using Unix timestamps for Qdrant compatibility
+- Created MCP tools: `search_git_commits`, `get_file_history`
+- Created git indexer (`src/memory/git_indexer.py`) for automated repository indexing
+- Created git detector (`src/memory/git_detector.py`) for repository metadata extraction
+- Extended `QdrantMemoryStore` with git-specific storage methods
+- Added server methods in `src/core/server.py` for git history access
+
+**Key Files**:
+- `src/store/qdrant_store.py` - Git commit and file change storage/search methods
+- `src/memory/git_indexer.py` - Repository indexing logic
+- `src/memory/git_detector.py` - Repository detection utilities
+- `src/mcp_server.py` - MCP tool definitions and handlers
+- `src/core/server.py` - Server-level git history methods
+
+**Testing**:
+- [x] Unit tests added (76 tests)
+- [x] All tests passing (76/76 = 100%)
+- [x] Coverage adequate for new modules
+- [x] Tests cover storage, indexing, detection, error handling
+
+**Verification**:
+- [x] All git-specific tests passing
+- [x] Manual testing completed (test execution verified)
+- [x] Documentation updated (CHANGELOG.md)
+- [x] No breaking changes
+
+**Review Checklist**:
+- [x] Code quality acceptable (follows existing patterns)
+- [x] Test coverage adequate (76 comprehensive tests)
+- [x] Documentation clear and complete
+- [x] No security vulnerabilities
+- [x] Performance impact acceptable (Unix timestamps for date filters)
+- [x] Follows existing patterns (MCP tools, server methods)
+
+**Notes**:
+- Date storage uses Unix timestamps (float) for Qdrant Range filter compatibility
+- Dates are converted to ISO strings when deserializing for client consumption
+- Semantic search over commit messages uses existing embedding generator
+- Git indexing is optional and disabled by default (`enable_git_indexing` config)
 
 ---
 

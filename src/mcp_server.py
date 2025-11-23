@@ -246,6 +246,58 @@ async def list_tools() -> List[Tool]:
             description="List all projects opted in for cross-project search",
             inputSchema={"type": "object", "properties": {}},
         ),
+        # Git History Tools
+        Tool(
+            name="search_git_commits",
+            description="Search git commits with semantic search and filters",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Semantic search query over commit messages",
+                    },
+                    "repository_path": {
+                        "type": "string",
+                        "description": "Filter by repository path",
+                    },
+                    "author": {
+                        "type": "string",
+                        "description": "Filter by author email",
+                    },
+                    "since": {
+                        "type": "string",
+                        "description": "Start date (ISO format)",
+                    },
+                    "until": {
+                        "type": "string",
+                        "description": "End date (ISO format)",
+                    },
+                    "limit": {
+                        "type": "number",
+                        "description": "Maximum number of results (default: 100)",
+                    },
+                },
+            },
+        ),
+        Tool(
+            name="get_file_history",
+            description="Get commit history for a specific file",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "file_path": {
+                        "type": "string",
+                        "description": "Path to the file",
+                    },
+                    "limit": {
+                        "type": "number",
+                        "description": "Maximum number of commits (default: 100)",
+                    },
+                },
+                "required": ["file_path"],
+            },
+        ),
         # Monitoring Tools
         Tool(
             name="get_performance_metrics",
@@ -461,6 +513,62 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
             if not projects:
                 return [TextContent(type="text", text="No projects opted in for cross-project search.")]
             return [TextContent(type="text", text=f"Opted-in projects:\n" + "\n".join(f"  - {p}" for p in projects))]
+
+        elif name == "search_git_commits":
+            from datetime import datetime
+            # Convert date strings to datetime if provided
+            kwargs = {}
+            if "query" in arguments:
+                kwargs["query"] = arguments["query"]
+            if "repository_path" in arguments:
+                kwargs["repository_path"] = arguments["repository_path"]
+            if "author" in arguments:
+                kwargs["author"] = arguments["author"]
+            if "since" in arguments:
+                kwargs["since"] = datetime.fromisoformat(arguments["since"])
+            if "until" in arguments:
+                kwargs["until"] = datetime.fromisoformat(arguments["until"])
+            if "limit" in arguments:
+                kwargs["limit"] = arguments["limit"]
+
+            result = await memory_server.search_git_commits(**kwargs)
+            commits = result.get("commits", [])
+            if not commits:
+                return [TextContent(type="text", text="No commits found matching your criteria.")]
+
+            output = f"Found {len(commits)} commit(s):\n\n"
+            for i, commit in enumerate(commits[:10], 1):
+                output += f"{i}. {commit['commit_hash'][:8]} - {commit['message'][:60]}\n"
+                output += f"   Author: {commit['author_name']} <{commit['author_email']}>\n"
+                output += f"   Date: {commit['author_date']}\n"
+                if commit.get('repository_path'):
+                    output += f"   Repo: {commit['repository_path']}\n"
+                output += "\n"
+
+            if len(commits) > 10:
+                output += f"... and {len(commits) - 10} more commits\n"
+
+            return [TextContent(type="text", text=output)]
+
+        elif name == "get_file_history":
+            result = await memory_server.get_file_history(
+                file_path=arguments["file_path"],
+                limit=arguments.get("limit", 100)
+            )
+            commits = result.get("commits", [])
+            if not commits:
+                return [TextContent(type="text", text=f"No commit history found for {arguments['file_path']}.")]
+
+            output = f"Commit history for {arguments['file_path']}:\n\n"
+            for i, commit in enumerate(commits[:10], 1):
+                output += f"{i}. {commit['commit_hash'][:8]} - {commit['message'][:60]}\n"
+                output += f"   Author: {commit['author_name']}\n"
+                output += f"   Date: {commit['author_date']}\n\n"
+
+            if len(commits) > 10:
+                output += f"... and {len(commits) - 10} more commits\n"
+
+            return [TextContent(type="text", text=output)]
 
         elif name == "get_performance_metrics":
             result = await memory_server.get_performance_metrics(

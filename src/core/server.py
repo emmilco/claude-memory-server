@@ -4002,6 +4002,90 @@ class MemoryRAGServer:
 
         return max(0, min(100, score))
 
+    # ============================================================
+    # Git History Search Methods
+    # ============================================================
+
+    async def search_git_commits(
+        self,
+        query: Optional[str] = None,
+        repository_path: Optional[str] = None,
+        author: Optional[str] = None,
+        since: Optional[datetime] = None,
+        until: Optional[datetime] = None,
+        limit: int = 100,
+    ) -> Dict[str, Any]:
+        """
+        Search git commits with semantic search and filters.
+
+        Args:
+            query: Optional semantic search query over commit messages
+            repository_path: Optional repository path filter
+            author: Optional author email filter
+            since: Optional start date filter
+            until: Optional end date filter
+            limit: Maximum number of results
+
+        Returns:
+            Dictionary with commits list and metadata
+        """
+        try:
+            commits = await self.store.search_git_commits(
+                query=query,
+                repository_path=repository_path,
+                author=author,
+                since=since,
+                until=until,
+                limit=limit,
+            )
+
+            return {
+                "commits": commits,
+                "total_found": len(commits),
+                "filters": {
+                    "query": query,
+                    "repository_path": repository_path,
+                    "author": author,
+                    "since": since.isoformat() if since else None,
+                    "until": until.isoformat() if until else None,
+                },
+            }
+
+        except Exception as e:
+            logger.error(f"Error searching git commits: {e}")
+            raise
+
+    async def get_file_history(
+        self,
+        file_path: str,
+        limit: int = 100,
+    ) -> Dict[str, Any]:
+        """
+        Get commit history for a specific file.
+
+        Args:
+            file_path: Path to the file
+            limit: Maximum number of commits
+
+        Returns:
+            Dictionary with commits list and metadata
+        """
+        try:
+            commits = await self.store.get_commits_by_file(
+                file_path=file_path,
+                limit=limit,
+            )
+
+            return {
+                "commits": commits,
+                "total_found": len(commits),
+                "file_path": file_path,
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting file history for {file_path}: {e}")
+            raise
+
     async def analyze_conversation(
         self,
         message: str,
