@@ -85,6 +85,25 @@ Organize entries under these headers in chronological order (newest first):
   - All dashboard components update with selected time range
   - Files: src/dashboard/static/index.html, dashboard.js, dashboard.css, src/dashboard/web_server.py
 
+||||||| e6b9eab
+
+### Added - 2025-11-22
+- **UX-038: Trend Charts Interactivity Enhancement**
+  - Chart.js zoom plugin for scroll-to-zoom and drag-to-pan functionality
+  - Performance insights in latency chart tooltips (Excellent/Good/Fair indicators)
+  - Hint text below charts: "💡 Scroll to zoom • Drag to pan"
+  - Gradient backgrounds for search activity bar chart
+  - Hover effects on chart data points with scaling animations
+  - Files: src/dashboard/static/dashboard.js, index.html, dashboard.css
+
+### Changed - 2025-11-22
+- **UX-038: Trend Charts Visual Improvements**
+  - Enhanced chart styling with better colors and contrast
+  - Dark mode support for all chart elements (text, grid, tooltips)
+  - Responsive design with mobile-friendly single-column layout
+  - Improved chart wrapper cards with hover transitions
+  - Crosshair cursor on charts to indicate interactivity
+
 ### Fixed - 2025-11-22
 - **BUG-033: Health Scheduler Missing `await` Keyword**
   - Fixed critical async bug in `health_scheduler.py:73` - missing `await` on `create_store()`
