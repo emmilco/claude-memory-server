@@ -52,6 +52,15 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-22
+- **BUG-033: Health Scheduler Missing `await` Keyword**
+  - Fixed critical async bug in `health_scheduler.py:73` - missing `await` on `create_store()`
+  - Removed redundant `await store.initialize()` call (create_store already initializes)
+  - Fixed scheduler restart issue by creating new AsyncIOScheduler instance in `update_config()`
+  - Health scheduler now works correctly in production
+  - All automated maintenance jobs (archival, cleanup, reports) now functional
+  - Test coverage improved from 0% to 90.12% with 33 comprehensive tests
+  - Files: src/memory/health_scheduler.py, tests/unit/test_health_scheduler.py
+
 - **BUG-018: Memory Retrieval Not Finding Recently Stored Memories**
   - Added comprehensive regression tests to prevent recurrence
   - Root cause was RetrievalGate blocking queries (already fixed on 2025-11-20)

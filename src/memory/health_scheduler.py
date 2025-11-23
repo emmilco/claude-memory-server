@@ -70,8 +70,7 @@ class HealthJobScheduler:
 
         # Initialize health jobs
         config = get_config()
-        store = create_store(config)
-        await store.initialize()
+        store = await create_store(config)  # create_store already calls initialize()
 
         lifecycle_manager = LifecycleManager(store)
         health_scorer = HealthScorer(store)
@@ -310,6 +309,8 @@ class HealthJobScheduler:
             await self.stop()
 
         self.config = new_config
+        # Create new scheduler instance after shutdown
+        self.scheduler = AsyncIOScheduler()
 
         if was_running and new_config.enabled:
             await self.start()
