@@ -18,11 +18,13 @@
   - **Verification:** All 16 tests in `test_list_memories.py` pass, total_count correctly populated
   - **Status:** Already fixed, no code changes needed
 
-### BUG-018: Memory Retrieval Not Finding Recently Stored Memories ⚠️ HIGH
-**Component:** Semantic search / memory retrieval
-**Issue:** Memories stored via `store_memory()` not immediately retrievable via `retrieve_memories()`
-**Impact:** Core functionality appears broken, poor user experience
-**Investigation Required:** Check embedding timing, vector store indexing delay, similarity threshold
+- [x] **BUG-018**: Memory Retrieval Not Finding Recently Stored Memories ✅ **FIXED** (2025-11-22)
+  - **Component:** Semantic search / memory retrieval
+  - **Issue:** Memories stored via `store_memory()` not immediately retrievable via `retrieve_memories()`
+  - **Root Cause:** RetrievalGate was blocking queries it deemed "low-value"
+  - **Fix:** RetrievalGate removed from codebase (2025-11-20)
+  - **Regression Tests:** Added 6 comprehensive tests in `test_bug_018_regression.py`
+  - **Status:** Fixed with comprehensive test coverage to prevent recurrence
 
 - [x] **BUG-019**: Docker Container Shows "Unhealthy" Despite Working ✅ **FIXED**
   - **Error:** `docker ps` shows Qdrant as "(unhealthy)", health check exits with -1
