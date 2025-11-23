@@ -15,31 +15,32 @@
 
 ## Active Tasks
 
-### [UX-037]: Interactive Time Range Selector
-**Started**: 2025-11-22
-**Assigned**: Claude Code Agent (Frontend Developer)
-**Branch**: worktrees/UX-037
+### [FEAT-056]: Advanced Filtering & Sorting
+**Started**: 2025-11-23
+**Assigned**: Backend Engineer (Claude Code Agent)
+**Branch**: .worktrees/FEAT-056
 **Blocked By**: None
-**Status**: Nearly Complete
+**Status**: In Progress - Re-implementing after FEAT-058 conflict
 
 **Progress Notes**:
-- 2025-11-22: Started implementation, created worktree
-- 2025-11-22: Added custom date picker UI with validation
-- 2025-11-22: Implemented localStorage persistence
-- 2025-11-22: Updated backend APIs to accept time range parameters
-- 2025-11-22: Added responsive mobile design
-- 2025-11-22: All features complete, ready for testing
+- 2025-11-23: Discovered FEAT-056 was merged (d2614e1) but reverted by FEAT-058 merge (ed12a21)
+- 2025-11-23: FEAT-058 overwrote search_code signature, removing FEAT-056 parameters
+- 2025-11-23: Need to re-add: file_pattern (glob), complexity_min/max, line_count_min/max, modified_after/before, sort_by, exclude_patterns
+- 2025-11-23: Must preserve FEAT-058 parameters: pattern, pattern_mode
 
 **Next Steps**:
-- [x] Implement custom date picker UI
-- [x] Add date validation
-- [x] Update backend endpoints
-- [x] Add localStorage persistence
-- [x] Implement responsive design
+- [ ] Update src/core/server.py - Add FEAT-056 parameters to search_code signature
+- [ ] Implement glob pattern matching logic
+- [ ] Implement complexity filtering logic
+- [ ] Implement date range filtering logic
+- [ ] Implement sorting logic
+- [ ] Update src/mcp_server.py - Update MCP tool schema
+- [ ] Remove skip markers from tests/unit/test_advanced_filtering.py
+- [ ] Run tests to verify implementation
+- [ ] Update CHANGELOG.md
 - [ ] Run verify-complete.py
-- [ ] Move to REVIEW.md
 
-**See**: TODO.md line 531
+**See**: planning_docs/FEAT-056_advanced_filtering_plan.md, TODO.md line 263
 
 ---
 
