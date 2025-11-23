@@ -1,7 +1,7 @@
 # IN_PROGRESS - Active Work
 
 **Maximum Concurrent Tasks: 6**
-**Current Active: 0/6**
+**Current Active: 1/6**
 
 ---
 
@@ -15,7 +15,28 @@
 
 ## Active Tasks
 
-<!-- No tasks currently in progress -->
+### [FEAT-059]: Structural/Relational Queries
+**Started**: 2025-11-22
+**Assigned**: Claude (Architecture Specialist)
+**Branch**: .worktrees/FEAT-059
+**Blocked By**: None
+**Status**: In Progress - Phase 1: Core Infrastructure
+
+**Progress Notes**:
+- 2025-11-22: Created worktree, started Phase 1 implementation
+- Plan: 6 new MCP tools for call graph analysis (find_callers, find_callees, find_implementations, find_dependencies, find_dependents, get_call_chain)
+- Target: Transform architecture discovery from 45min → 5min
+
+**Next Steps**:
+- [x] Create git worktree
+- [ ] Implement CallGraph class (src/graph/call_graph.py)
+- [ ] Implement CallGraphStore for Qdrant (src/store/call_graph_store.py)
+- [ ] Implement call extractors (Python, JavaScript, TypeScript)
+- [ ] Add 6 MCP tools to server
+- [ ] Write 25-30 comprehensive tests
+- [ ] Update CHANGELOG.md
+
+**See**: planning_docs/FEAT-059_structural_queries_plan.md
 
 ---
 

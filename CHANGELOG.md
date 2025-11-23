@@ -51,6 +51,16 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Added - 2025-11-22
+- **FEAT-059: Structural/Relational Queries (Phases 1-3 IN PROGRESS)**
+  - Created `src/graph/call_graph.py` - CallGraph class with BFS/DFS algorithms for analyzing function relationships
+  - Created `src/analysis/call_extractors.py` - PythonCallExtractor for extracting calls from Python code using AST
+  - Forward/reverse indexes for O(1) caller/callee lookups
+  - Call chain discovery with cycle detection and path ranking
+  - Interface/ABC implementation tracking
+  - 38 comprehensive tests (22 CallGraph + 16 extractors) - 100% pass rate
+  - Next: Qdrant storage, MCP tools, indexer integration
+
 ### Fixed - 2025-11-22
 - **BUG-033: Health Scheduler Missing `await` Keyword**
   - Fixed critical async bug in `health_scheduler.py:73` - missing `await` on `create_store()`
