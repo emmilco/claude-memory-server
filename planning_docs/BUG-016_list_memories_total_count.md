@@ -105,6 +105,34 @@ Tested with current codebase:
 - None (fixed by BUG-018)
 
 ### Next Steps
-- Mark BUG-016 as duplicate/resolved
-- Update TODO.md
-- Update CHANGELOG.md to note BUG-016 was resolved by BUG-018
+- [x] Mark BUG-016 as duplicate/resolved
+- [x] Update TODO.md
+- [x] Update CHANGELOG.md to note BUG-016 was resolved by BUG-018
+
+## Completion Summary (2025-11-22)
+
+**Status:** ✅ VERIFIED AND DOCUMENTED
+
+**Actions Taken:**
+1. ✅ Verified bug is not reproducing (all 16 unit tests pass)
+2. ✅ Confirmed root cause analysis (RetrievalGate was blocking queries)
+3. ✅ Verified fix in CHANGELOG.md (already documented)
+4. ✅ Updated TODO.md to mark BUG-016 as fixed
+5. ✅ Documented as duplicate of BUG-018
+
+**Evidence:**
+- All 16 tests in `tests/unit/test_list_memories.py` pass
+- Pagination tests verify `total_count` is correctly populated
+- `test_pagination_first_page`: Returns correct total_count with has_more flag
+- `test_empty_results`: Correctly returns total_count=0 when no results
+- Code review shows correct implementation in both layers:
+  - `src/store/qdrant_store.py:621` - Calculates total_count = len(all_memories)
+  - `src/core/server.py:988` - Returns total_count in response dict
+
+**No Code Changes Required:**
+- Bug was already fixed by BUG-018 (RetrievalGate removal)
+- Implementation is correct and tested
+- Issue was environmental (RetrievalGate interference), not a code bug
+
+**Closed:** 2025-11-22
+**Resolution:** Duplicate of BUG-018, already fixed
