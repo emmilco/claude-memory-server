@@ -75,6 +75,10 @@ class ServerConfig(BaseSettings):
     usage_batch_size: int = 100
     usage_flush_interval_seconds: int = 60
 
+    # Usage pattern analytics (FEAT-020)
+    enable_usage_pattern_analytics: bool = True
+    usage_analytics_retention_days: int = 90
+
     # Ranking weights (must sum to 1.0)
     ranking_weight_similarity: float = 0.6
     ranking_weight_recency: float = 0.2

@@ -658,237 +658,121 @@ class QualityMetrics(BaseModel):
     model_config = ConfigDict(use_enum_values=False)
 
 
-# ============================================================================
-# Performance Monitoring Models (FEAT-022)
-# ============================================================================
+# FEAT-020: Usage Patterns Tracking Models
 
 
-class GetPerformanceMetricsRequest(BaseModel):
-    """Request for current performance metrics."""
+class GetUsageStatisticsRequest(BaseModel):
+    """Request for overall usage statistics."""
 
-    include_history_days: int = Field(
-        default=1, ge=1, le=30,
-        description="Include historical average over N days"
+    days: int = Field(
+        default=30,
+        ge=1,
+        le=365,
+        description="Number of days to look back for statistics"
     )
 
     model_config = ConfigDict(use_enum_values=False)
 
 
-class PerformanceMetricsData(BaseModel):
-    """Performance metrics data."""
+class GetUsageStatisticsResponse(BaseModel):
+    """Response with overall usage statistics."""
 
-    avg_search_latency_ms: float = Field(default=0.0, description="Average search latency")
-    p95_search_latency_ms: float = Field(default=0.0, description="95th percentile latency")
-    cache_hit_rate: float = Field(default=0.0, description="Cache hit rate (0-1)")
-    index_staleness_ratio: float = Field(default=0.0, description="Index staleness ratio (0-1)")
-    queries_per_day: float = Field(default=0.0, description="Average queries per day")
-    avg_results_per_query: float = Field(default=0.0, description="Average results per query")
-    timestamp: str = Field(default="", description="Timestamp of metrics collection")
+    period_days: int = Field(..., description="Number of days covered")
+    total_queries: int = Field(default=0, description="Total number of queries")
+    unique_queries: int = Field(default=0, description="Number of unique query texts")
+    avg_query_time_ms: float = Field(default=0.0, description="Average query execution time")
+    avg_result_count: float = Field(default=0.0, description="Average number of results per query")
+    total_code_accesses: int = Field(default=0, description="Total code file/function accesses")
+    unique_files: int = Field(default=0, description="Number of unique files accessed")
+    unique_functions: int = Field(default=0, description="Number of unique functions accessed")
+    most_active_day: Optional[str] = Field(None, description="Date of most activity")
+    most_active_day_count: int = Field(default=0, description="Query count on most active day")
 
     model_config = ConfigDict(use_enum_values=False)
 
 
-class GetPerformanceMetricsResponse(BaseModel):
-    """Response with current performance metrics."""
+class GetTopQueriesRequest(BaseModel):
+    """Request for most frequent queries."""
 
-    current_metrics: PerformanceMetricsData = Field(..., description="Current metrics snapshot")
-    historical_average: Optional[PerformanceMetricsData] = Field(
-        None, description="Historical average if requested"
+    limit: int = Field(
+        default=10,
+        ge=1,
+        le=100,
+        description="Maximum number of queries to return"
+    )
+    days: int = Field(
+        default=30,
+        ge=1,
+        le=365,
+        description="Number of days to look back"
     )
 
     model_config = ConfigDict(use_enum_values=False)
 
 
-class GetActiveAlertsRequest(BaseModel):
-    """Request for active alerts."""
+class QueryStatistics(BaseModel):
+    """Statistics for a single query."""
 
-    severity_filter: Optional[str] = Field(
-        None,
-        description="Filter by severity: CRITICAL, WARNING, or INFO"
+    query: str = Field(..., description="The query text")
+    count: int = Field(..., description="Number of times queried")
+    avg_result_count: float = Field(default=0.0, description="Average number of results")
+    avg_execution_time_ms: float = Field(default=0.0, description="Average execution time")
+    last_used: str = Field(..., description="ISO timestamp of last use")
+
+    model_config = ConfigDict(use_enum_values=False)
+
+
+class GetTopQueriesResponse(BaseModel):
+    """Response with most frequent queries."""
+
+    queries: List[QueryStatistics] = Field(
+        default_factory=list,
+        description="List of query statistics ordered by frequency"
     )
-    include_snoozed: bool = Field(
-        default=False,
-        description="Include snoozed alerts"
+    period_days: int = Field(..., description="Number of days covered")
+    total_returned: int = Field(..., description="Number of queries returned")
+
+    model_config = ConfigDict(use_enum_values=False)
+
+
+class GetFrequentlyAccessedCodeRequest(BaseModel):
+    """Request for most frequently accessed code."""
+
+    limit: int = Field(
+        default=10,
+        ge=1,
+        le=100,
+        description="Maximum number of items to return"
     )
-
-    model_config = ConfigDict(use_enum_values=False)
-
-
-class AlertData(BaseModel):
-    """Alert information."""
-
-    id: str = Field(..., description="Alert ID")
-    severity: str = Field(..., description="Alert severity")
-    metric_name: str = Field(..., description="Metric that triggered alert")
-    current_value: float = Field(..., description="Current value of metric")
-    threshold_value: float = Field(..., description="Threshold that was exceeded")
-    message: str = Field(..., description="Alert message")
-    recommendations: List[str] = Field(default_factory=list, description="Recommended actions")
-    timestamp: str = Field(..., description="Alert timestamp")
-
-    model_config = ConfigDict(use_enum_values=False)
-
-
-class GetActiveAlertsResponse(BaseModel):
-    """Response with active alerts."""
-
-    alerts: List[AlertData] = Field(default_factory=list, description="Active alerts")
-    total_alerts: int = Field(default=0, description="Total number of alerts")
-    critical_count: int = Field(default=0, description="Number of critical alerts")
-    warning_count: int = Field(default=0, description="Number of warning alerts")
-    info_count: int = Field(default=0, description="Number of info alerts")
-
-    model_config = ConfigDict(use_enum_values=False)
-
-
-class GetHealthScoreRequest(BaseModel):
-    """Request for health score."""
-
-    model_config = ConfigDict(use_enum_values=False)
-
-
-class HealthScoreData(BaseModel):
-    """Health score information."""
-
-    overall_score: int = Field(..., ge=0, le=100, description="Overall health score (0-100)")
-    status: str = Field(..., description="Health status: EXCELLENT, GOOD, FAIR, POOR, CRITICAL")
-    performance_score: int = Field(..., ge=0, le=100, description="Performance component score")
-    quality_score: int = Field(..., ge=0, le=100, description="Quality component score")
-    database_health_score: int = Field(..., ge=0, le=100, description="Database health score")
-    usage_efficiency_score: int = Field(..., ge=0, le=100, description="Usage efficiency score")
-    total_alerts: int = Field(default=0, description="Total active alerts")
-    critical_alerts: int = Field(default=0, description="Critical alerts count")
-    warning_alerts: int = Field(default=0, description="Warning alerts count")
-    timestamp: str = Field(..., description="Timestamp of health calculation")
-
-    model_config = ConfigDict(use_enum_values=False)
-
-
-class GetHealthScoreResponse(BaseModel):
-    """Response with health score."""
-
-    health_score: HealthScoreData = Field(..., description="Health score details")
-    recommendations: List[str] = Field(default_factory=list, description="Recommended actions")
-
-    model_config = ConfigDict(use_enum_values=False)
-
-
-class GetCapacityForecastRequest(BaseModel):
-    """Request for capacity forecast."""
-
-    days_ahead: int = Field(
-        default=30, ge=7, le=90,
-        description="Number of days to forecast ahead"
+    days: int = Field(
+        default=30,
+        ge=1,
+        le=365,
+        description="Number of days to look back"
     )
 
     model_config = ConfigDict(use_enum_values=False)
 
 
-class DatabaseGrowthData(BaseModel):
-    """Database growth forecast data."""
+class CodeAccessStatistics(BaseModel):
+    """Statistics for accessed code files/functions."""
 
-    current_size_mb: float = Field(..., description="Current database size in MB")
-    projected_size_mb: float = Field(..., description="Projected size in MB")
-    growth_rate_mb_per_day: float = Field(..., description="Growth rate (MB/day)")
-    days_until_limit: Optional[int] = Field(None, description="Days until hitting limit")
-    status: str = Field(..., description="Status: HEALTHY, WARNING, or CRITICAL")
-    trend: str = Field(..., description="Trend: GROWING, STABLE, or SHRINKING")
+    file_path: str = Field(..., description="Path to the code file")
+    function_name: Optional[str] = Field(None, description="Function/method name if applicable")
+    access_count: int = Field(..., description="Number of times accessed")
+    last_accessed: str = Field(..., description="ISO timestamp of last access")
 
     model_config = ConfigDict(use_enum_values=False)
 
 
-class MemoryCapacityData(BaseModel):
-    """Memory capacity forecast data."""
+class GetFrequentlyAccessedCodeResponse(BaseModel):
+    """Response with most frequently accessed code."""
 
-    current_memories: int = Field(..., description="Current memory count")
-    projected_memories: int = Field(..., description="Projected memory count")
-    creation_rate_per_day: float = Field(..., description="Creation rate (memories/day)")
-    days_until_limit: Optional[int] = Field(None, description="Days until hitting limit")
-    status: str = Field(..., description="Status: HEALTHY, WARNING, or CRITICAL")
-    trend: str = Field(..., description="Trend: GROWING, STABLE, or SHRINKING")
-
-    model_config = ConfigDict(use_enum_values=False)
-
-
-class ProjectCapacityData(BaseModel):
-    """Project capacity forecast data."""
-
-    current_active_projects: int = Field(..., description="Current active project count")
-    current_total_projects: int = Field(..., description="Total projects (active + archived)")
-    projected_active_projects: int = Field(..., description="Projected active project count")
-    project_addition_rate_per_week: float = Field(..., description="Addition rate (projects/week)")
-    days_until_limit: Optional[int] = Field(None, description="Days until hitting limit")
-    status: str = Field(..., description="Status: HEALTHY, WARNING, or CRITICAL")
-
-    model_config = ConfigDict(use_enum_values=False)
-
-
-class GetCapacityForecastResponse(BaseModel):
-    """Response with capacity forecast."""
-
-    forecast_days: int = Field(..., description="Forecast period in days")
-    database_growth: DatabaseGrowthData = Field(..., description="Database growth forecast")
-    memory_capacity: MemoryCapacityData = Field(..., description="Memory capacity forecast")
-    project_capacity: ProjectCapacityData = Field(..., description="Project capacity forecast")
-    recommendations: List[str] = Field(default_factory=list, description="Capacity planning recommendations")
-    overall_status: str = Field(..., description="Overall status: HEALTHY, WARNING, or CRITICAL")
-    timestamp: str = Field(..., description="Forecast timestamp")
-
-    model_config = ConfigDict(use_enum_values=False)
-
-
-class ResolveAlertRequest(BaseModel):
-    """Request to resolve an alert."""
-
-    alert_id: str = Field(..., description="ID of alert to resolve")
-
-    model_config = ConfigDict(use_enum_values=False)
-
-
-class ResolveAlertResponse(BaseModel):
-    """Response from resolving an alert."""
-
-    success: bool = Field(..., description="Whether alert was successfully resolved")
-    alert_id: str = Field(..., description="ID of resolved alert")
-    message: str = Field(..., description="Result message")
-
-    model_config = ConfigDict(use_enum_values=False)
-
-
-class GetWeeklyReportRequest(BaseModel):
-    """Request for weekly health report."""
-
-    model_config = ConfigDict(use_enum_values=False)
-
-
-class TrendData(BaseModel):
-    """Trend analysis data."""
-
-    metric_name: str = Field(..., description="Metric being analyzed")
-    current_value: float = Field(..., description="Current metric value")
-    previous_value: float = Field(..., description="Previous metric value")
-    change_percent: float = Field(..., description="Percentage change")
-    direction: str = Field(..., description="Direction: improving, degrading, or stable")
-    is_significant: bool = Field(..., description="Whether change is significant (>10%)")
-
-    model_config = ConfigDict(use_enum_values=False)
-
-
-class GetWeeklyReportResponse(BaseModel):
-    """Response with weekly health report."""
-
-    period_start: str = Field(..., description="Report period start (ISO format)")
-    period_end: str = Field(..., description="Report period end (ISO format)")
-
-    current_health: HealthScoreData = Field(..., description="Current health score")
-    previous_health: Optional[HealthScoreData] = Field(None, description="Previous week's health score")
-
-    trends: List[TrendData] = Field(default_factory=list, description="Metric trend analyses")
-    improvements: List[str] = Field(default_factory=list, description="Significant improvements")
-    concerns: List[str] = Field(default_factory=list, description="Areas of concern")
-    recommendations: List[str] = Field(default_factory=list, description="Recommended actions")
-
-    usage_summary: Dict[str, float] = Field(default_factory=dict, description="Usage statistics")
-    alert_summary: Dict[str, int] = Field(default_factory=dict, description="Alert counts by severity")
+    code_items: List[CodeAccessStatistics] = Field(
+        default_factory=list,
+        description="List of code access statistics ordered by frequency"
+    )
+    period_days: int = Field(..., description="Number of days covered")
+    total_returned: int = Field(..., description="Number of items returned")
 
     model_config = ConfigDict(use_enum_values=False)

@@ -9,7 +9,7 @@
 
 The Claude Memory RAG Server exposes tools through the Model Context Protocol (MCP). All tools are accessible to Claude via MCP tool calls.
 
-**Total Tools:** 16 MCP tools + 30 CLI commands (19 main commands + 11 subcommands)
+**Total Tools:** 26 MCP tools + 30 CLI commands (19 main commands + 11 subcommands)
 
 ### Available MCP Tools
 
@@ -38,6 +38,9 @@ The Claude Memory RAG Server exposes tools through the Model Context Protocol (M
 | `get_capacity_forecast` | Get capacity planning forecast | Performance Monitoring |
 | `resolve_alert` | Mark an alert as resolved | Performance Monitoring |
 | `get_weekly_report` | Get comprehensive weekly health report | Performance Monitoring |
+| `get_usage_statistics` | Get usage analytics for queries and code access | Analytics |
+| `get_top_queries` | Get most frequently executed queries | Analytics |
+| `get_frequently_accessed_code` | Get most accessed code files/functions | Analytics |
 
 **Note:** Additional specialized retrieval tools are available via the SpecializedRetrievalTools class (retrieve_preferences, retrieve_project_context, retrieve_session_state) and dependency tracking tools (get_file_dependencies, get_file_dependents, find_dependency_path, get_dependency_stats) are available via the server API.
 
@@ -1871,6 +1874,158 @@ No rate limits currently enforced. Recommended client-side limits:
 2. **Use filters:** Filter by language or file pattern
 3. **Index incrementally:** Only changed files are re-indexed
 4. **Project scoping:** Use project_name to search specific projects
+
+---
+
+## Analytics Tools (FEAT-020)
+
+### get_usage_statistics
+
+Get overall usage statistics for queries and code access over a specified time period.
+
+**Input Schema:**
+```json
+{
+  "days": "integer 1-365 (default: 30)"
+}
+```
+
+**Example Request:**
+```json
+{
+  "days": 30
+}
+```
+
+**Response:**
+```json
+{
+  "period_days": 30,
+  "total_queries": 1543,
+  "unique_queries": 215,
+  "avg_query_time_ms": 12.5,
+  "avg_result_count": 4.2,
+  "total_code_accesses": 892,
+  "unique_files": 143,
+  "unique_functions": 287,
+  "most_active_day": "2025-11-15",
+  "most_active_day_count": 156
+}
+```
+
+**Use Cases:**
+- Monitor system usage trends
+- Identify peak usage periods
+- Track performance metrics over time
+- Understand user behavior patterns
+
+---
+
+### get_top_queries
+
+Get most frequently executed queries with detailed statistics.
+
+**Input Schema:**
+```json
+{
+  "limit": "integer 1-100 (default: 10)",
+  "days": "integer 1-365 (default: 30)"
+}
+```
+
+**Example Request:**
+```json
+{
+  "limit": 10,
+  "days": 30
+}
+```
+
+**Response:**
+```json
+{
+  "queries": [
+    {
+      "query": "authentication logic",
+      "count": 47,
+      "avg_result_count": 5.3,
+      "avg_execution_time_ms": 11.2,
+      "last_used": "2025-11-18T14:35:22Z"
+    },
+    {
+      "query": "error handling patterns",
+      "count": 35,
+      "avg_result_count": 4.8,
+      "avg_execution_time_ms": 9.7,
+      "last_used": "2025-11-18T12:15:10Z"
+    }
+  ],
+  "period_days": 30,
+  "total_returned": 2
+}
+```
+
+**Use Cases:**
+- Identify commonly searched topics
+- Optimize frequently accessed content
+- Understand user interests and needs
+- Pre-cache popular queries
+
+---
+
+### get_frequently_accessed_code
+
+Get most frequently accessed code files and functions.
+
+**Input Schema:**
+```json
+{
+  "limit": "integer 1-100 (default: 10)",
+  "days": "integer 1-365 (default: 30)"
+}
+```
+
+**Example Request:**
+```json
+{
+  "limit": 10,
+  "days": 30
+}
+```
+
+**Response:**
+```json
+{
+  "code_items": [
+    {
+      "file_path": "src/auth/handlers.py",
+      "function_name": "login",
+      "access_count": 152,
+      "last_accessed": "2025-11-18T15:20:45Z"
+    },
+    {
+      "file_path": "src/database/models.py",
+      "function_name": null,
+      "access_count": 98,
+      "last_accessed": "2025-11-18T14:10:33Z"
+    }
+  ],
+  "period_days": 30,
+  "total_returned": 2
+}
+```
+
+**Use Cases:**
+- Identify critical code paths
+- Prioritize code documentation
+- Guide refactoring decisions
+- Understand code usage patterns
+
+**Configuration:**
+- Enable via `enable_usage_pattern_analytics = true` in config
+- Data stored in `~/.claude-rag/usage_analytics.db`
+- Automatic cleanup of data older than 90 days (configurable via `usage_analytics_retention_days`)
+- Privacy-focused: tracks patterns, not sensitive data
 
 ---
 

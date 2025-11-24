@@ -25,6 +25,12 @@ from src.core.models import (
     ContextLevel,
     MemoryCategory,
     MemoryScope,
+    GetUsageStatisticsRequest,
+    GetUsageStatisticsResponse,
+    GetTopQueriesRequest,
+    GetTopQueriesResponse,
+    GetFrequentlyAccessedCodeRequest,
+    GetFrequentlyAccessedCodeResponse,
 )
 from src.core.exceptions import (
     StorageError,
@@ -39,15 +45,7 @@ from src.memory.conversation_tracker import ConversationTracker
 from src.memory.query_expander import QueryExpander
 from src.memory.suggestion_engine import SuggestionEngine
 from src.search.hybrid_search import HybridSearcher, FusionMethod
-from src.monitoring.metrics_collector import MetricsCollector
-from src.monitoring.alert_engine import AlertEngine
-from src.monitoring.health_reporter import HealthReporter
-from src.monitoring.capacity_planner import CapacityPlanner
-from src.graph import DependencyGraph, GraphNode, GraphEdge
-from src.graph.formatters import DOTFormatter, JSONFormatter, MermaidFormatter
-from src.analysis.quality_analyzer import QualityAnalyzer, CodeQualityMetrics, QualityHotspot
-from src.analysis.complexity_analyzer import ComplexityAnalyzer
-from src.memory.duplicate_detector import DuplicateDetector
+from src.analytics.usage_tracker import UsagePatternTracker
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +92,7 @@ class MemoryRAGServer:
         self.hybrid_searcher: Optional[HybridSearcher] = None
         self.cross_project_consent: Optional = None  # Cross-project consent manager
         self.suggestion_engine: Optional[SuggestionEngine] = None  # Proactive suggestions
+        self.pattern_tracker: Optional[UsagePatternTracker] = None  # Usage pattern analytics
         self.scheduler = None  # APScheduler instance
 
         # Quality analysis (FEAT-060)
@@ -270,26 +269,20 @@ class MemoryRAGServer:
                 self.suggestion_engine = None
                 logger.info("Proactive suggestions disabled")
 
-            # Initialize quality analysis components (FEAT-060)
-            self.complexity_analyzer = ComplexityAnalyzer()
-            self.quality_analyzer = QualityAnalyzer(complexity_analyzer=self.complexity_analyzer)
-            self.duplicate_detector = DuplicateDetector(
-                store=self.store,
-                embedding_generator=self.embedding_generator
-            )
-            logger.info("Quality analysis components initialized")
-
-            # Collect initial metrics snapshot (defer if requested for fast startup)
-            if self.metrics_collector and not defer_preload:
-                try:
-                    initial_metrics = await self.metrics_collector.collect_metrics()
-                    initial_metrics.health_score = self._calculate_simple_health_score(initial_metrics)
-                    self.metrics_collector.store_metrics(initial_metrics)
-                    logger.info(f"Initial metrics snapshot collected (health: {initial_metrics.health_score}/100)")
-                except Exception as e:
-                    logger.warning(f"Failed to collect initial metrics: {e}")
-            elif defer_preload:
-                logger.info("Initial metrics collection deferred (will collect in background)")
+            # Initialize usage pattern analytics (FEAT-020)
+            if self.config.enable_usage_pattern_analytics:
+                import os
+                # Store analytics DB in same directory as SQLite memory DB
+                sqlite_dir = os.path.dirname(os.path.expanduser(self.config.sqlite_path))
+                analytics_db_path = os.path.join(sqlite_dir, "usage_analytics.db")
+                self.pattern_tracker = UsagePatternTracker(db_path=analytics_db_path)
+                logger.info(
+                    f"Usage pattern analytics enabled "
+                    f"(retention: {self.config.usage_analytics_retention_days} days)"
+                )
+            else:
+                self.pattern_tracker = None
+                logger.info("Usage pattern analytics disabled")
 
             logger.info("Server initialized successfully")
 
@@ -4284,1343 +4277,152 @@ class MemoryRAGServer:
             logger.error(f"Error setting suggestion mode: {e}")
             raise ValidationError(f"Failed to set suggestion mode: {str(e)}")
 
-    async def find_usages(
-        self,
-        code_snippet: str,
-        file_path: Optional[str] = None,
-        project_name: Optional[str] = None,
-        min_similarity: float = 0.75,
-        limit: int = 20,
-    ) -> Dict[str, Any]:
-        """
-        Find all usages of a code snippet semantically.
+    # FEAT-020: Usage Pattern Analytics MCP Tools
 
-        Uses semantic search to find where a function, class, or code pattern
-        is used across the codebase, even with renamed variables or different
-        formatting.
+    async def get_usage_statistics(self, days: int = 30) -> Dict[str, Any]:
+        """
+        Get overall usage statistics for the specified time period.
 
         Args:
-            code_snippet: The code to find usages of
-            file_path: Optional file path to search within
-            project_name: Optional project to search within
-            min_similarity: Minimum similarity threshold (0-1), default 0.75
-            limit: Maximum number of results, default 20
+            days: Number of days to look back (1-365)
 
         Returns:
-            Dict with:
-                - usages: List of usage locations with context
-                - count: Total number of usages found
-                - query_info: Information about the search query
-
-        Example:
-            find_usages(
-                code_snippet="def calculate_total(items):",
-                project_name="my-project",
-                min_similarity=0.8
-            )
-        """
-        try:
-            # Use search_code with semantic search
-            from .code_search import search_code
-
-            results = await search_code(
-                store=self.store,
-                query=code_snippet,
-                limit=limit,
-                project_name=project_name,
-            )
-
-            # Filter by similarity threshold and format results
-            usages = []
-            for result in results:
-                if result.get("score", 0) >= min_similarity:
-                    usages.append({
-                        "file_path": result.get("metadata", {}).get("file_path"),
-                        "line_number": result.get("metadata", {}).get("start_line"),
-                        "code": result.get("text", ""),
-                        "similarity": result.get("score"),
-                        "context": result.get("metadata", {}).get("parent_name"),
-                    })
-
-            return {
-                "usages": usages,
-                "count": len(usages),
-                "query_info": {
-                    "code_snippet": code_snippet[:100],  # Truncate for display
-                    "min_similarity": min_similarity,
-                    "project_name": project_name,
-                    "file_path": file_path,
-                },
-            }
-
-        except Exception as e:
-            logger.error(f"Error finding usages: {e}")
-            raise RetrievalError(f"Failed to find usages: {str(e)}")
-
-    async def suggest_refactorings(
-        self,
-        file_path: Optional[str] = None,
-        project_name: Optional[str] = None,
-        severity_threshold: str = "medium",
-        limit: int = 50,
-    ) -> Dict[str, Any]:
-        """
-        Suggest refactorings for code in a file or project.
-
-        Analyzes code for common code smells and suggests improvements:
-        - Long parameter lists (>5 parameters)
-        - Large functions (>50 lines)
-        - High complexity (>10 cyclomatic complexity)
-        - Deep nesting (>4 levels)
-
-        Args:
-            file_path: Optional specific file to analyze
-            project_name: Optional project to analyze
-            severity_threshold: Minimum severity ('low', 'medium', 'high')
-            limit: Maximum number of suggestions to return
-
-        Returns:
-            Dict with:
-                - suggestions: List of refactoring suggestions
-                - count: Total number of suggestions
-                - summary: Summary by issue type and severity
-
-        Example:
-            suggest_refactorings(
-                project_name="my-project",
-                severity_threshold="high"
-            )
-        """
-        from ..refactoring.code_analyzer import CodeAnalyzer
-
-        try:
-            analyzer = CodeAnalyzer()
-
-            # Get code units from the store
-            # For MVP, we'll fetch indexed code units and analyze them
-            search_filters = {}
-            if project_name:
-                search_filters["project_name"] = project_name
-            if file_path:
-                search_filters["file_path"] = file_path
-
-            # Use search_code to get code units
-            from .code_search import search_code
-
-            # Get all code units (use broad query)
-            results = await search_code(
-                store=self.store,
-                query="function class method",  # Broad query to get code units
-                limit=limit * 2,  # Get more than needed, filter later
-                project_name=project_name,
-            )
-
-            all_suggestions = []
-
-            # Analyze each code unit
-            for result in results[:limit]:
-                metadata = result.get("metadata", {})
-                code = result.get("text", "")
-                language = metadata.get("language", "python")
-                current_file_path = metadata.get("file_path", "unknown")
-                line_number = metadata.get("start_line", 1)
-
-                # Skip if file_path filter doesn't match
-                if file_path and current_file_path != file_path:
-                    continue
-
-                # Analyze the code
-                suggestions = analyzer.analyze_code(
-                    code=code,
-                    language=language,
-                    file_path=current_file_path,
-                    line_number=line_number,
-                )
-
-                # Filter by severity threshold
-                severity_order = {"low": 0, "medium": 1, "high": 2}
-                min_severity = severity_order.get(severity_threshold.lower(), 1)
-
-                for suggestion in suggestions:
-                    if severity_order.get(suggestion.severity.lower(), 0) >= min_severity:
-                        all_suggestions.append({
-                            "issue_type": suggestion.issue_type,
-                            "severity": suggestion.severity,
-                            "file_path": suggestion.file_path,
-                            "line_number": suggestion.line_number,
-                            "code_unit_name": suggestion.code_unit_name,
-                            "description": suggestion.description,
-                            "suggested_fix": suggestion.suggested_fix,
-                            "metrics": {
-                                "lines_of_code": suggestion.metrics.lines_of_code if suggestion.metrics else None,
-                                "complexity": suggestion.metrics.cyclomatic_complexity if suggestion.metrics else None,
-                                "parameters": suggestion.metrics.parameter_count if suggestion.metrics else None,
-                                "nesting_depth": suggestion.metrics.nesting_depth if suggestion.metrics else None,
-                            } if suggestion.metrics else None,
-                        })
-
-            # Limit to requested number
-            all_suggestions = all_suggestions[:limit]
-
-            # Create summary
-            summary = {
-                "by_severity": {},
-                "by_issue_type": {},
-            }
-
-            for suggestion in all_suggestions:
-                severity = suggestion["severity"]
-                issue_type = suggestion["issue_type"]
-
-                summary["by_severity"][severity] = summary["by_severity"].get(severity, 0) + 1
-                summary["by_issue_type"][issue_type] = summary["by_issue_type"].get(issue_type, 0) + 1
-
-            return {
-                "suggestions": all_suggestions,
-                "count": len(all_suggestions),
-                "summary": summary,
-                "filters": {
-                    "file_path": file_path,
-                    "project_name": project_name,
-                    "severity_threshold": severity_threshold,
-                },
-            }
-
-        except Exception as e:
-            logger.error(f"Error suggesting refactorings: {e}")
-            raise ValidationError(f"Failed to suggest refactorings: {str(e)}")
-
-    # ========================================================================
-    # Performance Monitoring Methods (FEAT-022)
-    # ========================================================================
-
-    async def get_performance_metrics(
-        self, include_history_days: int = 1
-    ) -> Dict[str, Any]:
-        """
-        Get current performance metrics and historical averages.
-
-        **Use when:** Monitoring system performance, debugging slow searches,
-        or understanding usage patterns.
-
-        Args:
-            include_history_days: Include historical average over N days (default: 1)
-
-        Returns:
-            Dict with current_metrics (latency, cache, staleness, queries) and historical_average
-        """
-        try:
-            # Collect current metrics
-            current = await self.metrics_collector.collect_metrics()
-
-            # Convert to response format
-            current_data = {
-                "avg_search_latency_ms": current.avg_search_latency_ms,
-                "p95_search_latency_ms": current.p95_search_latency_ms,
-                "cache_hit_rate": current.cache_hit_rate,
-                "index_staleness_ratio": current.index_staleness_ratio,
-                "queries_per_day": current.queries_per_day,
-                "avg_results_per_query": current.avg_results_per_query,
-                "timestamp": current.timestamp.isoformat(),
-            }
-
-            result = {
-                "current_metrics": current_data
-            }
-
-            # Add historical average if requested
-            if include_history_days > 0:
-                history = self.metrics_collector.get_metrics_history(days=include_history_days)
-                if history:
-                    # Calculate averages
-                    avg_latency = sum(m.avg_search_latency_ms for m in history) / len(history)
-                    avg_p95 = sum(m.p95_search_latency_ms for m in history) / len(history)
-                    avg_cache = sum(m.cache_hit_rate for m in history) / len(history)
-                    avg_staleness = sum(m.index_staleness_ratio for m in history) / len(history)
-                    avg_queries = sum(m.queries_per_day for m in history) / len(history)
-                    avg_results = sum(m.avg_results_per_query for m in history) / len(history)
-
-                    result["historical_average"] = {
-                        "avg_search_latency_ms": avg_latency,
-                        "p95_search_latency_ms": avg_p95,
-                        "cache_hit_rate": avg_cache,
-                        "index_staleness_ratio": avg_staleness,
-                        "queries_per_day": avg_queries,
-                        "avg_results_per_query": avg_results,
-                        "timestamp": "",  # Historical average has no specific timestamp
-                    }
-
-            return result
-
-        except Exception as e:
-            logger.error(f"Error getting performance metrics: {e}")
-            raise StorageError(f"Failed to get performance metrics: {str(e)}")
-
-    async def get_active_alerts(
-        self,
-        severity_filter: Optional[str] = None,
-        include_snoozed: bool = False,
-    ) -> Dict[str, Any]:
-        """
-        Get active system alerts with severity levels.
-
-        **Use when:** Checking for system issues, investigating performance problems,
-        or monitoring system health.
-
-        Args:
-            severity_filter: Filter by "CRITICAL", "WARNING", or "INFO" (optional)
-            include_snoozed: Include temporarily snoozed alerts (default: False)
-
-        Returns:
-            Dict with alerts list, total_alerts, critical_count, warning_count, info_count
-        """
-        try:
-            # Get active alerts
-            if severity_filter:
-                from src.monitoring.alert_engine import AlertSeverity
-                severity = AlertSeverity(severity_filter.upper())
-                alerts = self.alert_engine.get_alerts_by_severity(severity)
-            else:
-                alerts = self.alert_engine.get_active_alerts(include_snoozed=include_snoozed)
-
-            # Convert to response format
-            alert_data = []
-            critical_count = 0
-            warning_count = 0
-            info_count = 0
-
-            for alert in alerts:
-                alert_data.append({
-                    "id": alert.id,
-                    "severity": alert.severity.value,
-                    "metric_name": alert.metric_name,
-                    "current_value": alert.current_value,
-                    "threshold_value": alert.threshold_value,
-                    "message": alert.message,
-                    "recommendations": alert.recommendations,
-                    "timestamp": alert.timestamp.isoformat(),
-                })
-
-                # Count by severity
-                if alert.severity.value == "CRITICAL":
-                    critical_count += 1
-                elif alert.severity.value == "WARNING":
-                    warning_count += 1
-                elif alert.severity.value == "INFO":
-                    info_count += 1
-
-            return {
-                "alerts": alert_data,
-                "total_alerts": len(alerts),
-                "critical_count": critical_count,
-                "warning_count": warning_count,
-                "info_count": info_count,
-            }
-
-        except Exception as e:
-            logger.error(f"Error getting active alerts: {e}")
-            raise StorageError(f"Failed to get active alerts: {str(e)}")
-
-    async def get_health_score(self) -> Dict[str, Any]:
-        """
-        Get overall system health score with component breakdown.
-
-        **Use when:** Quick health check, investigating issues, or periodic monitoring.
-        Returns 0-100 score with component scores and actionable recommendations.
-
-        Returns:
-            Dict with health_score (0-100), component_scores, status, recommendations
-        """
-        try:
-            # Collect current metrics
-            metrics = await self.metrics_collector.collect_metrics()
-
-            # Evaluate alerts
-            alerts = self.alert_engine.evaluate_metrics(metrics)
-
-            # Calculate health score
-            health_score = self.health_reporter.calculate_health_score(metrics, alerts)
-
-            # Generate recommendations
-            trends = []  # No trend analysis for single snapshot
-            recommendations = self.health_reporter._generate_recommendations(
-                metrics, alerts, trends
-            )
-
-            return {
-                "health_score": {
-                    "overall_score": health_score.overall_score,
-                    "status": health_score.status.value,  # Extract string value from enum
-                    "performance_score": health_score.performance_score,
-                    "quality_score": health_score.quality_score,
-                    "database_health_score": health_score.database_health_score,
-                    "usage_efficiency_score": health_score.usage_efficiency_score,
-                    "total_alerts": health_score.total_alerts,
-                    "critical_alerts": health_score.critical_alerts,
-                    "warning_alerts": health_score.warning_alerts,
-                    "timestamp": health_score.timestamp.isoformat(),
-                },
-                "recommendations": recommendations,
-            }
-
-        except Exception as e:
-            logger.error(f"Error calculating health score: {e}")
-            raise StorageError(f"Failed to calculate health score: {str(e)}")
-
-    async def start_dashboard(self, port: int = 8080, host: str = "localhost") -> Dict[str, Any]:
-        """
-        Start the web dashboard server for visual monitoring and analytics.
-
-        **Use when:** Need visual interface for monitoring system health, metrics, and analytics.
-        Starts the dashboard in a background process.
-
-        Args:
-            port: Port to run dashboard on (default: 8080)
-            host: Host to bind to (default: localhost)
-
-        Returns:
-            Dict with url, pid, and status
-        """
-        try:
-            import subprocess
-            import sys
-            from pathlib import Path
-
-            # Get the path to the dashboard server module
-            dashboard_path = Path(__file__).parent.parent / "dashboard" / "web_server.py"
-
-            if not dashboard_path.exists():
-                raise ValueError(f"Dashboard server not found at {dashboard_path}")
-
-            # Start the dashboard in a background process
-            process = subprocess.Popen(
-                [sys.executable, str(dashboard_path), "--port", str(port), "--host", host],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                start_new_session=True  # Detach from parent
-            )
-
-            # Give it a moment to start
-            import time
-            time.sleep(1)
-
-            # Check if it's still running
-            if process.poll() is not None:
-                # Process died, get error output
-                stderr = process.stderr.read().decode('utf-8') if process.stderr else "Unknown error"
-                raise RuntimeError(f"Dashboard server failed to start: {stderr}")
-
-            url = f"http://{host}:{port}"
-            logger.info(f"Dashboard server started at {url} (PID: {process.pid})")
-
-            return {
-                "status": "started",
-                "url": url,
-                "pid": process.pid,
-                "host": host,
-                "port": port
-            }
-
-        except Exception as e:
-            logger.error(f"Error starting dashboard: {e}")
-            raise StorageError(f"Failed to start dashboard: {str(e)}")
-
-    async def get_capacity_forecast(self, days_ahead: int = 30) -> Dict[str, Any]:
-        """
-        Get capacity planning forecast.
-
-        Args:
-            days_ahead: Number of days to forecast ahead (7-90)
-
-        Returns:
-            Dictionary with capacity forecast and recommendations
-        """
-        try:
-            # Get capacity forecast
-            forecast = await self.capacity_planner.get_capacity_forecast(days_ahead)
-
-            return forecast.to_dict()
-
-        except Exception as e:
-            logger.error(f"Error getting capacity forecast: {e}")
-            raise StorageError(f"Failed to get capacity forecast: {str(e)}")
-
-    async def resolve_alert(self, alert_id: str) -> Dict[str, Any]:
-        """
-        Mark an alert as resolved.
-
-        Args:
-            alert_id: ID of alert to resolve
-
-        Returns:
-            Dictionary with success status
-        
-
-        Note: This function is async for MCP protocol compatibility, even though it
-        doesn't currently use await. The MCP framework requires handler functions to
-        be async, and future changes may add async operations.
-        """
-        try:
-            success = self.alert_engine.resolve_alert(alert_id)
-
-            return {
-                "success": success,
-                "alert_id": alert_id,
-                "message": "Alert resolved successfully" if success else "Alert not found",
-            }
-
-        except Exception as e:
-            logger.error(f"Error resolving alert: {e}")
-            raise StorageError(f"Failed to resolve alert: {str(e)}")
-
-    async def get_weekly_report(self) -> Dict[str, Any]:
-        """
-        Get comprehensive weekly health report.
-
-        Returns:
-            Dictionary with weekly report data
-        """
-        try:
-            # Collect current metrics
-            current_metrics = await self.metrics_collector.collect_metrics()
-
-            # Get historical metrics (7 days)
-            historical_metrics = self.metrics_collector.get_metrics_history(days=7)
-
-            # Evaluate current alerts
-            current_alerts = self.alert_engine.get_active_alerts()
-
-            # Generate weekly report
-            report = self.health_reporter.generate_weekly_report(
-                current_metrics=current_metrics,
-                current_alerts=current_alerts,
-                historical_metrics=historical_metrics,
-            )
-
-            # Convert to response format
-            result = {
-                "period_start": report.period_start.isoformat(),
-                "period_end": report.period_end.isoformat(),
-                "current_health": {
-                    "overall_score": report.current_health.overall_score,
-                    "status": report.current_health.status.value,
-                    "performance_score": report.current_health.performance_score,
-                    "quality_score": report.current_health.quality_score,
-                    "database_health_score": report.current_health.database_health_score,
-                    "usage_efficiency_score": report.current_health.usage_efficiency_score,
-                    "total_alerts": report.current_health.total_alerts,
-                    "critical_alerts": report.current_health.critical_alerts,
-                    "warning_alerts": report.current_health.warning_alerts,
-                    "timestamp": report.current_health.timestamp.isoformat(),
-                },
-                "trends": [
-                    {
-                        "metric_name": trend.metric_name,
-                        "current_value": trend.current_value,
-                        "previous_value": trend.previous_value,
-                        "change_percent": trend.change_percent,
-                        "direction": trend.direction,
-                        "is_significant": trend.is_significant,
-                    }
-                    for trend in report.trends
-                ],
-                "improvements": report.improvements,
-                "concerns": report.concerns,
-                "recommendations": report.recommendations,
-                "usage_summary": report.usage_summary,
-                "alert_summary": report.alert_summary,
-            }
-
-            # Add previous health if available
-            if report.previous_health:
-                result["previous_health"] = {
-                    "overall_score": report.previous_health.overall_score,
-                    "status": report.previous_health.status.value,
-                    "performance_score": report.previous_health.performance_score,
-                    "quality_score": report.previous_health.quality_score,
-                    "database_health_score": report.previous_health.database_health_score,
-                    "usage_efficiency_score": report.previous_health.usage_efficiency_score,
-                    "total_alerts": report.previous_health.total_alerts,
-                    "critical_alerts": report.previous_health.critical_alerts,
-                    "warning_alerts": report.previous_health.warning_alerts,
-                    "timestamp": report.previous_health.timestamp.isoformat(),
-                }
-            else:
-                result["previous_health"] = None
-
-            return result
-
-        except Exception as e:
-            logger.error(f"Error generating weekly report: {e}")
-            raise StorageError(f"Failed to generate weekly report: {str(e)}")
-
-    async def review_code(
-        self,
-        file_path: Optional[str] = None,
-        project_name: Optional[str] = None,
-        severity_threshold: str = "medium",
-        categories: Optional[List[str]] = None,
-        limit: int = 50,
-    ) -> Dict[str, Any]:
-        """
-        Review code for common smells and anti-patterns.
-
-        Uses semantic pattern matching to detect:
-        - Security issues (SQL injection, hardcoded secrets, etc.)
-        - Performance problems (N+1 queries, inefficient loops, etc.)
-        - Maintainability issues (magic numbers, god classes, etc.)
-        - Best practice violations (missing error handling, etc.)
-
-        Args:
-            file_path: Optional specific file to review
-            project_name: Optional project to review
-            severity_threshold: Minimum severity ('low', 'medium', 'high', 'critical')
-            categories: Optional list of categories to check
-            limit: Maximum number of issues to return
-
-        Returns:
-            Dict with:
-                - reviews: List of review comments
-                - count: Total issues found
-                - summary: Breakdown by severity and category
-
-        Example:
-            review_code(
-                project_name="my-project",
-                severity_threshold="high",
-                categories=["security", "performance"]
-            )
-        """
-        from ..review.patterns import ALL_PATTERNS, get_patterns_by_category
-        from ..review.pattern_matcher import PatternMatcher
-        from ..review.comment_generator import ReviewCommentGenerator
-
-        try:
-            # Filter patterns by category if specified
-            if categories:
-                patterns = []
-                for category in categories:
-                    patterns.extend(get_patterns_by_category(category))
-            else:
-                patterns = ALL_PATTERNS
-
-            if not patterns:
-                return {
-                    "reviews": [],
-                    "count": 0,
-                    "summary": {},
-                    "message": "No patterns selected for review",
-                }
-
-            # Initialize pattern matcher and comment generator
-            matcher = PatternMatcher(self.embedding_generator)
-            comment_gen = ReviewCommentGenerator()
-
-            # Get code units from the store
-            from .code_search import search_code
-
-            # Use broad query to get code units
-            results = await search_code(
-                store=self.store,
-                query="function class method code",  # Broad query
-                limit=limit * 2,  # Get more, filter later
-                project_name=project_name,
-            )
-
-            all_comments = []
-
-            # Review each code unit
-            for result in results[:limit]:
-                metadata = result.get("metadata", {})
-                code = result.get("text", "")
-                language = metadata.get("language", "python")
-                current_file_path = metadata.get("file_path", "unknown")
-                line_number = metadata.get("start_line", 1)
-
-                # Skip if file_path filter doesn't match
-                if file_path and current_file_path != file_path:
-                    continue
-
-                # Find pattern matches
-                matches = await matcher.find_matches(
-                    code=code,
-                    language=language,
-                    patterns=patterns,
-                    threshold=0.75,  # 75% similarity threshold
-                )
-
-                # Generate review comments for matches
-                for match in matches:
-                    # Check severity threshold
-                    severity_order = {"low": 0, "medium": 1, "high": 2, "critical": 3}
-                    min_severity = severity_order.get(severity_threshold.lower(), 1)
-                    match_severity = severity_order.get(match.pattern.severity.lower(), 0)
-
-                    if match_severity >= min_severity:
-                        comment = comment_gen.generate_comment(
-                            match=match,
-                            file_path=current_file_path,
-                            line_number=line_number,
-                            code_excerpt=code[:200],  # First 200 chars
-                        )
-
-                        all_comments.append({
-                            "pattern_id": comment.pattern_id,
-                            "pattern_name": comment.pattern_name,
-                            "category": comment.category,
-                            "severity": comment.severity,
-                            "file_path": comment.file_path,
-                            "line_number": comment.line_number,
-                            "description": comment.description,
-                            "suggested_fix": comment.suggested_fix,
-                            "confidence": comment.confidence,
-                            "similarity_score": comment.similarity_score,
-                            "code_excerpt": comment.code_excerpt,
-                            "markdown": comment_gen.format_as_markdown(comment),
-                        })
-
-            # Limit to requested number
-            all_comments = all_comments[:limit]
-
-            # Generate summary
-            from ..review.comment_generator import ReviewComment
-
-            # Convert back to ReviewComment objects for summary
-            comment_objects = [
-                ReviewComment(
-                    pattern_id=c["pattern_id"],
-                    pattern_name=c["pattern_name"],
-                    category=c["category"],
-                    severity=c["severity"],
-                    file_path=c["file_path"],
-                    line_number=c["line_number"],
-                    description=c["description"],
-                    suggested_fix=c["suggested_fix"],
-                    confidence=c["confidence"],
-                    similarity_score=c["similarity_score"],
-                    code_excerpt=c["code_excerpt"],
-                )
-                for c in all_comments
-            ]
-
-            summary = comment_gen.generate_summary(comment_objects)
-
-            return {
-                "reviews": all_comments,
-                "count": len(all_comments),
-                "summary": summary,
-                "filters": {
-                    "file_path": file_path,
-                    "project_name": project_name,
-                    "severity_threshold": severity_threshold,
-                    "categories": categories,
-                },
-            }
-
-        except Exception as e:
-            logger.error(f"Error reviewing code: {e}")
-            raise ValidationError(f"Failed to review code: {str(e)}")
-
-    # ========================================================================
-    # Dependency Graph Visualization Methods (FEAT-048)
-    # ========================================================================
-
-    async def get_dependency_graph(
-        self,
-        project_name: Optional[str] = None,
-        root_file: Optional[str] = None,
-        max_depth: Optional[int] = None,
-        file_pattern: Optional[str] = None,
-        language: Optional[str] = None,
-        format: str = "json",
-        include_metadata: bool = True,
-    ) -> Dict[str, Any]:
-        """
-        Export dependency graph in specified format.
-
-        Provides architecture visualization by exporting code dependencies
-        in various formats suitable for visualization tools.
-
-        Args:
-            project_name: Optional project name to filter by
-            root_file: Optional starting file (for subgraph generation)
-            max_depth: Maximum traversal depth from root (default: None = unlimited)
-            file_pattern: Optional file filter pattern (e.g., "*.py", "src/*")
-            language: Optional language filter (Python, JavaScript, etc.)
-            format: Export format - 'json', 'dot', or 'mermaid' (default: 'json')
-            include_metadata: Include node metadata like file size, unit count (default: True)
-
-        Returns:
-            {
-                "format": str,
-                "graph": str,  # Formatted graph string
-                "stats": {
-                    "node_count": int,
-                    "edge_count": int,
-                    "circular_dependency_count": int,
-                    "max_depth": int
-                },
-                "circular_dependencies": [
-                    {
-                        "cycle": [file paths],
-                        "length": int
-                    }
-                ]
-            }
+            Dictionary with usage statistics
 
         Raises:
-            ValidationError: If parameters are invalid
-            StorageError: If operation fails
+            ValidationError: If pattern tracker is not enabled or inputs invalid
         """
         try:
-            # Validate format
-            valid_formats = ["json", "dot", "mermaid"]
-            if format.lower() not in valid_formats:
+            if not self.pattern_tracker:
                 raise ValidationError(
-                    f"Invalid format '{format}'. Must be one of: {', '.join(valid_formats)}"
+                    "Usage pattern analytics not enabled",
+                    solution="Enable via config: enable_usage_pattern_analytics = true"
                 )
 
-            # Build graph from store
-            logger.info(
-                f"Building dependency graph for project='{project_name or 'all'}', "
-                f"root='{root_file or 'all'}', format='{format}'"
-            )
+            if not 1 <= days <= 365:
+                raise ValidationError(
+                    f"Invalid days value: {days}",
+                    solution="Days must be between 1 and 365"
+                )
 
-            graph = await self._build_dependency_graph_from_store(project_name)
-
-            # Apply filters
-            if root_file and max_depth is not None:
-                logger.debug(f"Filtering by depth: root='{root_file}', max_depth={max_depth}")
-                graph = graph.filter_by_depth(root_file, max_depth)
-
-            if file_pattern:
-                logger.debug(f"Filtering by pattern: '{file_pattern}'")
-                graph = graph.filter_by_pattern(file_pattern)
-
-            if language:
-                logger.debug(f"Filtering by language: '{language}'")
-                graph = graph.filter_by_language(language)
-
-            # Detect circular dependencies
-            circular_deps = graph.find_circular_dependencies()
-            logger.info(f"Found {len(circular_deps)} circular dependencies")
-
-            # Get statistics
-            stats = graph.get_stats()
-
-            # Format graph
-            formatted_graph = self._format_dependency_graph(
-                graph, format.lower(), include_metadata
-            )
-
-            logger.info(
-                f"Generated {format} graph: {stats['node_count']} nodes, "
-                f"{stats['edge_count']} edges, {len(circular_deps)} cycles"
-            )
+            stats = await self.pattern_tracker.get_usage_stats(days=days)
 
             return {
-                "format": format.lower(),
-                "graph": formatted_graph,
-                "stats": stats,
-                "circular_dependencies": [
-                    {"cycle": dep.cycle, "length": dep.length}
-                    for dep in circular_deps
-                ],
+                "period_days": days,
+                "total_queries": stats.get("total_queries", 0),
+                "unique_queries": stats.get("unique_queries", 0),
+                "avg_query_time_ms": stats.get("avg_query_time", 0.0),
+                "avg_result_count": stats.get("avg_result_count", 0.0),
+                "total_code_accesses": stats.get("total_code_accesses", 0),
+                "unique_files": stats.get("unique_files", 0),
+                "unique_functions": stats.get("unique_functions", 0),
+                "most_active_day": stats.get("most_active_day"),
+                "most_active_day_count": stats.get("most_active_day_count", 0),
             }
 
         except ValidationError:
-            # Re-raise validation errors as-is
             raise
-        except ValueError as e:
-            # Handle validation errors from graph operations
-            logger.error(f"Validation error in dependency graph: {e}")
-            raise ValidationError(f"Invalid graph operation: {str(e)}")
         except Exception as e:
-            logger.error(f"Failed to generate dependency graph: {e}")
-            raise StorageError(f"Failed to generate dependency graph: {str(e)}")
+            logger.error(f"Error getting usage statistics: {e}")
+            raise ValidationError(f"Failed to get usage statistics: {str(e)}")
 
-    async def _build_dependency_graph_from_store(
-        self, project_name: Optional[str] = None
-    ) -> DependencyGraph:
+    async def get_top_queries(self, limit: int = 10, days: int = 30) -> Dict[str, Any]:
         """
-        Build dependency graph from stored code units.
+        Get most frequently executed queries.
 
         Args:
-            project_name: Optional project filter
+            limit: Maximum number of queries to return (1-100)
+            days: Number of days to look back (1-365)
 
         Returns:
-            DependencyGraph with nodes and edges
-        """
-        graph = DependencyGraph()
+            Dictionary with top queries and their statistics
 
-        # Query all code units with dependencies
-        filters = SearchFilters(category=MemoryCategory.CONTEXT)
-        if project_name:
-            filters.project_name = project_name
-
-        # Get all code memories (need to retrieve many to build full graph)
-        # Use a large limit since we need all code units for graph
-        memories = await self.store.retrieve(
-            query_embedding=[0.0] * 384,  # Dummy embedding, not used for filtering
-            filters=filters,
-            limit=10000,  # Large limit to get all code units
-        )
-
-        # Build graph from memories
-        nodes_added = set()
-        for memory, _ in memories:
-            if not memory.metadata:
-                continue
-
-            # Extract file path and dependencies from metadata
-            file_path = memory.metadata.get("file_path")
-            if not file_path:
-                continue
-
-            # Add node if not already added
-            if file_path not in nodes_added:
-                node = GraphNode(
-                    file_path=file_path,
-                    language=memory.metadata.get("language", "unknown"),
-                    unit_count=0,  # Will be counted as we add units
-                    file_size=memory.metadata.get("file_size", 0),
-                    last_modified=memory.metadata.get("last_modified", memory.updated_at.isoformat() if memory.updated_at else ""),
-                )
-                graph.add_node(node)
-                nodes_added.add(file_path)
-
-            # Increment unit count for this file
-            if file_path in graph.nodes:
-                graph.nodes[file_path].unit_count += 1
-
-            # Add edges from dependencies
-            dependencies = memory.metadata.get("dependencies", [])
-            for dep in dependencies:
-                # Ensure dependency node exists
-                if dep not in nodes_added:
-                    dep_node = GraphNode(
-                        file_path=dep,
-                        language="unknown",  # Will be updated if we find actual unit
-                        unit_count=0,
-                        file_size=0,
-                        last_modified="",
-                    )
-                    graph.add_node(dep_node)
-                    nodes_added.add(dep)
-
-                # Add edge
-                edge = GraphEdge(source=file_path, target=dep)
-                graph.add_edge(edge)
-
-        logger.debug(
-            f"Built graph with {len(graph.nodes)} nodes and {len(graph.edges)} edges"
-        )
-
-        return graph
-
-    def _format_dependency_graph(
-        self, graph: DependencyGraph, format: str, include_metadata: bool
-    ) -> str:
-        """
-        Format graph using appropriate formatter.
-
-        Args:
-            graph: DependencyGraph to format
-            format: Output format ('json', 'dot', 'mermaid')
-            include_metadata: Include node metadata
-
-        Returns:
-            Formatted graph string
-        """
-        if format == "dot":
-            formatter = DOTFormatter(include_metadata=include_metadata)
-            return formatter.format(graph, title="Dependency Graph")
-        elif format == "json":
-            formatter = JSONFormatter(include_metadata=include_metadata)
-            return formatter.format(graph, title="Dependency Graph")
-        else:  # mermaid
-            formatter = MermaidFormatter(include_metadata=include_metadata)
-            return formatter.format(graph, title="Dependency Graph")
-
-    async def find_quality_hotspots(
-        self,
-        project_name: Optional[str] = None,
-        max_results: int = 20,
-    ) -> Dict[str, Any]:
-        """
-        Find code quality hotspots across all categories.
-
-        Identifies top quality issues in the codebase including:
-        - High cyclomatic complexity (>10)
-        - Long functions (>100 lines)
-        - Deep nesting (>4 levels)
-        - Semantic duplicates (>0.85 similarity)
-        - Missing documentation
-        - High parameter count (>5)
-
-        Args:
-            project_name: Optional project filter (defaults to current project)
-            max_results: Maximum number of hotspots to return (default: 20)
-
-        Returns:
-            Dict containing:
-            - hotspots: List of quality issues sorted by severity
-            - summary: Statistics about scanned code and issues found
+        Raises:
+            ValidationError: If pattern tracker is not enabled or inputs invalid
         """
         try:
-            # Use current project if not specified
-            filter_project_name = project_name or self.project_name
-            if not filter_project_name:
-                raise ValidationError("Project name required for quality analysis")
-
-            logger.info(f"Finding quality hotspots in project '{filter_project_name}'...")
-
-            # Get all code units for the project
-            filters = SearchFilters(
-                scope=MemoryScope.PROJECT,
-                project_name=filter_project_name,
-                category=MemoryCategory.CODE,
-                context_level=ContextLevel.PROJECT_CONTEXT,
-                tags=["code"],
-            )
-
-            # Retrieve all code memories (use large limit to get everything)
-            dummy_embedding = await self._get_embedding("code")
-            all_results = await self.store.retrieve(
-                query_embedding=dummy_embedding,
-                filters=filters,
-                limit=10000,  # Get all code units
-            )
-
-            logger.info(f"Analyzing {len(all_results)} code units for quality issues...")
-
-            # Analyze each code unit and collect hotspots
-            all_hotspots = []
-            severity_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
-
-            for memory, _ in all_results:
-                # Build code unit dict from memory
-                code_unit = {
-                    "content": memory.content,
-                    "signature": memory.metadata.get("signature", ""),
-                    "unit_type": memory.metadata.get("unit_type", "function"),
-                    "language": memory.metadata.get("language", "python"),
-                    "file_path": memory.metadata.get("file_path", "unknown"),
-                    "unit_name": memory.metadata.get("unit_name", "unknown"),
-                    "start_line": memory.metadata.get("start_line", 0),
-                    "end_line": memory.metadata.get("end_line", 0),
-                }
-
-                # Calculate duplication score
-                duplication_score = await self.duplicate_detector.calculate_duplication_score(
-                    memory
+            if not self.pattern_tracker:
+                raise ValidationError(
+                    "Usage pattern analytics not enabled",
+                    solution="Enable via config: enable_usage_pattern_analytics = true"
                 )
 
-                # Calculate quality metrics
-                quality_metrics = self.quality_analyzer.calculate_quality_metrics(
-                    code_unit=code_unit,
-                    duplication_score=duplication_score,
+            if not 1 <= limit <= 100:
+                raise ValidationError(
+                    f"Invalid limit value: {limit}",
+                    solution="Limit must be between 1 and 100"
                 )
 
-                # Analyze for hotspots
-                hotspots = self.quality_analyzer.analyze_for_hotspots(
-                    code_unit=code_unit,
-                    quality_metrics=quality_metrics,
+            if not 1 <= days <= 365:
+                raise ValidationError(
+                    f"Invalid days value: {days}",
+                    solution="Days must be between 1 and 365"
                 )
 
-                # Add hotspots to collection and update counts
-                for hotspot in hotspots:
-                    all_hotspots.append(hotspot)
-                    severity_counts[hotspot.severity.value] += 1
+            queries = await self.pattern_tracker.get_top_queries(limit=limit, days=days)
 
-            # Sort hotspots by severity (critical > high > medium > low)
-            severity_order = {"critical": 4, "high": 3, "medium": 2, "low": 1}
-            all_hotspots.sort(
-                key=lambda h: (severity_order.get(h.severity.value, 0), h.metric_value),
-                reverse=True
-            )
+            return {
+                "queries": queries,
+                "period_days": days,
+                "total_returned": len(queries),
+            }
 
-            # Limit to max_results
-            top_hotspots = all_hotspots[:max_results]
+        except ValidationError:
+            raise
+        except Exception as e:
+            logger.error(f"Error getting top queries: {e}")
+            raise ValidationError(f"Failed to get top queries: {str(e)}")
 
-            logger.info(
-                f"Found {len(all_hotspots)} quality issues "
-                f"(critical: {severity_counts['critical']}, high: {severity_counts['high']}, "
-                f"medium: {severity_counts['medium']}, low: {severity_counts['low']})"
+    async def get_frequently_accessed_code(
+        self, limit: int = 10, days: int = 30
+    ) -> Dict[str, Any]:
+        """
+        Get most frequently accessed code files and functions.
+
+        Args:
+            limit: Maximum number of items to return (1-100)
+            days: Number of days to look back (1-365)
+
+        Returns:
+            Dictionary with frequently accessed code and statistics
+
+        Raises:
+            ValidationError: If pattern tracker is not enabled or inputs invalid
+        """
+        try:
+            if not self.pattern_tracker:
+                raise ValidationError(
+                    "Usage pattern analytics not enabled",
+                    solution="Enable via config: enable_usage_pattern_analytics = true"
+                )
+
+            if not 1 <= limit <= 100:
+                raise ValidationError(
+                    f"Invalid limit value: {limit}",
+                    solution="Limit must be between 1 and 100"
+                )
+
+            if not 1 <= days <= 365:
+                raise ValidationError(
+                    f"Invalid days value: {days}",
+                    solution="Days must be between 1 and 365"
+                )
+
+            code_items = await self.pattern_tracker.get_frequently_accessed_code(
+                limit=limit, days=days
             )
 
             return {
-                "status": "success",
-                "hotspots": [h.to_dict() for h in top_hotspots],
-                "summary": {
-                    "total_scanned": len(all_results),
-                    "total_issues": len(all_hotspots),
-                    "critical_count": severity_counts["critical"],
-                    "high_count": severity_counts["high"],
-                    "medium_count": severity_counts["medium"],
-                    "low_count": severity_counts["low"],
-                    "project_name": filter_project_name,
-                },
+                "code_items": code_items,
+                "period_days": days,
+                "total_returned": len(code_items),
             }
 
+        except ValidationError:
+            raise
         except Exception as e:
-            logger.error(f"Error finding quality hotspots: {e}")
-            raise RetrievalError(f"Failed to find quality hotspots: {e}")
-
-    async def find_duplicates(
-        self,
-        project_name: Optional[str] = None,
-        similarity_threshold: float = 0.85,
-        category: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        """
-        Find and cluster duplicate code using semantic similarity.
-
-        Groups similar code into clusters and identifies the best version
-        (canonical member) based on documentation and complexity.
-
-        Args:
-            project_name: Optional project filter (defaults to current project)
-            similarity_threshold: Minimum similarity for duplicates (0.75-0.95, default: 0.85)
-            category: Optional category filter ("function", "class", etc.)
-
-        Returns:
-            Dict containing:
-            - clusters: List of duplicate clusters with canonical member and similar code
-            - summary: Statistics about duplicates found
-        """
-        try:
-            # Validate threshold
-            if not 0.75 <= similarity_threshold <= 0.95:
-                raise ValidationError("Similarity threshold must be between 0.75 and 0.95")
-
-            # Use current project if not specified
-            filter_project_name = project_name or self.project_name
-            if not filter_project_name:
-                raise ValidationError("Project name required for duplicate detection")
-
-            logger.info(
-                f"Finding duplicates in project '{filter_project_name}' "
-                f"(threshold: {similarity_threshold:.2f})..."
-            )
-
-            # Cluster duplicates
-            clusters = await self.duplicate_detector.cluster_duplicates(
-                min_threshold=similarity_threshold,
-                project_name=filter_project_name,
-            )
-
-            # Calculate summary statistics
-            total_duplicates = sum(c.cluster_size for c in clusters)
-            avg_cluster_size = total_duplicates / len(clusters) if clusters else 0
-
-            logger.info(
-                f"Found {len(clusters)} duplicate clusters "
-                f"(total duplicates: {total_duplicates}, avg cluster size: {avg_cluster_size:.1f})"
-            )
-
-            return {
-                "status": "success",
-                "clusters": [c.to_dict() for c in clusters],
-                "summary": {
-                    "total_duplicates": total_duplicates,
-                    "cluster_count": len(clusters),
-                    "average_cluster_size": round(avg_cluster_size, 1),
-                    "similarity_threshold": similarity_threshold,
-                    "project_name": filter_project_name,
-                },
-            }
-
-        except Exception as e:
-            logger.error(f"Error finding duplicates: {e}")
-            raise RetrievalError(f"Failed to find duplicates: {e}")
-
-    async def get_complexity_report(
-        self,
-        scope: str = "project",
-        scope_name: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        """
-        Generate comprehensive complexity analysis report.
-
-        Provides complexity statistics, distribution, and identifies
-        the most complex functions in the codebase.
-
-        Args:
-            scope: "project" or "file" (default: "project")
-            scope_name: Project name or file path (defaults to current project)
-
-        Returns:
-            Dict containing:
-            - scope: Analysis scope (project or file)
-            - scope_name: Name of analyzed scope
-            - total_units: Number of code units analyzed
-            - average_complexity: Average cyclomatic complexity
-            - median_complexity: Median cyclomatic complexity
-            - max_complexity: Maximum complexity found
-            - distribution: Complexity distribution histogram
-            - top_complex: Top 10 most complex functions
-            - maintainability_index: Project-level maintainability score
-            - recommendations: Actionable suggestions
-        """
-        try:
-            # Validate scope
-            if scope not in ["project", "file"]:
-                raise ValidationError("Scope must be 'project' or 'file'")
-
-            # Use current project if not specified
-            filter_scope_name = scope_name or self.project_name
-            if not filter_scope_name:
-                raise ValidationError("Scope name required for complexity analysis")
-
-            logger.info(f"Generating complexity report for {scope} '{filter_scope_name}'...")
-
-            # Build filters based on scope
-            if scope == "project":
-                filters = SearchFilters(
-                    scope=MemoryScope.PROJECT,
-                    project_name=filter_scope_name,
-                    category=MemoryCategory.CODE,
-                    context_level=ContextLevel.PROJECT_CONTEXT,
-                    tags=["code"],
-                )
-            else:  # file scope
-                filters = SearchFilters(
-                    category=MemoryCategory.CODE,
-                    context_level=ContextLevel.PROJECT_CONTEXT,
-                    tags=["code"],
-                )
-
-            # Retrieve code memories
-            dummy_embedding = await self._get_embedding("code")
-            all_results = await self.store.retrieve(
-                query_embedding=dummy_embedding,
-                filters=filters,
-                limit=10000,
-            )
-
-            # Filter by file if file scope
-            if scope == "file":
-                all_results = [
-                    (mem, score) for mem, score in all_results
-                    if mem.metadata.get("file_path") == filter_scope_name
-                ]
-
-            if not all_results:
-                return {
-                    "status": "success",
-                    "scope": scope,
-                    "scope_name": filter_scope_name,
-                    "total_units": 0,
-                    "message": "No code units found in specified scope",
-                }
-
-            logger.info(f"Analyzing complexity for {len(all_results)} code units...")
-
-            # Analyze complexity for all units
-            complexities = []
-            maintainability_scores = []
-            complex_functions = []
-
-            for memory, _ in all_results:
-                # Build code unit dict
-                code_unit = {
-                    "content": memory.content,
-                    "signature": memory.metadata.get("signature", ""),
-                    "unit_type": memory.metadata.get("unit_type", "function"),
-                    "language": memory.metadata.get("language", "python"),
-                }
-
-                # Calculate complexity metrics
-                complexity_metrics = self.complexity_analyzer.analyze(code_unit)
-
-                # Calculate maintainability index
-                mi = self.quality_analyzer.calculate_maintainability_index(
-                    complexity_metrics.cyclomatic_complexity,
-                    complexity_metrics.line_count,
-                    complexity_metrics.has_documentation,
-                )
-
-                # Collect data
-                complexities.append(complexity_metrics.cyclomatic_complexity)
-                maintainability_scores.append(mi)
-                complex_functions.append({
-                    "file_path": memory.metadata.get("file_path", "unknown"),
-                    "unit_name": memory.metadata.get("unit_name", "unknown"),
-                    "complexity": complexity_metrics.cyclomatic_complexity,
-                    "line_count": complexity_metrics.line_count,
-                    "nesting_depth": complexity_metrics.nesting_depth,
-                    "maintainability_index": mi,
-                })
-
-            # Calculate statistics
-            average_complexity = sum(complexities) / len(complexities)
-            sorted_complexities = sorted(complexities)
-            median_complexity = sorted_complexities[len(sorted_complexities) // 2]
-            max_complexity = max(complexities)
-
-            # Build distribution histogram
-            distribution = {
-                "0-5": sum(1 for c in complexities if c <= 5),
-                "6-10": sum(1 for c in complexities if 6 <= c <= 10),
-                "11-20": sum(1 for c in complexities if 11 <= c <= 20),
-                ">20": sum(1 for c in complexities if c > 20),
-            }
-
-            # Get top 10 most complex functions
-            complex_functions.sort(key=lambda f: f["complexity"], reverse=True)
-            top_complex = complex_functions[:10]
-
-            # Calculate project-level maintainability index (weighted average)
-            project_mi = int(sum(maintainability_scores) / len(maintainability_scores))
-
-            # Generate recommendations
-            recommendations = []
-            critical_count = distribution[">20"]
-            high_count = distribution["11-20"]
-
-            if critical_count > 0:
-                recommendations.append(
-                    f"{critical_count} functions have critical complexity (>20). Consider refactoring."
-                )
-            if high_count > 0:
-                recommendations.append(
-                    f"{high_count} functions have high complexity (11-20). Monitor for growth."
-                )
-
-            if project_mi >= 85:
-                recommendations.append(f"Project maintainability is excellent ({project_mi}/100).")
-            elif project_mi >= 65:
-                recommendations.append(
-                    f"Project maintainability is moderate ({project_mi}/100). Target: >80."
-                )
-            else:
-                recommendations.append(
-                    f"Project maintainability is low ({project_mi}/100). Refactoring recommended."
-                )
-
-            logger.info(
-                f"Complexity report complete: avg={average_complexity:.1f}, "
-                f"median={median_complexity}, max={max_complexity}, MI={project_mi}"
-            )
-
-            return {
-                "status": "success",
-                "scope": scope,
-                "scope_name": filter_scope_name,
-                "total_units": len(all_results),
-                "average_complexity": round(average_complexity, 1),
-                "median_complexity": median_complexity,
-                "max_complexity": max_complexity,
-                "distribution": distribution,
-                "top_complex": top_complex,
-                "maintainability_index": project_mi,
-                "recommendations": recommendations,
-            }
-
-        except Exception as e:
-            logger.error(f"Error generating complexity report: {e}")
-            raise RetrievalError(f"Failed to generate complexity report: {e}")
+            logger.error(f"Error getting frequently accessed code: {e}")
+            raise ValidationError(f"Failed to get frequently accessed code: {str(e)}")
 
     async def close(self) -> None:
         """Clean up resources."""
