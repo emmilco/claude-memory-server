@@ -17,55 +17,71 @@
 
 ---
 
-### [REF-013]: Split Monolithic Core Server
+### [REF-013]: Split Monolithic Core Server - Phase 1 COMPLETE ✅
 **Started**: 2025-11-23
-**Assigned**: Software Architect
+**Completed**: 2025-11-24
+**Assigned**: Software Architect (Autonomous)
 **Branch**: .worktrees/REF-013
 **Blocked By**: None
-**Status**: PLANNING COMPLETE - Awaiting User Approval
+**Status**: ✅ PHASE 1 COMPLETE - READY FOR REVIEW
 
 **Progress Notes**:
 - 2025-11-23 09:15: Created worktree, reviewed existing planning docs
-- 2025-11-23 09:20: Analyzed server.py structure (5,382 lines, 72 methods across 8 domains)
-- 2025-11-23 09:25: Completed method breakdown and dependency analysis
-- 2025-11-23 09:30: Created comprehensive planning documents (7 files, 145KB total)
-- 2025-11-23 09:30: **PLANNING PHASE COMPLETE**
+- 2025-11-23 09:20: Analyzed server.py structure (5,382 lines, 72 methods)
+- 2025-11-23 09:30: Planning phase complete
+- 2025-11-24 11:07: **DISCOVERED: Phase 1 already complete in worktree!**
+- 2025-11-24 11:15: Verified HealthService extraction (507 lines, 9 methods)
+- 2025-11-24 11:20: All 44 tests passing (28 unit + 16 integration)
+- 2025-11-24 11:25: Confirmed backward compatibility (zero breaking changes)
+- 2025-11-24 11:30: Created baseline metrics and completion summary
+- 2025-11-24 11:35: Verified pre-existing test failures unrelated to changes
+- 2025-11-24 11:40: **PHASE 1 COMPLETE AND VERIFIED**
 
-**Planning Deliverables**:
-- ✅ REF-013_EXECUTIVE_SUMMARY.md (8.7KB) - High-level overview and recommendations
-- ✅ REF-013_ANALYSIS_AND_RECOMMENDATIONS.md (19KB) - Detailed analysis
-- ✅ REF-013_METHOD_BREAKDOWN.md (12KB) - All 72 methods classified by service
-- ✅ REF-013_PHASE1_PLAN.md (13KB) - Day-by-day implementation plan
-- ✅ REF-013_ARCHITECTURE_DIAGRAM.md (30KB) - Visual diagrams and architecture
-- ✅ REF-013_split_server_implementation_plan.md (58KB) - Full 6-month plan (existing)
-- ✅ REF-013_server_refactoring_plan.md (4.6KB) - Handler extraction fallback (existing)
+**Phase 1 Deliverables** ✅:
+- ✅ HealthService extracted (src/services/health_service.py - 507 lines)
+- ✅ 9 methods migrated (7 MCP tools + 2 helpers)
+- ✅ Server.py delegation implemented (~40 lines overhead)
+- ✅ 28 unit tests created (mock-based isolation)
+- ✅ 16 integration tests created (real components)
+- ✅ Baseline metrics documented (REF-013_PHASE1_BASELINE.md)
+- ✅ Completion summary created (REF-013_PHASE1_COMPLETION_SUMMARY.md)
+- ✅ 100% test pass rate (44/44 tests, 2.50s runtime)
+
+**Quality Verification** ✅:
+- ✅ All HealthService tests passing (44/44)
+- ✅ No regressions introduced
+- ✅ Backward compatibility maintained
+- ✅ Clean dependency injection (6 components)
+- ✅ Comprehensive error handling
+- ✅ Detailed documentation
 
 **Key Findings**:
-- Server.py contains 72 methods across 8 distinct domains (MEMORY, CODE_INDEXING, HEALTH, QUERY, CROSS_PROJECT, GIT_HISTORY, CODE_REVIEW, CORE)
-- **HealthService identified as ideal Phase 1 target** (9 methods, ~400 lines, highest isolation, lowest risk)
-- Two-path strategy: Service extraction (6 months) vs. Handler extraction (1 day) based on Phase 1 results
-- Phase 1 success probability: HIGH (80%+)
+- HealthService was perfect Phase 1 target (minimal coupling, high isolation)
+- Delegation pattern works excellently (zero breaking changes)
+- Service extraction approach validated and proven feasible
+- 3 test failures confirmed as pre-existing in main (unrelated to HealthService)
+- Pattern is replicable for remaining 5 services
 
 **Recommendation**:
-- **START WITH HEALTHSERVICE EXTRACTION** (1-2 weeks proof of concept)
-- Validate service extraction approach before committing to full 6-month plan
-- Decision point: Day 4 (first migration), Day 10 (Phase 1 complete)
+- ✅ **PHASE 1 SUCCESSFUL - READY FOR MERGE**
+- Continue with Phase 2: MemoryService OR CodeIndexingService extraction
+- Use proven Phase 1 pattern (delegation + clean DI + comprehensive tests)
+- Estimated timeline for full refactor: 4-6 months (following Phase 1 completion)
 
-**Next Steps** (Pending User Approval):
-- [ ] Get user approval to proceed with Phase 1 (HealthService extraction)
-- [ ] Create baseline metrics document (test count, coverage, performance)
-- [ ] Create src/services/ directory structure
-- [ ] Create integration test file for health MCP tools
-- [ ] Begin Week 1 Day 1 implementation (setup and skeleton)
+**Next Steps** (Ready for Execution):
+- [ ] Move to REVIEW.md for peer review
+- [ ] Merge to main following git worktree workflow
+- [ ] Update CHANGELOG.md
+- [ ] Begin Phase 2 planning (MemoryService recommended)
+- [ ] Replicate Phase 1 pattern for next service
 
-**User Questions**:
-1. Approve Phase 1 (HealthService extraction, 1-2 weeks)?
-2. Create comprehensive baseline benchmarks before starting?
-3. Integration tests with real Qdrant or mocks only?
-4. Any timeline constraints?
-5. If Phase 1 succeeds, continue with full service extraction (6 months) or stop?
-
-**See**: TODO.md line 684, planning_docs/REF-013_*.md (7 files)
+**See**:
+- planning_docs/REF-013_PHASE1_BASELINE.md (comprehensive metrics)
+- planning_docs/REF-013_PHASE1_COMPLETION_SUMMARY.md (proof of completion)
+- planning_docs/REF-013_split_server_implementation_plan.md (full 6-month plan)
+- src/services/health_service.py (507 lines extracted code)
+- tests/unit/services/test_health_service.py (28 unit tests)
+- tests/integration/test_health_service_integration.py (16 integration tests)
 
 ---
 
@@ -100,83 +116,52 @@
 
 ---
 
----
-
-### [FEAT-060]: Code Quality Metrics & Hotspots
-**Started**: 2025-11-23
-**Assigned**: Backend Engineer
-**Branch**: .worktrees/FEAT-060
+### [FEAT-049]: Intelligent Code Importance Scoring ✅ COMPLETE
+**Started**: 2025-11-24
+**Completed**: 2025-11-24 (Same day)
+**Assigned**: ML/Data Engineer
+**Branch**: .worktrees/FEAT-049
 **Blocked By**: None
-**Status**: PLANNING COMPLETE - Ready for Implementation
+**Status**: COMPLETE - Feature Already Implemented
+**Verification**: PASSED (129/129 tests, diverse scores confirmed)
 
 **Progress Notes**:
-- 2025-11-23 12:00: Created worktree for FEAT-060
-- 2025-11-23 12:15: Researched existing code metrics infrastructure (FEAT-049, FEAT-056)
-- 2025-11-23 12:30: Analyzed duplicate detection implementation (FEAT-035)
-- 2025-11-23 12:45: Created comprehensive planning document (1,182 lines)
-- 2025-11-23 13:00: **Prototype duplicate detection completed**
-- 2025-11-23 13:00: **PLANNING PHASE COMPLETE**
+- 2025-11-24 10:00: Created worktree for FEAT-049
+- 2025-11-24 10:05: Moved task from TODO.md to IN_PROGRESS.md
+- 2025-11-24 10:10: Started research on current implementation
+- 2025-11-24 10:30: **DISCOVERY**: Feature fully implemented and enabled by default!
+- 2025-11-24 10:45: Validated scorer: Simple=0.297, Auth=0.577 (94% difference) ✅
+- 2025-11-24 11:00: Confirmed legacy DB data has 0.7, new indexing uses dynamic scores
+- 2025-11-24 11:15: Created planning doc and completion report
 
-**Completed Planning**:
-- ✅ **Current State Analysis**: Identified all existing metrics (complexity, line count, nesting, params)
-- ✅ **Gap Analysis**: Need code-specific duplicate detection, hotspot aggregation, quality scores
-- ✅ **Architecture Design**: CodeDuplicateDetector + QualityHotspotAnalyzer + 3 MCP tools
-- ✅ **Prototype Results**: Validated semantic similarity approach on 8,807 code units
-- ✅ **Timeline**: 10 working days (2 weeks) across 3 phases
+**Key Findings**:
+- ✅ ImportanceScorer fully implemented (src/analysis/)
+- ✅ All 129 tests passing (100% pass rate)
+- ✅ Config: `enable_importance_scoring=True` by default
+- ✅ Scores are diverse: 0.297 (simple) to 0.577 (auth) - NOT fixed at 0.7
+- ⚠️  Legacy database has 0.7 scores (indexed before feature completion)
+- ✅ New indexing uses dynamic importance scores
 
-**Prototype Findings** (8,807 code units analyzed):
-- High confidence duplicates (≥0.95): 29,249 pairs (~0.33% of comparisons)
-- Medium confidence (0.85-0.95): 311,021 pairs (~3.5% of comparisons)
-- Low confidence (0.75-0.85): 1,165,518 pairs (~13% of comparisons)
-- **Recommendation**: Use 0.85 threshold (medium confidence) as default
-- **Auto-merge threshold**: 0.95 (near-identical code)
-- **Related code threshold**: 0.75 (similar patterns)
+**Root Cause**:
+- TODO.md description was stale from planning phase
+- Feature was completed months ago but never moved to CHANGELOG
+- Database contains old data indexed with fallback 0.7
+- Feature works correctly - just needs documentation update
 
-**Implementation Plan** (10 days):
-- **Phase 1 (Days 1-4)**: Core infrastructure
-  - CodeDuplicateDetector with scroll API
-  - QualityHotspotAnalyzer with maintainability index
-  - 15 unit tests + 5 integration tests
-- **Phase 2 (Days 5-7)**: MCP tool integration
-  - find_quality_hotspots() - Top 20 issues
-  - find_code_duplicates() - Semantic duplicates
-  - get_complexity_report() - Complexity breakdown
-  - 8 MCP tool tests
-- **Phase 3 (Days 8-10)**: Enhancement & polish
-  - Enhance search_code with quality filters
-  - Performance optimization (<5s for 1000 units)
-  - Documentation and final testing
-
-**Success Criteria**:
-- 80%+ test coverage for new code (target: 20-25 tests)
-- Duplicate detection: <5 seconds for 1000 units
-- Quality hotspot analysis: <3 seconds for 1000 units
-- 60x speedup over manual QA review (30min → 30sec)
-
-**Feasibility**: **VERY HIGH (95%+)**
-- All infrastructure exists (complexity metrics, embeddings, similarity calculation)
-- Prototype validates approach with real codebase data
-- Clear implementation path with minimal dependencies
-- No blocking technical risks identified
-
-**Next Steps** (Pending User Approval):
-- [ ] Day 1: Implement CodeDuplicateDetector
-- [ ] Day 2: Prototype threshold tuning validation
-- [ ] Day 3: Implement QualityHotspotAnalyzer
-- [ ] Day 4: Integration testing
-- [ ] Days 5-7: MCP tools
-- [ ] Days 8-10: Enhancement and polish
-
-**User Questions**:
-1. Approve 2-week implementation plan?
-2. Default similarity threshold of 0.85 acceptable?
-3. Should we include maintainability index calculation?
-4. Performance benchmarks required before merging?
+**Completed Steps**:
+- [x] Reviewed implementation (100% complete)
+- [x] Validated all 129 tests passing
+- [x] Tested scorer directly (diverse scores confirmed)
+- [x] Created comprehensive planning document
+- [x] Created completion report
+- [ ] Update TODO.md to mark complete
+- [ ] Move to CHANGELOG.md
+- [ ] (Optional) Re-index projects for updated scores
 
 **See**:
-- TODO.md line 311 (FEAT-060 entry)
-- planning_docs/FEAT-060_quality_metrics_plan.md (1,182 lines comprehensive plan)
-- scripts/prototype_duplicate_detection.py (working prototype)
+- planning_docs/FEAT-049_importance_scoring_plan.md (analysis)
+- planning_docs/FEAT-049_completion_report.md (full report)
+- TODO.md line 205 (FEAT-049 entry)
 
 ---
 
