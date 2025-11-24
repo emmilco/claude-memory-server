@@ -69,6 +69,14 @@ Organize entries under these headers in chronological order (newest first):
   - Added API documentation guides: CALL_GRAPH_API.md and CALL_GRAPH_USER_GUIDE.md
   - Files: src/graph/call_graph.py, src/analysis/call_extractors.py, src/store/call_graph_store.py
 
+- **PERF-007: Connection Pooling for Qdrant - Test Suite**
+  - Added comprehensive unit tests for connection pool (56 tests total)
+  - Created `tests/unit/test_store/test_connection_pool.py` with 33 tests covering initialization, acquire/release, pool exhaustion, health checking, connection recycling, metrics, and cleanup
+  - Created `tests/unit/test_store/test_connection_health_checker.py` with 23 tests covering fast/medium/deep health checks, statistics, and concurrent operations
+  - Connection pool implementation in `src/store/connection_pool.py` (already complete)
+  - Health checking in `src/store/connection_health_checker.py` (already complete)
+  - Pool monitoring in `src/store/connection_pool_monitor.py` (already complete)
+  - Configuration options in `src/config.py` for pool sizing, timeouts, recycling, and health checks
 ### Added - 2025-11-23
 - **FEAT-056: Advanced Filtering & Sorting for search_code**
   - Added glob pattern matching for `file_pattern` (e.g., `**/*.test.py`, `src/**/auth*.ts`)
