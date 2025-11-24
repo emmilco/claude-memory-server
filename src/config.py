@@ -122,6 +122,11 @@ class ServerConfig(BaseSettings):
     cross_project_default_mode: str = "current"  # "current" or "all"
     cross_project_opt_in_file: str = "~/.claude-rag/cross_project_consent.json"
 
+    # GPU acceleration (PERF-002)
+    enable_gpu: bool = True  # Auto-use GPU if available
+    force_cpu: bool = False  # Override GPU detection, use CPU only
+    gpu_memory_fraction: float = 0.8  # Max GPU memory to use (0.0-1.0)
+
     # Multi-repository support (FEAT-017)
     enable_multi_repository: bool = True  # Enable multi-repository features
     multi_repo_max_parallel: int = 3  # Max concurrent repository operations
@@ -239,6 +244,10 @@ class ServerConfig(BaseSettings):
             raise ValueError("importance_usage_weight must be between 0.0 and 2.0")
         if not 0.0 <= self.importance_criticality_weight <= 2.0:
             raise ValueError("importance_criticality_weight must be between 0.0 and 2.0")
+
+        # Validate GPU settings (PERF-002)
+        if not 0.0 <= self.gpu_memory_fraction <= 1.0:
+            raise ValueError("gpu_memory_fraction must be between 0.0 and 1.0")
 
         return self
 
