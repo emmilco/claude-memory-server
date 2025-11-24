@@ -397,17 +397,26 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
 
 ### 🚀 Tier 5: Advanced/Future Features
 
-- [ ] **FEAT-016**: Auto-indexing
-  - [ ] Automatically index on project open
-  - [ ] Background indexing for large projects
+- [x] **FEAT-016**: Auto-indexing ✅ **MERGED** (2025-11-24)
+  - [x] Automatically index on project open
+  - [x] Background indexing for large projects
+  - [x] ProjectIndexTracker for staleness detection
+  - [x] AutoIndexingService with foreground/background modes
+  - [x] 11 new configuration options
+  - [x] MCP tools: get_indexing_status(), trigger_reindex()
 
 - [ ] **FEAT-017**: Multi-repository support
   - [ ] Index across multiple repositories
   - [ ] Cross-repo code search
 
-- [ ] **FEAT-018**: Query DSL
-  - [ ] Advanced filters (by file pattern, date, author, etc.)
-  - [ ] Complex query expressions
+- [x] **FEAT-018**: Query DSL ✅ **MERGED** (2025-11-24)
+  - [x] Advanced filters (by file pattern, date, author, etc.)
+  - [x] Complex query expressions
+  - **Status:** MVP complete and merged to main
+  - **Implementation:** Query DSL parser with filter aliases, date filters, exclusions
+  - **Testing:** 20 comprehensive tests, all passing
+  - **Files:** `src/search/query_dsl_parser.py`, `tests/unit/test_query_dsl_parser.py`
+  - **Commit:** af53087
 
 - [ ] **FEAT-014**: Semantic refactoring
   - [ ] Find all usages semantically
