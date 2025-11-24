@@ -1,6 +1,12 @@
-"""Graph module for dependency visualization."""
+"""Graph analysis module for call graphs and dependency analysis."""
 
-from .dependency_graph import (
+from src.graph.call_graph import (
+    CallSite,
+    FunctionNode,
+    InterfaceImplementation,
+    CallGraph,
+)
+from src.graph.dependency_graph import (
     DependencyGraph,
     GraphNode,
     GraphEdge,
@@ -9,6 +15,10 @@ from .dependency_graph import (
 )
 
 __all__ = [
+    "CallSite",
+    "FunctionNode",
+    "InterfaceImplementation",
+    "CallGraph",
     "DependencyGraph",
     "GraphNode",
     "GraphEdge",

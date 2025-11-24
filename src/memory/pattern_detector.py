@@ -272,8 +272,9 @@ class PatternDetector:
             matches = re.findall(pattern, message, re.IGNORECASE)
             entities.extend(matches)
 
-        # Deduplicate and clean
-        entities = list(set([e.strip().lower() for e in entities if e.strip()]))
+        # Deduplicate and clean (preserve order using dict)
+        cleaned = [e.strip().lower() for e in entities if e.strip()]
+        entities = list(dict.fromkeys(cleaned))  # Preserves insertion order (Python 3.7+)
 
         return entities[:10]  # Limit to top 10 entities
 

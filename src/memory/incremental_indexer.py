@@ -137,6 +137,8 @@ from src.store.qdrant_store import QdrantMemoryStore
 from src.core.models import MemoryCategory, ContextLevel, MemoryScope
 from src.core.exceptions import StorageError
 from src.memory.import_extractor import ImportExtractor, build_dependency_metadata
+from src.store.call_graph_store import QdrantCallGraphStore
+from src.analysis.call_extractors import get_call_extractor
 
 logger = logging.getLogger(__name__)
 
@@ -288,6 +290,10 @@ class IncrementalIndexer(BaseCodeIndexer):
         # Import extractor for dependency tracking
         self.import_extractor = ImportExtractor()
 
+        # Call graph store for call extraction (FEAT-059)
+        self.call_graph_store = QdrantCallGraphStore(config)
+        logger.info("Call graph store initialized for call extraction")
+
         # Importance scorer for intelligent code importance (FEAT-049)
         if config.enable_importance_scoring:
             from src.analysis.importance_scorer import ImportanceScorer
@@ -306,6 +312,9 @@ class IncrementalIndexer(BaseCodeIndexer):
     async def initialize(self) -> None:
         """Initialize the indexer (connect to storage, etc.)."""
         await self.store.initialize()
+
+        # Initialize call graph store (FEAT-059)
+        await self.call_graph_store.initialize()
 
         # Initialize embedding generator (especially important for parallel generator)
         if hasattr(self.embedding_generator, 'initialize'):
@@ -356,6 +365,29 @@ class IncrementalIndexer(BaseCodeIndexer):
             import_metadata = build_dependency_metadata(imports)
             logger.debug(f"Extracted {len(imports)} imports from {file_path.name}")
 
+            # Extract function calls for call graph (FEAT-059)
+            call_extractor = get_call_extractor(parse_result.language)
+            if call_extractor:
+                try:
+                    call_sites = call_extractor.extract_calls(
+                        str(file_path),
+                        source_code,
+                        parse_result
+                    )
+                    implementations = call_extractor.extract_implementations(
+                        str(file_path),
+                        source_code
+                    )
+                    logger.debug(f"Extracted {len(call_sites)} call sites and {len(implementations)} implementations from {file_path.name}")
+                except Exception as e:
+                    logger.warning(f"Failed to extract calls from {file_path.name}: {e}")
+                    call_sites = []
+                    implementations = []
+            else:
+                logger.debug(f"No call extractor available for {parse_result.language}")
+                call_sites = []
+                implementations = []
+
             if not parse_result.units:
                 logger.debug(f"No semantic units found in {file_path}")
                 return {
@@ -392,9 +424,21 @@ class IncrementalIndexer(BaseCodeIndexer):
                 import_metadata,
             )
 
+            # Step 6: Store call graph data (FEAT-059)
+            if call_sites or implementations:
+                await self._store_call_graph(
+                    file_path,
+                    parse_result.units,
+                    call_sites,
+                    implementations,
+                    parse_result.language,
+                )
+                logger.debug(f"Stored call graph: {len(call_sites)} calls, {len(implementations)} implementations")
+
             logger.info(
                 f"Indexed {len(stored_ids)} units from {file_path.name} "
-                f"({parse_result.parse_time_ms:.2f}ms parse)"
+                f"({parse_result.parse_time_ms:.2f}ms parse, "
+                f"{len(call_sites)} calls extracted)"
             )
 
             return {
@@ -405,6 +449,8 @@ class IncrementalIndexer(BaseCodeIndexer):
                 "unit_ids": stored_ids,
                 "imports_extracted": len(imports),
                 "dependencies": import_metadata.get("dependencies", []),
+                "call_sites_extracted": len(call_sites),
+                "implementations_extracted": len(implementations),
             }
 
         except Exception as e:
@@ -1000,6 +1046,214 @@ class IncrementalIndexer(BaseCodeIndexer):
         # Batch store
         stored_ids = await self.store.batch_store(items)
         return stored_ids
+
+    async def _store_call_graph(
+        self,
+        file_path: Path,
+        units: List["SemanticUnit"],
+        call_sites: List["CallSite"],
+        implementations: List["InterfaceImplementation"],
+        language: str,
+    ) -> None:
+        """
+        Store call graph data for indexed file.
+
+        Args:
+            file_path: Source file path
+            units: List of semantic units (functions/classes)
+            call_sites: List of function calls
+            implementations: List of interface implementations
+            language: Programming language
+        """
+        from src.graph.call_graph import FunctionNode
+
+        try:
+            # Build unit hierarchy to determine qualified names
+            # Two-pass approach: first find all classes, then assign qualified names
+
+            # Pass 1: Find all class definitions and their line ranges
+            class_ranges = []  # List of (class_name, start_line, end_line)
+            for unit in units:
+                if unit.unit_type == "class":
+                    class_name = self._extract_function_name(unit.name)
+                    class_ranges.append((class_name, unit.start_line, unit.end_line))
+
+            # Pass 2: Build qualified names for all units
+            unit_qualified_names = {}
+            for unit in units:
+                if unit.unit_type == "class":
+                    class_name = self._extract_function_name(unit.name)
+                    unit_qualified_names[unit] = class_name
+                elif unit.unit_type in ("function", "method"):
+                    func_name = self._extract_function_name(unit.name)
+
+                    # Check if this function is within a class
+                    parent_class = None
+                    for class_name, class_start, class_end in class_ranges:
+                        if class_start < unit.start_line < class_end:
+                            parent_class = class_name
+                            break
+
+                    # Build qualified name
+                    if parent_class:
+                        qualified_name = f"{parent_class}.{func_name}"
+                    else:
+                        qualified_name = func_name
+
+                    unit_qualified_names[unit] = qualified_name
+
+            # Step 1: Store function nodes for all units FIRST
+            # (must exist before we can attach call sites to them)
+            for unit in units:
+                qualified_name = unit_qualified_names.get(unit, self._extract_function_name(unit.name))
+                func_name = self._extract_function_name(unit.name)
+
+                # Determine if function is exported (heuristic: not starting with _)
+                is_exported = not func_name.startswith("_")
+
+                # Determine if async
+                is_async = "async" in unit.signature
+
+                # Extract parameters from signature (basic parsing)
+                parameters = self._extract_parameters(unit.signature)
+
+                # Create function node
+                node = FunctionNode(
+                    name=func_name,
+                    qualified_name=qualified_name,  # Use qualified name (Class.method or just function)
+                    file_path=str(file_path.resolve()),
+                    language=language,
+                    start_line=unit.start_line,
+                    end_line=unit.end_line,
+                    is_exported=is_exported,
+                    is_async=is_async,
+                    parameters=parameters,
+                    return_type=None,  # TODO: Extract from signature if available
+                )
+
+                # Store function node WITHOUT call sites (those come later)
+                await self.call_graph_store.store_function_node(
+                    node=node,
+                    project_name=self.project_name,
+                    calls_to=[],  # Empty for now
+                    called_by=[],  # Empty for now
+                )
+
+            # Step 2: Store call sites for each caller function
+            # (now that all function nodes exist in the database)
+            caller_groups = {}
+            for call_site in call_sites:
+                if call_site.caller_function not in caller_groups:
+                    caller_groups[call_site.caller_function] = []
+                caller_groups[call_site.caller_function].append(call_site)
+
+            for caller_function, sites in caller_groups.items():
+                try:
+                    await self.call_graph_store.store_call_sites(
+                        function_name=caller_function,
+                        call_sites=sites,
+                        project_name=self.project_name,
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to store call sites for {caller_function}: {e}")
+
+            # Store implementations grouped by interface
+            impl_groups = {}
+            for impl in implementations:
+                if impl.interface_name not in impl_groups:
+                    impl_groups[impl.interface_name] = []
+                impl_groups[impl.interface_name].append(impl)
+
+            for interface_name, impls in impl_groups.items():
+                try:
+                    await self.call_graph_store.store_implementations(
+                        interface_name=interface_name,
+                        implementations=impls,
+                        project_name=self.project_name,
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to store implementations for {interface_name}: {e}")
+
+            logger.debug(
+                f"Stored call graph for {file_path.name}: "
+                f"{len(units)} functions, {len(call_sites)} calls, {len(implementations)} implementations"
+            )
+
+        except Exception as e:
+            logger.error(f"Failed to store call graph for {file_path}: {e}")
+            # Don't raise - call graph is optional, continue with indexing
+
+    def _extract_function_name(self, signature: str) -> str:
+        """
+        Extract clean function name from signature.
+
+        Args:
+            signature: Function signature (e.g., "def add(a, b):" or "async def foo():" or "class MyClass:")
+
+        Returns:
+            Clean function name (e.g., "add", "foo", "MyClass")
+        """
+        import re
+
+        # Handle class definitions
+        if signature.startswith('class '):
+            signature = signature.replace('class ', '').strip(':')
+            match = re.match(r'([a-zA-Z_][a-zA-Z0-9_]*)', signature)
+            if match:
+                return match.group(1)
+
+        # Remove 'def' or 'async def' prefix
+        signature = re.sub(r'^(async\s+)?def\s+', '', signature)
+
+        # Extract function name (everything before the opening parenthesis)
+        match = re.match(r'([a-zA-Z_][a-zA-Z0-9_\.]*)', signature)
+        if match:
+            # Handle qualified names (e.g., "Calculator.add_numbers")
+            # Use the last component (method name)
+            full_name = match.group(1)
+            return full_name.split('.')[-1] if '.' in full_name else full_name
+
+        # Fallback: return the signature as-is
+        return signature
+
+    def _extract_parameters(self, signature: str) -> List[str]:
+        """
+        Extract parameter names from function signature.
+
+        Args:
+            signature: Function signature string
+
+        Returns:
+            List of parameter names
+        """
+        import re
+
+        # Simple regex to extract parameters from signature
+        # Handles: def func(a, b, c=1, *args, **kwargs)
+        match = re.search(r'\((.*?)\)', signature)
+        if not match:
+            return []
+
+        params_str = match.group(1)
+        if not params_str.strip():
+            return []
+
+        # Split by comma and extract parameter names
+        params = []
+        for param in params_str.split(','):
+            param = param.strip()
+            if not param:
+                continue
+
+            # Remove default values, type hints, *args, **kwargs
+            param = re.sub(r':\s*[^=]+', '', param)  # Remove type hints
+            param = re.sub(r'=.*$', '', param)  # Remove default values
+            param = param.strip('*').strip()  # Remove *, **
+
+            if param:
+                params.append(param)
+
+        return params
 
     async def close(self) -> None:
         """Clean up resources."""

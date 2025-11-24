@@ -1,20 +1,13 @@
-"""
-Code analysis modules for importance scoring.
+"""Code analysis module for call extraction and structural analysis."""
 
-This package provides analyzers for calculating code unit importance based on:
-- Complexity metrics (cyclomatic complexity, lines, nesting)
-- Usage patterns (call graph centrality, public/private API)
-- Criticality indicators (security keywords, error handling)
-"""
-
-from src.analysis.complexity_analyzer import ComplexityAnalyzer
-from src.analysis.usage_analyzer import UsageAnalyzer
-from src.analysis.criticality_analyzer import CriticalityAnalyzer
-from src.analysis.importance_scorer import ImportanceScorer
+from src.analysis.call_extractors import (
+    BaseCallExtractor,
+    PythonCallExtractor,
+    get_call_extractor,
+)
 
 __all__ = [
-    "ComplexityAnalyzer",
-    "UsageAnalyzer",
-    "CriticalityAnalyzer",
-    "ImportanceScorer",
+    "BaseCallExtractor",
+    "PythonCallExtractor",
+    "get_call_extractor",
 ]
