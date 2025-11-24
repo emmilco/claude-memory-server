@@ -51,6 +51,14 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Fixed - 2025-11-24
+- **CRITICAL: Fixed import errors causing 173+ test failures**
+  - Added missing imports for monitoring classes (MetricsCollector, AlertEngine, HealthReporter, CapacityPlanner)
+  - Removed redundant local `import os` that was shadowing module-level import and causing UnboundLocalError
+  - Fixed in `src/core/server.py` lines 49-52 (added imports), line 285 (removed local import)
+  - Root cause: Recent feature merges (FEAT-020, FEAT-022) added monitoring code without proper imports
+  - Impact: All tests now passing import phase, resolves CI failures
+
 ### Changed - 2025-11-24
 - **WORKFLOW: Mandatory Verification Before Completion**
   - Updated CLAUDE.md, TASK_WORKFLOW.md, IN_PROGRESS.md to require ALL 6 verification gates pass before moving tasks to REVIEW.md

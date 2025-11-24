@@ -46,6 +46,10 @@ from src.memory.query_expander import QueryExpander
 from src.memory.suggestion_engine import SuggestionEngine
 from src.search.hybrid_search import HybridSearcher, FusionMethod
 from src.analytics.usage_tracker import UsagePatternTracker
+from src.monitoring.metrics_collector import MetricsCollector
+from src.monitoring.alert_engine import AlertEngine
+from src.monitoring.health_reporter import HealthReporter
+from src.monitoring.capacity_planner import CapacityPlanner
 
 logger = logging.getLogger(__name__)
 
@@ -278,7 +282,6 @@ class MemoryRAGServer:
 
             # Initialize usage pattern analytics (FEAT-020)
             if self.config.enable_usage_pattern_analytics:
-                import os
                 # Store analytics DB in same directory as SQLite memory DB
                 sqlite_dir = os.path.dirname(os.path.expanduser(self.config.sqlite_path))
                 analytics_db_path = os.path.join(sqlite_dir, "usage_analytics.db")
