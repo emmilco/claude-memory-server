@@ -1,7 +1,7 @@
 # IN_PROGRESS - Active Work
 
 **Maximum Concurrent Tasks: 6**
-**Current Active: 0/6**
+**Current Active: 1/6**
 
 ---
 
@@ -15,7 +15,42 @@
 
 ## Active Tasks
 
-<!-- No tasks currently in progress -->
+---
+
+### [FEAT-057]: Better UX & Discoverability
+**Started**: 2025-11-23
+**Assigned**: Claude Code Agent (Backend Engineer with UX focus)
+**Branch**: worktrees/FEAT-057
+**Blocked By**: None
+**Status**: Complete - Ready for Review
+
+**Progress Notes**:
+- 2025-11-23: Created worktree and reviewed planning document
+- 2025-11-23: Implemented QuerySuggester for intent-based suggestions
+- 2025-11-23: Implemented ResultSummarizer for faceted search results
+- 2025-11-23: Implemented SpellingSuggester for typo detection
+- 2025-11-23: Implemented RefinementAdvisor for search hints
+- 2025-11-23: Enhanced search_code with facets, summaries, hints, and "Did you mean?"
+- 2025-11-23: Added suggest_queries MCP tool to server
+- 2025-11-23: All 42 unit tests passing (1 skipped)
+- 2025-11-23: Ready for final testing and merge
+
+**Completed Features**:
+- [x] Query suggestion system with intent/project/domain/general suggestions
+- [x] Faceted search results (languages, unit_types, files, directories)
+- [x] Natural language result summaries
+- [x] "Did you mean?" spelling suggestions
+- [x] Interactive refinement hints
+- [x] suggest_queries MCP tool
+- [x] 42 comprehensive unit tests
+- [x] Backward compatible with existing search_code API
+
+**Next Steps**:
+- [ ] Run verify-complete.py
+- [ ] Move to REVIEW.md
+- [ ] Merge to main
+
+**See**: planning_docs/FEAT-057_ux_discoverability_plan.md
 
 ---
 

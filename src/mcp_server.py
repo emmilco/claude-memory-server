@@ -234,6 +234,36 @@ async def list_tools() -> List[Tool]:
             },
         ),
         Tool(
+            name="suggest_queries",
+            description=(
+                "Get contextual query suggestions based on indexed codebase and user intent. "
+                "FEAT-057: Helps users overcome query formulation paralysis by suggesting effective queries."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "intent": {
+                        "type": "string",
+                        "enum": ["implementation", "debugging", "learning", "exploration", "refactoring"],
+                        "description": "User's current intent or task"
+                    },
+                    "project_name": {
+                        "type": "string",
+                        "description": "Project to scope suggestions to"
+                    },
+                    "context": {
+                        "type": "string",
+                        "description": "Additional context from conversation"
+                    },
+                    "max_suggestions": {
+                        "type": "integer",
+                        "default": 8,
+                        "description": "Maximum suggestions to return"
+                    },
+                },
+            },
+        ),
+        Tool(
             name="index_codebase",
             description="Index a codebase directory for semantic code search",
             inputSchema={
@@ -528,6 +558,44 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
             # FEAT-056: Show sort info if not default
             if result.get("sort_info") and result["sort_info"].get("sort_by") != "relevance":
                 output += f"\n(Sorted by: {result['sort_info']['sort_by']} {result['sort_info']['sort_order']})\n"
+
+            return [TextContent(type="text", text=output)]
+
+        elif name == "suggest_queries":
+            result = await memory_server.suggest_queries(**arguments)
+            output = f"✅ Query Suggestions ({result['total_suggestions']} suggestions):\n\n"
+
+            # Show indexed stats
+            stats = result["indexed_stats"]
+            output += f"Indexed: {stats.get('total_units', 0)} code units in {stats.get('total_files', 0)} files\n"
+            if stats.get("languages"):
+                langs = ", ".join(f"{lang} ({count})" for lang, count in list(stats["languages"].items())[:3])
+                output += f"Languages: {langs}\n"
+            output += "\n"
+
+            # Group suggestions by category
+            suggestions_by_cat = {}
+            for suggestion in result["suggestions"]:
+                cat = suggestion["category"]
+                if cat not in suggestions_by_cat:
+                    suggestions_by_cat[cat] = []
+                suggestions_by_cat[cat].append(suggestion)
+
+            # Display suggestions grouped by category
+            category_names = {
+                "template": "Intent-Based Suggestions",
+                "project": "Project-Specific Suggestions",
+                "domain": "Domain Presets",
+                "general": "General Discovery"
+            }
+
+            for cat in ["template", "project", "domain", "general"]:
+                if cat in suggestions_by_cat:
+                    output += f"**{category_names[cat]}**:\n"
+                    for suggestion in suggestions_by_cat[cat]:
+                        output += f"  • \"{suggestion['query']}\"\n"
+                        output += f"    {suggestion['description']}\n"
+                    output += "\n"
 
             return [TextContent(type="text", text=output)]
 
