@@ -130,21 +130,34 @@ TODO.md → IN_PROGRESS.md → REVIEW.md → CHANGELOG.md
 
 **Details:** See TASK_WORKFLOW.md for complete lifecycle.
 
-### 3. Quality Gates (Before Merging)
+### 3. Quality Gates (MANDATORY Before Moving to REVIEW.md)
+
+**⚠️ CRITICAL WORKFLOW REQUIREMENT:**
 
 **Run comprehensive verification:**
 ```bash
 python scripts/verify-complete.py
 ```
 
-**Checks:**
-- ✅ All tests passing (100% pass rate)
+**Checks (ALL 6 gates MUST pass):**
+- ✅ All tests passing (100% pass rate - ZERO failures)
 - ✅ Coverage ≥80% for core modules
 - ✅ No syntax errors
 - ✅ CHANGELOG.md updated
 - ✅ Qdrant accessible
+- ✅ Git status clean (no conflicts)
 
-**If any check fails → NOT ready to merge**
+**If ANY gate fails:**
+1. **DO NOT** move task to REVIEW.md
+2. **DO NOT** report task as complete
+3. **FIX** all issues immediately
+4. **RE-RUN** verify-complete.py
+5. **REPEAT** until ALL 6 gates pass
+
+**Only after verify-complete.py shows "✅ Task is ready for completion" can you:**
+- Move task from IN_PROGRESS.md to REVIEW.md
+- Report task as complete
+- Request peer review
 
 **Details:** See TESTING_GUIDE.md for testing strategies.
 

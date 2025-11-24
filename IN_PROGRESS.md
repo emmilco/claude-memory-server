@@ -188,21 +188,28 @@
 **Assigned**: Agent/Developer name
 **Branch**: worktrees/TASK-XXX
 **Blocked By**: None | [TASK-YYY]
-**Status**: In Progress | Blocked | Nearly Complete
+**Status**: In Progress | Blocked | Nearly Complete | Fixing Verification Issues
+**Verification**: Not Run | ❌ Failed (X/6 gates) | ✅ Passed (6/6 gates)
 
 **Progress Notes**:
 - YYYY-MM-DD: Started work, created worktree
 - YYYY-MM-DD: Implemented X, discovered Y
 - YYYY-MM-DD: Fixed issue Z, 80% complete
+- YYYY-MM-DD: Ran verify-complete.py - 3/6 gates failed (fixing tests)
+- YYYY-MM-DD: All tests passing, re-verified - 6/6 gates passed ✅
 
 **Next Steps**:
 - [ ] Complete remaining implementation
 - [ ] Write tests
 - [ ] Update documentation
 - [ ] Run verify-complete.py
+- [ ] **MANDATORY**: Fix ALL verification failures before moving to REVIEW.md
+- [ ] Move to REVIEW.md ONLY after verify-complete.py shows 6/6 gates passed
 
 **See**: planning_docs/TASK-XXX_*.md
 ```
+
+**⚠️ WORKFLOW RULE**: Tasks CANNOT be moved to REVIEW.md until **Verification: ✅ Passed (6/6 gates)**
 
 ---
 

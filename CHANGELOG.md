@@ -51,6 +51,14 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Changed - 2025-11-24
+- **WORKFLOW: Mandatory Verification Before Completion**
+  - Updated CLAUDE.md, TASK_WORKFLOW.md, IN_PROGRESS.md to require ALL 6 verification gates pass before moving tasks to REVIEW.md
+  - Tasks must run `verify-complete.py` and fix all failures before reporting completion
+  - Added "Verification" status field to IN_PROGRESS.md task template to track verification state
+  - Prevents incomplete work from being marked as "ready for review", maintains 100% test pass rate
+  - Agents must fix test failures immediately instead of deferring to review phase
+
 ### Added - 2025-11-24
 - **FEAT-059: Structural/Relational Queries (Call Graph & Function Analysis)**
   - Added CallGraph infrastructure for bidirectional call tracking (find_callers, find_callees, call chains)

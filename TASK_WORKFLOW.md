@@ -113,9 +113,10 @@ Complete guide to the task lifecycle from planning to completion in the Claude M
 
 **Criteria:**
 - Implementation complete
-- All tests passing
+- All tests passing (100% pass rate - NO exceptions)
 - Documentation updated
-- `verify-complete.py` passes
+- `verify-complete.py` passes (ALL 6 gates green)
+- **MANDATORY**: Task CANNOT be in REVIEW.md unless verify-complete.py shows "✅ Task is ready for completion"
 
 **Format in REVIEW.md:**
 ```markdown
@@ -276,6 +277,8 @@ As you implement:
 
 ### Phase 4: Verification
 
+**⚠️ CRITICAL: Verification Must Pass BEFORE Moving to REVIEW.md**
+
 **9. Run Comprehensive Verification**
 
 ```bash
@@ -288,6 +291,15 @@ This checks:
 - Coverage targets met (80%+ for core)
 - No syntax errors
 - Documentation updated
+
+**🚨 IF VERIFICATION FAILS:**
+1. **DO NOT** move task to REVIEW.md
+2. **DO NOT** report task as complete
+3. **FIX** all failing tests immediately
+4. **RE-RUN** verify-complete.py
+5. **REPEAT** until all gates pass
+
+**Only proceed to step 10 after verify-complete.py shows "✅ Task is ready for completion"**
 
 **10. Manual Testing**
 
@@ -447,7 +459,7 @@ A task is **complete** when:
 ✅ **Testing**
 - Unit tests written (isolated components)
 - Integration tests written (end-to-end)
-- All tests passing (100% pass rate)
+- All tests passing (100% pass rate - **ZERO failures allowed**)
 - Coverage ≥80% for new code
 - Manual testing completed
 
@@ -458,15 +470,19 @@ A task is **complete** when:
 - CHANGELOG.md updated
 - Planning doc updated (if exists)
 
-✅ **Verification**
-- `python scripts/verify-complete.py` passes
+✅ **Verification** ⚠️ **MANDATORY BEFORE REVIEW**
+- `python scripts/verify-complete.py` passes with **ALL 6 gates green**
 - No linting errors
 - No type checking errors (if using mypy)
+- **IF ANY GATE FAILS**: Fix immediately, do NOT move to REVIEW.md
 
 ✅ **Review**
 - Self-review completed
 - Peer review approved (if team)
 - Feedback addressed
+
+**⚠️ CRITICAL WORKFLOW RULE:**
+**Tasks with failing verification gates MUST NOT be moved to REVIEW.md or reported as complete. Fix all issues first, then re-verify.**
 
 ### Verification Script
 
