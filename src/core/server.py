@@ -281,6 +281,7 @@ class MemoryRAGServer:
                 logger.info("Proactive suggestions disabled")
 
             # Initialize usage pattern analytics (FEAT-020)
+            # Note: os module imported at module level (line 6)
             if self.config.enable_usage_pattern_analytics:
                 # Store analytics DB in same directory as SQLite memory DB
                 sqlite_dir = os.path.dirname(os.path.expanduser(self.config.sqlite_path))
