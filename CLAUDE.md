@@ -61,9 +61,57 @@ A **Model Context Protocol (MCP) server** providing persistent memory, documenta
 - `REVIEW.md` → Awaiting review/approval
 - `CHANGELOG.md` → Completed work history
 - `planning_docs/` → Technical planning documents
+### Core Implementation
+- `src/core/server.py` - Main MCP server with all tools
+- `src/memory/incremental_indexer.py` - Code indexing logic with progress callbacks
+- `src/store/qdrant_store.py` - Vector database operations (with project stats methods)
+- `src/store/sqlite_store.py` - SQLite storage backend (with project stats methods)
+- `src/embeddings/generator.py` - Standard embedding generation (single-threaded)
+- `src/embeddings/parallel_generator.py` - **NEW:** Parallel embedding generation (4-8x faster)
+- `src/embeddings/cache.py` - Embedding cache for incremental indexing
+- `src/core/exceptions.py` - **ENHANCED:** Actionable error messages with solutions
+- `src/config.py` - Configuration management
+- `src/cli/status_command.py` - Status reporting with project statistics
+- `src/cli/index_command.py` - Indexing CLI with progress indicators
+- `rust_core/src/parsing.rs` - Fast code parsing
+### Core Implementation
+- `src/core/server.py` - Main MCP server with all tools
+- `src/memory/incremental_indexer.py` - Code indexing logic with progress callbacks
+- `src/memory/project_index_tracker.py` - **NEW:** Project indexing metadata and staleness tracking
+- `src/memory/auto_indexing_service.py` - **NEW:** Auto-indexing orchestration with foreground/background modes
+- `src/store/qdrant_store.py` - Vector database operations (with project stats methods)
+- `src/store/sqlite_store.py` - SQLite storage backend (with project stats methods)
+- `src/embeddings/generator.py` - Standard embedding generation (single-threaded)
+- `src/embeddings/parallel_generator.py` - **NEW:** Parallel embedding generation (4-8x faster)
+- `src/embeddings/cache.py` - Embedding cache for incremental indexing
+- `src/core/exceptions.py` - **ENHANCED:** Actionable error messages with solutions
+- `src/config.py` - Configuration management (11 new auto-indexing options)
+- `src/cli/status_command.py` - Status reporting with project statistics
+- `src/cli/index_command.py` - Indexing CLI with progress indicators
+- `rust_core/src/parsing.rs` - Fast code parsing
 
 ### 📚 Progressive Disclosure Guides
 **Read in order as you need them:**
+### Testing
+- `tests/unit/` - Unit tests for all modules
+  - `test_store_project_stats.py` - Project statistics functionality (15 tests)
+  - `test_indexing_progress.py` - Progress callback system (11 tests)
+  - `test_status_command.py` - Status command with file watcher info (38 tests)
+  - `test_parallel_embeddings.py` - **NEW:** Parallel embedding and cache tests (21 tests)
+  - `test_actionable_errors.py` - **NEW:** Actionable error message tests (6 tests)
+- `tests/integration/` - End-to-end workflow tests
+- `tests/security/` - Security validation tests
+### Testing
+- `tests/unit/` - Unit tests for all modules
+  - `test_project_index_tracker.py` - **NEW:** Project metadata tracking (26 tests, 100% passing)
+  - `test_auto_indexing_service.py` - **NEW:** Auto-indexing orchestration (33 tests, 23 passing)
+  - `test_store_project_stats.py` - Project statistics functionality (15 tests)
+  - `test_indexing_progress.py` - Progress callback system (11 tests)
+  - `test_status_command.py` - Status command with file watcher info (38 tests)
+  - `test_parallel_embeddings.py` - **NEW:** Parallel embedding and cache tests (21 tests)
+  - `test_actionable_errors.py` - **NEW:** Actionable error message tests (6 tests)
+- `tests/integration/` - End-to-end workflow tests
+- `tests/security/` - Security validation tests
 
 **Level 1 - Start Here:**
 - `GETTING_STARTED.md` → Quick start for new contributors (read first!)

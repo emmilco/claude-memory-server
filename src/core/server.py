@@ -94,6 +94,7 @@ class MemoryRAGServer:
         self.suggestion_engine: Optional[SuggestionEngine] = None  # Proactive suggestions
         self.pattern_tracker: Optional[UsagePatternTracker] = None  # Usage pattern analytics
         self.scheduler = None  # APScheduler instance
+        self.auto_indexing_service: Optional = None  # Auto-indexing service (FEAT-016)
 
         # Quality analysis (FEAT-060)
         self.complexity_analyzer: Optional[ComplexityAnalyzer] = None
@@ -253,6 +254,12 @@ class MemoryRAGServer:
             else:
                 self.cross_project_consent = None
                 logger.info("Cross-project search disabled")
+
+            # Initialize auto-indexing service if enabled (FEAT-016)
+            if self.config.auto_index_enabled and self.config.auto_index_on_startup:
+                await self._start_auto_indexing()
+            else:
+                logger.info("Auto-indexing disabled or not configured for startup")
 
             # Initialize suggestion engine for proactive context
             # Only enabled if store is initialized (needed for searches)
@@ -4028,6 +4035,294 @@ class MemoryRAGServer:
 
     async def _collect_metrics_job(self) -> None:
         """Background job to collect and store health metrics."""
+    async def export_memories(
+        self,
+        output_path: str,
+        format: str = "json",
+        project_name: Optional[str] = None,
+        category: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Export memories to file (MCP tool).
+
+        Args:
+            output_path: Path to write export file
+            format: Export format (json, markdown, archive)
+            project_name: Filter by project name
+            category: Filter by category
+
+        Returns:
+            Export statistics
+
+        Raises:
+            ValueError: If invalid format or category
+            StorageError: If export fails
+        """
+        from src.backup.exporter import DataExporter
+        from src.core.models import MemoryCategory
+        from pathlib import Path
+
+        # Validate parameters
+        if format not in ["json", "markdown", "archive"]:
+            raise ValueError(f"Invalid format: {format}. Must be json, markdown, or archive")
+
+        category_filter = None
+        if category:
+            try:
+                category_filter = MemoryCategory(category)
+            except ValueError:
+                raise ValueError(f"Invalid category: {category}")
+
+        # Create exporter and export
+        exporter = DataExporter(self.store)
+        output = Path(output_path).expanduser()
+
+        if format == "json":
+            stats = await exporter.export_to_json(
+                output_path=output,
+                project_name=project_name,
+                category=category_filter,
+            )
+        elif format == "markdown":
+            stats = await exporter.export_to_markdown(
+                output_path=output,
+                project_name=project_name,
+                include_metadata=True,
+            )
+        elif format == "archive":
+            stats = await exporter.create_portable_archive(
+                output_path=output,
+                project_name=project_name,
+                include_embeddings=True,
+            )
+
+        logger.info(f"MCP export completed: {stats}")
+        return stats
+
+    async def import_memories(
+        self,
+        input_path: str,
+        conflict_strategy: str = "keep_newer",
+        dry_run: bool = False,
+        selective_project: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Import memories from file (MCP tool).
+
+        Args:
+            input_path: Path to import file
+            conflict_strategy: How to handle conflicts (keep_newer, keep_older, keep_both, skip, merge_metadata)
+            dry_run: If True, analyze but don't actually import
+            selective_project: Only import this project
+
+        Returns:
+            Import statistics
+
+        Raises:
+            ValueError: If invalid strategy or file not found
+            StorageError: If import fails
+        """
+        from src.backup.importer import DataImporter, ConflictStrategy
+        from pathlib import Path
+
+        # Validate parameters
+    async def _start_auto_indexing(self) -> None:
+        """
+        Start auto-indexing on server startup (FEAT-016).
+
+        Automatically indexes the current project if configured.
+        """
+        try:
+            # Get current working directory as project path
+            project_path = Path.cwd()
+
+            # Use detected project name or directory name
+            project_name = self.project_name or project_path.name
+
+            logger.info(f"Starting auto-indexing for project: {project_name} at {project_path}")
+
+            # Import here to avoid circular dependency
+            from src.memory.auto_indexing_service import AutoIndexingService
+
+            # Create auto-indexing service
+            self.auto_indexing_service = AutoIndexingService(
+                project_path=project_path,
+                project_name=project_name,
+                config=self.config,
+            )
+
+            await self.auto_indexing_service.initialize()
+
+            # Start auto-indexing (may be background)
+            result = await self.auto_indexing_service.start_auto_indexing()
+
+            if result:
+                if result.get("mode") == "background":
+                    logger.info(
+                        f"Background indexing started for {project_name} "
+                        f"({result.get('file_count', 0)} files)"
+                    )
+                else:
+                    logger.info(
+                        f"Foreground indexing complete for {project_name}: "
+                        f"{result.get('indexed_files', 0)} files, "
+                        f"{result.get('total_units', 0)} units"
+                    )
+
+                # Start file watcher after initial indexing
+                if self.config.enable_file_watcher:
+                    await self.auto_indexing_service.start_watching()
+                    logger.info(f"File watcher started for {project_name}")
+            else:
+                logger.info(f"Project {project_name} is up-to-date, skipping indexing")
+
+        except Exception as e:
+            logger.error(f"Auto-indexing startup failed: {e}", exc_info=True)
+            # Don't raise - auto-indexing failure shouldn't prevent server start
+            self.auto_indexing_service = None
+
+    async def get_indexing_status(self) -> Dict[str, Any]:
+        """
+        Get current auto-indexing status (FEAT-016).
+
+        Returns:
+            Dictionary with indexing progress and status
+        """
+        if not self.auto_indexing_service:
+            return {
+                "enabled": False,
+                "status": "disabled",
+                "message": "Auto-indexing is not enabled or failed to initialize"
+            }
+
+        progress = await self.auto_indexing_service.get_progress()
+
+        return {
+            "enabled": True,
+            "project_name": self.auto_indexing_service.project_name,
+            "project_path": str(self.auto_indexing_service.project_path),
+            "progress": progress,
+        }
+
+    async def trigger_reindex(self) -> Dict[str, Any]:
+        """
+        Manually trigger a full re-index (FEAT-016).
+
+        Returns:
+            Dictionary with re-indexing result
+        """
+        if not self.auto_indexing_service:
+            # Try to create service if it doesn't exist
+            project_path = Path.cwd()
+            project_name = self.project_name or project_path.name
+
+            from src.memory.auto_indexing_service import AutoIndexingService
+
+            self.auto_indexing_service = AutoIndexingService(
+                project_path=project_path,
+                project_name=project_name,
+                config=self.config,
+            )
+            await self.auto_indexing_service.initialize()
+
+        logger.info(f"Manual re-index triggered for {self.auto_indexing_service.project_name}")
+        result = await self.auto_indexing_service.trigger_reindex()
+
+        return {
+            "status": "success",
+            "result": result,
+        }
+    async def export_memories(
+        self,
+        output_path: str,
+        format: str = "json",
+        project_name: Optional[str] = None,
+        category: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Export memories to file (MCP tool).
+
+        Args:
+            output_path: Path to write export file
+            format: Export format (json, markdown, archive)
+            project_name: Filter by project name
+            category: Filter by category
+
+        Returns:
+            Export statistics
+
+        Raises:
+            ValueError: If invalid format or category
+            StorageError: If export fails
+        """
+        from src.backup.exporter import DataExporter
+        from src.core.models import MemoryCategory
+        from pathlib import Path
+
+        # Validate parameters
+        if format not in ["json", "markdown", "archive"]:
+            raise ValueError(f"Invalid format: {format}. Must be json, markdown, or archive")
+
+        category_filter = None
+        if category:
+            try:
+                category_filter = MemoryCategory(category)
+            except ValueError:
+                raise ValueError(f"Invalid category: {category}")
+
+        # Create exporter and export
+        exporter = DataExporter(self.store)
+        output = Path(output_path).expanduser()
+
+        if format == "json":
+            stats = await exporter.export_to_json(
+                output_path=output,
+                project_name=project_name,
+                category=category_filter,
+            )
+        elif format == "markdown":
+            stats = await exporter.export_to_markdown(
+                output_path=output,
+                project_name=project_name,
+                include_metadata=True,
+            )
+        elif format == "archive":
+            stats = await exporter.create_portable_archive(
+                output_path=output,
+                project_name=project_name,
+                include_embeddings=True,
+            )
+
+        logger.info(f"MCP export completed: {stats}")
+        return stats
+
+    async def import_memories(
+        self,
+        input_path: str,
+        conflict_strategy: str = "keep_newer",
+        dry_run: bool = False,
+        selective_project: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Import memories from file (MCP tool).
+
+        Args:
+            input_path: Path to import file
+            conflict_strategy: How to handle conflicts (keep_newer, keep_older, keep_both, skip, merge_metadata)
+            dry_run: If True, analyze but don't actually import
+            selective_project: Only import this project
+
+        Returns:
+            Import statistics
+
+        Raises:
+            ValueError: If invalid strategy or file not found
+            StorageError: If import fails
+        """
+        from src.backup.importer import DataImporter, ConflictStrategy
+        from pathlib import Path
+
+        # Validate parameters
         try:
             logger.info("Running metrics collection job")
 
@@ -4426,6 +4721,11 @@ class MemoryRAGServer:
 
     async def close(self) -> None:
         """Clean up resources."""
+        # Stop auto-indexing service
+        if self.auto_indexing_service:
+            await self.auto_indexing_service.close()
+            logger.info("Auto-indexing service stopped")
+
         # Stop conversation tracker
         if self.conversation_tracker:
             await self.conversation_tracker.stop()

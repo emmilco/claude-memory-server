@@ -66,6 +66,32 @@ class ServerConfig(BaseSettings):
     # NOTE: allow_qdrant_fallback removed in REF-010 - Qdrant is now required
     allow_rust_fallback: bool = True  # Fall back to Python parser if Rust unavailable
     warn_on_degradation: bool = True  # Show warnings when running in degraded mode
+    # Adaptive retrieval
+    enable_retrieval_gate: bool = True
+    retrieval_gate_threshold: float = 0.8
+    # Auto-indexing (FEAT-016)
+    auto_index_enabled: bool = True  # Enable automatic indexing
+    auto_index_on_startup: bool = True  # Index on MCP server startup
+    auto_index_size_threshold: int = 500  # Files threshold for background mode
+    auto_index_recursive: bool = True  # Recursive directory indexing
+    auto_index_show_progress: bool = True  # Show progress indicators
+    auto_index_exclude_patterns: list[str] = [  # Patterns to exclude
+        "node_modules/**",
+        ".git/**",
+        "venv/**",
+        "__pycache__/**",
+        "*.pyc",
+        "dist/**",
+        "build/**",
+        ".next/**",
+        "target/**",
+        "*.min.js",
+        "*.map",
+    ]
+
+    # Adaptive retrieval
+    enable_retrieval_gate: bool = True
+    retrieval_gate_threshold: float = 0.8
 
     # Memory pruning and ranking
     session_state_ttl_hours: int = 48
@@ -248,6 +274,12 @@ class ServerConfig(BaseSettings):
         # Validate GPU settings (PERF-002)
         if not 0.0 <= self.gpu_memory_fraction <= 1.0:
             raise ValueError("gpu_memory_fraction must be between 0.0 and 1.0")
+
+        # Validate auto-indexing settings
+        if self.auto_index_size_threshold < 1:
+            raise ValueError("auto_index_size_threshold must be at least 1")
+        if self.auto_index_size_threshold > 100000:
+            raise ValueError("auto_index_size_threshold should not exceed 100000")
 
         return self
 

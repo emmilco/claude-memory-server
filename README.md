@@ -102,7 +102,55 @@ You: "How does the application start up?"
 - 7-13ms search latency (hybrid search: 10-18ms)
 - 10-20 files/sec indexing (with parallel embeddings, 4-8x faster)
 - 98% cache hit rate for re-indexing (5-10x faster)
+- 7-13ms search latency
+- 2.45 files/sec indexing
+- 7-13ms search latency
+- 10-20 files/sec indexing (with parallel processing)
 - Real-time file watching with auto-reindexing
+
+### ⚡ Auto-Indexing (NEW!)
+
+**Zero-configuration project indexing** - Your projects automatically index when you start working:
+
+```
+$ python -m src.mcp_server
+INFO: Starting auto-indexing for project: my-app at /path/to/my-app
+INFO: Found 450 indexable files
+INFO: Foreground indexing complete: 450 files, 2,340 units
+INFO: File watcher started for my-app
+INFO: Server initialized successfully
+```
+
+**Features:**
+- **Automatic Detection**: Indexes current project on server startup
+- **Smart Mode Selection**:
+  - Small projects (<500 files): Foreground mode, completes in ~30-60s
+  - Large projects (>500 files): Background mode, non-blocking
+- **Staleness Detection**: Only re-indexes if files have changed since last index
+- **Exclude Patterns**: Automatically skips node_modules, .git, __pycache__, etc.
+- **File Watcher Integration**: After initial index, watches for changes and re-indexes incrementally
+- **Progress Tracking**: Query indexing status with `get_indexing_status()` MCP tool
+
+**Configuration** (in `~/.claude-rag/.env` or environment variables):
+
+```bash
+# Enable/disable auto-indexing (default: true)
+CLAUDE_RAG_AUTO_INDEX_ENABLED=true
+
+# Index on server startup (default: true)
+CLAUDE_RAG_AUTO_INDEX_ON_STARTUP=true
+
+# File count threshold for background mode (default: 500)
+CLAUDE_RAG_AUTO_INDEX_SIZE_THRESHOLD=500
+
+# Recursive directory indexing (default: true)
+CLAUDE_RAG_AUTO_INDEX_RECURSIVE=true
+```
+
+**Exclude patterns** are configurable in `src/config.py`:
+- `node_modules/**`, `.git/**`, `venv/**`, `__pycache__/**`
+- `*.pyc`, `dist/**`, `build/**`, `.next/**`, `target/**`
+- `*.min.js`, `*.map`
 
 ### 🧠 Automatic Memory
 
