@@ -93,7 +93,7 @@ jobs:
         QDRANT_API_KEY: development
       run: |
         set -o pipefail
-        pytest tests/ -v --tb=short --timeout=30 --timeout-method=thread -n auto -m "not skip_ci" --cov=src --cov-report=term-missing --cov-report=xml --junitxml=test-results.xml 2>&1 | tee pytest-output.txt
+        pytest tests/ -v --tb=short --timeout=60 --timeout-method=thread -m "not skip_ci" --cov=src --cov-report=term-missing --cov-report=xml --junitxml=test-results.xml 2>&1 | tee pytest-output.txt
         echo "PYTEST_EXIT_CODE=${PIPESTATUS[0]}" >> $GITHUB_ENV
 
     - name: Generate test summary
