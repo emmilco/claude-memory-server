@@ -17,6 +17,7 @@ from qdrant_client.models import (
 )
 from src.config import ServerConfig
 from src.core.exceptions import QdrantConnectionError, StorageError
+from src.store.connection_pool import QdrantConnectionPool
 
 logger = logging.getLogger(__name__)
 
@@ -24,12 +25,13 @@ logger = logging.getLogger(__name__)
 class QdrantSetup:
     """Manages Qdrant collection initialization and configuration."""
 
-    def __init__(self, config: Optional[ServerConfig] = None):
+    def __init__(self, config: Optional[ServerConfig] = None, use_pool: bool = True):
         """
         Initialize Qdrant setup manager.
 
         Args:
             config: Server configuration. If None, uses global config.
+            use_pool: If True, create connection pool. If False, use single client (legacy mode).
         """
         if config is None:
             from src.config import get_config
@@ -38,7 +40,9 @@ class QdrantSetup:
         self.config = config
         self.collection_name = config.qdrant_collection_name
         self.vector_size = 384  # all-MiniLM-L6-v2 embedding dimension
+        self.use_pool = use_pool
         self.client: Optional[QdrantClient] = None
+        self.pool: Optional[QdrantConnectionPool] = None
 
     def connect(self) -> QdrantClient:
         """
@@ -78,6 +82,57 @@ class QdrantSetup:
                         url=self.config.qdrant_url,
                         reason=str(e)
                     )
+
+    async def create_pool(
+        self,
+        min_size: Optional[int] = None,
+        max_size: Optional[int] = None,
+        timeout: Optional[float] = None,
+        recycle: Optional[int] = None,
+        enable_health_checks: bool = True,
+        enable_monitoring: bool = False,
+    ) -> QdrantConnectionPool:
+        """
+        Create and initialize a connection pool.
+
+        Args:
+            min_size: Minimum pool size (uses config if None)
+            max_size: Maximum pool size (uses config if None)
+            timeout: Acquire timeout (uses config if None)
+            recycle: Connection recycle time (uses config if None)
+            enable_health_checks: Enable health checking
+            enable_monitoring: Enable background monitoring
+
+        Returns:
+            QdrantConnectionPool: Initialized connection pool
+
+        Raises:
+            QdrantConnectionError: If pool creation fails
+        """
+        # Use config defaults if not provided
+        min_size = min_size or getattr(self.config, 'qdrant_pool_min_size', 1)
+        max_size = max_size or getattr(self.config, 'qdrant_pool_size', 5)
+        timeout = timeout or getattr(self.config, 'qdrant_pool_timeout', 10.0)
+        recycle = recycle or getattr(self.config, 'qdrant_pool_recycle', 3600)
+
+        logger.info(
+            f"Creating connection pool: min={min_size}, max={max_size}, "
+            f"timeout={timeout}s, recycle={recycle}s"
+        )
+
+        self.pool = QdrantConnectionPool(
+            config=self.config,
+            min_size=min_size,
+            max_size=max_size,
+            timeout=timeout,
+            recycle=recycle,
+            enable_health_checks=enable_health_checks,
+            enable_monitoring=enable_monitoring,
+        )
+
+        await self.pool.initialize()
+        logger.info("Connection pool initialized successfully")
+        return self.pool
 
     def collection_exists(self) -> bool:
         """
