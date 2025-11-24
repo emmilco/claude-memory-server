@@ -62,7 +62,7 @@ Organize entries under these headers in chronological order (newest first):
   - DuplicateDetector enhancements: Union-find clustering algorithm, canonical member selection
   - 60x speedup for QA review process (30 minutes → 30 seconds automated analysis)
   - Files: src/analysis/quality_analyzer.py, src/memory/duplicate_detector.py, src/core/server.py
-  - Tests: tests/unit/test_quality_analyzer.py
+  - Tests: 47 unit tests + 17 integration tests (tests/unit/test_quality_analyzer.py, tests/unit/test_code_duplicate_detector.py, tests/integration/test_quality_system.py)
 
 ### Fixed - 2025-11-22
 - **BUG-033: Health Scheduler Missing `await` Keyword**
