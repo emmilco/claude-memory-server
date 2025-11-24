@@ -51,6 +51,14 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Fixed - 2025-11-23
+- **FEAT-059: Fixed Flaky Tests in Parallel Execution**
+  - Fixed non-deterministic entity extraction in `PatternDetector._extract_entities()`
+  - Changed from `set()` to `dict.fromkeys()` to preserve insertion order (Python 3.7+)
+  - Tests now pass reliably in parallel execution (pytest -n auto)
+  - Fixed tests: `test_immediate_retrieval_after_storage`, `test_search_query_generation`
+  - Files: `src/memory/pattern_detector.py`
+
 ### Added - 2025-11-23
 - **FEAT-059: Structural/Relational Queries (Week 2 COMPLETE - Comprehensive Testing + Documentation)**
   - **6 new MCP tools**: `find_callers`, `find_callees`, `get_call_chain`, `find_implementations`, `find_dependencies`, `find_dependents`
