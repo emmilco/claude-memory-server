@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, Mock, patch
 from src.core.server import MemoryRAGServer
 from src.core.models import MemoryUnit, ContextLevel, MemoryCategory, MemoryScope
 from src.config import ServerConfig
+from src.analysis.quality_analyzer import CodeQualityMetrics
 
 
 class TestConfidenceLabels:
@@ -67,6 +68,25 @@ async def mock_server(unique_qdrant_collection):
     server.query_expander = AsyncMock()
     server.hybrid_searcher = None
     server.metrics_collector = AsyncMock()
+
+    # Mock quality analysis components (FEAT-060)
+    server.duplicate_detector = AsyncMock()
+    server.duplicate_detector.calculate_duplication_score = AsyncMock(return_value=0.0)
+
+    # Create a mock quality_analyzer that returns realistic quality metrics
+    server.quality_analyzer = Mock()
+    server.quality_analyzer.calculate_quality_metrics = Mock(return_value=CodeQualityMetrics(
+        cyclomatic_complexity=5,
+        line_count=10,
+        nesting_depth=2,
+        parameter_count=2,
+        has_documentation=True,
+        duplication_score=0.0,
+        maintainability_index=85,
+        quality_flags=[]
+    ))
+
+    server.complexity_analyzer = Mock()
 
     # Mock cache to return None (cache miss)
     server.embedding_cache.get = AsyncMock(return_value=None)

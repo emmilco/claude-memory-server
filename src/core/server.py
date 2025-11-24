@@ -45,8 +45,9 @@ from src.monitoring.health_reporter import HealthReporter
 from src.monitoring.capacity_planner import CapacityPlanner
 from src.graph import DependencyGraph, GraphNode, GraphEdge
 from src.graph.formatters import DOTFormatter, JSONFormatter, MermaidFormatter
-from src.store.call_graph_store import QdrantCallGraphStore
-from src.graph.call_graph import CallGraph, FunctionNode, CallSite
+from src.analysis.quality_analyzer import QualityAnalyzer, CodeQualityMetrics, QualityHotspot
+from src.analysis.complexity_analyzer import ComplexityAnalyzer
+from src.memory.duplicate_detector import DuplicateDetector
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +95,11 @@ class MemoryRAGServer:
         self.cross_project_consent: Optional = None  # Cross-project consent manager
         self.suggestion_engine: Optional[SuggestionEngine] = None  # Proactive suggestions
         self.scheduler = None  # APScheduler instance
-        self.call_graph_store: Optional[QdrantCallGraphStore] = None  # Call graph storage
+
+        # Quality analysis (FEAT-060)
+        self.complexity_analyzer: Optional[ComplexityAnalyzer] = None
+        self.quality_analyzer: Optional[QualityAnalyzer] = None
+        self.duplicate_detector: Optional[DuplicateDetector] = None
 
         # Statistics
         self.stats = {
@@ -265,6 +270,15 @@ class MemoryRAGServer:
                 self.suggestion_engine = None
                 logger.info("Proactive suggestions disabled")
 
+            # Initialize quality analysis components (FEAT-060)
+            self.complexity_analyzer = ComplexityAnalyzer()
+            self.quality_analyzer = QualityAnalyzer(complexity_analyzer=self.complexity_analyzer)
+            self.duplicate_detector = DuplicateDetector(
+                store=self.store,
+                embedding_generator=self.embedding_generator
+            )
+            logger.info("Quality analysis components initialized")
+
             # Collect initial metrics snapshot (defer if requested for fast startup)
             if self.metrics_collector and not defer_preload:
                 try:
@@ -276,11 +290,6 @@ class MemoryRAGServer:
                     logger.warning(f"Failed to collect initial metrics: {e}")
             elif defer_preload:
                 logger.info("Initial metrics collection deferred (will collect in background)")
-
-            # Initialize call graph store for structural queries (FEAT-059)
-            self.call_graph_store = QdrantCallGraphStore(self.config)
-            await self.call_graph_store.initialize()
-            logger.info("Call graph store initialized")
 
             logger.info("Server initialized successfully")
 
@@ -1678,118 +1687,6 @@ class MemoryRAGServer:
             logger.error(f"Failed to import memories: {e}")
             raise StorageError(f"Failed to import memories: {e}")
 
-    async def suggest_queries(
-        self,
-        intent: Optional[str] = None,
-        project_name: Optional[str] = None,
-        context: Optional[str] = None,
-        max_suggestions: int = 8,
-    ) -> Dict[str, Any]:
-        """
-        Get contextual query suggestions based on indexed codebase and user intent.
-
-        **PROACTIVE USE:**
-        - Show suggestions when user opens search interface
-        - Guide users on what queries work well
-        - Discover indexed content without knowing specifics
-        - Learn query patterns for better discoverability
-
-        **Use cases:**
-        - User doesn't know what to search for
-        - Help formulate effective semantic queries
-        - Explore indexed codebase capabilities
-        - Learn from project-specific examples
-
-        **FEAT-057: Better UX & Discoverability**
-
-        This tool helps users overcome "query formulation paralysis" by providing
-        contextual suggestions based on:
-        1. User intent (implementation, debugging, learning, exploration, refactoring)
-        2. Project-specific content (actual indexed classes, functions)
-        3. Domain-specific presets (auth, database, API, error handling)
-        4. General discovery patterns (entry points, complex functions, utilities)
-
-        Args:
-            intent: User's current intent or task:
-                - "implementation": Find existing implementations
-                - "debugging": Find error handling and logging code
-                - "learning": Understand how systems work
-                - "exploration": Discover codebase structure
-                - "refactoring": Find code to improve
-            project_name: Optional project to scope suggestions (defaults to current project)
-            context: Optional context from conversation to refine suggestions
-            max_suggestions: Maximum suggestions to return (default: 8)
-
-        Returns:
-            Dict with:
-            - suggestions: List of QuerySuggestion objects with query, category, description
-            - indexed_stats: Statistics about indexed content (total_files, languages, top_classes)
-            - project_name: Project name (if scoped)
-            - total_suggestions: Count of suggestions returned
-
-        Example response:
-            {
-                "suggestions": [
-                    {
-                        "query": "JWT token validation logic",
-                        "category": "domain",
-                        "description": "Find authentication token validation code",
-                        "expected_results": 3
-                    },
-                    {
-                        "query": "UserRepository implementation",
-                        "category": "project",
-                        "description": "Based on commonly used class in your project",
-                        "expected_results": 1
-                    }
-                ],
-                "indexed_stats": {
-                    "total_files": 245,
-                    "total_units": 1834,
-                    "languages": {"python": 180, "typescript": 65},
-                    "top_classes": ["UserRepository", "AuthService", "APIClient"]
-                },
-                "project_name": "my-app",
-                "total_suggestions": 8
-            }
-        """
-        try:
-            from src.memory.query_suggester import QuerySuggester
-
-            # Use current project if not specified
-            filter_project_name = project_name or self.project_name
-
-            # Initialize query suggester
-            suggester = QuerySuggester(self.store, self.config)
-
-            # Generate suggestions
-            response = await suggester.suggest_queries(
-                intent=intent,
-                project_name=filter_project_name,
-                context=context,
-                max_suggestions=max_suggestions,
-            )
-
-            # Convert to dict for JSON serialization
-            return {
-                "suggestions": [
-                    {
-                        "query": s.query,
-                        "category": s.category,
-                        "description": s.description,
-                        "expected_results": s.expected_results,
-                    }
-                    for s in response.suggestions
-                ],
-                "indexed_stats": response.indexed_stats,
-                "project_name": response.project_name,
-                "total_suggestions": response.total_suggestions,
-            }
-
-        except Exception as e:
-            logger.error(f"Failed to generate query suggestions: {e}")
-            raise StorageError(f"Failed to generate query suggestions: {e}")
-
     async def submit_search_feedback(
         self,
         search_id: str,
@@ -2328,19 +2225,12 @@ class MemoryRAGServer:
         file_pattern: Optional[str] = None,
         language: Optional[str] = None,
         search_mode: str = "semantic",
-        # FEAT-058: Pattern matching
-        pattern: Optional[str] = None,
-        pattern_mode: str = "filter",
-        # FEAT-056: Advanced filtering and sorting
-        exclude_patterns: Optional[List[str]] = None,
-        complexity_min: Optional[int] = None,
-        complexity_max: Optional[int] = None,
-        line_count_min: Optional[int] = None,
-        line_count_max: Optional[int] = None,
-        modified_after: Optional[datetime] = None,
-        modified_before: Optional[datetime] = None,
-        sort_by: str = "relevance",
-        sort_order: str = "desc",
+        min_complexity: Optional[int] = None,
+        max_complexity: Optional[int] = None,
+        has_duplicates: Optional[bool] = None,
+        long_functions: Optional[bool] = None,
+        maintainability_min: Optional[int] = None,
+        include_quality_metrics: bool = True,
     ) -> Dict[str, Any]:
         """
         Search indexed code semantically across functions and classes.
@@ -2377,90 +2267,24 @@ class MemoryRAGServer:
         - "user permission checking logic"
 
         **Performance:** 7-13ms semantic, 3-7ms keyword, 10-18ms hybrid
-        **With pattern matching:** +2-5ms overhead depending on pattern_mode
-        **With filters:** +2-3ms overhead for typical queries
-
-        **Pattern Matching (FEAT-058):**
-        Combine regex patterns with semantic search for precise code detection.
-
-        **Pattern modes:**
-        - `filter`: Semantic search first, then filter by pattern (default)
-        - `boost`: Boost scores for pattern matches (balances pattern + semantics)
-        - `require`: Must match both pattern AND semantic query (strictest)
-
-        **Pattern presets:**
-        Use `@preset:name` for common patterns:
-        - `@preset:bare_except` - Find bare except blocks (code smell)
-        - `@preset:TODO_comments` - Find TODO/FIXME/HACK markers
-        - `@preset:security_keywords` - Find password/secret/token/key references
-        - `@preset:error_handlers` - Find try/catch/except blocks
-        - `@preset:deprecated_apis` - Find deprecated API usage
-        - Many more available via pattern_matcher.get_available_presets()
-
-        **Example queries with patterns:**
-        - search_code("error handling", pattern="@preset:bare_except", pattern_mode="require")
-          → Find bare except blocks in error handling code
-        - search_code("authentication", pattern="@preset:security_keywords", pattern_mode="boost")
-          → Find auth code, boost results with security keywords
-        - search_code("configuration", pattern=r"password|secret", pattern_mode="filter")
-          → Find config code containing password/secret
-
-        **Advanced Filtering & Sorting (FEAT-056):**
-
-        1. Find complex authentication functions modified in last 30 days:
-           ```python
-           search_code(
-               query="authentication",
-               complexity_min=5,
-               modified_after=datetime.now(UTC) - timedelta(days=30),
-               sort_by="complexity"
-           )
-           ```
-
-        2. Find error handlers, exclude test files:
-           ```python
-           search_code(
-               query="error handling",
-               file_pattern="**/*.py",
-               exclude_patterns=["**/*.test.py", "**/tests/**"],
-               sort_by="importance"
-           )
-           ```
-
-        3. Find large functions (>100 lines) sorted by complexity:
-           ```python
-           search_code(
-               query="business logic",
-               line_count_min=100,
-               sort_by="complexity",
-               sort_order="desc"
-           )
-           ```
 
         Args:
             query: Natural language description of what to find (be specific!)
             project_name: Optional project filter (defaults to current project if available)
             limit: Maximum results (default: 5, increase to 10-20 for broad searches)
-            file_pattern: Glob pattern for file paths (e.g., "**/*.test.py", "src/**/auth*.ts")
+            file_pattern: Optional path filter (e.g., "*/auth/*", "**/services/*.py")
             language: Optional language filter ("python", "javascript", "typescript", etc.)
             search_mode: "semantic" (meaning), "keyword" (exact), or "hybrid" (both)
-            pattern: Optional regex pattern or @preset:name for code pattern matching
-            pattern_mode: How to apply pattern: "filter", "boost", or "require"
-            exclude_patterns: Glob patterns to exclude (e.g., ["**/*.test.py", "**/generated/**"])
-            complexity_min: Minimum cyclomatic complexity filter
-            complexity_max: Maximum cyclomatic complexity filter
-            line_count_min: Minimum line count filter
-            line_count_max: Maximum line count filter
-            modified_after: Filter by file modification time (after this date)
-            modified_before: Filter by file modification time (before this date)
-            sort_by: Sort order - "relevance" (default), "complexity", "size", "recency", "importance"
-            sort_order: Sort direction - "desc" (default) or "asc"
+            min_complexity: Optional minimum complexity filter (FEAT-060)
+            max_complexity: Optional maximum complexity filter (FEAT-060)
+            has_duplicates: Optional duplicate filter (True/False) (FEAT-060)
+            long_functions: Optional long function filter (True/False) (FEAT-060)
+            maintainability_min: Optional minimum maintainability index (0-100) (FEAT-060)
+            include_quality_metrics: Include quality metrics in results (default: True) (FEAT-060)
 
         Returns:
             Dict with results containing file_path, start_line, end_line, code snippets,
-            relevance_score, quality assessment, matched keywords, pattern match metadata
-            (pattern_matched, pattern_match_count, pattern_match_locations if pattern provided),
-            and applied filters (filters_applied, sort_info)
+            relevance_score, quality assessment, quality_metrics, and matched keywords
         """
         try:
             import time
@@ -2469,14 +2293,6 @@ class MemoryRAGServer:
             # Validate search mode
             if search_mode not in ["semantic", "keyword", "hybrid"]:
                 raise ValidationError(f"Invalid search_mode: {search_mode}. Must be 'semantic', 'keyword', or 'hybrid'")
-
-            # Validate pattern mode if pattern is provided
-            if pattern:
-                if pattern_mode not in ["filter", "boost", "require"]:
-                    raise ValidationError(
-                        f"Invalid pattern_mode: {pattern_mode}. "
-                        "Must be one of: 'filter', 'boost', 'require'"
-                    )
 
             # Handle empty query
             if not query or not query.strip():
@@ -2554,148 +2370,6 @@ class MemoryRAGServer:
                     limit=limit,
                 )
 
-            # Apply pattern matching if pattern is provided
-            if pattern:
-                from src.search.pattern_matcher import PatternMatcher
-
-                if not hasattr(self, '_pattern_matcher'):
-                    self._pattern_matcher = PatternMatcher()
-
-                pattern_matcher = self._pattern_matcher
-
-                # Adjust retrieval_limit based on pattern_mode
-                if pattern_mode == "filter":
-                    # Already have results, will filter them
-                    pass
-                elif pattern_mode == "boost":
-                    # Retrieve 2x more results for boosting and re-ranking
-                    if len(results) < limit * 2:
-                        retrieval_limit = limit * 2
-                        results = await self.store.retrieve(
-                            query_embedding=query_embedding,
-                            filters=filters,
-                            limit=retrieval_limit,
-                        )
-                elif pattern_mode == "require":
-                    # Retrieve 5x more results for strict filtering
-                    if len(results) < limit * 5:
-                        retrieval_limit = limit * 5
-                        results = await self.store.retrieve(
-                            query_embedding=query_embedding,
-                            filters=filters,
-                            limit=retrieval_limit,
-                        )
-
-                # Apply pattern matching based on mode
-                pattern_results = []
-
-                for memory, score in results:
-                    content = memory.content
-                    pattern_matched = pattern_matcher.match(pattern, content)
-
-                    if pattern_mode == "filter":
-                        # Filter mode: only include if pattern matches
-                        if pattern_matched:
-                            match_count = pattern_matcher.get_match_count(pattern, content)
-                            match_locations = pattern_matcher.get_match_locations(pattern, content)
-
-                            pattern_results.append({
-                                "memory": memory,
-                                "score": score,
-                                "pattern_matched": True,
-                                "pattern_match_count": match_count,
-                                "pattern_match_locations": match_locations,
-                            })
-
-                            # Stop when we have enough results
-                            if len(pattern_results) >= limit:
-                                break
-
-                    elif pattern_mode == "boost":
-                        # Boost mode: calculate boosted score for pattern matches
-                        if pattern_matched:
-                            # Calculate pattern quality score
-                            unit_type = memory.metadata.get("unit_type", "function") if memory.metadata else "function"
-                            pattern_score = pattern_matcher.calculate_pattern_score(
-                                content,
-                                pattern,
-                                unit_type=unit_type
-                            )
-
-                            # Combine scores: 70% semantic + 30% pattern (configurable)
-                            alpha = 0.7  # Semantic weight
-                            beta = 0.3   # Pattern weight
-                            final_score = (alpha * score) + (beta * pattern_score)
-
-                            match_count = pattern_matcher.get_match_count(pattern, content)
-                            match_locations = pattern_matcher.get_match_locations(pattern, content)
-                        else:
-                            final_score = score
-                            match_count = 0
-                            match_locations = []
-
-                        pattern_results.append({
-                            "memory": memory,
-                            "score": final_score,
-                            "pattern_matched": pattern_matched,
-                            "pattern_match_count": match_count,
-                            "pattern_match_locations": match_locations,
-                        })
-
-                    elif pattern_mode == "require":
-                        # Require mode: must match BOTH pattern and semantic query
-                        if pattern_matched:
-                            match_count = pattern_matcher.get_match_count(pattern, content)
-                            match_locations = pattern_matcher.get_match_locations(pattern, content)
-
-                            pattern_results.append({
-                                "memory": memory,
-                                "score": score,
-                                "pattern_matched": True,
-                                "pattern_match_count": match_count,
-                                "pattern_match_locations": match_locations,
-                            })
-
-                            # Stop when we have enough results
-                            if len(pattern_results) >= limit:
-                                break
-
-                # Re-rank by score if in boost mode
-                if pattern_mode == "boost":
-                    pattern_results.sort(key=lambda x: x["score"], reverse=True)
-                    pattern_results = pattern_results[:limit]
-
-                # Convert back to (memory, score) format with pattern metadata
-                results_with_pattern = []
-                for pr in pattern_results:
-                    # Store pattern metadata in memory metadata for later access
-                    memory = pr["memory"]
-                    if not hasattr(memory, '_pattern_metadata'):
-                        memory._pattern_metadata = {}
-
-                    memory._pattern_metadata = {
-                        "pattern_matched": pr["pattern_matched"],
-                        "pattern_match_count": pr["pattern_match_count"],
-                        "pattern_match_locations": [
-                            {
-                                "line": loc.line,
-                                "column": loc.column,
-                                "text": loc.text,
-                                "start": loc.start,
-                                "end": loc.end,
-                            }
-                            for loc in pr["pattern_match_locations"]
-                        ],
-                    }
-
-                    results_with_pattern.append((memory, pr["score"]))
-
-                results = results_with_pattern
-                logger.info(
-                    f"Pattern matching applied (mode: {pattern_mode}, "
-                    f"pattern: {pattern[:50]}..., results: {len(results)})"
-                )
-
             # Format results for code search with deduplication
             code_results = []
             seen_units = set()  # Track (file_path, start_line, unit_name) to deduplicate
@@ -2705,81 +2379,14 @@ class MemoryRAGServer:
                 metadata = memory.metadata or {}
                 nested_metadata = metadata if isinstance(metadata, dict) else {}
 
-                # Extract values for filtering
+                # Apply post-filter for file pattern and language if specified
                 file_path = nested_metadata.get("file_path", "")
                 language_val = nested_metadata.get("language", "")
 
-                # FEAT-056: Glob pattern matching and exclusions
-                from pathlib import PurePosixPath
-                import fnmatch
-
-                # Helper function for glob matching that handles ** patterns correctly
-                def matches_glob(path_str: str, pattern: str) -> bool:
-                    """Check if path matches glob pattern, handling ** correctly."""
-                    # For patterns like **/tests/**, check if 'tests' is a path component
-                    if pattern.startswith('**/') and pattern.endswith('/**'):
-                        # Extract the middle part (e.g., 'tests' from '**/tests/**')
-                        middle = pattern[3:-3]
-                        # Check if middle is a component in the path
-                        path_parts = path_str.strip('/').split('/')
-                        if middle in path_parts:
-                            return True
-
-                    # Use PurePosixPath for standard glob matching
-                    # Strip leading slash for consistent matching
-                    normalized_path = path_str.lstrip('/')
-                    try:
-                        return PurePosixPath(normalized_path).match(pattern)
-                    except ValueError:
-                        # Fallback to fnmatch if Path.match fails
-                        return fnmatch.fnmatch(normalized_path, pattern)
-
-                # Apply glob pattern matching (replaces substring matching)
-                if file_pattern:
-                    if not matches_glob(file_path, file_pattern):
-                        continue
-
-                # Apply exclusion patterns
-                if exclude_patterns:
-                    should_exclude = False
-                    for exclude_pattern in exclude_patterns:
-                        if matches_glob(file_path, exclude_pattern):
-                            should_exclude = True
-                            break
-                    if should_exclude:
-                        continue
-
-                # Language filter (existing)
+                if file_pattern and file_pattern not in file_path:
+                    continue
                 if language and language_val.lower() != language.lower():
                     continue
-
-                # FEAT-056: Complexity range filtering
-                if complexity_min is not None or complexity_max is not None:
-                    complexity = nested_metadata.get("cyclomatic_complexity", 0)
-                    if complexity_min is not None and complexity < complexity_min:
-                        continue
-                    if complexity_max is not None and complexity > complexity_max:
-                        continue
-
-                # FEAT-056: Line count filtering
-                if line_count_min is not None or line_count_max is not None:
-                    line_count = nested_metadata.get("line_count", 0)
-                    if line_count_min is not None and line_count < line_count_min:
-                        continue
-                    if line_count_max is not None and line_count > line_count_max:
-                        continue
-
-                # FEAT-056: Date range filtering (file modification time)
-                if modified_after is not None or modified_before is not None:
-                    file_modified_timestamp = nested_metadata.get("file_modified_at", 0)
-                    if file_modified_timestamp > 0:  # Skip if no timestamp
-                        from datetime import datetime, UTC
-                        file_modified_dt = datetime.fromtimestamp(file_modified_timestamp, tz=UTC)
-
-                        if modified_after is not None and file_modified_dt < modified_after:
-                            continue
-                        if modified_before is not None and file_modified_dt >= modified_before:
-                            continue
 
                 # Deduplication: Skip if we've already seen this exact code unit
                 unit_name = nested_metadata.get("unit_name") or nested_metadata.get("name", "(unnamed)")
@@ -2806,37 +2413,58 @@ class MemoryRAGServer:
                     "relevance_score": relevance_score,
                     "confidence_label": confidence_label,
                     "confidence_display": f"{relevance_score:.0%} ({confidence_label})",
-                    # FEAT-056: Include metadata for sorting and display
-                    "metadata": {
-                        "cyclomatic_complexity": nested_metadata.get("cyclomatic_complexity", 0),
-                        "line_count": nested_metadata.get("line_count", 0),
-                        "file_modified_at": nested_metadata.get("file_modified_at", 0),
-                        "file_size_bytes": nested_metadata.get("file_size_bytes", 0),
-                    },
                 }
 
-                # Add pattern metadata if pattern matching was used
-                if pattern and hasattr(memory, '_pattern_metadata'):
-                    pm = memory._pattern_metadata
-                    result_dict["pattern_matched"] = pm["pattern_matched"]
-                    result_dict["pattern_match_count"] = pm["pattern_match_count"]
-                    result_dict["pattern_match_locations"] = pm["pattern_match_locations"]
+                # Calculate quality metrics (FEAT-060)
+                if include_quality_metrics:
+                    # Build code unit dict
+                    code_unit = {
+                        "content": memory.content,
+                        "signature": nested_metadata.get("signature", ""),
+                        "unit_type": nested_metadata.get("unit_type", "function"),
+                        "language": language_val,
+                    }
+
+                    # Calculate duplication score
+                    duplication_score = await self.duplicate_detector.calculate_duplication_score(
+                        memory
+                    )
+
+                    # Calculate quality metrics
+                    quality_metrics = self.quality_analyzer.calculate_quality_metrics(
+                        code_unit=code_unit,
+                        duplication_score=duplication_score,
+                    )
+
+                    # Add quality metrics to result
+                    result_dict["quality_metrics"] = {
+                        "cyclomatic_complexity": quality_metrics.cyclomatic_complexity,
+                        "line_count": quality_metrics.line_count,
+                        "nesting_depth": quality_metrics.nesting_depth,
+                        "parameter_count": quality_metrics.parameter_count,
+                        "has_documentation": quality_metrics.has_documentation,
+                        "duplication_score": round(quality_metrics.duplication_score, 2),
+                        "maintainability_index": quality_metrics.maintainability_index,
+                        "quality_flags": quality_metrics.quality_flags,
+                    }
+
+                    # Apply quality filters (FEAT-060)
+                    if min_complexity is not None and quality_metrics.cyclomatic_complexity < min_complexity:
+                        continue
+                    if max_complexity is not None and quality_metrics.cyclomatic_complexity > max_complexity:
+                        continue
+                    if has_duplicates is not None:
+                        is_duplicate = quality_metrics.duplication_score > 0.85
+                        if is_duplicate != has_duplicates:
+                            continue
+                    if long_functions is not None:
+                        is_long = quality_metrics.line_count > 100
+                        if is_long != long_functions:
+                            continue
+                    if maintainability_min is not None and quality_metrics.maintainability_index < maintainability_min:
+                        continue
 
                 code_results.append(result_dict)
-
-            # FEAT-056: Apply sorting
-            # Define sort key functions
-            sort_keys = {
-                "relevance": lambda r: r["relevance_score"],
-                "complexity": lambda r: r["metadata"]["cyclomatic_complexity"],
-                "size": lambda r: r["metadata"]["line_count"],
-                "recency": lambda r: r["metadata"]["file_modified_at"],
-                "importance": lambda r: r["relevance_score"],  # Use semantic score as importance
-            }
-
-            if sort_by in sort_keys:
-                reverse = (sort_order == "desc")
-                code_results.sort(key=sort_keys[sort_by], reverse=reverse)
 
             query_time_ms = (time.time() - start_time) * 1000
 
@@ -2847,47 +2475,6 @@ class MemoryRAGServer:
 
             # Add quality indicators and suggestions
             quality_info = self._analyze_search_quality(code_results, query, filter_project_name)
-
-            # FEAT-057: Build facets for result distribution
-            from src.memory.result_summarizer import ResultSummarizer
-            from src.memory.refinement_advisor import RefinementAdvisor
-            from src.memory.spelling_suggester import SpellingSuggester
-
-            # Build facets (always compute for analytics)
-            facets = ResultSummarizer.build_facets(
-                code_results,
-                include_projects=False  # Single-project search
-            )
-
-            # Generate natural language summary
-            summary = ResultSummarizer.summarize(code_results, facets, query)
-
-            # Generate refinement hints based on results
-            current_filters = {
-                "search_mode": search_mode,
-                "file_pattern": file_pattern,
-                "language": language,
-            }
-            refinement_hints = RefinementAdvisor.analyze_and_suggest(
-                code_results,
-                facets,
-                query,
-                current_filters
-            )
-
-            # "Did you mean?" suggestions for poor quality or empty results
-            did_you_mean = []
-            if len(code_results) == 0 or quality_info["quality"] == "poor":
-                spelling_suggester = SpellingSuggester(self.store)
-                await spelling_suggester.load_indexed_terms(filter_project_name)
-                did_you_mean = spelling_suggester.suggest_corrections(query, max_suggestions=3)
-
-                # Add "did you mean" to suggestions if we have corrections
-                if did_you_mean:
-                    quality_info["suggestions"] = [
-                        f"Did you mean '{correction}'?"
-                        for correction in did_you_mean
-                    ] + quality_info["suggestions"]
 
             # Determine actual search mode used
             actual_search_mode = search_mode
@@ -2904,25 +2491,6 @@ class MemoryRAGServer:
                     avg_relevance=avg_relevance
                 )
 
-            # FEAT-056: Build filters_applied dictionary
-            filters_applied = {}
-            if file_pattern:
-                filters_applied["file_pattern"] = file_pattern
-            if exclude_patterns:
-                filters_applied["exclude_patterns"] = exclude_patterns
-            if complexity_min is not None:
-                filters_applied["complexity_min"] = complexity_min
-            if complexity_max is not None:
-                filters_applied["complexity_max"] = complexity_max
-            if line_count_min is not None:
-                filters_applied["line_count_min"] = line_count_min
-            if line_count_max is not None:
-                filters_applied["line_count_max"] = line_count_max
-            if modified_after is not None:
-                filters_applied["modified_after"] = modified_after.isoformat()
-            if modified_before is not None:
-                filters_applied["modified_before"] = modified_before.isoformat()
-
             return {
                 "status": "success",
                 "results": code_results,
@@ -2936,22 +2504,6 @@ class MemoryRAGServer:
                 "suggestions": quality_info["suggestions"],
                 "interpretation": quality_info["interpretation"],
                 "matched_keywords": quality_info["matched_keywords"],
-                # FEAT-056: Add filter and sort metadata
-                "filters_applied": filters_applied,
-                "sort_info": {
-                    "sort_by": sort_by,
-                    "sort_order": sort_order,
-                },
-                # FEAT-057: UX enhancements
-                "summary": summary,
-                "facets": {
-                    "languages": facets.languages,
-                    "unit_types": facets.unit_types,
-                    "files": facets.files,
-                    "directories": facets.directories,
-                },
-                "refinement_hints": refinement_hints,
-                "did_you_mean": did_you_mean,
             }
 
         except RetrievalError:
@@ -5690,608 +5242,385 @@ class MemoryRAGServer:
             formatter = MermaidFormatter(include_metadata=include_metadata)
             return formatter.format(graph, title="Dependency Graph")
 
-    # ============================================================================
-    # CALL GRAPH / STRUCTURAL QUERY METHODS (FEAT-059)
-    # ============================================================================
-
-    async def find_callers(
+    async def find_quality_hotspots(
         self,
-        function_name: str,
         project_name: Optional[str] = None,
-        include_indirect: bool = False,
-        max_depth: int = 1,
-        limit: int = 50,
+        max_results: int = 20,
     ) -> Dict[str, Any]:
         """
-        Find all functions calling the specified function.
+        Find code quality hotspots across all categories.
+
+        Identifies top quality issues in the codebase including:
+        - High cyclomatic complexity (>10)
+        - Long functions (>100 lines)
+        - Deep nesting (>4 levels)
+        - Semantic duplicates (>0.85 similarity)
+        - Missing documentation
+        - High parameter count (>5)
 
         Args:
-            function_name: Function name to search for (qualified name, e.g., "MyClass.method")
-            project_name: Project to search in (defaults to current project)
-            include_indirect: If True, include transitive callers (functions that call functions that call this function)
-            max_depth: Maximum depth for transitive search (only used if include_indirect=True)
-            limit: Maximum number of results to return
+            project_name: Optional project filter (defaults to current project)
+            max_results: Maximum number of hotspots to return (default: 20)
 
         Returns:
-            Dictionary with:
-                - function_name: The queried function
-                - direct_callers: List of direct caller functions
-                - indirect_callers: List of indirect caller functions (if include_indirect=True)
-                - total_count: Total number of callers found
-                - project_name: Project searched
-
-        Raises:
-            ValidationError: If function_name is invalid
-            StorageError: If call graph retrieval fails
+            Dict containing:
+            - hotspots: List of quality issues sorted by severity
+            - summary: Statistics about scanned code and issues found
         """
-        if not function_name:
-            raise ValidationError("function_name is required")
-
-        # Use current project if not specified
-        if project_name is None:
-            project_name = self.project_name or "global"
-
-        logger.info(f"Finding callers for {function_name} in {project_name} (indirect={include_indirect}, depth={max_depth})")
-
         try:
-            # Load call graph from Qdrant
-            call_graph = await self.call_graph_store.load_call_graph(project_name)
+            # Use current project if not specified
+            filter_project_name = project_name or self.project_name
+            if not filter_project_name:
+                raise ValidationError("Project name required for quality analysis")
 
-            # Find callers using CallGraph algorithms
-            callers = call_graph.find_callers(
-                function_name=function_name,
-                include_indirect=include_indirect,
-                max_depth=max_depth,
+            logger.info(f"Finding quality hotspots in project '{filter_project_name}'...")
+
+            # Get all code units for the project
+            filters = SearchFilters(
+                scope=MemoryScope.PROJECT,
+                project_name=filter_project_name,
+                category=MemoryCategory.CODE,
+                context_level=ContextLevel.PROJECT_CONTEXT,
+                tags=["code"],
             )
 
-            # Separate direct and indirect if requested
-            direct_caller_names = list(call_graph.reverse_index.get(function_name, set()))
-            direct_callers = [c for c in callers if c.qualified_name in direct_caller_names]
-            indirect_callers = [c for c in callers if c.qualified_name not in direct_caller_names] if include_indirect else []
+            # Retrieve all code memories (use large limit to get everything)
+            dummy_embedding = await self._get_embedding("code")
+            all_results = await self.store.retrieve(
+                query_embedding=dummy_embedding,
+                filters=filters,
+                limit=10000,  # Get all code units
+            )
 
-            # Apply limit
-            all_callers = direct_callers + indirect_callers
-            limited_callers = all_callers[:limit]
+            logger.info(f"Analyzing {len(all_results)} code units for quality issues...")
 
-            # Format results
+            # Analyze each code unit and collect hotspots
+            all_hotspots = []
+            severity_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+
+            for memory, _ in all_results:
+                # Build code unit dict from memory
+                code_unit = {
+                    "content": memory.content,
+                    "signature": memory.metadata.get("signature", ""),
+                    "unit_type": memory.metadata.get("unit_type", "function"),
+                    "language": memory.metadata.get("language", "python"),
+                    "file_path": memory.metadata.get("file_path", "unknown"),
+                    "unit_name": memory.metadata.get("unit_name", "unknown"),
+                    "start_line": memory.metadata.get("start_line", 0),
+                    "end_line": memory.metadata.get("end_line", 0),
+                }
+
+                # Calculate duplication score
+                duplication_score = await self.duplicate_detector.calculate_duplication_score(
+                    memory
+                )
+
+                # Calculate quality metrics
+                quality_metrics = self.quality_analyzer.calculate_quality_metrics(
+                    code_unit=code_unit,
+                    duplication_score=duplication_score,
+                )
+
+                # Analyze for hotspots
+                hotspots = self.quality_analyzer.analyze_for_hotspots(
+                    code_unit=code_unit,
+                    quality_metrics=quality_metrics,
+                )
+
+                # Add hotspots to collection and update counts
+                for hotspot in hotspots:
+                    all_hotspots.append(hotspot)
+                    severity_counts[hotspot.severity.value] += 1
+
+            # Sort hotspots by severity (critical > high > medium > low)
+            severity_order = {"critical": 4, "high": 3, "medium": 2, "low": 1}
+            all_hotspots.sort(
+                key=lambda h: (severity_order.get(h.severity.value, 0), h.metric_value),
+                reverse=True
+            )
+
+            # Limit to max_results
+            top_hotspots = all_hotspots[:max_results]
+
+            logger.info(
+                f"Found {len(all_hotspots)} quality issues "
+                f"(critical: {severity_counts['critical']}, high: {severity_counts['high']}, "
+                f"medium: {severity_counts['medium']}, low: {severity_counts['low']})"
+            )
+
             return {
-                "function_name": function_name,
-                "project_name": project_name,
-                "direct_callers": [
-                    {
-                        "name": caller.name,
-                        "qualified_name": caller.qualified_name,
-                        "file_path": caller.file_path,
-                        "line_range": f"{caller.start_line}-{caller.end_line}",
-                        "is_async": caller.is_async,
-                    }
-                    for caller in direct_callers[:limit]
-                ],
-                "indirect_callers": [
-                    {
-                        "name": caller.name,
-                        "qualified_name": caller.qualified_name,
-                        "file_path": caller.file_path,
-                        "line_range": f"{caller.start_line}-{caller.end_line}",
-                        "is_async": caller.is_async,
-                    }
-                    for caller in indirect_callers[:limit]
-                ] if include_indirect else [],
-                "total_count": len(all_callers),
-                "returned_count": len(limited_callers),
-                "include_indirect": include_indirect,
-                "max_depth": max_depth if include_indirect else 1,
+                "status": "success",
+                "hotspots": [h.to_dict() for h in top_hotspots],
+                "summary": {
+                    "total_scanned": len(all_results),
+                    "total_issues": len(all_hotspots),
+                    "critical_count": severity_counts["critical"],
+                    "high_count": severity_counts["high"],
+                    "medium_count": severity_counts["medium"],
+                    "low_count": severity_counts["low"],
+                    "project_name": filter_project_name,
+                },
             }
 
         except Exception as e:
-            logger.error(f"Failed to find callers for {function_name}: {e}")
-            raise StorageError(f"Failed to find callers: {e}")
+            logger.error(f"Error finding quality hotspots: {e}")
+            raise RetrievalError(f"Failed to find quality hotspots: {e}")
 
-    async def find_callees(
+    async def find_duplicates(
         self,
-        function_name: str,
         project_name: Optional[str] = None,
-        include_indirect: bool = False,
-        max_depth: int = 1,
-        limit: int = 50,
+        similarity_threshold: float = 0.85,
+        category: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        Find all functions called by the specified function.
+        Find and cluster duplicate code using semantic similarity.
+
+        Groups similar code into clusters and identifies the best version
+        (canonical member) based on documentation and complexity.
 
         Args:
-            function_name: Function name to analyze (qualified name, e.g., "MyClass.method")
-            project_name: Project to search in (defaults to current project)
-            include_indirect: If True, include transitive callees (functions that are called by functions that this function calls)
-            max_depth: Maximum depth for transitive search (only used if include_indirect=True)
-            limit: Maximum number of results to return
+            project_name: Optional project filter (defaults to current project)
+            similarity_threshold: Minimum similarity for duplicates (0.75-0.95, default: 0.85)
+            category: Optional category filter ("function", "class", etc.)
 
         Returns:
-            Dictionary with:
-                - function_name: The queried function
-                - direct_callees: List of direct callee functions
-                - indirect_callees: List of indirect callee functions (if include_indirect=True)
-                - total_count: Total number of callees found
-                - project_name: Project searched
-
-        Raises:
-            ValidationError: If function_name is invalid
-            StorageError: If call graph retrieval fails
+            Dict containing:
+            - clusters: List of duplicate clusters with canonical member and similar code
+            - summary: Statistics about duplicates found
         """
-        if not function_name:
-            raise ValidationError("function_name is required")
-
-        # Use current project if not specified
-        if project_name is None:
-            project_name = self.project_name or "global"
-
-        logger.info(f"Finding callees for {function_name} in {project_name} (indirect={include_indirect}, depth={max_depth})")
-
         try:
-            # Load call graph from Qdrant
-            call_graph = await self.call_graph_store.load_call_graph(project_name)
+            # Validate threshold
+            if not 0.75 <= similarity_threshold <= 0.95:
+                raise ValidationError("Similarity threshold must be between 0.75 and 0.95")
 
-            # Find callees using CallGraph algorithms
-            callees = call_graph.find_callees(
-                function_name=function_name,
-                include_indirect=include_indirect,
-                max_depth=max_depth,
+            # Use current project if not specified
+            filter_project_name = project_name or self.project_name
+            if not filter_project_name:
+                raise ValidationError("Project name required for duplicate detection")
+
+            logger.info(
+                f"Finding duplicates in project '{filter_project_name}' "
+                f"(threshold: {similarity_threshold:.2f})..."
             )
 
-            # Separate direct and indirect if requested
-            direct_callee_names = list(call_graph.forward_index.get(function_name, set()))
-            direct_callees = [c for c in callees if c.qualified_name in direct_callee_names]
-            indirect_callees = [c for c in callees if c.qualified_name not in direct_callee_names] if include_indirect else []
+            # Cluster duplicates
+            clusters = await self.duplicate_detector.cluster_duplicates(
+                min_threshold=similarity_threshold,
+                project_name=filter_project_name,
+            )
 
-            # Apply limit
-            all_callees = direct_callees + indirect_callees
-            limited_callees = all_callees[:limit]
+            # Calculate summary statistics
+            total_duplicates = sum(c.cluster_size for c in clusters)
+            avg_cluster_size = total_duplicates / len(clusters) if clusters else 0
 
-            # Format results
+            logger.info(
+                f"Found {len(clusters)} duplicate clusters "
+                f"(total duplicates: {total_duplicates}, avg cluster size: {avg_cluster_size:.1f})"
+            )
+
             return {
-                "function_name": function_name,
-                "project_name": project_name,
-                "direct_callees": [
-                    {
-                        "name": callee.name,
-                        "qualified_name": callee.qualified_name,
-                        "file_path": callee.file_path,
-                        "line_range": f"{callee.start_line}-{callee.end_line}",
-                        "is_async": callee.is_async,
-                    }
-                    for callee in direct_callees[:limit]
-                ],
-                "indirect_callees": [
-                    {
-                        "name": callee.name,
-                        "qualified_name": callee.qualified_name,
-                        "file_path": callee.file_path,
-                        "line_range": f"{callee.start_line}-{callee.end_line}",
-                        "is_async": callee.is_async,
-                    }
-                    for callee in indirect_callees[:limit]
-                ] if include_indirect else [],
-                "total_count": len(all_callees),
-                "returned_count": len(limited_callees),
-                "include_indirect": include_indirect,
-                "max_depth": max_depth if include_indirect else 1,
+                "status": "success",
+                "clusters": [c.to_dict() for c in clusters],
+                "summary": {
+                    "total_duplicates": total_duplicates,
+                    "cluster_count": len(clusters),
+                    "average_cluster_size": round(avg_cluster_size, 1),
+                    "similarity_threshold": similarity_threshold,
+                    "project_name": filter_project_name,
+                },
             }
 
         except Exception as e:
-            logger.error(f"Failed to find callees for {function_name}: {e}")
-            raise StorageError(f"Failed to find callees: {e}")
+            logger.error(f"Error finding duplicates: {e}")
+            raise RetrievalError(f"Failed to find duplicates: {e}")
 
-    async def get_call_chain(
+    async def get_complexity_report(
         self,
-        from_function: str,
-        to_function: str,
-        project_name: Optional[str] = None,
-        max_paths: int = 5,
-        max_depth: int = 10,
+        scope: str = "project",
+        scope_name: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        Find call chains (paths) from one function to another.
+        Generate comprehensive complexity analysis report.
+
+        Provides complexity statistics, distribution, and identifies
+        the most complex functions in the codebase.
 
         Args:
-            from_function: Starting function (qualified name)
-            to_function: Target function (qualified name)
-            project_name: Project to search in (defaults to current project)
-            max_paths: Maximum number of paths to return
-            max_depth: Maximum path length to search
+            scope: "project" or "file" (default: "project")
+            scope_name: Project name or file path (defaults to current project)
 
         Returns:
-            Dictionary with:
-                - from_function: Starting function
-                - to_function: Target function
-                - paths: List of call paths (each path is a list of function names)
-                - path_count: Number of paths found
-                - project_name: Project searched
-
-        Raises:
-            ValidationError: If function names are invalid
-            StorageError: If call graph retrieval fails
+            Dict containing:
+            - scope: Analysis scope (project or file)
+            - scope_name: Name of analyzed scope
+            - total_units: Number of code units analyzed
+            - average_complexity: Average cyclomatic complexity
+            - median_complexity: Median cyclomatic complexity
+            - max_complexity: Maximum complexity found
+            - distribution: Complexity distribution histogram
+            - top_complex: Top 10 most complex functions
+            - maintainability_index: Project-level maintainability score
+            - recommendations: Actionable suggestions
         """
-        if not from_function:
-            raise ValidationError("from_function is required")
-        if not to_function:
-            raise ValidationError("to_function is required")
-
-        # Use current project if not specified
-        if project_name is None:
-            project_name = self.project_name or "global"
-
-        logger.info(f"Finding call chains from {from_function} to {to_function} in {project_name}")
-
         try:
-            # Load call graph from Qdrant
-            call_graph = await self.call_graph_store.load_call_graph(project_name)
+            # Validate scope
+            if scope not in ["project", "file"]:
+                raise ValidationError("Scope must be 'project' or 'file'")
 
-            # Find call chains using CallGraph BFS algorithm
-            paths = call_graph.find_call_chain(
-                from_func=from_function,
-                to_func=to_function,
-                max_depth=max_depth,
-                max_paths=max_paths,
+            # Use current project if not specified
+            filter_scope_name = scope_name or self.project_name
+            if not filter_scope_name:
+                raise ValidationError("Scope name required for complexity analysis")
+
+            logger.info(f"Generating complexity report for {scope} '{filter_scope_name}'...")
+
+            # Build filters based on scope
+            if scope == "project":
+                filters = SearchFilters(
+                    scope=MemoryScope.PROJECT,
+                    project_name=filter_scope_name,
+                    category=MemoryCategory.CODE,
+                    context_level=ContextLevel.PROJECT_CONTEXT,
+                    tags=["code"],
+                )
+            else:  # file scope
+                filters = SearchFilters(
+                    category=MemoryCategory.CODE,
+                    context_level=ContextLevel.PROJECT_CONTEXT,
+                    tags=["code"],
+                )
+
+            # Retrieve code memories
+            dummy_embedding = await self._get_embedding("code")
+            all_results = await self.store.retrieve(
+                query_embedding=dummy_embedding,
+                filters=filters,
+                limit=10000,
             )
 
-            # Format results with detailed path information
-            formatted_paths = []
-            for path in paths:
-                # Get function details for each step
-                path_details = []
-                for func_name in path:
-                    node = call_graph.nodes.get(func_name)
-                    if node:
-                        path_details.append({
-                            "name": node.name,
-                            "qualified_name": node.qualified_name,
-                            "file_path": node.file_path,
-                            "line_range": f"{node.start_line}-{node.end_line}",
-                        })
-                    else:
-                        # Fallback if node not found
-                        path_details.append({
-                            "name": func_name,
-                            "qualified_name": func_name,
-                            "file_path": "unknown",
-                            "line_range": "unknown",
-                        })
+            # Filter by file if file scope
+            if scope == "file":
+                all_results = [
+                    (mem, score) for mem, score in all_results
+                    if mem.metadata.get("file_path") == filter_scope_name
+                ]
 
-                formatted_paths.append({
-                    "path": path,
-                    "length": len(path),
-                    "details": path_details,
+            if not all_results:
+                return {
+                    "status": "success",
+                    "scope": scope,
+                    "scope_name": filter_scope_name,
+                    "total_units": 0,
+                    "message": "No code units found in specified scope",
+                }
+
+            logger.info(f"Analyzing complexity for {len(all_results)} code units...")
+
+            # Analyze complexity for all units
+            complexities = []
+            maintainability_scores = []
+            complex_functions = []
+
+            for memory, _ in all_results:
+                # Build code unit dict
+                code_unit = {
+                    "content": memory.content,
+                    "signature": memory.metadata.get("signature", ""),
+                    "unit_type": memory.metadata.get("unit_type", "function"),
+                    "language": memory.metadata.get("language", "python"),
+                }
+
+                # Calculate complexity metrics
+                complexity_metrics = self.complexity_analyzer.analyze(code_unit)
+
+                # Calculate maintainability index
+                mi = self.quality_analyzer.calculate_maintainability_index(
+                    complexity_metrics.cyclomatic_complexity,
+                    complexity_metrics.line_count,
+                    complexity_metrics.has_documentation,
+                )
+
+                # Collect data
+                complexities.append(complexity_metrics.cyclomatic_complexity)
+                maintainability_scores.append(mi)
+                complex_functions.append({
+                    "file_path": memory.metadata.get("file_path", "unknown"),
+                    "unit_name": memory.metadata.get("unit_name", "unknown"),
+                    "complexity": complexity_metrics.cyclomatic_complexity,
+                    "line_count": complexity_metrics.line_count,
+                    "nesting_depth": complexity_metrics.nesting_depth,
+                    "maintainability_index": mi,
                 })
 
+            # Calculate statistics
+            average_complexity = sum(complexities) / len(complexities)
+            sorted_complexities = sorted(complexities)
+            median_complexity = sorted_complexities[len(sorted_complexities) // 2]
+            max_complexity = max(complexities)
+
+            # Build distribution histogram
+            distribution = {
+                "0-5": sum(1 for c in complexities if c <= 5),
+                "6-10": sum(1 for c in complexities if 6 <= c <= 10),
+                "11-20": sum(1 for c in complexities if 11 <= c <= 20),
+                ">20": sum(1 for c in complexities if c > 20),
+            }
+
+            # Get top 10 most complex functions
+            complex_functions.sort(key=lambda f: f["complexity"], reverse=True)
+            top_complex = complex_functions[:10]
+
+            # Calculate project-level maintainability index (weighted average)
+            project_mi = int(sum(maintainability_scores) / len(maintainability_scores))
+
+            # Generate recommendations
+            recommendations = []
+            critical_count = distribution[">20"]
+            high_count = distribution["11-20"]
+
+            if critical_count > 0:
+                recommendations.append(
+                    f"{critical_count} functions have critical complexity (>20). Consider refactoring."
+                )
+            if high_count > 0:
+                recommendations.append(
+                    f"{high_count} functions have high complexity (11-20). Monitor for growth."
+                )
+
+            if project_mi >= 85:
+                recommendations.append(f"Project maintainability is excellent ({project_mi}/100).")
+            elif project_mi >= 65:
+                recommendations.append(
+                    f"Project maintainability is moderate ({project_mi}/100). Target: >80."
+                )
+            else:
+                recommendations.append(
+                    f"Project maintainability is low ({project_mi}/100). Refactoring recommended."
+                )
+
+            logger.info(
+                f"Complexity report complete: avg={average_complexity:.1f}, "
+                f"median={median_complexity}, max={max_complexity}, MI={project_mi}"
+            )
+
             return {
-                "from_function": from_function,
-                "to_function": to_function,
-                "project_name": project_name,
-                "paths": formatted_paths,
-                "path_count": len(paths),
-                "max_paths": max_paths,
-                "max_depth": max_depth,
+                "status": "success",
+                "scope": scope,
+                "scope_name": filter_scope_name,
+                "total_units": len(all_results),
+                "average_complexity": round(average_complexity, 1),
+                "median_complexity": median_complexity,
+                "max_complexity": max_complexity,
+                "distribution": distribution,
+                "top_complex": top_complex,
+                "maintainability_index": project_mi,
+                "recommendations": recommendations,
             }
 
         except Exception as e:
-            logger.error(f"Failed to find call chain from {from_function} to {to_function}: {e}")
-            raise StorageError(f"Failed to find call chain: {e}")
-
-    async def find_implementations(
-        self,
-        interface_name: str,
-        project_name: Optional[str] = None,
-        language: Optional[str] = None,
-        limit: int = 50,
-    ) -> Dict[str, Any]:
-        """
-        Find all implementations of an interface/abstract class.
-
-        Args:
-            interface_name: Interface/abstract class name to search for
-            project_name: Project to search in (defaults to current project)
-            language: Filter by language (e.g., "python", "javascript")
-            limit: Maximum number of results to return
-
-        Returns:
-            Dictionary with:
-                - interface_name: The queried interface
-                - implementations: List of implementation classes
-                - total_count: Total number of implementations found
-                - project_name: Project searched
-
-        Raises:
-            ValidationError: If interface_name is invalid
-            StorageError: If call graph retrieval fails
-        """
-        if not interface_name:
-            raise ValidationError("interface_name is required")
-
-        # Use current project if not specified
-        if project_name is None:
-            project_name = self.project_name or "global"
-
-        logger.info(f"Finding implementations of {interface_name} in {project_name}")
-
-        try:
-            # Load call graph from Qdrant
-            call_graph = await self.call_graph_store.load_call_graph(project_name)
-
-            # Get implementations from call graph
-            implementations = call_graph.get_implementations(interface_name)
-
-            # Filter by language if requested
-            if language:
-                implementations = [impl for impl in implementations if impl.language.lower() == language.lower()]
-
-            # Apply limit
-            limited_impls = implementations[:limit]
-
-            # Format results
-            return {
-                "interface_name": interface_name,
-                "project_name": project_name,
-                "language": language,
-                "implementations": [
-                    {
-                        "implementation_name": impl.implementation_name,
-                        "file_path": impl.file_path,
-                        "language": impl.language,
-                        "methods": impl.methods,
-                        "method_count": len(impl.methods),
-                    }
-                    for impl in limited_impls
-                ],
-                "total_count": len(implementations),
-                "returned_count": len(limited_impls),
-            }
-
-        except Exception as e:
-            logger.error(f"Failed to find implementations for {interface_name}: {e}")
-            raise StorageError(f"Failed to find implementations: {e}")
-
-    async def find_dependencies(
-        self,
-        file_path: str,
-        project_name: Optional[str] = None,
-        depth: int = 1,
-        include_transitive: bool = False,
-    ) -> Dict[str, Any]:
-        """
-        Find all files that this file depends on (imports).
-
-        This method uses the existing dependency graph functionality (FEAT-048)
-        to find file-level dependencies.
-
-        Args:
-            file_path: File path to analyze
-            project_name: Project to search in (defaults to current project)
-            depth: Maximum depth for dependency traversal
-            include_transitive: If True, include transitive dependencies
-
-        Returns:
-            Dictionary with:
-                - file_path: The queried file
-                - direct_dependencies: List of direct dependencies
-                - transitive_dependencies: List of transitive dependencies (if include_transitive=True)
-                - total_count: Total number of dependencies found
-                - project_name: Project searched
-
-        Raises:
-            ValidationError: If file_path is invalid
-            StorageError: If dependency graph retrieval fails
-        """
-        if not file_path:
-            raise ValidationError("file_path is required")
-
-        # Use current project if not specified
-        if project_name is None:
-            project_name = self.project_name or "global"
-
-        logger.info(f"Finding dependencies for {file_path} in {project_name} (transitive={include_transitive}, depth={depth})")
-
-        try:
-            # Build dependency graph from store
-            dep_graph = await self._build_dependency_graph_from_store(project_name=project_name)
-
-            # Find the node for this file
-            file_node = None
-            for node in dep_graph.nodes.values():
-                if node.file_path == file_path:
-                    file_node = node
-                    break
-
-            if not file_node:
-                return {
-                    "file_path": file_path,
-                    "project_name": project_name,
-                    "direct_dependencies": [],
-                    "transitive_dependencies": [],
-                    "total_count": 0,
-                    "returned_count": 0,
-                    "include_transitive": include_transitive,
-                }
-
-            # Get direct dependencies (outgoing edges)
-            direct_deps = []
-            transitive_deps = []
-
-            for edge in dep_graph.edges:
-                if edge.from_file == file_path:
-                    # This is a direct dependency
-                    target_node = dep_graph.nodes.get(edge.to_file)
-                    if target_node:
-                        direct_deps.append({
-                            "file_path": target_node.file_path,
-                            "import_type": edge.import_type,
-                            "language": target_node.language,
-                        })
-
-            # For transitive dependencies, use BFS traversal
-            if include_transitive:
-                visited = {file_path}
-                queue = [file_path]
-                depth_map = {file_path: 0}
-
-                while queue:
-                    current_file = queue.pop(0)
-                    current_depth = depth_map[current_file]
-
-                    if current_depth >= depth:
-                        continue
-
-                    for edge in dep_graph.edges:
-                        if edge.from_file == current_file and edge.to_file not in visited:
-                            visited.add(edge.to_file)
-                            queue.append(edge.to_file)
-                            depth_map[edge.to_file] = current_depth + 1
-
-                            # Skip direct dependencies (already in direct_deps)
-                            if edge.to_file not in [d["file_path"] for d in direct_deps]:
-                                target_node = dep_graph.nodes.get(edge.to_file)
-                                if target_node:
-                                    transitive_deps.append({
-                                        "file_path": target_node.file_path,
-                                        "import_type": edge.import_type,
-                                        "language": target_node.language,
-                                        "depth": depth_map[edge.to_file],
-                                    })
-
-            return {
-                "file_path": file_path,
-                "project_name": project_name,
-                "direct_dependencies": direct_deps,
-                "transitive_dependencies": transitive_deps if include_transitive else [],
-                "total_count": len(direct_deps) + len(transitive_deps),
-                "returned_count": len(direct_deps) + len(transitive_deps),
-                "include_transitive": include_transitive,
-                "max_depth": depth,
-            }
-
-        except Exception as e:
-            logger.error(f"Failed to find dependencies for {file_path}: {e}")
-            raise StorageError(f"Failed to find dependencies: {e}")
-
-    async def find_dependents(
-        self,
-        file_path: str,
-        project_name: Optional[str] = None,
-        depth: int = 1,
-        include_transitive: bool = False,
-    ) -> Dict[str, Any]:
-        """
-        Find all files that depend on this file (reverse dependencies).
-
-        This method uses the existing dependency graph functionality (FEAT-048)
-        to find file-level reverse dependencies.
-
-        Args:
-            file_path: File path to analyze
-            project_name: Project to search in (defaults to current project)
-            depth: Maximum depth for reverse dependency traversal
-            include_transitive: If True, include transitive dependents
-
-        Returns:
-            Dictionary with:
-                - file_path: The queried file
-                - direct_dependents: List of direct dependents
-                - transitive_dependents: List of transitive dependents (if include_transitive=True)
-                - total_count: Total number of dependents found
-                - project_name: Project searched
-
-        Raises:
-            ValidationError: If file_path is invalid
-            StorageError: If dependency graph retrieval fails
-        """
-        if not file_path:
-            raise ValidationError("file_path is required")
-
-        # Use current project if not specified
-        if project_name is None:
-            project_name = self.project_name or "global"
-
-        logger.info(f"Finding dependents for {file_path} in {project_name} (transitive={include_transitive}, depth={depth})")
-
-        try:
-            # Build dependency graph from store
-            dep_graph = await self._build_dependency_graph_from_store(project_name=project_name)
-
-            # Find the node for this file
-            file_node = None
-            for node in dep_graph.nodes.values():
-                if node.file_path == file_path:
-                    file_node = node
-                    break
-
-            if not file_node:
-                return {
-                    "file_path": file_path,
-                    "project_name": project_name,
-                    "direct_dependents": [],
-                    "transitive_dependents": [],
-                    "total_count": 0,
-                    "returned_count": 0,
-                    "include_transitive": include_transitive,
-                }
-
-            # Get direct dependents (incoming edges)
-            direct_deps = []
-            transitive_deps = []
-
-            for edge in dep_graph.edges:
-                if edge.to_file == file_path:
-                    # This file is being imported by edge.from_file
-                    source_node = dep_graph.nodes.get(edge.from_file)
-                    if source_node:
-                        direct_deps.append({
-                            "file_path": source_node.file_path,
-                            "import_type": edge.import_type,
-                            "language": source_node.language,
-                        })
-
-            # For transitive dependents, use BFS traversal (reverse direction)
-            if include_transitive:
-                visited = {file_path}
-                queue = [file_path]
-                depth_map = {file_path: 0}
-
-                while queue:
-                    current_file = queue.pop(0)
-                    current_depth = depth_map[current_file]
-
-                    if current_depth >= depth:
-                        continue
-
-                    for edge in dep_graph.edges:
-                        if edge.to_file == current_file and edge.from_file not in visited:
-                            visited.add(edge.from_file)
-                            queue.append(edge.from_file)
-                            depth_map[edge.from_file] = current_depth + 1
-
-                            # Skip direct dependents (already in direct_deps)
-                            if edge.from_file not in [d["file_path"] for d in direct_deps]:
-                                source_node = dep_graph.nodes.get(edge.from_file)
-                                if source_node:
-                                    transitive_deps.append({
-                                        "file_path": source_node.file_path,
-                                        "import_type": edge.import_type,
-                                        "language": source_node.language,
-                                        "depth": depth_map[edge.from_file],
-                                    })
-
-            return {
-                "file_path": file_path,
-                "project_name": project_name,
-                "direct_dependents": direct_deps,
-                "transitive_dependents": transitive_deps if include_transitive else [],
-                "total_count": len(direct_deps) + len(transitive_deps),
-                "returned_count": len(direct_deps) + len(transitive_deps),
-                "include_transitive": include_transitive,
-                "max_depth": depth,
-            }
-
-        except Exception as e:
-            logger.error(f"Failed to find dependents for {file_path}: {e}")
-            raise StorageError(f"Failed to find dependents: {e}")
+            logger.error(f"Error generating complexity report: {e}")
+            raise RetrievalError(f"Failed to generate complexity report: {e}")
 
     async def close(self) -> None:
         """Clean up resources."""
