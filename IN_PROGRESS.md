@@ -1,7 +1,7 @@
 # IN_PROGRESS - Active Work
 
 **Maximum Concurrent Tasks: 6**
-**Current Active: 2/6**
+**Current Active: 1/6**
 
 ---
 
@@ -14,32 +14,6 @@
 - **Completion**: Move to REVIEW.md when ready for review, then to CHANGELOG.md when merged
 
 ## Active Tasks
-
-### [UX-037]: Interactive Time Range Selector
-**Started**: 2025-11-22
-**Assigned**: Claude Code Agent (Frontend Developer)
-**Branch**: worktrees/UX-037
-**Blocked By**: None
-**Status**: Nearly Complete
-
-**Progress Notes**:
-- 2025-11-22: Started implementation, created worktree
-- 2025-11-22: Added custom date picker UI with validation
-- 2025-11-22: Implemented localStorage persistence
-- 2025-11-22: Updated backend APIs to accept time range parameters
-- 2025-11-22: Added responsive mobile design
-- 2025-11-22: All features complete, ready for testing
-
-**Next Steps**:
-- [x] Implement custom date picker UI
-- [x] Add date validation
-- [x] Update backend endpoints
-- [x] Add localStorage persistence
-- [x] Implement responsive design
-- [ ] Run verify-complete.py
-- [ ] Move to REVIEW.md
-
-**See**: TODO.md line 531
 
 ---
 
