@@ -187,6 +187,16 @@ async def list_tools() -> List[Tool]:
                         "enum": ["semantic", "keyword", "hybrid"],
                         "description": "Search mode (default: semantic)"
                     },
+                    # FEAT-058: Pattern matching parameters
+                    "pattern": {
+                        "type": "string",
+                        "description": "Optional regex pattern or @preset:name for code pattern matching"
+                    },
+                    "pattern_mode": {
+                        "type": "string",
+                        "enum": ["filter", "boost", "require"],
+                        "description": "How to apply pattern: filter, boost, or require (default: filter)"
+                    },
                     # FEAT-056: Advanced filtering parameters
                     "exclude_patterns": {
                         "type": "array",

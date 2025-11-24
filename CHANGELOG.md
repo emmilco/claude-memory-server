@@ -51,6 +51,19 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Added - 2025-11-23
+- **FEAT-056: Advanced Filtering & Sorting for search_code**
+  - Added glob pattern matching for `file_pattern` (e.g., `**/*.test.py`, `src/**/auth*.ts`)
+  - Added `exclude_patterns` parameter to filter out test files, generated code
+  - Added complexity filtering: `complexity_min`, `complexity_max` (cyclomatic complexity)
+  - Added line count filtering: `line_count_min`, `line_count_max`
+  - Added date filtering: `modified_after`, `modified_before` (file modification time)
+  - Added multi-criteria sorting: `sort_by` (relevance, complexity, size, recency, importance), `sort_order` (asc/desc)
+  - Custom glob matching handles `**/tests/**` patterns correctly
+  - Response includes `filters_applied` and `sort_info` metadata
+  - Updated MCP tool schema with FEAT-056 and FEAT-058 parameters
+  - Re-implemented after FEAT-058 merge conflict resolved
+
 ### Added - 2025-11-22
 - **FEAT-055: Git Storage and History Search**
   - Added git commit storage with semantic search over commit messages
