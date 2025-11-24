@@ -28,30 +28,86 @@ logger = logging.getLogger(__name__)
 class QdrantMemoryStore(MemoryStore):
     """Qdrant implementation of the MemoryStore interface."""
 
-    def __init__(self, config: Optional[ServerConfig] = None):
+    def __init__(self, config: Optional[ServerConfig] = None, use_pool: bool = True):
         """
         Initialize Qdrant memory store.
 
         Args:
             config: Server configuration. If None, uses global config.
+            use_pool: If True, use connection pool. If False, use single client (legacy mode).
         """
         if config is None:
             from src.config import get_config
             config = get_config()
 
         self.config = config
-        self.setup = QdrantSetup(config)
+        self.use_pool = use_pool
+        self.setup = QdrantSetup(config, use_pool=use_pool)
         self.client: Optional[QdrantClient] = None
         self.collection_name = config.qdrant_collection_name
 
     async def initialize(self) -> None:
-        """Initialize the Qdrant connection and collection."""
+        """Initialize the Qdrant connection/pool and collection."""
         try:
-            self.client = self.setup.connect()
-            self.setup.ensure_collection_exists()
-            logger.info("Qdrant store initialized successfully")
+            if self.use_pool:
+                # Create connection pool - disable health checks during initialization
+                # to avoid chicken-and-egg problem (collection doesn't exist yet)
+                await self.setup.create_pool(
+                    enable_health_checks=False,  # Disable during init, will work after collection exists
+                    enable_monitoring=False,  # Can be enabled for production
+                )
+                # Acquire a temporary client to ensure collection exists
+                client = await self.setup.pool.acquire()
+                try:
+                    # Use temporary client for setup
+                    old_client = self.setup.client
+                    self.setup.client = client
+                    self.setup.ensure_collection_exists()
+                    self.setup.client = old_client
+                finally:
+                    await self.setup.pool.release(client)
+
+                # Now enable health checks since collection exists
+                if self.setup.pool:
+                    self.setup.pool.enable_health_checks = True
+                    from src.store.connection_health_checker import ConnectionHealthChecker
+                    self.setup.pool._health_checker = ConnectionHealthChecker()
+
+                logger.info("Qdrant store initialized with connection pool")
+            else:
+                # Legacy: single client
+                self.client = self.setup.connect()
+                self.setup.ensure_collection_exists()
+                logger.info("Qdrant store initialized with single client (legacy mode)")
         except Exception as e:
             raise StorageError(f"Failed to initialize Qdrant store: {e}")
+
+    async def _get_client(self) -> QdrantClient:
+        """Get a Qdrant client (from pool or single client).
+
+        Returns:
+            QdrantClient: Client for Qdrant operations
+
+        Raises:
+            StorageError: If not initialized
+        """
+        if self.use_pool:
+            if self.setup.pool is None:
+                await self.initialize()
+            return await self.setup.pool.acquire()
+        else:
+            if self.client is None:
+                await self.initialize()
+            return self.client
+
+    async def _release_client(self, client: QdrantClient) -> None:
+        """Release a Qdrant client back to pool (if using pool).
+
+        Args:
+            client: Client to release
+        """
+        if self.use_pool and self.setup.pool:
+            await self.setup.pool.release(client)
 
     async def store(
         self,
@@ -60,9 +116,7 @@ class QdrantMemoryStore(MemoryStore):
         metadata: Dict[str, Any],
     ) -> str:
         """Store a single memory with its embedding and metadata."""
-        if self.client is None:
-            await self.initialize()
-
+        client = await self._get_client()
         try:
             # Build payload using helper method
             memory_id, payload = self._build_payload(content, embedding, metadata)
@@ -75,7 +129,7 @@ class QdrantMemoryStore(MemoryStore):
             )
 
             # Upsert to Qdrant
-            self.client.upsert(
+            client.upsert(
                 collection_name=self.collection_name,
                 points=[point],
             )
@@ -95,6 +149,8 @@ class QdrantMemoryStore(MemoryStore):
             # Generic fallback
             logger.error(f"Unexpected error storing memory: {e}")
             raise StorageError(f"Failed to store memory: {e}")
+        finally:
+            await self._release_client(client)
 
     async def retrieve(
         self,
@@ -103,9 +159,7 @@ class QdrantMemoryStore(MemoryStore):
         limit: int = 5,
     ) -> List[Tuple[MemoryUnit, float]]:
         """Retrieve memories similar to the query embedding."""
-        if self.client is None:
-            await self.initialize()
-
+        client = await self._get_client()
         try:
             # Cap limit to prevent memory/performance issues from unbounded queries
             safe_limit = min(limit, 100)
@@ -116,7 +170,7 @@ class QdrantMemoryStore(MemoryStore):
             filter_conditions = self._build_filter(filters) if filters else None
 
             # Search using new query API
-            search_result = self.client.query_points(
+            search_result = client.query_points(
                 collection_name=self.collection_name,
                 query=query_embedding,
                 query_filter=filter_conditions,
@@ -161,6 +215,8 @@ class QdrantMemoryStore(MemoryStore):
                 raise RetrievalError(f"Failed to connect to Qdrant: {e}")
             logger.error(f"Unexpected error during retrieval: {e}")
             raise RetrievalError(f"Failed to retrieve memories from Qdrant: {e}")
+        finally:
+            await self._release_client(client)
 
     async def delete(self, memory_id: str) -> bool:
         """Delete a memory by its ID."""
@@ -864,9 +920,36 @@ class QdrantMemoryStore(MemoryStore):
             logger.error(f"Error listing indexed units: {e}")
             raise StorageError(f"Failed to list indexed units: {e}")
 
+    def get_pool_stats(self) -> Optional[Dict[str, Any]]:
+        """Get connection pool statistics.
+
+        Returns:
+            Pool statistics dictionary or None if not using pool
+        """
+        if self.use_pool and self.setup.pool:
+            pool_stats = self.setup.pool.stats()
+            return {
+                "pool_size": pool_stats.pool_size,
+                "active_connections": pool_stats.active_connections,
+                "idle_connections": pool_stats.idle_connections,
+                "total_acquires": pool_stats.total_acquires,
+                "total_releases": pool_stats.total_releases,
+                "total_timeouts": pool_stats.total_timeouts,
+                "total_health_failures": pool_stats.total_health_failures,
+                "connections_created": pool_stats.connections_created,
+                "connections_recycled": pool_stats.connections_recycled,
+                "avg_acquire_time_ms": pool_stats.avg_acquire_time_ms,
+                "p95_acquire_time_ms": pool_stats.p95_acquire_time_ms,
+                "max_acquire_time_ms": pool_stats.max_acquire_time_ms,
+            }
+        return None
+
     async def close(self) -> None:
         """Close connections and clean up resources."""
-        if self.client:
+        if self.use_pool and self.setup.pool:
+            await self.setup.pool.close()
+            logger.info("Qdrant connection pool closed")
+        elif self.client:
             self.client.close()
             self.client = None
             logger.info("Qdrant store closed")

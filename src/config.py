@@ -21,6 +21,14 @@ class ServerConfig(BaseSettings):
     qdrant_api_key: Optional[str] = None
     qdrant_collection_name: str = "memory"
 
+    # Connection pooling (PERF-007)
+    qdrant_pool_size: int = 5  # Maximum connections in pool
+    qdrant_pool_min_size: int = 1  # Minimum connections to maintain
+    qdrant_pool_timeout: float = 10.0  # Max wait for connection (seconds)
+    qdrant_pool_recycle: int = 3600  # Recycle connections after N seconds (1 hour)
+    qdrant_prefer_grpc: bool = False  # Use gRPC for better performance
+    qdrant_health_check_interval: int = 60  # Health check every N seconds
+
     # Performance tuning
     embedding_batch_size: int = 32
     max_query_context_tokens: int = 8000
