@@ -257,32 +257,26 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
 
 **Phase 1: Quick Wins (2 weeks)**
 
-- [ ] **FEAT-056**: Advanced Filtering & Sorting (~1 week) 🔥🔥
-  - **Current Gap:** No way to filter by file pattern, complexity, date ranges, or sort by relevance
-  - **Problem:** QA review needed grep for pattern matching ("find all *.test.py files with TODO"), architecture discovery needed complexity filters
-  - **Proposed Solution:**
-    - [ ] Add `file_pattern` parameter to search_code (glob patterns like "*.test.py", "src/**/auth*.ts")
-    - [ ] Add `complexity_min` / `complexity_max` filters (cyclomatic complexity, line count)
-    - [ ] Add `modified_after` / `modified_before` date range filters
-    - [ ] Add `sort_by` parameter: relevance (default), complexity, size, recency, importance
-    - [ ] Add `exclude_patterns` to filter out test files, generated code, etc.
-  - **Impact:** Eliminates 40% of grep usage, enables precise filtering, 3x faster targeted searches
-  - **Use case:** "Find complex authentication functions modified in last 30 days" or "Show all error handlers sorted by complexity"
-  - **Tests:** 15-20 tests for filtering, sorting, and edge cases
+- [x] **FEAT-056**: Advanced Filtering & Sorting ✅ **COMPLETE** (2025-11-23)
+  - [x] Added `file_pattern` parameter to search_code (glob patterns like "*.test.py", "src/**/auth*.ts")
+  - [x] Added `exclude_patterns` to filter out test files, generated code, etc.
+  - [x] Added `complexity_min` / `complexity_max` filters (cyclomatic complexity)
+  - [x] Added `line_count_min` / `line_count_max` filters
+  - [x] Added `modified_after` / `modified_before` date range filters
+  - [x] Added `sort_by` parameter: relevance (default), complexity, size, recency, importance
+  - [x] Added `sort_order` parameter: asc/desc
+  - [x] All 22 tests passing
+  - **Impact:** Enables precise filtering, eliminates grep usage for pattern matching
   - **See:** planning_docs/FEAT-056_advanced_filtering_plan.md
 
-- [ ] **FEAT-057**: Better UX & Discoverability (~1 week) 🔥
-  - **Current Gap:** No query suggestions, result summaries, or interactive refinement
-  - **Problem:** Users don't know what queries work well, results lack context, no guidance for improvement
-  - **Proposed Solution:**
-    - [ ] Add `suggest_queries()` MCP tool - Returns query suggestions based on codebase and intent
-    - [ ] Add faceted search results (show file counts by language, category, project)
-    - [ ] Add result summaries (e.g., "Found 15 functions across 8 files in 3 projects")
-    - [ ] Add "Did you mean?" suggestions for typos/synonyms
-    - [ ] Add interactive refinement hints ("Try narrowing with file_pattern=*.py")
+- [x] **FEAT-057**: Better UX & Discoverability ✅ **COMPLETE** (2025-11-23)
+  - [x] Added `suggest_queries()` MCP tool with intent-based suggestions
+  - [x] Added faceted search results (languages, unit_types, files, directories)
+  - [x] Added natural language result summaries
+  - [x] Added "Did you mean?" spelling suggestions
+  - [x] Added interactive refinement hints
+  - [x] All 43 tests passing
   - **Impact:** Reduced learning curve, better discoverability, improved query success rate
-  - **Use case:** User asks "show me auth code" → System suggests refinements and shows distribution
-  - **Tests:** 10-15 tests for suggestions, facets, summaries
   - **See:** planning_docs/FEAT-057_ux_discoverability_plan.md
 
 - [x] **FEAT-058**: Pattern Detection (Regex + Semantic Hybrid) ✅ **COMPLETE** (2025-11-22)
