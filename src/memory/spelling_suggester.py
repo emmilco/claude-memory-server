@@ -92,15 +92,7 @@ class SpellingSuggester:
             if len(term) <= 2:
                 continue
 
-            # Check synonyms first - offer alternative term if available
-            if term in PROGRAMMING_SYNONYMS:
-                for synonym in list(PROGRAMMING_SYNONYMS[term])[:2]:
-                    if synonym not in query_terms:
-                        corrected_query = query.lower().replace(term, synonym)
-                        if corrected_query not in suggestions:
-                            suggestions.append(corrected_query)
-
-            # Check indexed terms for close matches
+            # Check indexed terms for close matches first
             if self.indexed_terms:
                 close_matches = self._find_close_matches(
                     term,
@@ -111,6 +103,25 @@ class SpellingSuggester:
                     corrected_query = query.lower().replace(term, match)
                     if corrected_query not in suggestions:
                         suggestions.append(corrected_query)
+
+            # Check synonyms - prioritize those in indexed_terms
+            if term in PROGRAMMING_SYNONYMS:
+                # Sort synonyms to prioritize those in indexed_terms
+                synonyms = PROGRAMMING_SYNONYMS[term]
+                if self.indexed_terms:
+                    # Prioritize synonyms that exist in indexed terms
+                    indexed_synonyms = sorted(
+                        synonyms,
+                        key=lambda s: (s.lower() not in self.indexed_terms, s)
+                    )
+                else:
+                    indexed_synonyms = sorted(synonyms)  # Deterministic ordering
+
+                for synonym in indexed_synonyms[:2]:
+                    if synonym not in query_terms:
+                        corrected_query = query.lower().replace(term, synonym)
+                        if corrected_query not in suggestions:
+                            suggestions.append(corrected_query)
 
         # Common programming typos
         common_typos = {

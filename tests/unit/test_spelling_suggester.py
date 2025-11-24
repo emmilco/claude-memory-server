@@ -36,7 +36,6 @@ def test_multiple_typos(suggester):
     assert any("connection" in c for c in corrections)
 
 
-@pytest.mark.skip(reason="Flaky test - race condition in parallel execution (passes individually)")
 def test_synonym_suggestions(suggester):
     """Test synonym suggestions."""
     # Load some terms so synonyms can be suggested
