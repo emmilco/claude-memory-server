@@ -2658,7 +2658,7 @@ class MemoryRAGServer:
 
                         if modified_after is not None and file_modified_dt < modified_after:
                             continue
-                        if modified_before is not None and file_modified_dt > modified_before:
+                        if modified_before is not None and file_modified_dt >= modified_before:
                             continue
 
                 # Deduplication: Skip if we've already seen this exact code unit
@@ -2704,20 +2704,19 @@ class MemoryRAGServer:
 
                 code_results.append(result_dict)
 
-            # FEAT-056: Apply sorting (if not sorting by relevance, which is already sorted)
-            if sort_by and sort_by != "relevance":
-                # Define sort key functions
-                sort_keys = {
-                    "complexity": lambda r: r["metadata"]["cyclomatic_complexity"],
-                    "size": lambda r: r["metadata"]["line_count"],
-                    "recency": lambda r: r["metadata"]["file_modified_at"],
-                    "importance": lambda r: r["relevance_score"],  # Use semantic score as importance
-                }
+            # FEAT-056: Apply sorting
+            # Define sort key functions
+            sort_keys = {
+                "relevance": lambda r: r["relevance_score"],
+                "complexity": lambda r: r["metadata"]["cyclomatic_complexity"],
+                "size": lambda r: r["metadata"]["line_count"],
+                "recency": lambda r: r["metadata"]["file_modified_at"],
+                "importance": lambda r: r["relevance_score"],  # Use semantic score as importance
+            }
 
-                if sort_by in sort_keys:
-                    reverse = (sort_order == "desc")
-                    code_results.sort(key=sort_keys[sort_by], reverse=reverse)
-                # else: keep default relevance sorting
+            if sort_by in sort_keys:
+                reverse = (sort_order == "desc")
+                code_results.sort(key=sort_keys[sort_by], reverse=reverse)
 
             query_time_ms = (time.time() - start_time) * 1000
 
