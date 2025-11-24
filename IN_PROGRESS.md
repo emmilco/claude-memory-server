@@ -15,32 +15,57 @@
 
 ## Active Tasks
 
-### [FEAT-056]: Advanced Filtering & Sorting
+---
+
+### [REF-013]: Split Monolithic Core Server
 **Started**: 2025-11-23
-**Assigned**: Backend Engineer (Claude Code Agent)
-**Branch**: .worktrees/FEAT-056
+**Assigned**: Software Architect
+**Branch**: .worktrees/REF-013
 **Blocked By**: None
-**Status**: In Progress - Re-implementing after FEAT-058 conflict
+**Status**: PLANNING COMPLETE - Awaiting User Approval
 
 **Progress Notes**:
-- 2025-11-23: Discovered FEAT-056 was merged (d2614e1) but reverted by FEAT-058 merge (ed12a21)
-- 2025-11-23: FEAT-058 overwrote search_code signature, removing FEAT-056 parameters
-- 2025-11-23: Need to re-add: file_pattern (glob), complexity_min/max, line_count_min/max, modified_after/before, sort_by, exclude_patterns
-- 2025-11-23: Must preserve FEAT-058 parameters: pattern, pattern_mode
+- 2025-11-23 09:15: Created worktree, reviewed existing planning docs
+- 2025-11-23 09:20: Analyzed server.py structure (5,382 lines, 72 methods across 8 domains)
+- 2025-11-23 09:25: Completed method breakdown and dependency analysis
+- 2025-11-23 09:30: Created comprehensive planning documents (7 files, 145KB total)
+- 2025-11-23 09:30: **PLANNING PHASE COMPLETE**
 
-**Next Steps**:
-- [ ] Update src/core/server.py - Add FEAT-056 parameters to search_code signature
-- [ ] Implement glob pattern matching logic
-- [ ] Implement complexity filtering logic
-- [ ] Implement date range filtering logic
-- [ ] Implement sorting logic
-- [ ] Update src/mcp_server.py - Update MCP tool schema
-- [ ] Remove skip markers from tests/unit/test_advanced_filtering.py
-- [ ] Run tests to verify implementation
-- [ ] Update CHANGELOG.md
-- [ ] Run verify-complete.py
+**Planning Deliverables**:
+- ✅ REF-013_EXECUTIVE_SUMMARY.md (8.7KB) - High-level overview and recommendations
+- ✅ REF-013_ANALYSIS_AND_RECOMMENDATIONS.md (19KB) - Detailed analysis
+- ✅ REF-013_METHOD_BREAKDOWN.md (12KB) - All 72 methods classified by service
+- ✅ REF-013_PHASE1_PLAN.md (13KB) - Day-by-day implementation plan
+- ✅ REF-013_ARCHITECTURE_DIAGRAM.md (30KB) - Visual diagrams and architecture
+- ✅ REF-013_split_server_implementation_plan.md (58KB) - Full 6-month plan (existing)
+- ✅ REF-013_server_refactoring_plan.md (4.6KB) - Handler extraction fallback (existing)
 
-**See**: planning_docs/FEAT-056_advanced_filtering_plan.md, TODO.md line 263
+**Key Findings**:
+- Server.py contains 72 methods across 8 distinct domains (MEMORY, CODE_INDEXING, HEALTH, QUERY, CROSS_PROJECT, GIT_HISTORY, CODE_REVIEW, CORE)
+- **HealthService identified as ideal Phase 1 target** (9 methods, ~400 lines, highest isolation, lowest risk)
+- Two-path strategy: Service extraction (6 months) vs. Handler extraction (1 day) based on Phase 1 results
+- Phase 1 success probability: HIGH (80%+)
+
+**Recommendation**:
+- **START WITH HEALTHSERVICE EXTRACTION** (1-2 weeks proof of concept)
+- Validate service extraction approach before committing to full 6-month plan
+- Decision point: Day 4 (first migration), Day 10 (Phase 1 complete)
+
+**Next Steps** (Pending User Approval):
+- [ ] Get user approval to proceed with Phase 1 (HealthService extraction)
+- [ ] Create baseline metrics document (test count, coverage, performance)
+- [ ] Create src/services/ directory structure
+- [ ] Create integration test file for health MCP tools
+- [ ] Begin Week 1 Day 1 implementation (setup and skeleton)
+
+**User Questions**:
+1. Approve Phase 1 (HealthService extraction, 1-2 weeks)?
+2. Create comprehensive baseline benchmarks before starting?
+3. Integration tests with real Qdrant or mocks only?
+4. Any timeline constraints?
+5. If Phase 1 succeeds, continue with full service extraction (6 months) or stop?
+
+**See**: TODO.md line 684, planning_docs/REF-013_*.md (7 files)
 
 ---
 

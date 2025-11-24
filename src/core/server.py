@@ -1670,6 +1670,118 @@ class MemoryRAGServer:
             logger.error(f"Failed to import memories: {e}")
             raise StorageError(f"Failed to import memories: {e}")
 
+    async def suggest_queries(
+        self,
+        intent: Optional[str] = None,
+        project_name: Optional[str] = None,
+        context: Optional[str] = None,
+        max_suggestions: int = 8,
+    ) -> Dict[str, Any]:
+        """
+        Get contextual query suggestions based on indexed codebase and user intent.
+
+        **PROACTIVE USE:**
+        - Show suggestions when user opens search interface
+        - Guide users on what queries work well
+        - Discover indexed content without knowing specifics
+        - Learn query patterns for better discoverability
+
+        **Use cases:**
+        - User doesn't know what to search for
+        - Help formulate effective semantic queries
+        - Explore indexed codebase capabilities
+        - Learn from project-specific examples
+
+        **FEAT-057: Better UX & Discoverability**
+
+        This tool helps users overcome "query formulation paralysis" by providing
+        contextual suggestions based on:
+        1. User intent (implementation, debugging, learning, exploration, refactoring)
+        2. Project-specific content (actual indexed classes, functions)
+        3. Domain-specific presets (auth, database, API, error handling)
+        4. General discovery patterns (entry points, complex functions, utilities)
+
+        Args:
+            intent: User's current intent or task:
+                - "implementation": Find existing implementations
+                - "debugging": Find error handling and logging code
+                - "learning": Understand how systems work
+                - "exploration": Discover codebase structure
+                - "refactoring": Find code to improve
+            project_name: Optional project to scope suggestions (defaults to current project)
+            context: Optional context from conversation to refine suggestions
+            max_suggestions: Maximum suggestions to return (default: 8)
+
+        Returns:
+            Dict with:
+            - suggestions: List of QuerySuggestion objects with query, category, description
+            - indexed_stats: Statistics about indexed content (total_files, languages, top_classes)
+            - project_name: Project name (if scoped)
+            - total_suggestions: Count of suggestions returned
+
+        Example response:
+            {
+                "suggestions": [
+                    {
+                        "query": "JWT token validation logic",
+                        "category": "domain",
+                        "description": "Find authentication token validation code",
+                        "expected_results": 3
+                    },
+                    {
+                        "query": "UserRepository implementation",
+                        "category": "project",
+                        "description": "Based on commonly used class in your project",
+                        "expected_results": 1
+                    }
+                ],
+                "indexed_stats": {
+                    "total_files": 245,
+                    "total_units": 1834,
+                    "languages": {"python": 180, "typescript": 65},
+                    "top_classes": ["UserRepository", "AuthService", "APIClient"]
+                },
+                "project_name": "my-app",
+                "total_suggestions": 8
+            }
+        """
+        try:
+            from src.memory.query_suggester import QuerySuggester
+
+            # Use current project if not specified
+            filter_project_name = project_name or self.project_name
+
+            # Initialize query suggester
+            suggester = QuerySuggester(self.store, self.config)
+
+            # Generate suggestions
+            response = await suggester.suggest_queries(
+                intent=intent,
+                project_name=filter_project_name,
+                context=context,
+                max_suggestions=max_suggestions,
+            )
+
+            # Convert to dict for JSON serialization
+            return {
+                "suggestions": [
+                    {
+                        "query": s.query,
+                        "category": s.category,
+                        "description": s.description,
+                        "expected_results": s.expected_results,
+                    }
+                    for s in response.suggestions
+                ],
+                "indexed_stats": response.indexed_stats,
+                "project_name": response.project_name,
+                "total_suggestions": response.total_suggestions,
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to generate query suggestions: {e}")
+            raise StorageError(f"Failed to generate query suggestions: {e}")
+
     async def submit_search_feedback(
         self,
         search_id: str,
@@ -2728,6 +2840,47 @@ class MemoryRAGServer:
             # Add quality indicators and suggestions
             quality_info = self._analyze_search_quality(code_results, query, filter_project_name)
 
+            # FEAT-057: Build facets for result distribution
+            from src.memory.result_summarizer import ResultSummarizer
+            from src.memory.refinement_advisor import RefinementAdvisor
+            from src.memory.spelling_suggester import SpellingSuggester
+
+            # Build facets (always compute for analytics)
+            facets = ResultSummarizer.build_facets(
+                code_results,
+                include_projects=False  # Single-project search
+            )
+
+            # Generate natural language summary
+            summary = ResultSummarizer.summarize(code_results, facets, query)
+
+            # Generate refinement hints based on results
+            current_filters = {
+                "search_mode": search_mode,
+                "file_pattern": file_pattern,
+                "language": language,
+            }
+            refinement_hints = RefinementAdvisor.analyze_and_suggest(
+                code_results,
+                facets,
+                query,
+                current_filters
+            )
+
+            # "Did you mean?" suggestions for poor quality or empty results
+            did_you_mean = []
+            if len(code_results) == 0 or quality_info["quality"] == "poor":
+                spelling_suggester = SpellingSuggester(self.store)
+                await spelling_suggester.load_indexed_terms(filter_project_name)
+                did_you_mean = spelling_suggester.suggest_corrections(query, max_suggestions=3)
+
+                # Add "did you mean" to suggestions if we have corrections
+                if did_you_mean:
+                    quality_info["suggestions"] = [
+                        f"Did you mean '{correction}'?"
+                        for correction in did_you_mean
+                    ] + quality_info["suggestions"]
+
             # Determine actual search mode used
             actual_search_mode = search_mode
             if search_mode == "hybrid" and not self.hybrid_searcher:
@@ -2781,6 +2934,16 @@ class MemoryRAGServer:
                     "sort_by": sort_by,
                     "sort_order": sort_order,
                 },
+                # FEAT-057: UX enhancements
+                "summary": summary,
+                "facets": {
+                    "languages": facets.languages,
+                    "unit_types": facets.unit_types,
+                    "files": facets.files,
+                    "directories": facets.directories,
+                },
+                "refinement_hints": refinement_hints,
+                "did_you_mean": did_you_mean,
             }
 
         except RetrievalError:

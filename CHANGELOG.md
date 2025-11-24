@@ -85,9 +85,6 @@ Organize entries under these headers in chronological order (newest first):
   - Tests: 65+ comprehensive tests (unit + integration) covering all UX features
   - Backward compatible: All existing search_code response fields preserved
 
-||||||| e6b9eab
-
-### Added - 2025-11-22
 - **UX-037: Interactive Time Range Selector**
   - Custom date picker with start/end date inputs
   - Date validation (start before end, no future dates)
@@ -98,9 +95,6 @@ Organize entries under these headers in chronological order (newest first):
   - All dashboard components update with selected time range
   - Files: src/dashboard/static/index.html, dashboard.js, dashboard.css, src/dashboard/web_server.py
 
-||||||| e6b9eab
-
-### Added - 2025-11-22
 - **UX-038: Trend Charts Interactivity Enhancement**
   - Chart.js zoom plugin for scroll-to-zoom and drag-to-pan functionality
   - Performance insights in latency chart tooltips (Excellent/Good/Fair indicators)
@@ -166,8 +160,6 @@ Organize entries under these headers in chronological order (newest first):
   - Automated insights and trends generation tests
   - CORS handling, error handling, and edge cases
   - File: `tests/unit/test_web_server.py`
-
-||||||| e6b9eab
 
 - **FEAT-058: Pattern Detection (Regex + Semantic Hybrid)**
   - Added `pattern` and `pattern_mode` parameters to `search_code()` MCP tool
@@ -1040,8 +1032,6 @@ A pre-commit hook enforces CHANGELOG updates:
   - Added missing imports (json, UTC) to `src/core/server.py`
   - Fixed SearchFilters validation to handle empty tags list
   - Test pass rate: 97.2% → 99.9% (60 failures → 1 failure)
-
-||||||| caae755
 
 ### Added - 2025-11-22
 
