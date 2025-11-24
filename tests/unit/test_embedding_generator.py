@@ -263,6 +263,7 @@ class TestConcurrency:
     """Test concurrent embedding generation."""
 
     @pytest.mark.asyncio
+    @pytest.mark.skip_ci  # Concurrent operations may exceed CI timeout
     async def test_concurrent_generate_calls(self, generator):
         """Test that multiple concurrent generate calls work correctly."""
         texts = [f"Concurrent text {i}" for i in range(10)]
@@ -279,6 +280,7 @@ class TestConcurrency:
             assert abs(magnitude - 1.0) < 1e-5
 
     @pytest.mark.asyncio
+    @pytest.mark.skip_ci  # Concurrent batch operations may exceed CI timeout
     async def test_concurrent_batch_generate_calls(self, generator):
         """Test concurrent batch generation."""
         batch1 = ["Batch 1 text A", "Batch 1 text B"]

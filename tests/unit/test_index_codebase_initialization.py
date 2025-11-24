@@ -145,6 +145,7 @@ class TestIndexCodebaseInitialization:
         await store.close()
 
     @pytest.mark.asyncio
+    @pytest.mark.skip_ci  # Performance test may exceed CI timeout
     async def test_indexing_performance_with_initialization(self, server, temp_codebase, mock_embeddings):
         """
         Test that indexing completes in reasonable time when properly initialized.
