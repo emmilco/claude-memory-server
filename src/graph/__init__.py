@@ -6,10 +6,22 @@ from src.graph.call_graph import (
     InterfaceImplementation,
     CallGraph,
 )
+from src.graph.dependency_graph import (
+    DependencyGraph,
+    GraphNode,
+    GraphEdge,
+    CircularDependency,
+    NodeColor,
+)
 
 __all__ = [
     "CallSite",
     "FunctionNode",
     "InterfaceImplementation",
     "CallGraph",
+    "DependencyGraph",
+    "GraphNode",
+    "GraphEdge",
+    "CircularDependency",
+    "NodeColor",
 ]

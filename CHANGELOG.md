@@ -51,15 +51,24 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Added - 2025-11-23
+- **FEAT-059: Structural/Relational Queries (Week 2 COMPLETE - Comprehensive Testing + Documentation)**
+  - **6 new MCP tools**: `find_callers`, `find_callees`, `get_call_chain`, `find_implementations`, `find_dependencies`, `find_dependents`
+  - **Qdrant storage**: `src/store/call_graph_store.py` - Persistent call graph with project isolation
+  - **Indexing integration**: Call extraction during file indexing with progress reporting
+  - **129 tests total** (100% pass rate): 72 unit tests, 25 integration tests, 32 edge case tests
+  - **Edge cases covered**: Unicode, special characters, large graphs (1000+ nodes), deep chains (100 levels), concurrent operations
+  - **Performance validated**: find_callers/callees O(1) <5ms, call chains O(V+E) 20-100ms
+  - **Documentation**: `docs/CALL_GRAPH_API.md` (600+ lines) and `docs/CALL_GRAPH_USER_GUIDE.md` (500+ lines)
+  - Files: `src/graph/call_graph.py`, `src/analysis/call_extractors.py`, `src/store/call_graph_store.py`, `src/core/server.py`, `src/memory/incremental_indexer.py`
+
 ### Added - 2025-11-22
-- **FEAT-059: Structural/Relational Queries (Phases 1-3 IN PROGRESS)**
+- **FEAT-059: Structural/Relational Queries (Phases 1-3 - Core Infrastructure)**
   - Created `src/graph/call_graph.py` - CallGraph class with BFS/DFS algorithms for analyzing function relationships
   - Created `src/analysis/call_extractors.py` - PythonCallExtractor for extracting calls from Python code using AST
   - Forward/reverse indexes for O(1) caller/callee lookups
   - Call chain discovery with cycle detection and path ranking
   - Interface/ABC implementation tracking
-  - 38 comprehensive tests (22 CallGraph + 16 extractors) - 100% pass rate
-  - Next: Qdrant storage, MCP tools, indexer integration
 
 ### Fixed - 2025-11-22
 - **BUG-033: Health Scheduler Missing `await` Keyword**

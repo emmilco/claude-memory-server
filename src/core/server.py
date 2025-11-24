@@ -45,6 +45,8 @@ from src.monitoring.health_reporter import HealthReporter
 from src.monitoring.capacity_planner import CapacityPlanner
 from src.graph import DependencyGraph, GraphNode, GraphEdge
 from src.graph.formatters import DOTFormatter, JSONFormatter, MermaidFormatter
+from src.store.call_graph_store import QdrantCallGraphStore
+from src.graph.call_graph import CallGraph, FunctionNode, CallSite
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +94,7 @@ class MemoryRAGServer:
         self.cross_project_consent: Optional = None  # Cross-project consent manager
         self.suggestion_engine: Optional[SuggestionEngine] = None  # Proactive suggestions
         self.scheduler = None  # APScheduler instance
+        self.call_graph_store: Optional[QdrantCallGraphStore] = None  # Call graph storage
 
         # Statistics
         self.stats = {
@@ -273,6 +276,11 @@ class MemoryRAGServer:
                     logger.warning(f"Failed to collect initial metrics: {e}")
             elif defer_preload:
                 logger.info("Initial metrics collection deferred (will collect in background)")
+
+            # Initialize call graph store for structural queries (FEAT-059)
+            self.call_graph_store = QdrantCallGraphStore(self.config)
+            await self.call_graph_store.initialize()
+            logger.info("Call graph store initialized")
 
             logger.info("Server initialized successfully")
 
@@ -5161,6 +5169,609 @@ class MemoryRAGServer:
         else:  # mermaid
             formatter = MermaidFormatter(include_metadata=include_metadata)
             return formatter.format(graph, title="Dependency Graph")
+
+    # ============================================================================
+    # CALL GRAPH / STRUCTURAL QUERY METHODS (FEAT-059)
+    # ============================================================================
+
+    async def find_callers(
+        self,
+        function_name: str,
+        project_name: Optional[str] = None,
+        include_indirect: bool = False,
+        max_depth: int = 1,
+        limit: int = 50,
+    ) -> Dict[str, Any]:
+        """
+        Find all functions calling the specified function.
+
+        Args:
+            function_name: Function name to search for (qualified name, e.g., "MyClass.method")
+            project_name: Project to search in (defaults to current project)
+            include_indirect: If True, include transitive callers (functions that call functions that call this function)
+            max_depth: Maximum depth for transitive search (only used if include_indirect=True)
+            limit: Maximum number of results to return
+
+        Returns:
+            Dictionary with:
+                - function_name: The queried function
+                - direct_callers: List of direct caller functions
+                - indirect_callers: List of indirect caller functions (if include_indirect=True)
+                - total_count: Total number of callers found
+                - project_name: Project searched
+
+        Raises:
+            ValidationError: If function_name is invalid
+            StorageError: If call graph retrieval fails
+        """
+        if not function_name:
+            raise ValidationError("function_name is required")
+
+        # Use current project if not specified
+        if project_name is None:
+            project_name = self.project_name or "global"
+
+        logger.info(f"Finding callers for {function_name} in {project_name} (indirect={include_indirect}, depth={max_depth})")
+
+        try:
+            # Load call graph from Qdrant
+            call_graph = await self.call_graph_store.load_call_graph(project_name)
+
+            # Find callers using CallGraph algorithms
+            callers = call_graph.find_callers(
+                function_name=function_name,
+                include_indirect=include_indirect,
+                max_depth=max_depth,
+            )
+
+            # Separate direct and indirect if requested
+            direct_caller_names = list(call_graph.reverse_index.get(function_name, set()))
+            direct_callers = [c for c in callers if c.qualified_name in direct_caller_names]
+            indirect_callers = [c for c in callers if c.qualified_name not in direct_caller_names] if include_indirect else []
+
+            # Apply limit
+            all_callers = direct_callers + indirect_callers
+            limited_callers = all_callers[:limit]
+
+            # Format results
+            return {
+                "function_name": function_name,
+                "project_name": project_name,
+                "direct_callers": [
+                    {
+                        "name": caller.name,
+                        "qualified_name": caller.qualified_name,
+                        "file_path": caller.file_path,
+                        "line_range": f"{caller.start_line}-{caller.end_line}",
+                        "is_async": caller.is_async,
+                    }
+                    for caller in direct_callers[:limit]
+                ],
+                "indirect_callers": [
+                    {
+                        "name": caller.name,
+                        "qualified_name": caller.qualified_name,
+                        "file_path": caller.file_path,
+                        "line_range": f"{caller.start_line}-{caller.end_line}",
+                        "is_async": caller.is_async,
+                    }
+                    for caller in indirect_callers[:limit]
+                ] if include_indirect else [],
+                "total_count": len(all_callers),
+                "returned_count": len(limited_callers),
+                "include_indirect": include_indirect,
+                "max_depth": max_depth if include_indirect else 1,
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to find callers for {function_name}: {e}")
+            raise StorageError(f"Failed to find callers: {e}")
+
+    async def find_callees(
+        self,
+        function_name: str,
+        project_name: Optional[str] = None,
+        include_indirect: bool = False,
+        max_depth: int = 1,
+        limit: int = 50,
+    ) -> Dict[str, Any]:
+        """
+        Find all functions called by the specified function.
+
+        Args:
+            function_name: Function name to analyze (qualified name, e.g., "MyClass.method")
+            project_name: Project to search in (defaults to current project)
+            include_indirect: If True, include transitive callees (functions that are called by functions that this function calls)
+            max_depth: Maximum depth for transitive search (only used if include_indirect=True)
+            limit: Maximum number of results to return
+
+        Returns:
+            Dictionary with:
+                - function_name: The queried function
+                - direct_callees: List of direct callee functions
+                - indirect_callees: List of indirect callee functions (if include_indirect=True)
+                - total_count: Total number of callees found
+                - project_name: Project searched
+
+        Raises:
+            ValidationError: If function_name is invalid
+            StorageError: If call graph retrieval fails
+        """
+        if not function_name:
+            raise ValidationError("function_name is required")
+
+        # Use current project if not specified
+        if project_name is None:
+            project_name = self.project_name or "global"
+
+        logger.info(f"Finding callees for {function_name} in {project_name} (indirect={include_indirect}, depth={max_depth})")
+
+        try:
+            # Load call graph from Qdrant
+            call_graph = await self.call_graph_store.load_call_graph(project_name)
+
+            # Find callees using CallGraph algorithms
+            callees = call_graph.find_callees(
+                function_name=function_name,
+                include_indirect=include_indirect,
+                max_depth=max_depth,
+            )
+
+            # Separate direct and indirect if requested
+            direct_callee_names = list(call_graph.forward_index.get(function_name, set()))
+            direct_callees = [c for c in callees if c.qualified_name in direct_callee_names]
+            indirect_callees = [c for c in callees if c.qualified_name not in direct_callee_names] if include_indirect else []
+
+            # Apply limit
+            all_callees = direct_callees + indirect_callees
+            limited_callees = all_callees[:limit]
+
+            # Format results
+            return {
+                "function_name": function_name,
+                "project_name": project_name,
+                "direct_callees": [
+                    {
+                        "name": callee.name,
+                        "qualified_name": callee.qualified_name,
+                        "file_path": callee.file_path,
+                        "line_range": f"{callee.start_line}-{callee.end_line}",
+                        "is_async": callee.is_async,
+                    }
+                    for callee in direct_callees[:limit]
+                ],
+                "indirect_callees": [
+                    {
+                        "name": callee.name,
+                        "qualified_name": callee.qualified_name,
+                        "file_path": callee.file_path,
+                        "line_range": f"{callee.start_line}-{callee.end_line}",
+                        "is_async": callee.is_async,
+                    }
+                    for callee in indirect_callees[:limit]
+                ] if include_indirect else [],
+                "total_count": len(all_callees),
+                "returned_count": len(limited_callees),
+                "include_indirect": include_indirect,
+                "max_depth": max_depth if include_indirect else 1,
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to find callees for {function_name}: {e}")
+            raise StorageError(f"Failed to find callees: {e}")
+
+    async def get_call_chain(
+        self,
+        from_function: str,
+        to_function: str,
+        project_name: Optional[str] = None,
+        max_paths: int = 5,
+        max_depth: int = 10,
+    ) -> Dict[str, Any]:
+        """
+        Find call chains (paths) from one function to another.
+
+        Args:
+            from_function: Starting function (qualified name)
+            to_function: Target function (qualified name)
+            project_name: Project to search in (defaults to current project)
+            max_paths: Maximum number of paths to return
+            max_depth: Maximum path length to search
+
+        Returns:
+            Dictionary with:
+                - from_function: Starting function
+                - to_function: Target function
+                - paths: List of call paths (each path is a list of function names)
+                - path_count: Number of paths found
+                - project_name: Project searched
+
+        Raises:
+            ValidationError: If function names are invalid
+            StorageError: If call graph retrieval fails
+        """
+        if not from_function:
+            raise ValidationError("from_function is required")
+        if not to_function:
+            raise ValidationError("to_function is required")
+
+        # Use current project if not specified
+        if project_name is None:
+            project_name = self.project_name or "global"
+
+        logger.info(f"Finding call chains from {from_function} to {to_function} in {project_name}")
+
+        try:
+            # Load call graph from Qdrant
+            call_graph = await self.call_graph_store.load_call_graph(project_name)
+
+            # Find call chains using CallGraph BFS algorithm
+            paths = call_graph.find_call_chain(
+                from_func=from_function,
+                to_func=to_function,
+                max_depth=max_depth,
+                max_paths=max_paths,
+            )
+
+            # Format results with detailed path information
+            formatted_paths = []
+            for path in paths:
+                # Get function details for each step
+                path_details = []
+                for func_name in path:
+                    node = call_graph.nodes.get(func_name)
+                    if node:
+                        path_details.append({
+                            "name": node.name,
+                            "qualified_name": node.qualified_name,
+                            "file_path": node.file_path,
+                            "line_range": f"{node.start_line}-{node.end_line}",
+                        })
+                    else:
+                        # Fallback if node not found
+                        path_details.append({
+                            "name": func_name,
+                            "qualified_name": func_name,
+                            "file_path": "unknown",
+                            "line_range": "unknown",
+                        })
+
+                formatted_paths.append({
+                    "path": path,
+                    "length": len(path),
+                    "details": path_details,
+                })
+
+            return {
+                "from_function": from_function,
+                "to_function": to_function,
+                "project_name": project_name,
+                "paths": formatted_paths,
+                "path_count": len(paths),
+                "max_paths": max_paths,
+                "max_depth": max_depth,
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to find call chain from {from_function} to {to_function}: {e}")
+            raise StorageError(f"Failed to find call chain: {e}")
+
+    async def find_implementations(
+        self,
+        interface_name: str,
+        project_name: Optional[str] = None,
+        language: Optional[str] = None,
+        limit: int = 50,
+    ) -> Dict[str, Any]:
+        """
+        Find all implementations of an interface/abstract class.
+
+        Args:
+            interface_name: Interface/abstract class name to search for
+            project_name: Project to search in (defaults to current project)
+            language: Filter by language (e.g., "python", "javascript")
+            limit: Maximum number of results to return
+
+        Returns:
+            Dictionary with:
+                - interface_name: The queried interface
+                - implementations: List of implementation classes
+                - total_count: Total number of implementations found
+                - project_name: Project searched
+
+        Raises:
+            ValidationError: If interface_name is invalid
+            StorageError: If call graph retrieval fails
+        """
+        if not interface_name:
+            raise ValidationError("interface_name is required")
+
+        # Use current project if not specified
+        if project_name is None:
+            project_name = self.project_name or "global"
+
+        logger.info(f"Finding implementations of {interface_name} in {project_name}")
+
+        try:
+            # Load call graph from Qdrant
+            call_graph = await self.call_graph_store.load_call_graph(project_name)
+
+            # Get implementations from call graph
+            implementations = call_graph.get_implementations(interface_name)
+
+            # Filter by language if requested
+            if language:
+                implementations = [impl for impl in implementations if impl.language.lower() == language.lower()]
+
+            # Apply limit
+            limited_impls = implementations[:limit]
+
+            # Format results
+            return {
+                "interface_name": interface_name,
+                "project_name": project_name,
+                "language": language,
+                "implementations": [
+                    {
+                        "implementation_name": impl.implementation_name,
+                        "file_path": impl.file_path,
+                        "language": impl.language,
+                        "methods": impl.methods,
+                        "method_count": len(impl.methods),
+                    }
+                    for impl in limited_impls
+                ],
+                "total_count": len(implementations),
+                "returned_count": len(limited_impls),
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to find implementations for {interface_name}: {e}")
+            raise StorageError(f"Failed to find implementations: {e}")
+
+    async def find_dependencies(
+        self,
+        file_path: str,
+        project_name: Optional[str] = None,
+        depth: int = 1,
+        include_transitive: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        Find all files that this file depends on (imports).
+
+        This method uses the existing dependency graph functionality (FEAT-048)
+        to find file-level dependencies.
+
+        Args:
+            file_path: File path to analyze
+            project_name: Project to search in (defaults to current project)
+            depth: Maximum depth for dependency traversal
+            include_transitive: If True, include transitive dependencies
+
+        Returns:
+            Dictionary with:
+                - file_path: The queried file
+                - direct_dependencies: List of direct dependencies
+                - transitive_dependencies: List of transitive dependencies (if include_transitive=True)
+                - total_count: Total number of dependencies found
+                - project_name: Project searched
+
+        Raises:
+            ValidationError: If file_path is invalid
+            StorageError: If dependency graph retrieval fails
+        """
+        if not file_path:
+            raise ValidationError("file_path is required")
+
+        # Use current project if not specified
+        if project_name is None:
+            project_name = self.project_name or "global"
+
+        logger.info(f"Finding dependencies for {file_path} in {project_name} (transitive={include_transitive}, depth={depth})")
+
+        try:
+            # Build dependency graph from store
+            dep_graph = await self._build_dependency_graph_from_store(project_name=project_name)
+
+            # Find the node for this file
+            file_node = None
+            for node in dep_graph.nodes.values():
+                if node.file_path == file_path:
+                    file_node = node
+                    break
+
+            if not file_node:
+                return {
+                    "file_path": file_path,
+                    "project_name": project_name,
+                    "direct_dependencies": [],
+                    "transitive_dependencies": [],
+                    "total_count": 0,
+                    "returned_count": 0,
+                    "include_transitive": include_transitive,
+                }
+
+            # Get direct dependencies (outgoing edges)
+            direct_deps = []
+            transitive_deps = []
+
+            for edge in dep_graph.edges:
+                if edge.from_file == file_path:
+                    # This is a direct dependency
+                    target_node = dep_graph.nodes.get(edge.to_file)
+                    if target_node:
+                        direct_deps.append({
+                            "file_path": target_node.file_path,
+                            "import_type": edge.import_type,
+                            "language": target_node.language,
+                        })
+
+            # For transitive dependencies, use BFS traversal
+            if include_transitive:
+                visited = {file_path}
+                queue = [file_path]
+                depth_map = {file_path: 0}
+
+                while queue:
+                    current_file = queue.pop(0)
+                    current_depth = depth_map[current_file]
+
+                    if current_depth >= depth:
+                        continue
+
+                    for edge in dep_graph.edges:
+                        if edge.from_file == current_file and edge.to_file not in visited:
+                            visited.add(edge.to_file)
+                            queue.append(edge.to_file)
+                            depth_map[edge.to_file] = current_depth + 1
+
+                            # Skip direct dependencies (already in direct_deps)
+                            if edge.to_file not in [d["file_path"] for d in direct_deps]:
+                                target_node = dep_graph.nodes.get(edge.to_file)
+                                if target_node:
+                                    transitive_deps.append({
+                                        "file_path": target_node.file_path,
+                                        "import_type": edge.import_type,
+                                        "language": target_node.language,
+                                        "depth": depth_map[edge.to_file],
+                                    })
+
+            return {
+                "file_path": file_path,
+                "project_name": project_name,
+                "direct_dependencies": direct_deps,
+                "transitive_dependencies": transitive_deps if include_transitive else [],
+                "total_count": len(direct_deps) + len(transitive_deps),
+                "returned_count": len(direct_deps) + len(transitive_deps),
+                "include_transitive": include_transitive,
+                "max_depth": depth,
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to find dependencies for {file_path}: {e}")
+            raise StorageError(f"Failed to find dependencies: {e}")
+
+    async def find_dependents(
+        self,
+        file_path: str,
+        project_name: Optional[str] = None,
+        depth: int = 1,
+        include_transitive: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        Find all files that depend on this file (reverse dependencies).
+
+        This method uses the existing dependency graph functionality (FEAT-048)
+        to find file-level reverse dependencies.
+
+        Args:
+            file_path: File path to analyze
+            project_name: Project to search in (defaults to current project)
+            depth: Maximum depth for reverse dependency traversal
+            include_transitive: If True, include transitive dependents
+
+        Returns:
+            Dictionary with:
+                - file_path: The queried file
+                - direct_dependents: List of direct dependents
+                - transitive_dependents: List of transitive dependents (if include_transitive=True)
+                - total_count: Total number of dependents found
+                - project_name: Project searched
+
+        Raises:
+            ValidationError: If file_path is invalid
+            StorageError: If dependency graph retrieval fails
+        """
+        if not file_path:
+            raise ValidationError("file_path is required")
+
+        # Use current project if not specified
+        if project_name is None:
+            project_name = self.project_name or "global"
+
+        logger.info(f"Finding dependents for {file_path} in {project_name} (transitive={include_transitive}, depth={depth})")
+
+        try:
+            # Build dependency graph from store
+            dep_graph = await self._build_dependency_graph_from_store(project_name=project_name)
+
+            # Find the node for this file
+            file_node = None
+            for node in dep_graph.nodes.values():
+                if node.file_path == file_path:
+                    file_node = node
+                    break
+
+            if not file_node:
+                return {
+                    "file_path": file_path,
+                    "project_name": project_name,
+                    "direct_dependents": [],
+                    "transitive_dependents": [],
+                    "total_count": 0,
+                    "returned_count": 0,
+                    "include_transitive": include_transitive,
+                }
+
+            # Get direct dependents (incoming edges)
+            direct_deps = []
+            transitive_deps = []
+
+            for edge in dep_graph.edges:
+                if edge.to_file == file_path:
+                    # This file is being imported by edge.from_file
+                    source_node = dep_graph.nodes.get(edge.from_file)
+                    if source_node:
+                        direct_deps.append({
+                            "file_path": source_node.file_path,
+                            "import_type": edge.import_type,
+                            "language": source_node.language,
+                        })
+
+            # For transitive dependents, use BFS traversal (reverse direction)
+            if include_transitive:
+                visited = {file_path}
+                queue = [file_path]
+                depth_map = {file_path: 0}
+
+                while queue:
+                    current_file = queue.pop(0)
+                    current_depth = depth_map[current_file]
+
+                    if current_depth >= depth:
+                        continue
+
+                    for edge in dep_graph.edges:
+                        if edge.to_file == current_file and edge.from_file not in visited:
+                            visited.add(edge.from_file)
+                            queue.append(edge.from_file)
+                            depth_map[edge.from_file] = current_depth + 1
+
+                            # Skip direct dependents (already in direct_deps)
+                            if edge.from_file not in [d["file_path"] for d in direct_deps]:
+                                source_node = dep_graph.nodes.get(edge.from_file)
+                                if source_node:
+                                    transitive_deps.append({
+                                        "file_path": source_node.file_path,
+                                        "import_type": edge.import_type,
+                                        "language": source_node.language,
+                                        "depth": depth_map[edge.from_file],
+                                    })
+
+            return {
+                "file_path": file_path,
+                "project_name": project_name,
+                "direct_dependents": direct_deps,
+                "transitive_dependents": transitive_deps if include_transitive else [],
+                "total_count": len(direct_deps) + len(transitive_deps),
+                "returned_count": len(direct_deps) + len(transitive_deps),
+                "include_transitive": include_transitive,
+                "max_depth": depth,
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to find dependents for {file_path}: {e}")
+            raise StorageError(f"Failed to find dependents: {e}")
 
     async def close(self) -> None:
         """Clean up resources."""

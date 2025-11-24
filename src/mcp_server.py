@@ -298,6 +298,193 @@ async def list_tools() -> List[Tool]:
                 },
             },
         ),
+        # Call Graph / Structural Query Tools (FEAT-059)
+        Tool(
+            name="find_callers",
+            description="Find all functions calling the specified function (supports transitive search)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "function_name": {
+                        "type": "string",
+                        "description": "Function name to search for (qualified name, e.g., 'MyClass.method')",
+                    },
+                    "project_name": {
+                        "type": "string",
+                        "description": "Project to search in (defaults to current project)",
+                    },
+                    "include_indirect": {
+                        "type": "boolean",
+                        "description": "If true, include transitive callers (default: false)",
+                    },
+                    "max_depth": {
+                        "type": "integer",
+                        "description": "Maximum depth for transitive search (default: 1)",
+                        "minimum": 1,
+                        "maximum": 10,
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum number of results to return (default: 50)",
+                        "minimum": 1,
+                        "maximum": 100,
+                    },
+                },
+                "required": ["function_name"],
+            },
+        ),
+        Tool(
+            name="find_callees",
+            description="Find all functions called by the specified function (supports transitive search)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "function_name": {
+                        "type": "string",
+                        "description": "Function name to analyze (qualified name, e.g., 'MyClass.method')",
+                    },
+                    "project_name": {
+                        "type": "string",
+                        "description": "Project to search in (defaults to current project)",
+                    },
+                    "include_indirect": {
+                        "type": "boolean",
+                        "description": "If true, include transitive callees (default: false)",
+                    },
+                    "max_depth": {
+                        "type": "integer",
+                        "description": "Maximum depth for transitive search (default: 1)",
+                        "minimum": 1,
+                        "maximum": 10,
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum number of results to return (default: 50)",
+                        "minimum": 1,
+                        "maximum": 100,
+                    },
+                },
+                "required": ["function_name"],
+            },
+        ),
+        Tool(
+            name="get_call_chain",
+            description="Find call chains (paths) from one function to another",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "from_function": {
+                        "type": "string",
+                        "description": "Starting function (qualified name)",
+                    },
+                    "to_function": {
+                        "type": "string",
+                        "description": "Target function (qualified name)",
+                    },
+                    "project_name": {
+                        "type": "string",
+                        "description": "Project to search in (defaults to current project)",
+                    },
+                    "max_paths": {
+                        "type": "integer",
+                        "description": "Maximum number of paths to return (default: 5)",
+                        "minimum": 1,
+                        "maximum": 20,
+                    },
+                    "max_depth": {
+                        "type": "integer",
+                        "description": "Maximum path length to search (default: 10)",
+                        "minimum": 1,
+                        "maximum": 20,
+                    },
+                },
+                "required": ["from_function", "to_function"],
+            },
+        ),
+        Tool(
+            name="find_implementations",
+            description="Find all implementations of an interface/abstract class",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "interface_name": {
+                        "type": "string",
+                        "description": "Interface/abstract class name to search for",
+                    },
+                    "project_name": {
+                        "type": "string",
+                        "description": "Project to search in (defaults to current project)",
+                    },
+                    "language": {
+                        "type": "string",
+                        "description": "Filter by language (e.g., 'python', 'javascript')",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum number of results to return (default: 50)",
+                        "minimum": 1,
+                        "maximum": 100,
+                    },
+                },
+                "required": ["interface_name"],
+            },
+        ),
+        Tool(
+            name="find_dependencies",
+            description="Find all files that this file depends on (imports)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "file_path": {
+                        "type": "string",
+                        "description": "File path to analyze",
+                    },
+                    "project_name": {
+                        "type": "string",
+                        "description": "Project to search in (defaults to current project)",
+                    },
+                    "depth": {
+                        "type": "integer",
+                        "description": "Maximum depth for dependency traversal (default: 1)",
+                        "minimum": 1,
+                        "maximum": 10,
+                    },
+                    "include_transitive": {
+                        "type": "boolean",
+                        "description": "If true, include transitive dependencies (default: false)",
+                    },
+                },
+                "required": ["file_path"],
+            },
+        ),
+        Tool(
+            name="find_dependents",
+            description="Find all files that depend on this file (reverse dependencies)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "file_path": {
+                        "type": "string",
+                        "description": "File path to analyze",
+                    },
+                    "project_name": {
+                        "type": "string",
+                        "description": "Project to search in (defaults to current project)",
+                    },
+                    "depth": {
+                        "type": "integer",
+                        "description": "Maximum depth for reverse dependency traversal (default: 1)",
+                        "minimum": 1,
+                        "maximum": 10,
+                    },
+                    "include_transitive": {
+                        "type": "boolean",
+                        "description": "If true, include transitive dependents (default: false)",
+                    },
+                },
+                "required": ["file_path"],
+            },
+        ),
     ]
 
 
@@ -510,6 +697,175 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
                     f"The server is running in the background."
                 )
             ]
+
+        # Call Graph / Structural Query Tools (FEAT-059)
+        elif name == "find_callers":
+            result = await memory_server.find_callers(
+                function_name=arguments["function_name"],
+                project_name=arguments.get("project_name"),
+                include_indirect=arguments.get("include_indirect", False),
+                max_depth=arguments.get("max_depth", 1),
+                limit=arguments.get("limit", 50),
+            )
+
+            if result["total_count"] == 0:
+                return [TextContent(type="text", text=f"No callers found for '{result['function_name']}'")]
+
+            output = f"📞 Found {result['total_count']} caller(s) for '{result['function_name']}':\n\n"
+
+            if result["direct_callers"]:
+                output += "Direct Callers:\n"
+                for i, caller in enumerate(result["direct_callers"][:10], 1):
+                    output += f"{i}. {caller['qualified_name']}\n"
+                    output += f"   File: {caller['file_path']}:{caller['line_range']}\n"
+                    if caller['is_async']:
+                        output += "   [async]\n"
+                output += "\n"
+
+            if result.get("indirect_callers"):
+                output += f"Indirect Callers (depth {result['max_depth']}):\n"
+                for i, caller in enumerate(result["indirect_callers"][:10], 1):
+                    output += f"{i}. {caller['qualified_name']}\n"
+                    output += f"   File: {caller['file_path']}:{caller['line_range']}\n"
+
+            return [TextContent(type="text", text=output)]
+
+        elif name == "find_callees":
+            result = await memory_server.find_callees(
+                function_name=arguments["function_name"],
+                project_name=arguments.get("project_name"),
+                include_indirect=arguments.get("include_indirect", False),
+                max_depth=arguments.get("max_depth", 1),
+                limit=arguments.get("limit", 50),
+            )
+
+            if result["total_count"] == 0:
+                return [TextContent(type="text", text=f"No callees found for '{result['function_name']}'")]
+
+            output = f"📞 Found {result['total_count']} callee(s) for '{result['function_name']}':\n\n"
+
+            if result["direct_callees"]:
+                output += "Direct Callees:\n"
+                for i, callee in enumerate(result["direct_callees"][:10], 1):
+                    output += f"{i}. {callee['qualified_name']}\n"
+                    output += f"   File: {callee['file_path']}:{callee['line_range']}\n"
+                    if callee['is_async']:
+                        output += "   [async]\n"
+                output += "\n"
+
+            if result.get("indirect_callees"):
+                output += f"Indirect Callees (depth {result['max_depth']}):\n"
+                for i, callee in enumerate(result["indirect_callees"][:10], 1):
+                    output += f"{i}. {callee['qualified_name']}\n"
+                    output += f"   File: {callee['file_path']}:{callee['line_range']}\n"
+
+            return [TextContent(type="text", text=output)]
+
+        elif name == "get_call_chain":
+            result = await memory_server.get_call_chain(
+                from_function=arguments["from_function"],
+                to_function=arguments["to_function"],
+                project_name=arguments.get("project_name"),
+                max_paths=arguments.get("max_paths", 5),
+                max_depth=arguments.get("max_depth", 10),
+            )
+
+            if result["path_count"] == 0:
+                return [TextContent(type="text", text=f"No call path found from '{result['from_function']}' to '{result['to_function']}'")]
+
+            output = f"🔗 Found {result['path_count']} call path(s) from '{result['from_function']}' to '{result['to_function']}':\n\n"
+
+            for i, path_info in enumerate(result["paths"], 1):
+                output += f"Path {i} (length: {path_info['length']}):\n"
+                output += "  " + " → ".join(path_info['path']) + "\n\n"
+
+                # Show file locations
+                for detail in path_info['details']:
+                    output += f"  • {detail['qualified_name']}\n"
+                    output += f"    {detail['file_path']}:{detail['line_range']}\n"
+                output += "\n"
+
+            return [TextContent(type="text", text=output)]
+
+        elif name == "find_implementations":
+            result = await memory_server.find_implementations(
+                interface_name=arguments["interface_name"],
+                project_name=arguments.get("project_name"),
+                language=arguments.get("language"),
+                limit=arguments.get("limit", 50),
+            )
+
+            if result["total_count"] == 0:
+                lang_str = f" in {result['language']}" if result.get('language') else ""
+                return [TextContent(type="text", text=f"No implementations found for '{result['interface_name']}'{lang_str}")]
+
+            output = f"🏗️ Found {result['total_count']} implementation(s) of '{result['interface_name']}':\n\n"
+
+            for i, impl in enumerate(result["implementations"], 1):
+                output += f"{i}. {impl['implementation_name']} [{impl['language']}]\n"
+                output += f"   File: {impl['file_path']}\n"
+                output += f"   Methods: {', '.join(impl['methods'][:5])}"
+                if len(impl['methods']) > 5:
+                    output += f" ... ({impl['method_count']} total)"
+                output += "\n\n"
+
+            return [TextContent(type="text", text=output)]
+
+        elif name == "find_dependencies":
+            result = await memory_server.find_dependencies(
+                file_path=arguments["file_path"],
+                project_name=arguments.get("project_name"),
+                depth=arguments.get("depth", 1),
+                include_transitive=arguments.get("include_transitive", False),
+            )
+
+            if result["total_count"] == 0:
+                return [TextContent(type="text", text=f"No dependencies found for '{result['file_path']}'")]
+
+            output = f"📦 Found {result['total_count']} dependenc(ies) for '{result['file_path']}':\n\n"
+
+            if result["direct_dependencies"]:
+                output += "Direct Dependencies:\n"
+                for i, dep in enumerate(result["direct_dependencies"][:15], 1):
+                    output += f"{i}. {dep['file_path']}\n"
+                    output += f"   Type: {dep['import_type']} | Language: {dep['language']}\n"
+                output += "\n"
+
+            if result.get("transitive_dependencies"):
+                output += f"Transitive Dependencies (depth {result['max_depth']}):\n"
+                for i, dep in enumerate(result["transitive_dependencies"][:15], 1):
+                    output += f"{i}. {dep['file_path']} (depth: {dep['depth']})\n"
+                    output += f"   Type: {dep['import_type']}\n"
+
+            return [TextContent(type="text", text=output)]
+
+        elif name == "find_dependents":
+            result = await memory_server.find_dependents(
+                file_path=arguments["file_path"],
+                project_name=arguments.get("project_name"),
+                depth=arguments.get("depth", 1),
+                include_transitive=arguments.get("include_transitive", False),
+            )
+
+            if result["total_count"] == 0:
+                return [TextContent(type="text", text=f"No dependents found for '{result['file_path']}'")]
+
+            output = f"📦 Found {result['total_count']} dependent(s) on '{result['file_path']}':\n\n"
+
+            if result["direct_dependents"]:
+                output += "Direct Dependents:\n"
+                for i, dep in enumerate(result["direct_dependents"][:15], 1):
+                    output += f"{i}. {dep['file_path']}\n"
+                    output += f"   Type: {dep['import_type']} | Language: {dep['language']}\n"
+                output += "\n"
+
+            if result.get("transitive_dependents"):
+                output += f"Transitive Dependents (depth {result['max_depth']}):\n"
+                for i, dep in enumerate(result["transitive_dependents"][:15], 1):
+                    output += f"{i}. {dep['file_path']} (depth: {dep['depth']})\n"
+                    output += f"   Type: {dep['import_type']}\n"
+
+            return [TextContent(type="text", text=output)]
 
         else:
             return [TextContent(type="text", text=f"Unknown tool: {name}")]
