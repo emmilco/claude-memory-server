@@ -1204,6 +1204,16 @@ A pre-commit hook enforces CHANGELOG updates:
   - Supports force full re-index, clearing existing index, and cache bypass
   - Returns detailed statistics including units_deleted, cache_bypassed, and index_cleared
 
+- **FEAT-018: Query DSL (MVP Foundation)**
+  - Implemented `QueryDSLParser` in `src/search/query_dsl_parser.py` for advanced filtering
+  - GitHub-style filter syntax: `language:python file:src/**/*.py created:>2024-01-01`
+  - Supported filters: language, file, project, author, created, modified, category, scope
+  - Date operators: >, >=, <, <=, =, and ranges (2024-01-01..2024-12-31)
+  - Exclusions: `-file:test` to exclude patterns
+  - Filter aliases: lang→language, path→file, proj→project
+  - Created `tests/unit/test_query_dsl_parser.py` with 20 comprehensive tests
+  - Foundation for future MCP integration and boolean expression support
+
 ### Fixed - 2025-11-18
 
 - **BUG-013: Query Synonym Test Failure**
