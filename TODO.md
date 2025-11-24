@@ -369,10 +369,11 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
 
 #### Performance Optimizations
 
-- [ ] **PERF-002**: GPU acceleration (~1-2 weeks)
-  - [ ] Use CUDA for embedding model
-  - [ ] Target: 50-100x speedup
+- [x] **PERF-002**: GPU acceleration ✅ **COMPLETE**
+  - [x] Use CUDA for embedding model
+  - [x] Target: 50-100x speedup
   - **Impact:** Massive speedup (requires GPU hardware)
+  - **Status:** Merged to main (2025-11-24)
 
 ---
 
