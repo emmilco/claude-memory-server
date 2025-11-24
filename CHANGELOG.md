@@ -51,6 +51,16 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Added - 2025-11-24
+- **FEAT-059: Structural/Relational Queries (Call Graph & Function Analysis)**
+  - Added CallGraph infrastructure for bidirectional call tracking (find_callers, find_callees, call chains)
+  - Added PythonCallExtractor for AST-based call analysis (direct calls, method calls, constructors, async/await, inheritance)
+  - Added QdrantCallGraphStore for persistent graph storage with CRUD operations
+  - Added comprehensive graph algorithms: BFS traversal, cycle detection, dependency analysis
+  - Added 129 tests covering all call graph functionality
+  - Added API documentation guides: CALL_GRAPH_API.md and CALL_GRAPH_USER_GUIDE.md
+  - Files: src/graph/call_graph.py, src/analysis/call_extractors.py, src/store/call_graph_store.py
+
 ### Added - 2025-11-23
 - **FEAT-056: Advanced Filtering & Sorting for search_code**
   - Added glob pattern matching for `file_pattern` (e.g., `**/*.test.py`, `src/**/auth*.ts`)
