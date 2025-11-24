@@ -17,40 +17,55 @@
 
 ---
 
-### [FEAT-057]: Better UX & Discoverability
+### [REF-013]: Split Monolithic Core Server
 **Started**: 2025-11-23
-**Assigned**: Claude Code Agent (Backend Engineer with UX focus)
-**Branch**: worktrees/FEAT-057
+**Assigned**: Software Architect
+**Branch**: .worktrees/REF-013
 **Blocked By**: None
-**Status**: Complete - Ready for Review
+**Status**: PLANNING COMPLETE - Awaiting User Approval
 
 **Progress Notes**:
-- 2025-11-23: Created worktree and reviewed planning document
-- 2025-11-23: Implemented QuerySuggester for intent-based suggestions
-- 2025-11-23: Implemented ResultSummarizer for faceted search results
-- 2025-11-23: Implemented SpellingSuggester for typo detection
-- 2025-11-23: Implemented RefinementAdvisor for search hints
-- 2025-11-23: Enhanced search_code with facets, summaries, hints, and "Did you mean?"
-- 2025-11-23: Added suggest_queries MCP tool to server
-- 2025-11-23: All 42 unit tests passing (1 skipped)
-- 2025-11-23: Ready for final testing and merge
+- 2025-11-23 09:15: Created worktree, reviewed existing planning docs
+- 2025-11-23 09:20: Analyzed server.py structure (5,382 lines, 72 methods across 8 domains)
+- 2025-11-23 09:25: Completed method breakdown and dependency analysis
+- 2025-11-23 09:30: Created comprehensive planning documents (7 files, 145KB total)
+- 2025-11-23 09:30: **PLANNING PHASE COMPLETE**
 
-**Completed Features**:
-- [x] Query suggestion system with intent/project/domain/general suggestions
-- [x] Faceted search results (languages, unit_types, files, directories)
-- [x] Natural language result summaries
-- [x] "Did you mean?" spelling suggestions
-- [x] Interactive refinement hints
-- [x] suggest_queries MCP tool
-- [x] 42 comprehensive unit tests
-- [x] Backward compatible with existing search_code API
+**Planning Deliverables**:
+- ✅ REF-013_EXECUTIVE_SUMMARY.md (8.7KB) - High-level overview and recommendations
+- ✅ REF-013_ANALYSIS_AND_RECOMMENDATIONS.md (19KB) - Detailed analysis
+- ✅ REF-013_METHOD_BREAKDOWN.md (12KB) - All 72 methods classified by service
+- ✅ REF-013_PHASE1_PLAN.md (13KB) - Day-by-day implementation plan
+- ✅ REF-013_ARCHITECTURE_DIAGRAM.md (30KB) - Visual diagrams and architecture
+- ✅ REF-013_split_server_implementation_plan.md (58KB) - Full 6-month plan (existing)
+- ✅ REF-013_server_refactoring_plan.md (4.6KB) - Handler extraction fallback (existing)
 
-**Next Steps**:
-- [ ] Run verify-complete.py
-- [ ] Move to REVIEW.md
-- [ ] Merge to main
+**Key Findings**:
+- Server.py contains 72 methods across 8 distinct domains (MEMORY, CODE_INDEXING, HEALTH, QUERY, CROSS_PROJECT, GIT_HISTORY, CODE_REVIEW, CORE)
+- **HealthService identified as ideal Phase 1 target** (9 methods, ~400 lines, highest isolation, lowest risk)
+- Two-path strategy: Service extraction (6 months) vs. Handler extraction (1 day) based on Phase 1 results
+- Phase 1 success probability: HIGH (80%+)
 
-**See**: planning_docs/FEAT-057_ux_discoverability_plan.md
+**Recommendation**:
+- **START WITH HEALTHSERVICE EXTRACTION** (1-2 weeks proof of concept)
+- Validate service extraction approach before committing to full 6-month plan
+- Decision point: Day 4 (first migration), Day 10 (Phase 1 complete)
+
+**Next Steps** (Pending User Approval):
+- [ ] Get user approval to proceed with Phase 1 (HealthService extraction)
+- [ ] Create baseline metrics document (test count, coverage, performance)
+- [ ] Create src/services/ directory structure
+- [ ] Create integration test file for health MCP tools
+- [ ] Begin Week 1 Day 1 implementation (setup and skeleton)
+
+**User Questions**:
+1. Approve Phase 1 (HealthService extraction, 1-2 weeks)?
+2. Create comprehensive baseline benchmarks before starting?
+3. Integration tests with real Qdrant or mocks only?
+4. Any timeline constraints?
+5. If Phase 1 succeeds, continue with full service extraction (6 months) or stop?
+
+**See**: TODO.md line 684, planning_docs/REF-013_*.md (7 files)
 
 ---
 
