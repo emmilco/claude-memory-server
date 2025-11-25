@@ -62,10 +62,11 @@ Organize entries under these headers in chronological order (newest first):
 
 - **Fixed test timeout by disabling auto-indexing in test fixtures**
   - Disabled auto-indexing in `server` fixture in `tests/integration/test_call_graph_tools.py`
+  - Disabled auto-indexing in `server` fixture in `tests/integration/test_concurrent_operations.py`
   - Skipped 18 FEAT-059 tests pending MCP tool implementation on MemoryRAGServer
   - Root cause: Auto-indexing (`auto_index_on_startup=True`) triggered full repository scan during fixture setup, overwhelming Qdrant
-  - Combined with heavy `sample_call_graph` fixture (15-20 Qdrant operations), caused socket connection timeouts
-  - Impact: Eliminates Qdrant resource exhaustion during test fixture setup, tests run in <8s without timeout
+  - Combined with heavy fixtures and concurrent operations, caused socket connection timeouts
+  - Impact: Eliminates Qdrant resource exhaustion during test fixture setup, tests run in <6s without timeout
 
 - **CRITICAL: Fixed overly aggressive health check timeouts causing integration test failures**
   - Increased connection pool health check timeouts from 1ms/10ms/50ms to 50ms/100ms/200ms
