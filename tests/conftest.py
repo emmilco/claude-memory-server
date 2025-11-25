@@ -534,3 +534,53 @@ def unique_qdrant_collection(monkeypatch, qdrant_client, setup_qdrant_pool):
     yield collection_name
 
     # No cleanup needed - collection stays in pool for next test
+
+
+# ============================================================================
+# Automatic Test Marker Application (TEST-011)
+# ============================================================================
+
+def pytest_collection_modifyitems(config, items):
+    """Auto-apply markers based on test location and characteristics.
+
+    This hook automatically adds markers to tests based on their file path,
+    reducing the need for manual marker application while maintaining
+    test categorization.
+
+    Auto-applied markers:
+    - unit: All tests in tests/unit/
+    - integration: All tests in tests/integration/
+    - security: All tests in tests/security/
+    - requires_docker: Integration tests (most need Docker for Qdrant)
+    """
+    for item in items:
+        # Get file path as string
+        fspath = str(item.fspath)
+
+        # Auto-apply markers based on directory structure
+        if "tests/unit/" in fspath:
+            item.add_marker(pytest.mark.unit)
+        elif "tests/integration/" in fspath:
+            item.add_marker(pytest.mark.integration)
+            # Most integration tests require Docker for Qdrant
+            item.add_marker(pytest.mark.requires_docker)
+        elif "tests/security/" in fspath:
+            item.add_marker(pytest.mark.security)
+
+        # Skip GPU tests if GPU not available
+        if "requires_gpu" in item.keywords:
+            try:
+                import torch
+                if not torch.cuda.is_available():
+                    item.add_marker(pytest.mark.skip(reason="GPU not available"))
+            except ImportError:
+                item.add_marker(pytest.mark.skip(reason="PyTorch not installed"))
+
+        # Skip Docker tests if Docker not running
+        if "requires_docker" in item.keywords:
+            try:
+                import docker
+                client = docker.from_env()
+                client.ping()
+            except Exception:
+                item.add_marker(pytest.mark.skip(reason="Docker not available"))

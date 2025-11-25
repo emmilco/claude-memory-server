@@ -116,8 +116,9 @@ class QdrantMemoryStore(MemoryStore):
         metadata: Dict[str, Any],
     ) -> str:
         """Store a single memory with its embedding and metadata."""
-        client = await self._get_client()
+        client = None
         try:
+            client = await self._get_client()
             # Build payload using helper method
             memory_id, payload = self._build_payload(content, embedding, metadata)
 
@@ -139,18 +140,18 @@ class QdrantMemoryStore(MemoryStore):
 
         except ValueError as e:
             # Invalid payload structure
-            logger.error(f"Invalid payload for storage: {e}")
+            logger.error(f"Invalid payload for storage: {e}", exc_info=True)
             raise ValidationError(f"Invalid memory payload: {e}")
         except ConnectionError as e:
             # Connection issues
-            logger.error(f"Connection error during store: {e}")
+            logger.error(f"Connection error during store: {e}", exc_info=True)
             raise StorageError(f"Failed to connect to Qdrant: {e}")
         except Exception as e:
             # Generic fallback
-            logger.error(f"Unexpected error storing memory: {e}")
+            logger.error(f"Unexpected error storing memory: {e}", exc_info=True)
             raise StorageError(f"Failed to store memory: {e}")
         finally:
-            if 'client' in locals():
+            if client is not None:
                 await self._release_client(client)
 
     async def retrieve(
@@ -160,8 +161,9 @@ class QdrantMemoryStore(MemoryStore):
         limit: int = 5,
     ) -> List[Tuple[MemoryUnit, float]]:
         """Retrieve memories similar to the query embedding."""
-        client = await self._get_client()
+        client = None
         try:
+            client = await self._get_client()
             # Cap limit to prevent memory/performance issues from unbounded queries
             safe_limit = min(limit, 100)
             if limit != safe_limit:
@@ -199,31 +201,32 @@ class QdrantMemoryStore(MemoryStore):
             return results
 
         except ConnectionError as e:
-            logger.error(f"Connection error during retrieval: {e}")
+            logger.error(f"Connection error during retrieval: {e}", exc_info=True)
             raise RetrievalError(f"Failed to connect to Qdrant: {e}")
         except OSError as e:
             # OSError covers socket errors, connection refused, etc.
-            logger.error(f"Network error during retrieval: {e}")
+            logger.error(f"Network error during retrieval: {e}", exc_info=True)
             raise RetrievalError(f"Qdrant connection error: {e}")
         except ValueError as e:
-            logger.error(f"Invalid filter or query: {e}")
+            logger.error(f"Invalid filter or query: {e}", exc_info=True)
             raise RetrievalError(f"Invalid search parameters: {e}")
         except Exception as e:
             # Check if it's a connection-related error by string matching
             error_str = str(e).lower()
             if any(keyword in error_str for keyword in ['connection', 'refused', 'timeout', 'unreachable', 'qdrant']):
-                logger.error(f"Connection-related error during retrieval: {e}")
+                logger.error(f"Connection-related error during retrieval: {e}", exc_info=True)
                 raise RetrievalError(f"Failed to connect to Qdrant: {e}")
-            logger.error(f"Unexpected error during retrieval: {e}")
+            logger.error(f"Unexpected error during retrieval: {e}", exc_info=True)
             raise RetrievalError(f"Failed to retrieve memories from Qdrant: {e}")
         finally:
-            if 'client' in locals():
+            if client is not None:
                 await self._release_client(client)
 
     async def delete(self, memory_id: str) -> bool:
         """Delete a memory by its ID."""
-        client = await self._get_client()
+        client = None
         try:
+            client = await self._get_client()
             result = client.delete(
                 collection_name=self.collection_name,
                 points_selector=[memory_id],
@@ -237,7 +240,7 @@ class QdrantMemoryStore(MemoryStore):
         except Exception as e:
             raise StorageError(f"Failed to delete memory: {e}")
         finally:
-            if 'client' in locals():
+            if client is not None:
                 await self._release_client(client)
 
     async def delete_code_units_by_project(self, project_name: str) -> int:
@@ -253,8 +256,9 @@ class QdrantMemoryStore(MemoryStore):
         Raises:
             StorageError: If deletion fails.
         """
-        client = await self._get_client()
+        client = None
         try:
+            client = await self._get_client()
             # First, count how many units will be deleted by scrolling
             filter_conditions = Filter(
                 must=[
@@ -303,10 +307,10 @@ class QdrantMemoryStore(MemoryStore):
             return count
 
         except Exception as e:
-            logger.error(f"Failed to delete code units for project {project_name}: {e}")
+            logger.error(f"Failed to delete code units for project {project_name}: {e}", exc_info=True)
             raise StorageError(f"Failed to delete code units: {e}")
         finally:
-            if 'client' in locals():
+            if client is not None:
                 await self._release_client(client)
 
     async def batch_store(
@@ -345,16 +349,16 @@ class QdrantMemoryStore(MemoryStore):
             return memory_ids
 
         except ValueError as e:
-            logger.error(f"Invalid payload in batch: {e}")
+            logger.error(f"Invalid payload in batch: {e}", exc_info=True)
             raise ValidationError(f"Invalid memory payload in batch: {e}")
         except ConnectionError as e:
-            logger.error(f"Connection error during batch store: {e}")
+            logger.error(f"Connection error during batch store: {e}", exc_info=True)
             raise StorageError(f"Failed to connect to Qdrant: {e}")
         except Exception as e:
-            logger.error(f"Unexpected error in batch store: {e}")
+            logger.error(f"Unexpected error in batch store: {e}", exc_info=True)
             raise StorageError(f"Failed to batch store memories: {e}")
         finally:
-            if 'client' in locals():
+            if client is not None:
                 await self._release_client(client)
 
     async def search_with_filters(
@@ -368,8 +372,9 @@ class QdrantMemoryStore(MemoryStore):
 
     async def get_by_id(self, memory_id: str) -> Optional[MemoryUnit]:
         """Retrieve a specific memory by its ID."""
-        client = await self._get_client()
+        client = None
         try:
+            client = await self._get_client()
             result = client.retrieve(
                 collection_name=self.collection_name,
                 ids=[memory_id],
@@ -383,16 +388,17 @@ class QdrantMemoryStore(MemoryStore):
             return self._payload_to_memory_unit(result[0].payload)
 
         except Exception as e:
-            logger.error(f"Failed to get memory by ID: {e}")
+            logger.error(f"Failed to get memory by ID: {e}", exc_info=True)
             return None
         finally:
-            if 'client' in locals():
+            if client is not None:
                 await self._release_client(client)
 
     async def count(self, filters: Optional[SearchFilters] = None) -> int:
         """Count the number of memories, optionally with filters."""
-        client = await self._get_client()
+        client = None
         try:
+            client = await self._get_client()
             if not filters:
                 # No filters - return total collection count
                 collection_info = client.get_collection(self.collection_name)
@@ -422,10 +428,10 @@ class QdrantMemoryStore(MemoryStore):
             return total
 
         except Exception as e:
-            logger.error(f"Failed to count memories: {e}")
+            logger.error(f"Failed to count memories: {e}", exc_info=True)
             return 0
         finally:
-            if 'client' in locals():
+            if client is not None:
                 await self._release_client(client)
 
     async def update(
@@ -446,6 +452,7 @@ class QdrantMemoryStore(MemoryStore):
             bool: True if updated, False if not found
         """
 
+        client = None
         try:
             client = await self._get_client()
             # Get existing memory
@@ -533,7 +540,7 @@ class QdrantMemoryStore(MemoryStore):
             raise StorageError(f"Failed to update memory: {e}")
 
         finally:
-            if 'client' in locals():
+            if client is not None:
                 await self._release_client(client)
 
     async def health_check(self) -> bool:
@@ -567,6 +574,7 @@ class QdrantMemoryStore(MemoryStore):
 
         filters = filters or {}
 
+        client = None
         try:
             client = await self._get_client()
             # Build Qdrant filter conditions
@@ -694,11 +702,11 @@ class QdrantMemoryStore(MemoryStore):
             return paginated, total_count
 
         except Exception as e:
-            logger.error(f"Error listing memories: {e}")
+            logger.error(f"Error listing memories: {e}", exc_info=True)
             raise StorageError(f"Failed to list memories: {e}")
 
         finally:
-            if 'client' in locals():
+            if client is not None:
                 await self._release_client(client)
 
     async def get_indexed_files(
@@ -723,6 +731,7 @@ class QdrantMemoryStore(MemoryStore):
         limit = min(max(1, limit), 500)
         offset = max(0, offset)
 
+        client = None
         try:
             client = await self._get_client()
             # Build filter for code category
@@ -801,11 +810,11 @@ class QdrantMemoryStore(MemoryStore):
             }
 
         except Exception as e:
-            logger.error(f"Error getting indexed files: {e}")
+            logger.error(f"Error getting indexed files: {e}", exc_info=True)
             raise StorageError(f"Failed to get indexed files: {e}")
 
         finally:
-            if 'client' in locals():
+            if client is not None:
                 await self._release_client(client)
 
     async def list_indexed_units(
@@ -836,6 +845,7 @@ class QdrantMemoryStore(MemoryStore):
         limit = min(max(1, limit), 500)
         offset = max(0, offset)
 
+        client = None
         try:
             client = await self._get_client()
             # Build filter conditions
@@ -934,11 +944,11 @@ class QdrantMemoryStore(MemoryStore):
             }
 
         except Exception as e:
-            logger.error(f"Error listing indexed units: {e}")
+            logger.error(f"Error listing indexed units: {e}", exc_info=True)
             raise StorageError(f"Failed to list indexed units: {e}")
 
         finally:
-            if 'client' in locals():
+            if client is not None:
                 await self._release_client(client)
 
     def get_pool_stats(self) -> Optional[Dict[str, Any]]:
@@ -1374,6 +1384,7 @@ class QdrantMemoryStore(MemoryStore):
         Returns:
             List of project names.
         """
+        client = None
         try:
             client = await self._get_client()
             # Scroll through all points and collect unique project names
@@ -1403,11 +1414,11 @@ class QdrantMemoryStore(MemoryStore):
             return sorted(list(projects))
 
         except Exception as e:
-            logger.error(f"Error getting all projects: {e}")
+            logger.error(f"Error getting all projects: {e}", exc_info=True)
             raise StorageError(f"Failed to get projects: {e}")
 
         finally:
-            if 'client' in locals():
+            if client is not None:
                 await self._release_client(client)
 
     async def get_project_stats(self, project_name: str) -> Dict[str, Any]:
@@ -1420,6 +1431,7 @@ class QdrantMemoryStore(MemoryStore):
         Returns:
             Dictionary with project statistics (total_memories, categories, etc.).
         """
+        client = None
         try:
             client = await self._get_client()
             # Get all memories for this project
@@ -1499,11 +1511,11 @@ class QdrantMemoryStore(MemoryStore):
             }
 
         except Exception as e:
-            logger.error(f"Error getting project stats for {project_name}: {e}")
+            logger.error(f"Error getting project stats for {project_name}: {e}", exc_info=True)
             raise StorageError(f"Failed to get project stats: {e}")
 
         finally:
-            if 'client' in locals():
+            if client is not None:
                 await self._release_client(client)
 
     async def update_usage(self, usage_data: Dict[str, Any]) -> bool:
@@ -1516,6 +1528,7 @@ class QdrantMemoryStore(MemoryStore):
         Returns:
             True if successful
         """
+        client = None
         try:
             client = await self._get_client()
             memory_id = usage_data["memory_id"]
@@ -1556,11 +1569,11 @@ class QdrantMemoryStore(MemoryStore):
             return True
 
         except Exception as e:
-            logger.error(f"Failed to update usage tracking: {e}")
+            logger.error(f"Failed to update usage tracking: {e}", exc_info=True)
             raise StorageError(f"Failed to update usage tracking: {e}")
 
         finally:
-            if 'client' in locals():
+            if client is not None:
                 await self._release_client(client)
 
     async def batch_update_usage(self, usage_data_list: List[Dict[str, Any]]) -> bool:
@@ -1573,6 +1586,7 @@ class QdrantMemoryStore(MemoryStore):
         Returns:
             True if successful
         """
+        client = None
         try:
             client = await self._get_client()
             # Retrieve all points at once
@@ -1619,11 +1633,11 @@ class QdrantMemoryStore(MemoryStore):
             return True
 
         except Exception as e:
-            logger.error(f"Failed to batch update usage tracking: {e}")
+            logger.error(f"Failed to batch update usage tracking: {e}", exc_info=True)
             raise StorageError(f"Failed to batch update usage tracking: {e}")
 
         finally:
-            if 'client' in locals():
+            if client is not None:
                 await self._release_client(client)
 
     async def get_usage_stats(self, memory_id: str) -> Optional[Dict[str, Any]]:
@@ -1636,6 +1650,7 @@ class QdrantMemoryStore(MemoryStore):
         Returns:
             Usage stats dictionary, or None if not found
         """
+        client = None
         try:
             client = await self._get_client()
             points = client.retrieve(
@@ -1659,15 +1674,16 @@ class QdrantMemoryStore(MemoryStore):
             }
 
         except Exception as e:
-            logger.error(f"Failed to get usage stats: {e}")
+            logger.error(f"Failed to get usage stats: {e}", exc_info=True)
             return None
 
         finally:
-            if 'client' in locals():
+            if client is not None:
                 await self._release_client(client)
 
     async def get_all_usage_stats(self) -> List[Dict[str, Any]]:
         """Get all usage statistics."""
+        client = None
         try:
             client = await self._get_client()
             stats = []
@@ -1702,11 +1718,11 @@ class QdrantMemoryStore(MemoryStore):
             return stats
 
         except Exception as e:
-            logger.error(f"Failed to get all usage stats: {e}")
+            logger.error(f"Failed to get all usage stats: {e}", exc_info=True)
             return []
 
         finally:
-            if 'client' in locals():
+            if client is not None:
                 await self._release_client(client)
 
     async def delete_usage_tracking(self, memory_id: str) -> bool:
@@ -1719,6 +1735,7 @@ class QdrantMemoryStore(MemoryStore):
         Returns:
             True if deleted
         """
+        client = None
         try:
             client = await self._get_client()
             points = client.retrieve(
@@ -1755,11 +1772,11 @@ class QdrantMemoryStore(MemoryStore):
             return True
 
         except Exception as e:
-            logger.error(f"Failed to delete usage tracking: {e}")
+            logger.error(f"Failed to delete usage tracking: {e}", exc_info=True)
             return False
 
         finally:
-            if 'client' in locals():
+            if client is not None:
                 await self._release_client(client)
 
     async def cleanup_orphaned_usage_tracking(self) -> int:
@@ -1788,6 +1805,7 @@ class QdrantMemoryStore(MemoryStore):
         Returns:
             List of memory dictionaries
         """
+        client = None
         try:
             client = await self._get_client()
             # Build filter conditions
@@ -1851,11 +1869,11 @@ class QdrantMemoryStore(MemoryStore):
             return results_list
 
         except Exception as e:
-            logger.error(f"Failed to find memories by criteria: {e}")
+            logger.error(f"Failed to find memories by criteria: {e}", exc_info=True)
             return []
 
         finally:
-            if 'client' in locals():
+            if client is not None:
                 await self._release_client(client)
 
     async def find_unused_memories(
@@ -1873,6 +1891,7 @@ class QdrantMemoryStore(MemoryStore):
         Returns:
             List of memory dictionaries
         """
+        client = None
         try:
             client = await self._get_client()
             offset = None
@@ -1933,11 +1952,11 @@ class QdrantMemoryStore(MemoryStore):
             return results_list
 
         except Exception as e:
-            logger.error(f"Failed to find unused memories: {e}")
+            logger.error(f"Failed to find unused memories: {e}", exc_info=True)
             return []
 
         finally:
-            if 'client' in locals():
+            if client is not None:
                 await self._release_client(client)
 
     async def get_all_memories(self) -> List[Dict[str, Any]]:
@@ -1947,6 +1966,7 @@ class QdrantMemoryStore(MemoryStore):
         Returns:
             List of all memory dictionaries
         """
+        client = None
         try:
             client = await self._get_client()
             offset = None
@@ -1975,11 +1995,11 @@ class QdrantMemoryStore(MemoryStore):
             return memories
 
         except Exception as e:
-            logger.error(f"Failed to get all memories: {e}")
+            logger.error(f"Failed to get all memories: {e}", exc_info=True)
             return []
 
         finally:
-            if 'client' in locals():
+            if client is not None:
                 await self._release_client(client)
 
     async def migrate_memory_scope(self, memory_id: str, new_project_name: Optional[str]) -> bool:
@@ -1996,6 +2016,7 @@ class QdrantMemoryStore(MemoryStore):
         Raises:
             StorageError: If migration fails
         """
+        client = None
         try:
             client = await self._get_client()
             # Get the memory
@@ -2033,7 +2054,7 @@ class QdrantMemoryStore(MemoryStore):
 
         except StorageError:
             raise
-            logger.error(f"Error migrating memory {memory_id}: {e}")
+            logger.error(f"Error migrating memory {memory_id}: {e}", exc_info=True)
             raise StorageError(f"Failed to migrate memory scope: {e}")
 
     async def bulk_update_context_level(
@@ -2058,6 +2079,7 @@ class QdrantMemoryStore(MemoryStore):
         Raises:
             StorageError: If update fails
         """
+        client = None
         try:
             client = await self._get_client()
             # Build filter
@@ -2130,11 +2152,11 @@ class QdrantMemoryStore(MemoryStore):
             return count
 
         except Exception as e:
-            logger.error(f"Error bulk updating context level: {e}")
+            logger.error(f"Error bulk updating context level: {e}", exc_info=True)
             raise StorageError(f"Failed to bulk update context level: {e}")
 
         finally:
-            if 'client' in locals():
+            if client is not None:
                 await self._release_client(client)
 
     async def find_duplicate_memories(
@@ -2155,6 +2177,7 @@ class QdrantMemoryStore(MemoryStore):
         Raises:
             StorageError: If search fails
         """
+        client = None
         try:
             client = await self._get_client()
             # Get all memories matching criteria
@@ -2220,11 +2243,11 @@ class QdrantMemoryStore(MemoryStore):
             return duplicates
 
         except Exception as e:
-            logger.error(f"Error finding duplicate memories: {e}")
+            logger.error(f"Error finding duplicate memories: {e}", exc_info=True)
             raise StorageError(f"Failed to find duplicates: {e}")
 
         finally:
-            if 'client' in locals():
+            if client is not None:
                 await self._release_client(client)
 
     async def merge_memories(
@@ -2248,6 +2271,7 @@ class QdrantMemoryStore(MemoryStore):
         if len(memory_ids) < 2:
             raise StorageError("Need at least 2 memories to merge")
 
+        client = None
         try:
             client = await self._get_client()
             # Determine which memory to keep
@@ -2306,7 +2330,7 @@ class QdrantMemoryStore(MemoryStore):
 
         except StorageError:
             raise
-            logger.error(f"Error merging memories: {e}")
+            logger.error(f"Error merging memories: {e}", exc_info=True)
             raise StorageError(f"Failed to merge memories: {e}")
 
     async def get_recent_activity(
@@ -2324,6 +2348,7 @@ class QdrantMemoryStore(MemoryStore):
         Returns:
             Dictionary with recent_searches and recent_additions
         """
+        client = None
         try:
             client = await self._get_client()
             # Get recent searches from feedback database
@@ -2444,7 +2469,7 @@ class QdrantMemoryStore(MemoryStore):
             }
 
         except Exception as e:
-            logger.error(f"Error retrieving recent activity: {e}")
+            logger.error(f"Error retrieving recent activity: {e}", exc_info=True)
             raise StorageError(f"Failed to retrieve recent activity: {e}")
 
     # ============================================================
@@ -2452,7 +2477,7 @@ class QdrantMemoryStore(MemoryStore):
     # ============================================================
 
         finally:
-            if 'client' in locals():
+            if client is not None:
                 await self._release_client(client)
 
     async def store_git_commits(
@@ -2487,6 +2512,7 @@ class QdrantMemoryStore(MemoryStore):
         if not commits:
             return 0
 
+        client = None
         try:
             client = await self._get_client()
             import hashlib
@@ -2546,11 +2572,11 @@ class QdrantMemoryStore(MemoryStore):
             return len(commits)
 
         except Exception as e:
-            logger.error(f"Error storing git commits: {e}")
+            logger.error(f"Error storing git commits: {e}", exc_info=True)
             raise StorageError(f"Failed to store git commits: {e}")
 
         finally:
-            if 'client' in locals():
+            if client is not None:
                 await self._release_client(client)
 
     async def store_git_file_changes(
@@ -2580,6 +2606,7 @@ class QdrantMemoryStore(MemoryStore):
         if not file_changes:
             return 0
 
+        client = None
         try:
             client = await self._get_client()
             points = []
@@ -2627,11 +2654,11 @@ class QdrantMemoryStore(MemoryStore):
             return len(file_changes)
 
         except Exception as e:
-            logger.error(f"Error storing git file changes: {e}")
+            logger.error(f"Error storing git file changes: {e}", exc_info=True)
             raise StorageError(f"Failed to store git file changes: {e}")
 
         finally:
-            if 'client' in locals():
+            if client is not None:
                 await self._release_client(client)
 
     async def search_git_commits(
@@ -2660,6 +2687,7 @@ class QdrantMemoryStore(MemoryStore):
         Raises:
             StorageError: If search operation fails
         """
+        client = None
         try:
             client = await self._get_client()
             # Build filter conditions
@@ -2758,11 +2786,11 @@ class QdrantMemoryStore(MemoryStore):
             return results[:limit]
 
         except Exception as e:
-            logger.error(f"Error searching git commits: {e}")
+            logger.error(f"Error searching git commits: {e}", exc_info=True)
             raise StorageError(f"Failed to search git commits: {e}")
 
         finally:
-            if 'client' in locals():
+            if client is not None:
                 await self._release_client(client)
 
     async def get_git_commit(
@@ -2781,6 +2809,7 @@ class QdrantMemoryStore(MemoryStore):
         Raises:
             StorageError: If retrieval operation fails
         """
+        client = None
         try:
             client = await self._get_client()
             # Search by commit_hash field since we use UUIDs for point IDs
@@ -2809,11 +2838,11 @@ class QdrantMemoryStore(MemoryStore):
             return self._deserialize_commit(payload, vector)
 
         except Exception as e:
-            logger.error(f"Error retrieving git commit {commit_hash}: {e}")
+            logger.error(f"Error retrieving git commit {commit_hash}: {e}", exc_info=True)
             raise StorageError(f"Failed to retrieve git commit: {e}")
 
         finally:
-            if 'client' in locals():
+            if client is not None:
                 await self._release_client(client)
 
     async def get_commits_by_file(
@@ -2834,6 +2863,7 @@ class QdrantMemoryStore(MemoryStore):
         Raises:
             StorageError: If retrieval operation fails
         """
+        client = None
         try:
             client = await self._get_client()
             # First, find file changes for this file
@@ -2905,11 +2935,11 @@ class QdrantMemoryStore(MemoryStore):
             return results[:limit]
 
         except Exception as e:
-            logger.error(f"Error getting commits by file {file_path}: {e}")
+            logger.error(f"Error getting commits by file {file_path}: {e}", exc_info=True)
             raise StorageError(f"Failed to get commits by file: {e}")
 
         finally:
-            if 'client' in locals():
+            if client is not None:
                 await self._release_client(client)
 
     def _deserialize_commit(

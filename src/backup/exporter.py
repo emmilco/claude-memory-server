@@ -386,7 +386,7 @@ class DataExporter:
                 raise StorageError(f"Unsupported store type: {type(self.store)}. Only Qdrant is supported.")
 
         except Exception as e:
-            raise StorageError(f"Failed to retrieve embedding for {memory_id}: {e}")
+            raise StorageError(f"Failed to retrieve embedding for {memory_id}: {e}") from e
 
     def _memory_to_dict(self, memory: MemoryUnit, embedding: List[float]) -> Dict[str, Any]:
         """

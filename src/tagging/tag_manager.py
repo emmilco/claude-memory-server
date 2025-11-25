@@ -133,7 +133,7 @@ class TagManager:
         except sqlite3.IntegrityError as e:
             if "UNIQUE constraint failed" in str(e):
                 raise StorageError(f"Tag already exists: {full_path}")
-            raise StorageError(f"Failed to create tag: {e}")
+            raise StorageError(f"Failed to create tag: {e}") from e
 
         return tag
 
@@ -302,7 +302,7 @@ class TagManager:
                 conn.execute("DELETE FROM tags WHERE id = ?", (tag_id,))
                 conn.commit()
         except sqlite3.Error as e:
-            raise StorageError(f"Failed to delete tag: {e}")
+            raise StorageError(f"Failed to delete tag: {e}") from e
 
     def merge_tags(self, source_tag_id: str, target_tag_id: str) -> None:
         """
@@ -350,7 +350,7 @@ class TagManager:
                 conn.execute("DELETE FROM tags WHERE id = ?", (source_tag_id,))
                 conn.commit()
         except sqlite3.Error as e:
-            raise StorageError(f"Failed to merge tags: {e}")
+            raise StorageError(f"Failed to merge tags: {e}") from e
 
     def tag_memory(
         self, memory_id: str, tag_id: str, confidence: float = 1.0, auto_generated: bool = False
@@ -387,7 +387,7 @@ class TagManager:
                 )
                 conn.commit()
         except sqlite3.Error as e:
-            raise StorageError(f"Failed to tag memory: {e}")
+            raise StorageError(f"Failed to tag memory: {e}") from e
 
     def untag_memory(self, memory_id: str, tag_id: str) -> None:
         """
@@ -408,7 +408,7 @@ class TagManager:
                 )
                 conn.commit()
         except sqlite3.Error as e:
-            raise StorageError(f"Failed to untag memory: {e}")
+            raise StorageError(f"Failed to untag memory: {e}") from e
 
     def get_memory_tags(self, memory_id: str) -> List[Tag]:
         """

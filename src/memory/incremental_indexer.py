@@ -455,7 +455,7 @@ class IncrementalIndexer(BaseCodeIndexer):
 
         except Exception as e:
             logger.error(f"Failed to index {file_path}: {e}")
-            raise StorageError(f"Failed to index file: {e}")
+            raise StorageError(f"Failed to index file: {e}") from e
 
     async def index_directory(
         self,

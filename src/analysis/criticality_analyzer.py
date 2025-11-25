@@ -1,11 +1,47 @@
 """
 Criticality analyzer for code importance scoring.
 
-Analyzes criticality indicators including:
-- Security keywords (auth, crypto, permission)
-- Error handling patterns
-- Decorators/annotations
-- File-level proximity to entry points
+Analyzes criticality indicators to identify security-sensitive, error-critical,
+and infrastructure-essential code. Provides boost scores (0.0-0.3) that amplify
+importance for code with critical characteristics.
+
+Criticality Indicators:
+- Security keywords: auth, crypto, token, permission, session (40+ patterns)
+- Error handling: try/catch/except, assertions, validation checks
+- Critical decorators: @security, @auth, @permission, @critical
+- File proximity: Distance from entry points (main, __init__, api)
+
+Boost Calculation:
+- Security keywords (1-3+): +0.02 to +0.10
+- Error handling present: +0.03
+- Critical decorator present: +0.05
+- File proximity (0.0-1.0): +0.00 to +0.02
+- Maximum total boost: 0.3 (30% importance increase)
+
+Language Support:
+- Python: try/except, @decorator, if not/assert patterns
+- JavaScript/TypeScript: try/catch, decorators, null checks
+- Java: try/catch, @annotations, throws declarations
+- Go: if err != nil, defer, panic patterns
+- Rust: Result<>, Option<>, match, ? operator
+
+Architecture:
+- Independent analyzer with no external dependencies
+- Configurable via MAX_CRITICALITY_BOOST constant
+- Thread-safe (stateless design)
+- Used by ImportanceScorer to calculate final importance
+
+Example:
+    ```python
+    analyzer = CriticalityAnalyzer()
+    metrics = analyzer.analyze(
+        code_unit={'name': 'authenticate', 'content': code, 'language': 'python'},
+        file_path=Path('src/auth/login.py')
+    )
+    # metrics.criticality_boost = 0.15 (security keywords + error handling)
+    ```
+
+Part of FEAT-049: Intelligent Code Importance Scoring
 """
 
 import re
@@ -190,10 +226,24 @@ class CriticalityAnalyzer:
         """
         score = 0.0
 
+        # Validate file_path type early
+        if not isinstance(file_path, Path):
+            logger.warning(
+                f"Expected Path object for proximity calculation, got {type(file_path).__name__}: {file_path}"
+            )
+            # Can only score function name, skip file-based scoring
+            func_name = function_name.lower()
+            if func_name in self.ENTRY_POINT_NAMES:
+                score += 0.3
+            return min(score, 1.0)
+
         # Check file name
-        file_name = file_path.stem.lower()
-        if file_name in self.ENTRY_POINT_NAMES:
-            score += 0.5
+        try:
+            file_name = file_path.stem.lower()
+            if file_name in self.ENTRY_POINT_NAMES:
+                score += 0.5
+        except (AttributeError, OSError) as e:
+            logger.debug(f"Could not extract file name from {file_path}: {e}")
 
         # Check function name
         func_name = function_name.lower()
@@ -203,12 +253,28 @@ class CriticalityAnalyzer:
         # Check directory depth (lower depth = closer to root = higher score)
         try:
             parts = file_path.parts
-            depth = len(parts)
-            # Max depth consideration: 10 levels
-            depth_score = max(0.0, 1.0 - (depth / 10.0))
-            score += depth_score * 0.2
-        except Exception:
-            pass
+            if len(parts) == 0:
+                logger.debug(f"Empty path parts for {file_path}, skipping depth scoring")
+            else:
+                depth = len(parts)
+                # Max depth consideration: 10 levels
+                depth_score = max(0.0, 1.0 - (depth / 10.0))
+                score += depth_score * 0.2
+                logger.debug(f"Depth score for {file_path}: {depth_score:.2f} (depth={depth})")
+        except (AttributeError, TypeError) as e:
+            # Unexpected attribute/type issues
+            logger.warning(
+                f"Unexpected error calculating depth score for {file_path}: {e}",
+                exc_info=True
+            )
+            # Continue without depth scoring
+        except Exception as e:
+            # Catch-all for truly unexpected errors - log with full traceback
+            logger.error(
+                f"Critical error in depth calculation for {file_path}: {e}",
+                exc_info=True
+            )
+            # Don't fail the entire criticality analysis over depth scoring
 
         return min(score, 1.0)
 

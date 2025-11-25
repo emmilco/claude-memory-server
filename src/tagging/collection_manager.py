@@ -107,7 +107,7 @@ class CollectionManager:
         except sqlite3.IntegrityError as e:
             if "UNIQUE constraint failed" in str(e):
                 raise StorageError(f"Collection already exists: {collection.name}")
-            raise StorageError(f"Failed to create collection: {e}")
+            raise StorageError(f"Failed to create collection: {e}") from e
 
         return collection
 
@@ -223,7 +223,7 @@ class CollectionManager:
                 )
                 conn.commit()
         except sqlite3.Error as e:
-            raise StorageError(f"Failed to add memories to collection: {e}")
+            raise StorageError(f"Failed to add memories to collection: {e}") from e
 
     def remove_from_collection(self, collection_id: str, memory_ids: List[str]) -> None:
         """
@@ -252,7 +252,7 @@ class CollectionManager:
                 )
                 conn.commit()
         except sqlite3.Error as e:
-            raise StorageError(f"Failed to remove memories from collection: {e}")
+            raise StorageError(f"Failed to remove memories from collection: {e}") from e
 
     def get_collection_memories(self, collection_id: str) -> List[str]:
         """
@@ -295,7 +295,7 @@ class CollectionManager:
                 )
                 conn.commit()
         except sqlite3.Error as e:
-            raise StorageError(f"Failed to delete collection: {e}")
+            raise StorageError(f"Failed to delete collection: {e}") from e
 
     def auto_generate_collections(
         self, tag_patterns: Optional[Dict[str, List[str]]] = None

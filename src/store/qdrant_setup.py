@@ -204,7 +204,7 @@ class QdrantSetup:
             logger.info(f"Collection {self.collection_name} created successfully")
 
         except Exception as e:
-            raise StorageError(f"Failed to create collection: {e}")
+            raise StorageError(f"Failed to create collection: {e}") from e
 
     def create_payload_indices(self) -> None:
         """

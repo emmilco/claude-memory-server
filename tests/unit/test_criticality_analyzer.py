@@ -425,3 +425,60 @@ class TestEdgeCases:
         metrics = analyzer.analyze(code_unit)
         # Should not crash
         assert isinstance(metrics.criticality_boost, float)
+
+
+class TestDepthCalculationErrorHandling:
+    """Tests for error handling in depth calculation (BUG-036)."""
+
+    def test_depth_calculation_with_none_path(self, analyzer, caplog):
+        """Test that None path is handled gracefully."""
+        import logging
+
+        # Should log warning and continue without crashing
+        with caplog.at_level(logging.WARNING):
+            score = analyzer._calculate_file_proximity(None, "main")
+
+        # Should have warning log
+        assert "Expected Path object" in caplog.text
+        # Should return score (without depth component, but not crash)
+        assert isinstance(score, float)
+        # Should still give bonus for 'main' function name
+        assert score >= 0.3
+
+    def test_depth_calculation_with_string_path(self, analyzer, caplog):
+        """Test that string path is handled gracefully."""
+        import logging
+
+        with caplog.at_level(logging.WARNING):
+            score = analyzer._calculate_file_proximity("/some/path/file.py", "main")
+
+        assert "Expected Path object" in caplog.text
+        assert isinstance(score, float)
+        # Should still give bonus for 'main' function name
+        assert score >= 0.3
+
+    def test_depth_calculation_with_empty_path(self, analyzer, caplog):
+        """Test that empty Path is handled."""
+        import logging
+
+        empty_path = Path("")
+        with caplog.at_level(logging.DEBUG):
+            score = analyzer._calculate_file_proximity(empty_path, "main")
+
+        # Should handle gracefully (logs at debug level for empty parts)
+        assert isinstance(score, float)
+        # Should still give bonus for 'main' function name
+        assert score >= 0.3
+
+    def test_depth_calculation_with_valid_path(self, analyzer, caplog):
+        """Test normal case still works."""
+        import logging
+
+        valid_path = Path("src/core/server.py")
+        with caplog.at_level(logging.DEBUG):
+            score = analyzer._calculate_file_proximity(valid_path, "main")
+
+        # Should calculate depth score
+        assert isinstance(score, float)
+        # Entry point name adds 0.3, depth adds up to 0.2
+        assert score >= 0.3

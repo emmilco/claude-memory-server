@@ -9,6 +9,18 @@ using vector embeddings and cosine similarity. It supports:
 - Efficient batch processing
 
 Based on prototype validation with 8,807 code units from claude-memory-server.
+
+Integration:
+- Used by QualityAnalyzer for duplication hotspot detection
+- Integrates with ImportanceScorer via duplication_score field
+- Requires pre-computed embeddings from EmbeddingGenerator
+
+Performance Notes:
+- Memory: O(N²) for similarity matrix (384 * N² bytes for N units)
+- For 10,000 units: ~14.4 GB similarity matrix (use batch processing)
+- Recommended: Process in batches of 1,000 units for large codebases
+
+Part of FEAT-060: Code Quality Metrics & Hotspots
 """
 
 import logging

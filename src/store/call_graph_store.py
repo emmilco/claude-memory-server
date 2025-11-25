@@ -82,7 +82,7 @@ class QdrantCallGraphStore:
             logger.info(f"Call graph store initialized: {self.collection_name}")
 
         except Exception as e:
-            raise StorageError(f"Failed to initialize call graph store: {e}")
+            raise StorageError(f"Failed to initialize call graph store: {e}") from e
 
     def _collection_exists(self) -> bool:
         """Check if call graph collection exists."""
@@ -117,7 +117,7 @@ class QdrantCallGraphStore:
             logger.info(f"Collection {self.collection_name} created successfully")
 
         except Exception as e:
-            raise StorageError(f"Failed to create call graph collection: {e}")
+            raise StorageError(f"Failed to create call graph collection: {e}") from e
 
     async def store_function_node(
         self,
@@ -185,7 +185,7 @@ class QdrantCallGraphStore:
             return point_id
 
         except Exception as e:
-            raise StorageError(f"Failed to store function node: {e}")
+            raise StorageError(f"Failed to store function node: {e}") from e
 
     async def store_call_sites(
         self,
@@ -262,7 +262,7 @@ class QdrantCallGraphStore:
         except MemoryNotFoundError:
             raise
         except Exception as e:
-            raise StorageError(f"Failed to store call sites: {e}")
+            raise StorageError(f"Failed to store call sites: {e}") from e
 
     async def store_implementations(
         self,
@@ -371,7 +371,7 @@ class QdrantCallGraphStore:
             logger.debug(f"Stored {len(implementations)} implementations for {interface_name}")
 
         except Exception as e:
-            raise StorageError(f"Failed to store implementations: {e}")
+            raise StorageError(f"Failed to store implementations: {e}") from e
 
     async def load_call_graph(self, project_name: str) -> CallGraph:
         """
@@ -464,7 +464,7 @@ class QdrantCallGraphStore:
             return graph
 
         except Exception as e:
-            raise StorageError(f"Failed to load call graph: {e}")
+            raise StorageError(f"Failed to load call graph: {e}") from e
 
     async def find_function_by_name(
         self,
@@ -683,4 +683,4 @@ class QdrantCallGraphStore:
             return count
 
         except Exception as e:
-            raise StorageError(f"Failed to delete project call graph: {e}")
+            raise StorageError(f"Failed to delete project call graph: {e}") from e

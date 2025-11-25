@@ -1,7 +1,7 @@
 """System degradation warning and tracking."""
 
 import logging
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, ClassVar
 from datetime import datetime, UTC
 from dataclasses import dataclass, field
 
@@ -109,17 +109,45 @@ class DegradationTracker:
         self.warnings.clear()
         self._warning_keys.clear()
 
+    # Class-level singleton pattern for backward compatibility
+    _instance: ClassVar[Optional["DegradationTracker"]] = None
 
-# Global singleton instance
-_degradation_tracker: Optional[DegradationTracker] = None
+    @classmethod
+    def get_instance(cls) -> "DegradationTracker":
+        """
+        Get or create the singleton instance.
+
+        This provides a class-based singleton pattern that's easier to test
+        and doesn't rely on module-level global state.
+
+        Returns:
+            DegradationTracker: The singleton instance.
+        """
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+
+    @classmethod
+    def reset_instance(cls) -> None:
+        """
+        Reset the singleton instance.
+
+        This is primarily for testing to ensure test isolation.
+        Each test can call this to get a fresh tracker instance.
+        """
+        cls._instance = None
 
 
+# Backward compatibility functions (deprecated but maintained for existing code)
 def get_degradation_tracker() -> DegradationTracker:
-    """Get global degradation tracker instance."""
-    global _degradation_tracker
-    if _degradation_tracker is None:
-        _degradation_tracker = DegradationTracker()
-    return _degradation_tracker
+    """
+    Get global degradation tracker instance.
+
+    DEPRECATED: Use DegradationTracker.get_instance() instead.
+    This function is maintained for backward compatibility but will be
+    removed in a future version.
+    """
+    return DegradationTracker.get_instance()
 
 
 def add_degradation_warning(
@@ -131,23 +159,35 @@ def add_degradation_warning(
     """
     Add a degradation warning to the global tracker.
 
+    DEPRECATED: Create a DegradationTracker instance and call add_warning() directly.
+    This function is maintained for backward compatibility but will be
+    removed in a future version.
+
     Args:
         component: Component name (e.g., "Qdrant", "Rust Parser")
         message: Human-readable message
         upgrade_path: Instructions to upgrade
         performance_impact: Performance impact description
     """
-    tracker = get_degradation_tracker()
+    tracker = DegradationTracker.get_instance()
     tracker.add_warning(component, message, upgrade_path, performance_impact)
 
 
 def has_degradations() -> bool:
-    """Check if system has any degradations."""
-    tracker = get_degradation_tracker()
+    """
+    Check if system has any degradations.
+
+    DEPRECATED: Use DegradationTracker.get_instance().has_degradations() instead.
+    """
+    tracker = DegradationTracker.get_instance()
     return tracker.has_degradations()
 
 
 def get_degradation_summary() -> str:
-    """Get summary of all system degradations."""
-    tracker = get_degradation_tracker()
+    """
+    Get summary of all system degradations.
+
+    DEPRECATED: Use DegradationTracker.get_instance().get_summary() instead.
+    """
+    tracker = DegradationTracker.get_instance()
     return tracker.get_summary()

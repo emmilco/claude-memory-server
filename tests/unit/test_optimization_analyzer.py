@@ -63,85 +63,31 @@ def temp_project():
         yield project
 
 
-def test_analyze_finds_node_modules(temp_project):
-    """Test detection of node_modules directory."""
+@pytest.mark.parametrize("pattern_match,description_match,min_files,expected_priority", [
+    ("node_modules", "Node.js", 50, 5),
+    ("dist/", "build", 20, None),
+    ("venv", "virtual", 30, None),
+    ("__pycache__", "cache", 10, None),
+    (".git/", None, 15, None),
+], ids=["node_modules", "build_dist", "venv", "pycache", "git"])
+def test_analyze_finds_common_directories(temp_project, pattern_match, description_match, min_files, expected_priority):
+    """Test detection of common excludable directories."""
     analyzer = OptimizationAnalyzer(temp_project)
     result = analyzer.analyze()
 
-    # Should suggest excluding node_modules
-    node_modules_suggestions = [
+    # Find matching suggestions
+    suggestions = [
         s for s in result.suggestions
-        if "node_modules" in s.pattern or "Node.js" in s.description
+        if pattern_match in s.pattern.lower() or
+           (description_match and description_match.lower() in s.description.lower())
     ]
 
-    assert len(node_modules_suggestions) > 0
-    suggestion = node_modules_suggestions[0]
-    assert suggestion.affected_files >= 50
-    assert suggestion.priority == 5  # Highest priority
+    assert len(suggestions) > 0, f"No suggestions found for {pattern_match}"
+    suggestion = suggestions[0]
+    assert suggestion.affected_files >= min_files
 
-
-def test_analyze_finds_build_directories(temp_project):
-    """Test detection of build directories."""
-    analyzer = OptimizationAnalyzer(temp_project)
-    result = analyzer.analyze()
-
-    # Should suggest excluding dist/
-    build_suggestions = [
-        s for s in result.suggestions
-        if "dist/" in s.pattern or "build" in s.description.lower()
-    ]
-
-    assert len(build_suggestions) > 0
-    suggestion = build_suggestions[0]
-    assert suggestion.affected_files >= 20
-
-
-def test_analyze_finds_venv(temp_project):
-    """Test detection of Python virtual environments."""
-    analyzer = OptimizationAnalyzer(temp_project)
-    result = analyzer.analyze()
-
-    # Should suggest excluding venv/
-    venv_suggestions = [
-        s for s in result.suggestions
-        if "venv" in s.pattern.lower() or "virtual" in s.description.lower()
-    ]
-
-    assert len(venv_suggestions) > 0
-    suggestion = venv_suggestions[0]
-    assert suggestion.affected_files >= 30
-
-
-def test_analyze_finds_cache_directories(temp_project):
-    """Test detection of cache directories."""
-    analyzer = OptimizationAnalyzer(temp_project)
-    result = analyzer.analyze()
-
-    # Should suggest excluding __pycache__/
-    cache_suggestions = [
-        s for s in result.suggestions
-        if "__pycache__" in s.pattern or "cache" in s.description.lower()
-    ]
-
-    assert len(cache_suggestions) > 0
-    suggestion = cache_suggestions[0]
-    assert suggestion.affected_files >= 10
-
-
-def test_analyze_finds_git_directory(temp_project):
-    """Test detection of .git directory."""
-    analyzer = OptimizationAnalyzer(temp_project)
-    result = analyzer.analyze()
-
-    # Should suggest excluding .git/
-    git_suggestions = [
-        s for s in result.suggestions
-        if ".git/" in s.pattern
-    ]
-
-    assert len(git_suggestions) > 0
-    suggestion = git_suggestions[0]
-    assert suggestion.affected_files >= 15
+    if expected_priority is not None:
+        assert suggestion.priority == expected_priority
 
 
 def test_analyze_finds_large_binaries(temp_project):
@@ -245,59 +191,46 @@ def test_clean_project():
         assert len(result.suggestions) <= 1  # Maybe test directory if > 100 files
 
 
-def test_binary_detection_images():
-    """Test binary file detection for images."""
+@pytest.mark.parametrize("filename,magic_bytes,description", [
+    ("image.jpg", b"\xFF\xD8\xFF", "JPEG image"),
+    ("photo.png", b"\x89PNG", "PNG image"),
+    ("app.exe", b"MZ", "Windows executable"),
+], ids=["jpeg", "png", "exe"])
+def test_binary_detection(filename, magic_bytes, description):
+    """Test binary file detection for various file types."""
     with tempfile.TemporaryDirectory() as tmpdir:
         project = Path(tmpdir)
 
-        # Create image files
-        (project / "image.jpg").write_bytes(b"\xFF\xD8\xFF" + b"\x00" * 100)  # JPEG magic
-        (project / "photo.png").write_bytes(b"\x89PNG" + b"\x00" * 100)  # PNG magic
+        # Create binary file with magic bytes
+        (project / filename).write_bytes(magic_bytes + b"\x00" * 100)
 
         analyzer = OptimizationAnalyzer(project)
         analyzer._scan_directory()
 
-        jpg_file = (project / "image.jpg").resolve()
-        png_file = (project / "photo.png").resolve()
-
-        assert jpg_file in analyzer.file_stats
-        assert png_file in analyzer.file_stats
-        assert analyzer.file_stats[jpg_file].is_binary
-        assert analyzer.file_stats[png_file].is_binary
+        file_path = (project / filename).resolve()
+        assert file_path in analyzer.file_stats, f"File not found in stats: {filename}"
+        assert analyzer.file_stats[file_path].is_binary, f"{description} should be detected as binary"
 
 
-def test_binary_detection_executables():
-    """Test binary file detection for executables."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        project = Path(tmpdir)
-
-        # Create executable
-        (project / "app.exe").write_bytes(b"MZ" + b"\x00" * 100)  # EXE magic
-
-        analyzer = OptimizationAnalyzer(project)
-        analyzer._scan_directory()
-
-        exe_file = (project / "app.exe").resolve()
-        assert exe_file in analyzer.file_stats
-        assert analyzer.file_stats[exe_file].is_binary
-
-
-def test_text_files_not_binary():
+@pytest.mark.parametrize("filename,content,description", [
+    ("code.py", "def hello(): print('world')", "Python file"),
+    ("script.js", "console.log('hello')", "JavaScript file"),
+    ("README.md", "# Project", "Markdown file"),
+], ids=["python", "javascript", "markdown"])
+def test_text_files_not_binary(filename, content, description):
     """Test that text files are not marked as binary."""
     with tempfile.TemporaryDirectory() as tmpdir:
         project = Path(tmpdir)
 
-        # Create text files
-        (project / "code.py").write_text("def hello(): print('world')")
-        (project / "script.js").write_text("console.log('hello')")
-        (project / "README.md").write_text("# Project")
+        # Create text file
+        (project / filename).write_text(content)
 
         analyzer = OptimizationAnalyzer(project)
         analyzer._scan_directory()
 
-        for file_path in [(project / "code.py").resolve(), (project / "script.js").resolve(), (project / "README.md").resolve()]:
-            assert file_path in analyzer.file_stats
-            assert not analyzer.file_stats[file_path].is_binary
+        file_path = (project / filename).resolve()
+        assert file_path in analyzer.file_stats, f"File not found: {filename}"
+        assert not analyzer.file_stats[file_path].is_binary, f"{description} should not be binary"
 
 
 def test_large_file_threshold():

@@ -118,7 +118,7 @@ class EmbeddingGenerator:
             await loop.run_in_executor(self.executor, self._load_model)
             logger.info("Embedding model preloaded and ready")
         except Exception as e:
-            logger.error(f"Failed to preload embedding model: {e}")
+            logger.error(f"Failed to preload embedding model: {e}", exc_info=True)
             raise
 
     def _load_model(self) -> SentenceTransformer:

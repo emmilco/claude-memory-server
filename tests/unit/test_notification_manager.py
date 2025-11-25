@@ -335,13 +335,18 @@ async def test_callback_backend():
 async def test_callback_backend_async():
     """Test callback backend with async function."""
     notifications = []
+    callback_event = asyncio.Event()
 
     async def async_callback(title: str, message: str, level: str):
-        await asyncio.sleep(0.001)  # Simulate async work
+        # Simulate async work without sleep
         notifications.append((title, message, level))
+        callback_event.set()
 
     backend = CallbackNotificationBackend(async_callback)
     await backend.notify("Test Title", "Test Message", "info")
+
+    # Wait for callback to complete
+    await asyncio.wait_for(callback_event.wait(), timeout=1.0)
 
     assert len(notifications) == 1
     assert notifications[0] == ("Test Title", "Test Message", "info")

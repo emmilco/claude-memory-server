@@ -114,14 +114,16 @@ class TestDebouncedFileWatcherCoverage:
 
         watcher.on_modified(event)
 
-        # Callback should not be triggered
-        await asyncio.sleep(0.15)
+        # Callback should not be triggered - use a short wait to verify no callbacks
+        # NOTE: Sleep is necessary here to verify callback is NOT triggered
+        await asyncio.sleep(0.15)  # Wait longer than debounce to ensure no callback
         callback.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_on_modified_file(self, tmp_path):
         """Test on_modified processes files (lines 132-135)."""
-        callback = AsyncMock()
+        callback_event = asyncio.Event()
+        callback = AsyncMock(side_effect=lambda path: callback_event.set())
         watcher = DebouncedFileWatcher(
             watch_path=tmp_path,
             callback=callback,
@@ -140,8 +142,8 @@ class TestDebouncedFileWatcherCoverage:
 
         watcher.on_modified(event)
 
-        # Wait for debounce
-        await asyncio.sleep(0.1)
+        # Wait for callback with timeout
+        await asyncio.wait_for(callback_event.wait(), timeout=0.2)
         callback.assert_called_once()
 
     @pytest.mark.asyncio
@@ -162,14 +164,16 @@ class TestDebouncedFileWatcherCoverage:
 
         watcher.on_created(event)
 
-        # Callback should not be triggered
-        await asyncio.sleep(0.15)
+        # Callback should not be triggered - use a short wait to verify no callbacks
+        # NOTE: Sleep is necessary here to verify callback is NOT triggered
+        await asyncio.sleep(0.15)  # Wait longer than debounce to ensure no callback
         callback.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_on_created_file(self, tmp_path):
         """Test on_created processes files (lines 142-147)."""
-        callback = AsyncMock()
+        callback_event = asyncio.Event()
+        callback = AsyncMock(side_effect=lambda path: callback_event.set())
         watcher = DebouncedFileWatcher(
             watch_path=tmp_path,
             callback=callback,
@@ -188,8 +192,8 @@ class TestDebouncedFileWatcherCoverage:
 
         watcher.on_created(event)
 
-        # Wait for debounce
-        await asyncio.sleep(0.1)
+        # Wait for callback with timeout
+        await asyncio.wait_for(callback_event.wait(), timeout=0.2)
         callback.assert_called_once()
 
     @pytest.mark.asyncio
@@ -259,8 +263,14 @@ class TestDebouncedFileWatcherCoverage:
     @pytest.mark.asyncio
     async def test_callback_error_handling(self, tmp_path):
         """Test error handling in callback execution (lines 203-205)."""
-        # Create callback that raises error
-        callback = AsyncMock(side_effect=RuntimeError("Callback failed"))
+        callback_event = asyncio.Event()
+
+        # Create callback that raises error but signals completion
+        async def error_callback(path):
+            callback_event.set()
+            raise RuntimeError("Callback failed")
+
+        callback = AsyncMock(side_effect=error_callback)
 
         watcher = DebouncedFileWatcher(
             watch_path=tmp_path,
@@ -279,8 +289,8 @@ class TestDebouncedFileWatcherCoverage:
 
         watcher.on_modified(event)
 
-        # Wait for debounce and error handling
-        await asyncio.sleep(0.15)
+        # Wait for callback with timeout
+        await asyncio.wait_for(callback_event.wait(), timeout=0.2)
 
         # Callback should have been called despite error
         callback.assert_called_once()
@@ -365,7 +375,8 @@ class TestFileWatcherServiceCoverage:
         # Start async and cancel after short time
         task = asyncio.create_task(service.start_async())
 
-        # Let it run briefly
+        # Let it run briefly to ensure it starts
+        # NOTE: Sleep is necessary here to allow service to initialize
         await asyncio.sleep(0.1)
 
         # Service should be running
@@ -394,6 +405,7 @@ class TestFileWatcherServiceCoverage:
 
         # Start async
         task = asyncio.create_task(service.start_async())
+        # NOTE: Sleep is necessary here to allow service to initialize before cancellation
         await asyncio.sleep(0.05)
 
         # Cancel

@@ -491,6 +491,104 @@ claude-memory-server/
 
 ---
 
+## 📓 Work Journal Protocol
+
+Claude Code hooks automatically prompt you to write journal entries at key moments. When you see `[JOURNAL:xxxxxxxx]` prompts, append a brief entry to `CLAUDE_JOURNAL.md`.
+
+**Always include the session ID from the prompt** so entries from parallel sessions can be distinguished.
+
+### Triggers
+| Event | When | What to Write |
+|-------|------|---------------|
+| `USER_PROMPT` | User sends request | What's being asked? Initial approach? |
+| `TASK_START` | Spawning subagent | Why delegate? What should it accomplish? |
+| `TASK_END` | Subagent finished | Did it succeed? What did you learn? |
+| `STOP` | Response complete | What was accomplished? Concerns? |
+| `INTERVAL` | Every 10 minutes | Progress check. Stuck anywhere? |
+
+### Entry Format
+```markdown
+### <timestamp> | <session> | <event_type>
+<1-3 sentences responding to the prompt>
+```
+
+### Example
+```markdown
+### 2025-11-25 10:15 | a1b2c3d4 | USER_PROMPT
+User wants retry logic for API client. Plan: find existing error handling, add exponential backoff.
+
+### 2025-11-25 10:16 | a1b2c3d4 | TASK_START (Explore)
+Delegating search for API call sites - too many files to check manually.
+
+### 2025-11-25 10:17 | a1b2c3d4 | TASK_END (Explore)
+Found 12 call sites across 4 files. Most have try/catch but no retry.
+
+### 2025-11-25 10:18 | a1b2c3d4 | STOP
+Added retry wrapper to utils, updated 3 critical endpoints.
+
+### 2025-11-25 10:28 | a1b2c3d4 | INTERVAL
+Implementing tests for retry logic. Going smoothly, no blockers.
+```
+
+### Purpose
+These entries enable periodic retrospectives to identify:
+- Where Claude gets stuck
+- Inefficient approaches
+- False completions (thought done, wasn't)
+- Patterns that need new guidelines
+
+**Files:**
+- `CLAUDE_JOURNAL.md` - Qualitative reflections (Claude-written)
+- `.claude/logs/CLAUDE_LOGS.jsonl` - Raw event log (hook-written)
+
+---
+
+## 🔄 Behavioral Reinforcement System
+
+A feedback loop for iterative behavioral improvement. User reactions (praise, criticism, corrections) are captured automatically and analyzed periodically to extract actionable principles.
+
+### How It Works
+
+1. **Automatic Capture:** Sentiment keywords in user messages trigger logging to `.claude/feedback/feedback_log.jsonl`
+2. **Periodic Analysis:** Run `/retro` to analyze feedback, filter false positives, identify patterns
+3. **Principle Extraction:** Recurring patterns become candidate principles for user approval
+4. **Guidance Update:** Approved principles are added to `LEARNED_PRINCIPLES.md`
+
+### Commands
+
+| Command | Purpose |
+|---------|---------|
+| `/retro` | Run a retrospective analysis session |
+
+### Files
+
+| File | Purpose |
+|------|---------|
+| `LEARNED_PRINCIPLES.md` | Extracted behavioral rules (consult alongside this file) |
+| `.claude/feedback/feedback_log.jsonl` | Raw feedback entries |
+| `.claude/feedback/retro_history.md` | Audit trail of retrospectives |
+
+### Sentiment Detection
+
+The system detects:
+- **Positive:** "great", "perfect", "exactly", "well done", "thanks", etc.
+- **Negative:** "wrong", "broke", "missed", "stuck", "frustrating", etc.
+- **Corrective:** "actually", "not quite", "I meant", "try again", etc.
+
+Detection is intentionally over-sensitive; false positives are filtered during `/retro` analysis.
+
+### Usage
+
+Work normally. When you've accumulated feedback (after several sessions), run `/retro` to:
+1. Review genuine feedback vs false positives
+2. Identify behavioral patterns
+3. Generate candidate principles
+4. Approve or reject proposed changes
+
+**Full documentation:** `planning_docs/FEAT-050_behavioral_reinforcement_system.md`
+
+---
+
 ## 🎓 Full Reference
 
 This is a **streamlined navigation hub** (~300 lines).

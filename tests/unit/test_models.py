@@ -17,20 +17,26 @@ from src.core.models import (
 )
 
 
-def test_context_level_enum():
+@pytest.mark.parametrize("enum_value,expected_str", [
+    (ContextLevel.USER_PREFERENCE, "USER_PREFERENCE"),
+    (ContextLevel.PROJECT_CONTEXT, "PROJECT_CONTEXT"),
+    (ContextLevel.SESSION_STATE, "SESSION_STATE"),
+])
+def test_context_level_enum(enum_value, expected_str):
     """Test ContextLevel enum values."""
-    assert ContextLevel.USER_PREFERENCE == "USER_PREFERENCE"
-    assert ContextLevel.PROJECT_CONTEXT == "PROJECT_CONTEXT"
-    assert ContextLevel.SESSION_STATE == "SESSION_STATE"
+    assert enum_value == expected_str
 
 
-def test_memory_category_enum():
+@pytest.mark.parametrize("enum_value,expected_str", [
+    (MemoryCategory.PREFERENCE, "preference"),
+    (MemoryCategory.FACT, "fact"),
+    (MemoryCategory.EVENT, "event"),
+    (MemoryCategory.WORKFLOW, "workflow"),
+    (MemoryCategory.CONTEXT, "context"),
+])
+def test_memory_category_enum(enum_value, expected_str):
     """Test MemoryCategory enum values."""
-    assert MemoryCategory.PREFERENCE == "preference"
-    assert MemoryCategory.FACT == "fact"
-    assert MemoryCategory.EVENT == "event"
-    assert MemoryCategory.WORKFLOW == "workflow"
-    assert MemoryCategory.CONTEXT == "context"
+    assert enum_value == expected_str
 
 
 def test_memory_unit_creation():
@@ -89,25 +95,20 @@ def test_memory_unit_content_validation():
         )
 
 
-def test_memory_unit_importance_validation():
-    """Test importance field validation."""
-    # Valid importance values
-    memory1 = MemoryUnit(
-        content="Test", category=MemoryCategory.FACT, importance=0.0
+@pytest.mark.parametrize("importance_value", [0.0, 0.5, 1.0])
+def test_memory_unit_importance_valid(importance_value):
+    """Test valid importance field values."""
+    memory = MemoryUnit(
+        content="Test", category=MemoryCategory.FACT, importance=importance_value
     )
-    assert memory1.importance == 0.0
+    assert memory.importance == importance_value
 
-    memory2 = MemoryUnit(
-        content="Test", category=MemoryCategory.FACT, importance=1.0
-    )
-    assert memory2.importance == 1.0
 
-    # Invalid importance (out of range)
+@pytest.mark.parametrize("invalid_importance", [1.5, -0.5, 2.0, -1.0])
+def test_memory_unit_importance_invalid(invalid_importance):
+    """Test invalid importance values raise errors."""
     with pytest.raises(ValueError):
-        MemoryUnit(content="Test", category=MemoryCategory.FACT, importance=1.5)
-
-    with pytest.raises(ValueError):
-        MemoryUnit(content="Test", category=MemoryCategory.FACT, importance=-0.5)
+        MemoryUnit(content="Test", category=MemoryCategory.FACT, importance=invalid_importance)
 
 
 def test_memory_unit_tags_validation():
@@ -141,20 +142,18 @@ def test_store_memory_request():
     assert request.scope == MemoryScope.GLOBAL  # default
 
 
-def test_store_memory_request_injection_detection():
+@pytest.mark.parametrize("dangerous_input,attack_type", [
+    ("'; DROP TABLE memories; --", "SQL DROP"),
+    ("UNION SELECT * FROM passwords", "SQL UNION"),
+    ("DELETE FROM users", "SQL DELETE"),
+], ids=["sql_drop", "sql_union", "sql_delete"])
+def test_store_memory_request_injection_detection(dangerous_input, attack_type):
     """Test that StoreMemoryRequest detects SQL injection patterns."""
-    dangerous_inputs = [
-        "'; DROP TABLE memories; --",
-        "UNION SELECT * FROM passwords",
-        "DELETE FROM users",
-    ]
-
-    for dangerous_input in dangerous_inputs:
-        with pytest.raises(ValueError, match="suspicious pattern"):
-            StoreMemoryRequest(
-                content=dangerous_input,
-                category=MemoryCategory.FACT,
-            )
+    with pytest.raises(ValueError, match="suspicious pattern"):
+        StoreMemoryRequest(
+            content=dangerous_input,
+            category=MemoryCategory.FACT,
+        )
 
 
 def test_query_request():
@@ -170,18 +169,20 @@ def test_query_request():
     assert query.min_importance == 0.0  # default
 
 
-def test_query_request_validation():
-    """Test QueryRequest validation rules."""
-    # Empty query should fail
-    with pytest.raises(ValueError, match="Query cannot be empty"):
-        QueryRequest(query="   ")
+@pytest.mark.parametrize("invalid_query,error_match", [
+    ("   ", "Query cannot be empty"),
+])
+def test_query_request_empty_query(invalid_query, error_match):
+    """Test QueryRequest validation for empty queries."""
+    with pytest.raises(ValueError, match=error_match):
+        QueryRequest(query=invalid_query)
 
-    # Limit out of range should fail
-    with pytest.raises(ValueError):
-        QueryRequest(query="test", limit=0)
 
+@pytest.mark.parametrize("invalid_limit", [0, -1, 150, 200])
+def test_query_request_limit_validation(invalid_limit):
+    """Test QueryRequest validation for invalid limits."""
     with pytest.raises(ValueError):
-        QueryRequest(query="test", limit=150)
+        QueryRequest(query="test", limit=invalid_limit)
 
 
 def test_memory_result():

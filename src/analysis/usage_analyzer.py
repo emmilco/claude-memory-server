@@ -1,11 +1,62 @@
 """
 Usage analyzer for code importance scoring.
 
-Analyzes usage patterns including:
-- Call graph centrality (number of callers)
-- Public vs private API status
-- Export status (explicitly exported vs internal)
-- Entry point detection (main files, API files, __init__)
+Analyzes usage patterns to identify highly-used, public-facing, and entry-point
+code. Builds lightweight call graphs to measure centrality and provides boost
+scores (0.0-0.2) that amplify importance for frequently-used code.
+
+Usage Patterns Analyzed:
+- Call graph centrality: Number of callers (0-10+)
+- Public API detection: Naming conventions (_private vs public)
+- Export status: Explicit exports (__all__, export keyword)
+- Entry point detection: main files, API files, __init__ modules
+
+Boost Calculation:
+- Caller count (0-2): +0.00 to +0.03
+- Caller count (3-9): +0.03 to +0.10 (scaled)
+- Caller count (10+): +0.10 (maximum)
+- Public API: +0.03
+- Explicitly exported: +0.03
+- Entry point file: +0.04
+- Maximum total boost: 0.2 (20% importance increase)
+
+Call Graph Construction:
+- Lightweight static analysis (no execution)
+- Simple pattern matching for function calls
+- File-scoped only (no cross-file analysis)
+- Reset between files to manage memory
+
+Language-Specific Rules:
+- Python: _private, __private = private; __all__ = exports
+- JavaScript/TypeScript: _private, #private = private; export keyword
+- Java: Limited name-based detection; public keyword for exports
+- Go: Lowercase = private; uppercase = exported
+- Rust: Similar to Go naming conventions
+
+Thresholds:
+- HIGH_USAGE_THRESHOLD = 10 callers (highly central)
+- MEDIUM_USAGE_THRESHOLD = 3 callers (moderately used)
+
+Architecture:
+- Stateful analyzer (maintains call_graph dictionary)
+- Must call reset() between files to clear state
+- Used by ImportanceScorer for batch processing
+- Integrates with ComplexityAnalyzer and CriticalityAnalyzer
+
+Example:
+    ```python
+    analyzer = UsageAnalyzer()
+    metrics = analyzer.analyze(
+        code_unit={'name': 'process_request', 'content': code},
+        all_units=all_file_units,  # For call graph
+        file_content=full_file_text,  # For export detection
+        file_path=Path('src/api/handler.py')
+    )
+    # metrics.usage_boost = 0.17 (10+ callers + public + exported + entry point)
+    analyzer.reset()  # Clear call graph before next file
+    ```
+
+Part of FEAT-049: Intelligent Code Importance Scoring
 """
 
 import re

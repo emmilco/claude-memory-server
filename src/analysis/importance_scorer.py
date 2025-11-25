@@ -2,6 +2,82 @@
 Importance scorer - integrates complexity, usage, and criticality analyzers.
 
 This is the main entry point for calculating code unit importance scores.
+Combines three independent analyzers with configurable weights to produce
+final importance scores (0.0-1.0) that rank code by significance.
+
+Scoring Architecture:
+1. ComplexityAnalyzer: Base score (0.3-0.7) from code metrics
+   - Cyclomatic complexity, line count, nesting, parameters
+   - Documentation presence bonus
+
+2. UsageAnalyzer: Boost (+0.0 to +0.2) from usage patterns
+   - Call graph centrality, public API, exports, entry points
+
+3. CriticalityAnalyzer: Boost (+0.0 to +0.3) from critical indicators
+   - Security keywords, error handling, decorators, file proximity
+
+Final Formula:
+    raw_score = (complexity_score * complexity_weight) +
+                (usage_boost * usage_weight) +
+                (criticality_boost * criticality_weight)
+
+    importance = clamp(raw_score / baseline_max, 0.0, 1.0)
+
+    Where baseline_max = 1.2 (max with all weights = 1.0)
+
+Weight System:
+- Default weights: (1.0, 1.0, 1.0) - balanced scoring
+- Weight range: 0.0-2.0 per factor
+- Higher weight = greater emphasis on that factor
+- Independent amplification (not zero-sum)
+
+Presets:
+- "balanced": (1.0, 1.0, 1.0) - Equal weights (default)
+- "security": (0.8, 0.5, 2.0) - Emphasize security-critical code
+- "complexity": (2.0, 0.5, 0.8) - Emphasize complex code
+- "api": (1.0, 2.0, 1.0) - Emphasize public APIs
+
+Typical Score Ranges:
+- 0.2-0.4: Trivial utilities, getters/setters, constants
+- 0.4-0.6: Standard functions, moderate complexity
+- 0.6-0.8: Important functions, public APIs, moderate centrality
+- 0.8-1.0: Critical functions (auth, crypto, high centrality)
+
+Performance:
+- Per-unit calculation: ~1-2ms (dominated by AST parsing)
+- Batch optimization: Build call graph once per file
+- Memory: O(N) for call graph, cleared between files
+
+Example:
+    ```python
+    # Basic usage
+    scorer = ImportanceScorer()
+    score = scorer.calculate_importance(
+        code_unit={'name': 'authenticate', 'content': code, 'language': 'python'},
+        all_units=[...],  # For call graph
+        file_path=Path('src/auth/login.py'),
+        file_content=full_file_text
+    )
+    print(f"Importance: {score.importance:.2f}")  # 0.87
+    print(f"Breakdown: complexity={score.complexity_score:.2f}, "
+          f"usage={score.usage_boost:.2f}, criticality={score.criticality_boost:.2f}")
+
+    # With preset
+    security_scorer = ImportanceScorer.from_preset("security")
+
+    # Batch processing (optimized)
+    scores = scorer.calculate_batch(all_units, file_path, file_content)
+    stats = scorer.get_summary_statistics(scores)
+    print(f"Score distribution: {stats['distribution']}")
+    ```
+
+Integration:
+- Called by IncrementalIndexer during code indexing
+- Replaces fixed importance score of 0.7
+- Configurable via ServerConfig importance_*_weight settings
+- Error handling: Falls back to 0.5 on calculation failure
+
+Part of FEAT-049: Intelligent Code Importance Scoring
 """
 
 import logging

@@ -1,5 +1,196 @@
 # TODO
 
+## 🚨 CODE REVIEW FINDINGS (2025-11-25)
+
+**Source:** Comprehensive 4-agent code review analyzing architecture, testing, error handling, and developer experience.
+**Full Report:** `~/Documents/code_review_2025-11-25.md`
+
+### 🔴 Critical - Must Fix Before Production
+
+- [ ] **REF-015**: Fix Unsafe Resource Cleanup Pattern (~2 days) 🔥🔥🔥
+  - **Location:** `src/store/qdrant_store.py` (50+ instances)
+  - **Problem:** Using `if 'client' in locals():` for cleanup is fragile and causes resource leaks
+  - **Impact:** Connection pool exhaustion under error conditions, silent failures
+  - **Fix:** Replace with `client = None; try: client = await self._get_client() finally: if client:`
+  - **Better:** Implement async context manager pattern for all resource acquisition
+  - **See:** code_review_2025-11-25.md section ARCH-002
+
+- [ ] **BUG-034**: Remove Duplicate Config Field `enable_retrieval_gate` (~1 hour) 🔥🔥🔥
+  - **Location:** `src/config.py:70` and `src/config.py:93`
+  - **Problem:** Same field defined twice in ServerConfig class
+  - **Impact:** Configuration confusion, unclear which definition is authoritative
+  - **Fix:** Remove duplicate definition at line 93, consolidate comments
+  - **See:** code_review_2025-11-25.md section CONFIG-001
+
+- [ ] **BUG-035**: Add Exception Chain Preservation (~1 day) 🔥🔥🔥
+  - **Location:** 40+ locations across `src/store/`, `src/embeddings/`, `src/memory/`
+  - **Problem:** `raise SomeError(f"message: {e}")` loses original exception chain
+  - **Impact:** Cannot debug production failures - original traceback lost
+  - **Fix:** Change all to `raise SomeError(f"message: {e}") from e`
+  - **Grep:** `grep -r "raise.*Error.*{e}\")" src/`
+  - **See:** code_review_2025-11-25.md section ERR-001
+
+- [ ] **TEST-008**: Delete Empty Placeholder Test Files (~30 min) 🔥🔥
+  - **Location:** `tests/` root directory
+  - **Files:** `test_database.py`, `test_ingestion.py`, `test_mcp_server.py`, `test_router.py` (0 bytes each)
+  - **Problem:** Empty files create false coverage impression, confuse developers
+  - **Impact:** Technical debt, misleading test counts
+  - **Fix:** Delete all 4 empty files
+  - **See:** code_review_2025-11-25.md section TEST-003
+
+- [ ] **BUG-036**: Fix Silent/Swallowed Exceptions (~2 hours) 🔥🔥
+  - **Location:** `src/analysis/criticality_analyzer.py:204-211`, `src/review/patterns.py:227`
+  - **Problem:** Bare `except: pass` swallows all errors silently
+  - **Impact:** TypeError, AttributeError completely invisible - debugging impossible
+  - **Fix:** Catch specific exceptions, add logging for unexpected ones
+  - **See:** code_review_2025-11-25.md section ERR-002
+
+### 🟡 High Priority - Next Sprint
+
+- [ ] **REF-016**: Split MemoryRAGServer God Class (~1 week) 🔥🔥
+  - **Location:** `src/core/server.py` (4,767 lines, 62+ methods)
+  - **Problem:** Violates Single Responsibility Principle - handles storage, search, indexing, analytics, monitoring
+  - **Impact:** Impossible to test in isolation, high coupling, difficult maintenance
+  - **Proposed Solution:** Extract into focused service classes:
+    - [ ] `SearchService` - query handling, hybrid search
+    - [ ] `IndexingService` - code indexing, file watching
+    - [ ] `AnalyticsService` - usage tracking, metrics
+    - [ ] `MemoryService` - CRUD operations
+  - **Note:** REF-013 Phase 1 (HealthService) already complete - continue pattern
+  - **See:** code_review_2025-11-25.md section ARCH-001
+
+- [ ] **REF-017**: Consolidate Feature Flags (~2 days) 🔥🔥
+  - **Location:** `src/config.py` (31+ boolean flags)
+  - **Problem:** Exponential configuration complexity, untestable combinations
+  - **Impact:** 2^31+ config combinations infeasible to test, difficult to reason about behavior
+  - **Proposed Solution:**
+    - [ ] Group related flags into feature classes (`SearchFeatures`, `AnalyticsFeatures`)
+    - [ ] Create semantic feature levels (BASIC, ADVANCED, EXPERIMENTAL)
+    - [ ] Remove redundant flags after BUG-034 fix
+  - **See:** code_review_2025-11-25.md section ARCH-003
+
+- [ ] **UX-049**: Add `exc_info=True` to Error Logs (~2 days) 🔥🔥
+  - **Location:** 100+ `logger.error()` calls throughout codebase
+  - **Problem:** Error logs don't include tracebacks
+  - **Impact:** Cannot debug production issues - only error message, no stack trace
+  - **Fix:** Add `exc_info=True` parameter to all `logger.error()` calls
+  - **Grep:** `grep -r "logger.error" src/ | wc -l`
+  - **See:** code_review_2025-11-25.md section ERR-003
+
+- [ ] **UX-050**: Add Thread-Safe Stats Counters (~1 day) 🔥🔥
+  - **Location:** `src/core/server.py` (stats mutations across 62+ methods)
+  - **Problem:** `self.stats["key"] += 1` not thread-safe
+  - **Impact:** Lost updates in concurrent scenarios, inconsistent metrics
+  - **Fix:** Use Lock or atomic counter primitives:
+    ```python
+    from threading import Lock
+    self._stats_lock = Lock()
+    def _increment_stat(self, key, value=1):
+        with self._stats_lock:
+            self.stats[key] += value
+    ```
+  - **See:** code_review_2025-11-25.md section ARCH-004
+
+- [ ] **TEST-009**: Add Test Parametrization (~3 days) 🔥🔥
+  - **Location:** All 125 unit test files
+  - **Problem:** Zero uses of `@pytest.mark.parametrize` despite 100+ duplicate test patterns
+  - **Impact:** 5x slower test suite, massive code duplication, maintenance nightmare
+  - **Fix:** Replace duplicate tests with parametrized versions
+  - **Example:** 50+ near-identical `test_pool_creation_*` methods → 1 parametrized test
+  - **See:** code_review_2025-11-25.md section TEST-001
+
+- [ ] **TEST-010**: Reduce Excessive Mocking (~3 days) 🔥🔥
+  - **Location:** 30+ test files, especially `test_qdrant_setup_coverage.py`, `test_indexing_progress.py`
+  - **Problem:** Tests only verify `mock.assert_called()`, not actual behavior
+  - **Impact:** False confidence - unit tests pass but integration tests fail (40+ recent failures)
+  - **Fix:** Replace mock-only assertions with behavior verification
+  - **See:** code_review_2025-11-25.md section TEST-002
+
+- [ ] **TEST-011**: Add Test Markers (~1 day) 🔥
+  - **Location:** All test files
+  - **Problem:** No `@pytest.mark.unit`, `@pytest.mark.integration`, `@pytest.mark.slow` markers
+  - **Impact:** Can't run `pytest -m "not slow"` to skip slow tests in CI
+  - **Fix:** Add markers to all test files, update pytest.ini
+  - **See:** code_review_2025-11-25.md section TEST-005
+
+- [ ] **TEST-012**: Replace Sleep-Based Tests with Signals (~1 day) 🔥
+  - **Location:** 7 test files with `asyncio.sleep()` or `time.sleep()`
+  - **Problem:** Non-deterministic tests fail randomly on slow CI
+  - **Impact:** Flaky tests, unreliable CI, wasted debugging time
+  - **Fix:** Replace sleeps with Event/Signal patterns
+  - **See:** code_review_2025-11-25.md section TEST-004
+
+### 🟢 Medium Priority - Quality Improvements
+
+- [ ] **DOC-008**: Add Missing Module Docstrings (~2 days)
+  - **Location:** `src/analysis/` (5 modules with empty docstrings)
+  - **Files:** `code_duplicate_detector.py`, `criticality_analyzer.py`, `usage_analyzer.py`, `importance_scorer.py`, `__init__.py`
+  - **Problem:** New developers can't understand module purpose without reading implementation
+  - **Impact:** Harder onboarding, poor IDE support
+  - **Fix:** Add comprehensive module docstrings following `quality_analyzer.py` pattern
+  - **See:** code_review_2025-11-25.md section DOC-001
+
+- [ ] **DOC-009**: Create Error Handling Documentation (~1 day)
+  - **Location:** `docs/ERROR_HANDLING.md` (new file)
+  - **Problem:** 15+ custom exceptions in `src/core/exceptions.py` with no usage guide
+  - **Impact:** Callers don't know what to catch, no recovery strategies documented
+  - **Fix:** Document each exception type, when raised, how to handle
+  - **See:** code_review_2025-11-25.md section DOC-002
+
+- [ ] **PERF-008**: Add Distributed Tracing Support (~3 days)
+  - **Location:** Throughout async operations in `src/core/server.py`
+  - **Problem:** No operation IDs passed through request chains
+  - **Impact:** Cannot correlate logs across services, debugging multi-step failures impossible
+  - **Fix:** Add operation IDs via contextvars:
+    ```python
+    from contextvars import ContextVar
+    operation_id: ContextVar[str] = ContextVar('operation_id', default='')
+    ```
+  - **See:** code_review_2025-11-25.md section ERR-004
+
+- [ ] **REF-018**: Remove Global State Patterns (~2 days)
+  - **Locations:**
+    - `src/core/degradation_warnings.py:32-76` - Global `_degradation_tracker`
+    - `src/embeddings/parallel_generator.py:36-51` - Global `_worker_model_cache`
+  - **Problem:** Hidden dependencies, difficult testing, state leakage between tests
+  - **Impact:** Tests affect each other via global state, hard to isolate behavior
+  - **Fix:** Pass tracker/cache as dependency injection instead of module-level globals
+  - **See:** code_review_2025-11-25.md section ARCH-005
+
+- [ ] **REF-019**: Extract ConnectionPool from QdrantStore (~3 days)
+  - **Location:** `src/store/qdrant_store.py` (2,953 lines, 45 methods)
+  - **Problem:** Single class handles connection pooling AND business logic
+  - **Impact:** Difficult to test, tight coupling, violates SRP
+  - **Fix:** Extract `ConnectionPool` class, keep `QdrantStore` focused on data operations
+  - **See:** code_review_2025-11-25.md section ARCH-006
+
+- [ ] **UX-051**: Improve Configuration Validation (~2 days)
+  - **Location:** `src/config.py:172-189`
+  - **Problem:** Only validates few fields, doesn't validate ranking weights sum to 1.0
+  - **Impact:** Users misconfigure system without warning, suboptimal performance
+  - **Fix:** Add comprehensive validation for all interdependent config options
+  - **See:** code_review_2025-11-25.md
+
+- [ ] **DOC-010**: Create Configuration Guide (~2 days)
+  - **Location:** `docs/CONFIGURATION_GUIDE.md` (new file)
+  - **Problem:** 150+ config options, only ~10 documented
+  - **Impact:** Users can't discover advanced features, trial-and-error config
+  - **Fix:** Document all config categories, common profiles, interdependencies
+  - **See:** code_review_2025-11-25.md
+
+### 📊 Code Review Summary
+
+| Severity | Count | Key Issues |
+|----------|-------|------------|
+| Critical | 5 | Resource cleanup, duplicate config, lost exceptions, empty tests, swallowed errors |
+| High | 7 | God class, feature flags, logging, thread safety, test quality |
+| Medium | 6 | Documentation, tracing, global state, store extraction, config validation |
+
+**Total Issues Identified:** 18 new tasks from code review
+**Full Report:** `~/Documents/code_review_2025-11-25.md` (101 issues across 4 categories)
+
+---
+
 ## 🚨 CRITICAL BUGS FOUND IN E2E TESTING (2025-11-20)
 
 - [x] **BUG-015**: Health Check False Negative for Qdrant ✅ **FIXED** (2025-11-21)

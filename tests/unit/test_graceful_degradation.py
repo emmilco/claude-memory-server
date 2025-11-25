@@ -140,6 +140,14 @@ class TestDegradationTracker:
 class TestDegradationGlobalFunctions:
     """Tests for global degradation tracking functions."""
 
+    def setup_method(self):
+        """Reset singleton before each test for isolation."""
+        DegradationTracker.reset_instance()
+
+    def teardown_method(self):
+        """Reset singleton after each test for cleanup."""
+        DegradationTracker.reset_instance()
+
     def test_get_degradation_tracker_singleton(self):
         """Test global tracker is a singleton."""
         tracker1 = get_degradation_tracker()
@@ -147,18 +155,34 @@ class TestDegradationGlobalFunctions:
 
         assert tracker1 is tracker2
 
+    def test_class_based_singleton(self):
+        """Test class-based singleton pattern."""
+        tracker1 = DegradationTracker.get_instance()
+        tracker2 = DegradationTracker.get_instance()
+
+        assert tracker1 is tracker2
+
+    def test_reset_instance_for_test_isolation(self):
+        """Test that reset_instance provides test isolation."""
+        # Add warning to first instance
+        tracker1 = DegradationTracker.get_instance()
+        tracker1.add_warning("Test", "Message", "Upgrade", "Impact")
+        assert tracker1.has_degradations()
+
+        # Reset singleton
+        DegradationTracker.reset_instance()
+
+        # New instance should be clean
+        tracker2 = DegradationTracker.get_instance()
+        assert not tracker2.has_degradations()
+        assert tracker1 is not tracker2  # Different instances
+
     def test_add_degradation_warning_global(self):
         """Test adding warning via global function."""
-        tracker = get_degradation_tracker()
-        tracker.clear()  # Clear any previous warnings
-
         add_degradation_warning("Test", "Message", "Upgrade", "Impact")
 
         assert has_degradations()
         assert "Test" in get_degradation_summary()
-
-        # Cleanup
-        tracker.clear()
 
 
 class TestStoreCreation:

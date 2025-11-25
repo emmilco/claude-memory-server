@@ -5,6 +5,7 @@ import logging
 import os
 import multiprocessing
 from concurrent.futures import ProcessPoolExecutor
+from functools import lru_cache
 from typing import List, Optional, Dict, Any
 import time
 
@@ -32,81 +33,78 @@ if hasattr(multiprocessing, 'set_start_method'):
     except RuntimeError as e:
         logger.debug(f"Could not set multiprocessing start method: {e}")
 
-# Global model cache for worker processes (one model per process)
-_worker_model_cache: Dict[str, Any] = {}
-
-
+@lru_cache(maxsize=4)
 def _load_model_in_worker(model_name: str) -> Any:
     """
     Load the sentence transformer model in a worker process.
 
-    This is called once per worker process and caches the model.
+    This function is cached per worker process using @lru_cache, which provides
+    automatic caching without global state. Each worker process maintains its own
+    cache (up to 4 models).
+
+    Note: This cache is per-process. Each worker in ProcessPoolExecutor has its
+    own independent cache, which is the desired behavior for multiprocessing.
 
     Args:
         model_name: Name of the model to load.
 
     Returns:
-        SentenceTransformer: Loaded model.
+        SentenceTransformer: Loaded model (cached after first load in this process).
     """
-    global _worker_model_cache
+    try:
+        import torch
+        from sentence_transformers import SentenceTransformer
+        from src.embeddings.rust_bridge import RustBridge
 
-    if model_name not in _worker_model_cache:
+        # Disable tokenizers parallelism in worker to prevent conflicts
+        # This is the proper way to disable it via the API
         try:
-            import torch
-            from sentence_transformers import SentenceTransformer
-            from src.embeddings.rust_bridge import RustBridge
+            import tokenizers
+            tokenizers.set_parallelism(False)
+        except (ImportError, AttributeError):
+            # tokenizers may not be available or may not have this method
+            pass
 
-            # Disable tokenizers parallelism in worker to prevent conflicts
-            # This is the proper way to disable it via the API
-            try:
-                import tokenizers
-                tokenizers.set_parallelism(False)
-            except (ImportError, AttributeError):
-                # tokenizers may not be available or may not have this method
-                pass
+        logger.info(f"Worker {os.getpid()}: Loading model {model_name}")
 
-            logger.info(f"Worker {os.getpid()}: Loading model {model_name}")
+        # COMPLETE FIX: Explicitly disable meta device initialization
+        # This prevents the "Cannot copy out of meta tensor" error
 
-            # COMPLETE FIX: Explicitly disable meta device initialization
-            # This prevents the "Cannot copy out of meta tensor" error
+        # Load model with explicit CPU device and disable trust_remote_code
+        # to avoid lazy initialization on meta device
+        model = SentenceTransformer(
+            model_name,
+            device="cpu",
+            trust_remote_code=False,  # Prevents meta device issues
+        )
 
-            # Load model with explicit CPU device and disable trust_remote_code
-            # to avoid lazy initialization on meta device
-            model = SentenceTransformer(
-                model_name,
-                device="cpu",
-                trust_remote_code=False,  # Prevents meta device issues
-            )
+        # Force evaluation mode (disables dropout, etc.)
+        model.eval()
 
-            # Force evaluation mode (disables dropout, etc.)
-            model.eval()
+        # Ensure all tensors are materialized on CPU
+        # This is the key fix for meta tensor issues
+        for module in model.modules():
+            for param in module.parameters(recurse=False):
+                if param.is_meta:
+                    # Use to_empty() instead of to() for meta tensors
+                    param.data = torch.nn.Parameter(
+                        torch.empty_like(param, device='cpu')
+                    ).data
+                elif param.device.type != 'cpu':
+                    param.data = param.data.to('cpu')
 
-            # Ensure all tensors are materialized on CPU
-            # This is the key fix for meta tensor issues
-            for module in model.modules():
-                for param in module.parameters(recurse=False):
-                    if param.is_meta:
-                        # Use to_empty() instead of to() for meta tensors
-                        param.data = torch.nn.Parameter(
-                            torch.empty_like(param, device='cpu')
-                        ).data
-                    elif param.device.type != 'cpu':
-                        param.data = param.data.to('cpu')
+            for buffer_name, buffer in module.named_buffers(recurse=False):
+                if buffer.is_meta:
+                    setattr(module, buffer_name,
+                           torch.empty_like(buffer, device='cpu'))
+                elif buffer.device.type != 'cpu':
+                    setattr(module, buffer_name, buffer.to('cpu'))
 
-                for buffer_name, buffer in module.named_buffers(recurse=False):
-                    if buffer.is_meta:
-                        setattr(module, buffer_name,
-                               torch.empty_like(buffer, device='cpu'))
-                    elif buffer.device.type != 'cpu':
-                        setattr(module, buffer_name, buffer.to('cpu'))
-
-            _worker_model_cache[model_name] = model
-            logger.info(f"Worker {os.getpid()}: Model loaded successfully")
-        except Exception as e:
-            logger.error(f"Worker {os.getpid()}: Failed to load model: {e}")
-            raise
-
-    return _worker_model_cache[model_name]
+        logger.info(f"Worker {os.getpid()}: Model loaded successfully")
+        return model
+    except Exception as e:
+        logger.error(f"Worker {os.getpid()}: Failed to load model: {e}", exc_info=True)
+        raise
 
 
 def _generate_embeddings_batch(
@@ -152,7 +150,7 @@ def _generate_embeddings_batch(
         return normalized
 
     except Exception as e:
-        logger.error(f"Worker {os.getpid()}: Error generating embeddings: {e}")
+        logger.error(f"Worker {os.getpid()}: Error generating embeddings: {e}", exc_info=True)
         raise EmbeddingError(f"Embedding generation failed in worker: {e}")
 
 
@@ -241,7 +239,7 @@ class ParallelEmbeddingGenerator:
             self.executor = ProcessPoolExecutor(max_workers=self.max_workers)
             logger.info("Process pool initialized successfully")
         except Exception as e:
-            logger.error(f"Failed to initialize process pool: {e}")
+            logger.error(f"Failed to initialize process pool: {e}", exc_info=True)
             raise
 
     async def generate(self, text: str) -> List[float]:

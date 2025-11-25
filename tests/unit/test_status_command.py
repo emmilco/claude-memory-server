@@ -493,23 +493,35 @@ class TestRunCommand:
         """Test running the status command."""
         cmd = StatusCommand()
 
-        # Mock all data gathering methods
-        cmd.get_storage_stats = AsyncMock(return_value={
+        # Mock all data gathering methods with realistic return values
+        storage_stats = {
             "backend": "sqlite",
-            "connected": True
-        })
-        cmd.get_cache_stats = AsyncMock(return_value={
-            "exists": True,
+            "connected": True,
+            "path": "/tmp/test.db",
             "size": 1024 * 1024
-        })
-        cmd.get_parser_info = AsyncMock(return_value={
+        }
+        cache_stats = {
+            "exists": True,
+            "size": 1024 * 1024,
+            "total_entries": 100
+        }
+        parser_info = {
             "mode": "rust",
-            "rust_available": True
-        })
-        cmd.get_embedding_model_info = AsyncMock(return_value={
-            "model": "all-MiniLM-L6-v2"
-        })
-        cmd.get_indexed_projects = AsyncMock(return_value=[])
+            "rust_available": True,
+            "description": "Optimal performance"
+        }
+        embedding_info = {
+            "model": "all-MiniLM-L6-v2",
+            "dimensions": 384,
+            "batch_size": 32
+        }
+        projects = []
+
+        cmd.get_storage_stats = AsyncMock(return_value=storage_stats)
+        cmd.get_cache_stats = AsyncMock(return_value=cache_stats)
+        cmd.get_parser_info = AsyncMock(return_value=parser_info)
+        cmd.get_embedding_model_info = AsyncMock(return_value=embedding_info)
+        cmd.get_indexed_projects = AsyncMock(return_value=projects)
 
         # Mock print methods
         cmd.print_header = Mock()
@@ -523,13 +535,21 @@ class TestRunCommand:
         args = MagicMock()
         await cmd.run(args)
 
-        # Verify all methods were called
-        cmd.print_header.assert_called_once()
+        # Verify all data gathering methods were called
         cmd.get_storage_stats.assert_called_once()
         cmd.get_cache_stats.assert_called_once()
         cmd.get_parser_info.assert_called_once()
         cmd.get_embedding_model_info.assert_called_once()
         cmd.get_indexed_projects.assert_called_once()
+
+        # Verify print methods were called with correct data
+        cmd.print_header.assert_called_once()
+        cmd.print_storage_stats.assert_called_once_with(storage_stats)
+        cmd.print_cache_stats.assert_called_once_with(cache_stats)
+        cmd.print_parser_info.assert_called_once_with(parser_info)
+        cmd.print_embedding_info.assert_called_once_with(embedding_info)
+        cmd.print_projects_table.assert_called_once_with(projects)
+        cmd.print_quick_commands.assert_called_once()
 
 class TestFileWatcherInfo:
     """Test file watcher information methods."""
@@ -616,14 +636,21 @@ class TestFileWatcherInfo:
     async def test_run_includes_file_watcher_info(self):
         """Test that run() calls file watcher info methods."""
         cmd = StatusCommand()
-        
-        # Mock all methods
+
+        # Mock all methods with realistic return values
+        file_watcher_info = {
+            "enabled": True,
+            "debounce_ms": 1000,
+            "supported_extensions": [".py", ".js"],
+            "description": "Auto-reindex files on change"
+        }
+
         cmd.print_header = Mock()
-        cmd.get_storage_stats = AsyncMock(return_value={})
-        cmd.get_cache_stats = AsyncMock(return_value={})
-        cmd.get_parser_info = AsyncMock(return_value={})
-        cmd.get_embedding_model_info = AsyncMock(return_value={})
-        cmd.get_file_watcher_info = AsyncMock(return_value={})
+        cmd.get_storage_stats = AsyncMock(return_value={"backend": "sqlite", "connected": True})
+        cmd.get_cache_stats = AsyncMock(return_value={"exists": False})
+        cmd.get_parser_info = AsyncMock(return_value={"mode": "rust"})
+        cmd.get_embedding_model_info = AsyncMock(return_value={"model": "all-MiniLM-L6-v2"})
+        cmd.get_file_watcher_info = AsyncMock(return_value=file_watcher_info)
         cmd.get_indexed_projects = AsyncMock(return_value=[])
         cmd.print_storage_stats = Mock()
         cmd.print_cache_stats = Mock()
@@ -632,10 +659,10 @@ class TestFileWatcherInfo:
         cmd.print_file_watcher_info = Mock()
         cmd.print_projects_table = Mock()
         cmd.print_quick_commands = Mock()
-        
+
         args = MagicMock()
         await cmd.run(args)
-        
+
         # Verify file watcher methods were called
         cmd.get_file_watcher_info.assert_called_once()
-        cmd.print_file_watcher_info.assert_called_once()
+        cmd.print_file_watcher_info.assert_called_once_with(file_watcher_info)

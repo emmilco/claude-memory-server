@@ -345,8 +345,12 @@ class TestRunChecks:
 
         await cmd.run_checks()
 
+        # Verify actual behavior - no errors/warnings accumulated
         assert len(cmd.errors) == 0
         assert len(cmd.warnings) == 0
+        # Verify checks were actually called
+        cmd.check_python_version.assert_called_once()
+        cmd.check_storage_backend.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_run_checks_with_errors(self):
@@ -365,9 +369,15 @@ class TestRunChecks:
 
         await cmd.run_checks()
 
+        # Verify actual behavior - errors accumulated
         assert len(cmd.errors) > 0
         assert "Python 3.8+ required" in cmd.errors
         assert "No parser available" in cmd.errors
+        # Verify critical checks were called
+        cmd.check_python_version.assert_called_once()
+        cmd.check_rust_parser.assert_called_once()
+        cmd.check_python_parser.assert_called_once()
+        cmd.check_storage_backend.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_run_checks_with_warnings(self):
@@ -386,8 +396,11 @@ class TestRunChecks:
 
         await cmd.run_checks()
 
+        # Verify actual behavior - warnings and recommendations accumulated
         assert len(cmd.warnings) > 0
         assert len(cmd.recommendations) > 0
+        # Verify warning content is meaningful
+        assert any("disk" in w.lower() or "space" in w.lower() for w in cmd.warnings)
 
 
 class TestPrintMethods:
@@ -461,7 +474,10 @@ class TestRunCommand:
         with pytest.raises(SystemExit) as exc_info:
             await cmd.run(args)
 
+        # Verify behavior - exits with success code when no errors
         assert exc_info.value.code == 0
+        # Verify run_checks was actually called
+        cmd.run_checks.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_run_command_with_errors(self):
@@ -477,7 +493,12 @@ class TestRunCommand:
         with pytest.raises(SystemExit) as exc_info:
             await cmd.run(args)
 
+        # Verify behavior - exits with error code when errors present
         assert exc_info.value.code == 1
+        # Verify run_checks was actually called
+        cmd.run_checks.assert_called_once()
+        # Verify errors were captured
+        assert len(cmd.errors) == 2
 
 
 class TestPerformanceChecks:
@@ -502,11 +523,14 @@ class TestPerformanceChecks:
 
                 success, message, hit_rate = await cmd.check_cache_hit_rate()
 
+                # Verify actual behavior - success status, correct calculations
                 assert success is True
                 assert hit_rate == 85.0
                 assert "85.0%" in message
-                # Verify EmbeddingCache was initialized with config object
+                # Verify cache was properly initialized
                 mock_cache_cls.assert_called_once_with(config)
+                # Verify stats were retrieved
+                mock_cache.get_stats.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_check_cache_hit_rate_low(self):

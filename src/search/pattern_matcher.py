@@ -99,7 +99,7 @@ class PatternMatcher:
                 )
                 logger.debug(f"Compiled and cached pattern: {cache_key}")
             except re.error as e:
-                raise ValidationError(f"Invalid regex pattern '{pattern}': {e}")
+                raise ValidationError(f"Invalid regex pattern '{pattern}': {e}") from e
 
         return self._pattern_cache[cache_key]
 

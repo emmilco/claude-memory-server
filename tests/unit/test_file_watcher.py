@@ -27,8 +27,11 @@ def changed_files():
 async def test_file_watcher_detects_changes(temp_watch_dir, changed_files):
     """Test that file watcher detects file modifications via direct debounce call."""
 
+    callback_event = asyncio.Event()
+
     async def callback(file_path: Path):
         changed_files.append(file_path)
+        callback_event.set()
 
     # Create watcher (without full observer for unit test)
     watcher = DebouncedFileWatcher(
@@ -45,8 +48,8 @@ async def test_file_watcher_detects_changes(temp_watch_dir, changed_files):
     # Manually trigger debounce callback (simulating file change event)
     await watcher._debounce_callback(test_file)
 
-    # Wait for debounce
-    await asyncio.sleep(0.2)
+    # Wait for callback with timeout (debounce is 100ms, so 500ms is generous)
+    await asyncio.wait_for(callback_event.wait(), timeout=0.5)
 
     # Should have detected the change
     assert len(changed_files) >= 1
@@ -57,8 +60,11 @@ async def test_file_watcher_detects_changes(temp_watch_dir, changed_files):
 async def test_file_watcher_debouncing(temp_watch_dir, changed_files):
     """Test that debouncing prevents excessive callbacks."""
 
+    callback_event = asyncio.Event()
+
     async def callback(file_path: Path):
         changed_files.append(file_path)
+        callback_event.set()
 
     watcher = DebouncedFileWatcher(
         watch_path=temp_watch_dir,
@@ -72,13 +78,14 @@ async def test_file_watcher_debouncing(temp_watch_dir, changed_files):
     test_file.write_text("v1")
 
     # Simulate rapid changes
+    # NOTE: Sleep is necessary here to test debounce timing behavior
     for i in range(5):
         test_file.write_text(f"version {i}")
         await watcher._debounce_callback(test_file)
-        await asyncio.sleep(0.05)  # 50ms between changes
+        await asyncio.sleep(0.05)  # 50ms between changes - tests debounce window
 
     # Wait for debounce to complete (200ms + buffer)
-    await asyncio.sleep(0.3)
+    await asyncio.wait_for(callback_event.wait(), timeout=0.5)
 
     # Should have debounced to exactly 1 callback
     # (all 5 rapid changes within 250ms total should trigger only 1 final callback)
