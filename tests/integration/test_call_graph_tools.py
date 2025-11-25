@@ -29,11 +29,11 @@ from src.graph.call_graph import CallGraph, FunctionNode, CallSite, InterfaceImp
 
 @pytest_asyncio.fixture
 async def server():
-    """Create and initialize server with test configuration."""
+    """Create and initialize server with test configuration.
+
+    Auto-indexing is globally disabled via conftest.py:disable_auto_indexing fixture.
+    """
     config = get_config()
-    # Disable auto-indexing in tests to avoid overwhelming Qdrant
-    config.auto_index_enabled = False
-    config.auto_index_on_startup = False
     server = MemoryRAGServer(config=config)
     await server.initialize()
     yield server

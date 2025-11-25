@@ -153,6 +153,20 @@ def mock_embeddings(monkeypatch, mock_embedding_cache):
         pass  # generate_batch might not exist
 
 
+@pytest.fixture(autouse=True)
+def disable_auto_indexing(monkeypatch):
+    """Globally disable auto-indexing for all tests to prevent Qdrant timeouts.
+
+    Auto-indexing triggers full repository scans during server initialization,
+    which overwhelms Qdrant during test fixture setup and causes 60s timeouts.
+
+    This fixture automatically applies to ALL tests via autouse=True.
+    Tests that specifically need indexing should explicitly enable it.
+    """
+    monkeypatch.setenv("CLAUDE_RAG_AUTO_INDEX_ENABLED", "false")
+    monkeypatch.setenv("CLAUDE_RAG_AUTO_INDEX_ON_STARTUP", "false")
+
+
 @pytest.fixture
 def small_test_project(tmp_path):
     """Create small test project with 5 files for fast indexing.

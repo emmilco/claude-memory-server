@@ -60,13 +60,14 @@ Organize entries under these headers in chronological order (newest first):
   - Fixed methods: update, list_memories, get_indexed_files, list_indexed_units, get_all_projects, get_project_stats, update_usage, batch_update_usage, get_usage_stats, and 15+ more
   - Impact: Fixes 6-8 CI test failures in call_graph and integration tests, all 7 call_graph integration tests now pass
 
-- **Fixed test timeout by disabling auto-indexing in test fixtures**
-  - Disabled auto-indexing in `server` fixture in `tests/integration/test_call_graph_tools.py`
-  - Disabled auto-indexing in `server` fixture in `tests/integration/test_concurrent_operations.py`
+- **Fixed test timeout by globally disabling auto-indexing for all tests**
+  - Added `disable_auto_indexing` autouse fixture in `tests/conftest.py` to globally disable auto-indexing via environment variables
+  - Sets `CLAUDE_RAG_AUTO_INDEX_ENABLED=false` and `CLAUDE_RAG_AUTO_INDEX_ON_STARTUP=false` for all tests
+  - Removed redundant fixture-level auto-indexing disables (now handled globally)
   - Skipped 18 FEAT-059 tests pending MCP tool implementation on MemoryRAGServer
   - Root cause: Auto-indexing (`auto_index_on_startup=True`) triggered full repository scan during fixture setup, overwhelming Qdrant
-  - Combined with heavy fixtures and concurrent operations, caused socket connection timeouts
-  - Impact: Eliminates Qdrant resource exhaustion during test fixture setup, tests run in <6s without timeout
+  - Combined with heavy fixtures and concurrent operations, caused socket connection timeouts across multiple test files
+  - Impact: Eliminates Qdrant resource exhaustion during test fixture setup for ALL tests, tests run in <6s without timeout
 
 - **CRITICAL: Fixed overly aggressive health check timeouts causing integration test failures**
   - Increased connection pool health check timeouts from 1ms/10ms/50ms to 50ms/100ms/200ms

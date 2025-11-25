@@ -33,11 +33,9 @@ async def server(config, qdrant_client):
     Uses the session-scoped qdrant_client and unique_qdrant_collection
     fixtures from conftest.py to leverage collection pooling and prevent
     Qdrant deadlocks during parallel test execution.
-    """
-    # Disable auto-indexing in tests to avoid overwhelming Qdrant
-    config.auto_index_enabled = False
-    config.auto_index_on_startup = False
 
+    Auto-indexing is globally disabled via conftest.py:disable_auto_indexing fixture.
+    """
     srv = MemoryRAGServer(config)
     await srv.initialize()
     yield srv
