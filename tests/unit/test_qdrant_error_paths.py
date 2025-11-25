@@ -20,8 +20,8 @@ class TestQdrantStoreErrorPaths:
             mock_config = ServerConfig(qdrant_url="http://localhost:6333")
             mock_get_config.return_value = mock_config
 
-            # Create store without config
-            store = QdrantMemoryStore(config=None)
+            # Create store without config (use_pool=False for mocking)
+            store = QdrantMemoryStore(config=None, use_pool=False)
 
             # Should have called get_config
             mock_get_config.assert_called_once()
@@ -31,7 +31,7 @@ class TestQdrantStoreErrorPaths:
     async def test_initialize_failure(self):
         """Test initialization failure error handling (lines 52-53)."""
         config = ServerConfig(qdrant_url="http://invalid:9999")
-        store = QdrantMemoryStore(config)
+        store = QdrantMemoryStore(config, use_pool=False)
 
         with patch.object(store.setup, 'connect', side_effect=ConnectionError("Cannot connect")):
             with pytest.raises(StorageError) as exc_info:
@@ -43,7 +43,7 @@ class TestQdrantStoreErrorPaths:
     async def test_store_auto_initialize(self):
         """Test store auto-initializes if client is None (line 63)."""
         config = ServerConfig(qdrant_url="http://localhost:6333")
-        store = QdrantMemoryStore(config)
+        store = QdrantMemoryStore(config, use_pool=False)
 
         # Client should be None initially
         assert store.client is None
@@ -74,7 +74,7 @@ class TestQdrantStoreErrorPaths:
     async def test_store_validation_error(self):
         """Test store ValueError handling (lines 85-88)."""
         config = ServerConfig(qdrant_url="http://localhost:6333")
-        store = QdrantMemoryStore(config)
+        store = QdrantMemoryStore(config, use_pool=False)
         store.client = MagicMock()
 
         # Mock _build_payload to raise ValueError
@@ -92,7 +92,7 @@ class TestQdrantStoreErrorPaths:
     async def test_store_connection_error(self):
         """Test store ConnectionError handling (lines 89-92)."""
         config = ServerConfig(qdrant_url="http://localhost:6333")
-        store = QdrantMemoryStore(config)
+        store = QdrantMemoryStore(config, use_pool=False)
         store.client = MagicMock()
         store.client.upsert = MagicMock(side_effect=ConnectionError("Connection lost"))
 
@@ -113,7 +113,7 @@ class TestQdrantStoreErrorPaths:
     async def test_store_generic_error(self):
         """Test store generic Exception handling (lines 93-96)."""
         config = ServerConfig(qdrant_url="http://localhost:6333")
-        store = QdrantMemoryStore(config)
+        store = QdrantMemoryStore(config, use_pool=False)
         store.client = MagicMock()
         store.client.upsert = MagicMock(side_effect=RuntimeError("Unknown error"))
 
@@ -134,7 +134,7 @@ class TestQdrantStoreErrorPaths:
     async def test_retrieve_invalid_payload_parsing(self):
         """Test retrieve ValueError when parsing payload (lines 138-140)."""
         config = ServerConfig(qdrant_url="http://localhost:6333")
-        store = QdrantMemoryStore(config)
+        store = QdrantMemoryStore(config, use_pool=False)
         store.client = MagicMock()
 
         # Mock search response with invalid payload
@@ -157,7 +157,7 @@ class TestQdrantStoreErrorPaths:
     async def test_retrieve_connection_error(self):
         """Test retrieve ConnectionError handling (lines 145-147)."""
         config = ServerConfig(qdrant_url="http://localhost:6333")
-        store = QdrantMemoryStore(config)
+        store = QdrantMemoryStore(config, use_pool=False)
         store.client = MagicMock()
         store.client.query_points = MagicMock(side_effect=ConnectionError("Connection lost"))
 
@@ -172,7 +172,7 @@ class TestQdrantStoreErrorPaths:
         from src.core.models import SearchFilters, MemoryCategory
 
         config = ServerConfig(qdrant_url="http://localhost:6333")
-        store = QdrantMemoryStore(config)
+        store = QdrantMemoryStore(config, use_pool=False)
         store.client = MagicMock()
 
         # Mock _build_filter to raise ValueError
@@ -188,7 +188,7 @@ class TestQdrantStoreErrorPaths:
     async def test_retrieve_generic_error(self):
         """Test retrieve generic Exception handling (lines 151-153)."""
         config = ServerConfig(qdrant_url="http://localhost:6333")
-        store = QdrantMemoryStore(config)
+        store = QdrantMemoryStore(config, use_pool=False)
         store.client = MagicMock()
         store.client.query_points = MagicMock(side_effect=RuntimeError("Unknown error"))
 
@@ -201,7 +201,7 @@ class TestQdrantStoreErrorPaths:
     async def test_delete_auto_initialize(self):
         """Test delete auto-initializes if client is None (line 158)."""
         config = ServerConfig(qdrant_url="http://localhost:6333")
-        store = QdrantMemoryStore(config)
+        store = QdrantMemoryStore(config, use_pool=False)
 
         assert store.client is None
 
@@ -226,7 +226,7 @@ class TestQdrantStoreErrorPaths:
     async def test_delete_error(self):
         """Test delete error handling (lines 171-172)."""
         config = ServerConfig(qdrant_url="http://localhost:6333")
-        store = QdrantMemoryStore(config)
+        store = QdrantMemoryStore(config, use_pool=False)
         store.client = MagicMock()
         store.client.delete = MagicMock(side_effect=RuntimeError("Delete failed"))
 
@@ -243,7 +243,7 @@ class TestQdrantStoreEdgeCases:
     async def test_batch_store_auto_initialize(self):
         """Test batch_store auto-initializes if needed."""
         config = ServerConfig(qdrant_url="http://localhost:6333")
-        store = QdrantMemoryStore(config)
+        store = QdrantMemoryStore(config, use_pool=False)
 
         assert store.client is None
 
@@ -276,7 +276,7 @@ class TestQdrantStoreEdgeCases:
     async def test_get_by_id_auto_initialize(self):
         """Test get_by_id auto-initializes if needed."""
         config = ServerConfig(qdrant_url="http://localhost:6333")
-        store = QdrantMemoryStore(config)
+        store = QdrantMemoryStore(config, use_pool=False)
 
         assert store.client is None
 
@@ -298,7 +298,7 @@ class TestQdrantStoreEdgeCases:
     async def test_update_auto_initialize(self):
         """Test update auto-initializes if needed."""
         config = ServerConfig(qdrant_url="http://localhost:6333")
-        store = QdrantMemoryStore(config)
+        store = QdrantMemoryStore(config, use_pool=False)
 
         assert store.client is None
 

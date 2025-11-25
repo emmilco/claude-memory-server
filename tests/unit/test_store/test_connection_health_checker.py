@@ -63,9 +63,9 @@ class TestHealthCheckInitialization:
         """Test health checker uses default timeouts."""
         checker = ConnectionHealthChecker()
 
-        assert checker.fast_timeout == 0.001
-        assert checker.medium_timeout == 0.010
-        assert checker.deep_timeout == 0.050
+        assert checker.fast_timeout == 0.05  # 50ms (updated from 1ms)
+        assert checker.medium_timeout == 0.1  # 100ms (updated from 10ms)
+        assert checker.deep_timeout == 0.2  # 200ms (updated from 50ms)
 
 
 class TestFastHealthCheck:

@@ -96,6 +96,8 @@ class QdrantMemoryStore(MemoryStore):
                 await self.initialize()
             return await self.setup.pool.acquire()
         else:
+            if self.client is None:
+                await self.initialize()
             return self.client
 
     async def _release_client(self, client: QdrantClient) -> None:

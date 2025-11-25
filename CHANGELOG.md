@@ -52,6 +52,13 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-24
+- **Fixed missing auto-initialization for legacy non-pooled mode in QdrantMemoryStore**
+  - Restored auto-initialization behavior for `use_pool=False` mode in `_get_client()` method
+  - Root cause: PERF-007 pooling refactor added auto-init for pooled path but not for legacy path
+  - Added `if self.client is None: await self.initialize()` check before returning client in legacy mode
+  - Fixed tests: 15 tests in `test_qdrant_error_paths.py` now pass (test_store_auto_initialize, test_delete_auto_initialize, test_batch_store_auto_initialize, test_get_by_id_auto_initialize, test_update_auto_initialize)
+  - Impact: Restores convenience feature for users relying on auto-initialization, eliminates ~30 CI test failures
+
 - **CRITICAL: Completed PERF-007 connection pooling refactoring in qdrant_store.py**
   - Fixed incomplete refactoring where 24+ methods still accessed `self.client` directly instead of using connection pool
   - Root cause: PERF-007 added connection pooling but didn't update all methods; `self.client` is None after pooling, clients must be acquired via `_get_client()`
