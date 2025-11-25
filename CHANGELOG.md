@@ -454,6 +454,15 @@ Organize entries under these headers in chronological order (newest first):
   - Health checking in `src/store/connection_health_checker.py` (already complete)
   - Pool monitoring in `src/store/connection_pool_monitor.py` (already complete)
   - Configuration options in `src/config.py` for pool sizing, timeouts, recycling, and health checks
+
+- **FEAT-060: Code Quality Metrics & Hotspots**
+  - Added CodeDuplicateDetector with semantic similarity analysis using scroll API for scale
+  - Added QualityHotspotAnalyzer with maintainability index calculation
+  - Added 3 new MCP tools: find_quality_hotspots(), find_code_duplicates(), get_complexity_report()
+  - Enhanced search_code() with quality filters (complexity, duplicate score)
+  - Files: src/analysis/duplicate_detector.py, src/analysis/quality_analyzer.py
+  - Tests: tests/unit/test_duplicate_detector.py, tests/unit/test_quality_analyzer.py, tests/integration/test_quality_mcp_tools.py
+
 ### Added - 2025-11-23
 - **FEAT-056: Advanced Filtering & Sorting for search_code**
   - Added glob pattern matching for `file_pattern` (e.g., `**/*.test.py`, `src/**/auth*.ts`)
