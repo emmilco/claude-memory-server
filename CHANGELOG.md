@@ -52,6 +52,13 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-24
+- **CRITICAL: Fixed missing quality analysis component initialization in MemoryRAGServer**
+  - Added imports for DuplicateDetector, ComplexityAnalyzer, QualityAnalyzer in src/core/server.py
+  - Added initialization of all three components in initialize() method (lines 225-229)
+  - Root cause: Components were declared as None but never instantiated, causing AttributeError when integration tests called methods like calculate_duplication_score()
+  - Fixed ~28 integration test failures in test_hybrid_search_integration.py
+  - Impact: Reduces CI failures from 112 to expected ~82-84
+
 - **Fixed missing auto-initialization for legacy non-pooled mode in QdrantMemoryStore**
   - Restored auto-initialization behavior for `use_pool=False` mode in `_get_client()` method
   - Root cause: PERF-007 pooling refactor added auto-init for pooled path but not for legacy path

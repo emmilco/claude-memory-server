@@ -44,6 +44,9 @@ from src.memory.pruner import MemoryPruner
 from src.memory.conversation_tracker import ConversationTracker
 from src.memory.query_expander import QueryExpander
 from src.memory.suggestion_engine import SuggestionEngine
+from src.memory.duplicate_detector import DuplicateDetector
+from src.analysis.complexity_analyzer import ComplexityAnalyzer
+from src.analysis.quality_analyzer import QualityAnalyzer
 from src.search.hybrid_search import HybridSearcher, FusionMethod
 from src.analytics.usage_tracker import UsagePatternTracker
 from src.monitoring.metrics_collector import MetricsCollector
@@ -218,6 +221,12 @@ class MemoryRAGServer:
                 self.conversation_tracker = None
                 self.query_expander = None
                 logger.info("Conversation tracking disabled")
+
+            # Initialize quality analysis components (FEAT-060)
+            self.complexity_analyzer = ComplexityAnalyzer(self.store)
+            self.quality_analyzer = QualityAnalyzer(self.store)
+            self.duplicate_detector = DuplicateDetector(self.store, self.embedding_generator)
+            logger.info("Quality analysis components initialized")
 
             # Initialize hybrid searcher if enabled
             if self.config.enable_hybrid_search:
