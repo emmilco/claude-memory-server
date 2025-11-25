@@ -355,11 +355,44 @@ If working with other agents/developers:
 
 ### Phase 6: Merge
 
+**⚠️ PRE-MERGE CHECKLIST (MANDATORY)**
+
+This checklist prevents the cascading failures that occurred in November 2025 when multiple features were merged while CI was failing.
+
+**Before running `git merge`:**
+
+```markdown
+## Pre-Merge Checklist
+
+### CI Status (CRITICAL)
+- [ ] Run: `gh run list --branch main --limit 1`
+- [ ] CI shows "success" (NOT "failure" or "in_progress")
+- [ ] If CI is failing: STOP - fix CI first, do NOT merge
+
+### Local Verification
+- [ ] `python scripts/verify-complete.py` passes ALL 9 gates
+- [ ] Pay attention to the NEW gates:
+  - CI Status gate (checks GitHub Actions)
+  - Skipped Tests gate (max 150 skipped)
+  - Dependencies gate (version bounds)
+
+### Post-Merge Verification
+- [ ] After merge, wait for CI to complete (~10-15 min)
+- [ ] Verify CI passes on your merge commit
+- [ ] If CI fails: IMMEDIATELY investigate (don't merge more)
+```
+
+**Why this matters:** In Nov 2025, 6+ large features merged in 2 days while CI was failing, creating 173+ test failures that took days to untangle.
+
 **15. Merge to Main**
 
 ```bash
 # Return to main repository
 cd ../..  # Back to root
+
+# FIRST: Check CI status
+gh run list --branch main --limit 1
+# If not "success", STOP HERE and fix CI first!
 
 # Sync main with latest changes
 git checkout main
@@ -373,6 +406,9 @@ git merge --no-ff FEAT-056
 
 # Push to remote
 git push origin main
+
+# CRITICAL: Wait for CI and verify it passes
+gh run watch  # Watch the CI run
 ```
 
 **16. Clean Up**

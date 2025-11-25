@@ -219,6 +219,68 @@ async def test_index_and_search_workflow(server, small_test_project):
     assert results[0]["score"] > 0.5
 ```
 
+### Critical Rule: Tests Must Test Working Code
+
+**DO NOT write tests for features that don't exist yet.**
+
+This anti-pattern caused significant problems in November 2025 when 60+ tests were written for unimplemented features, masking real issues and creating confusion about test suite health.
+
+**❌ Wrong approach:**
+```python
+# DON'T DO THIS - writing test before feature exists
+def test_get_dependency_graph_returns_nodes():
+    """Test dependency graph visualization."""
+    server = MemoryRAGServer(config)
+    # This method doesn't exist yet!
+    result = server.get_dependency_graph(project="test")
+    assert "nodes" in result
+
+# Then marking it as skipped:
+@pytest.mark.skip(reason="TODO: implement get_dependency_graph")
+def test_get_dependency_graph_returns_nodes():
+    ...
+```
+
+**Why this is harmful:**
+1. Skipped tests accumulate (we had 134 at one point)
+2. Creates false impression that "tests exist" for features
+3. Masks real test failures in noise
+4. Features often never get implemented
+5. Tests may be written for wrong API when feature ships
+
+**✅ Correct approach:**
+```python
+# Step 1: Implement the feature first (even a basic stub)
+class MemoryRAGServer:
+    def get_dependency_graph(self, project: str) -> dict:
+        """Return dependency graph for project."""
+        # Basic implementation
+        return {"nodes": [], "edges": []}
+
+# Step 2: THEN write tests that pass
+def test_get_dependency_graph_returns_structure():
+    """Test dependency graph returns expected structure."""
+    server = MemoryRAGServer(config)
+    result = server.get_dependency_graph(project="test")
+    assert "nodes" in result
+    assert "edges" in result
+
+# Step 3: Expand both together
+```
+
+**If you find yourself writing a test that fails because the feature doesn't exist:**
+
+1. **STOP** - Don't write the test yet
+2. **Add to TODO.md** - Document the feature need
+3. **Implement first** - At least a basic stub
+4. **Then test** - Write tests for working code
+
+**If reviewing code with skipped "future feature" tests:**
+
+1. **DELETE the test** - Don't leave dead code
+2. **Add to TODO.md** - Capture the requirement properly
+3. **File an issue** - If it's important, track it properly
+
 ---
 
 ## Test Fixtures

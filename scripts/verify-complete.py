@@ -4,6 +4,17 @@ Comprehensive verification script for task completion.
 
 Runs all quality gates before allowing a task to be marked complete.
 
+Gates (in order):
+    1. CI Status     - GitHub Actions must be passing on main
+    2. Qdrant        - Qdrant must be accessible
+    3. Syntax        - All Python files must have valid syntax
+    4. Dependencies  - Critical deps must have version bounds
+    5. Specification - SPEC.md must be valid
+    6. Skipped Tests - No more than 150 skipped tests
+    7. Tests         - All tests must pass (100% pass rate)
+    8. Coverage      - Core modules must have ≥80% coverage
+    9. Documentation - CHANGELOG.md must be updated
+
 Usage:
     python scripts/verify-complete.py
     python scripts/verify-complete.py --fast  # Skip slow tests
@@ -277,6 +288,178 @@ class SpecValidationGate(VerificationGate):
             return False, f"Error validating spec: {str(e)}"
 
 
+class CIStatusGate(VerificationGate):
+    """Verify CI is passing on main branch - prevents local/CI divergence."""
+
+    def __init__(self):
+        super().__init__(
+            "CI Status",
+            "GitHub Actions CI must be passing on main"
+        )
+
+    def run(self) -> Tuple[bool, str]:
+        try:
+            # Check if gh CLI is available
+            result = subprocess.run(
+                ["gh", "--version"],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode != 0:
+                return False, "GitHub CLI (gh) not installed - install with 'brew install gh'"
+
+            # Get latest CI run status on main
+            result = subprocess.run(
+                ["gh", "run", "list", "--branch", "main", "--limit", "1",
+                 "--json", "status,conclusion,headBranch,createdAt"],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+
+            if result.returncode != 0:
+                return False, f"Failed to check CI status: {result.stderr}"
+
+            import json
+            runs = json.loads(result.stdout)
+            if not runs:
+                return False, "No CI runs found on main branch"
+
+            run = runs[0]
+            conclusion = run.get("conclusion", "unknown")
+            status = run.get("status", "unknown")
+            created = run.get("createdAt", "unknown")[:10]  # Just the date
+
+            if status == "in_progress":
+                return False, f"CI is still running (started {created}) - wait for completion"
+            elif conclusion == "success":
+                return True, f"CI is green on main (as of {created})"
+            elif conclusion == "failure":
+                return False, f"CI is FAILING on main ({created}) - FIX CI BEFORE MERGING"
+            else:
+                return False, f"CI status unclear: {conclusion}/{status}"
+
+        except subprocess.TimeoutExpired:
+            return False, "Timed out checking CI status"
+        except FileNotFoundError:
+            return False, "GitHub CLI (gh) not found - install with 'brew install gh'"
+        except Exception as e:
+            return False, f"Error checking CI: {str(e)}"
+
+
+class SkippedTestsGate(VerificationGate):
+    """Warn if there are too many skipped tests - prevents tech debt accumulation."""
+
+    def __init__(self, max_skipped: int = 150):
+        super().__init__(
+            "Skipped Tests",
+            f"No more than {max_skipped} skipped tests allowed"
+        )
+        self.max_skipped = max_skipped
+
+    def run(self) -> Tuple[bool, str]:
+        try:
+            result = subprocess.run(
+                ["pytest", "tests/", "--collect-only", "-q"],
+                capture_output=True,
+                text=True,
+                timeout=120
+            )
+
+            # Parse the summary line for skipped/deselected count
+            import re
+            skipped = 0
+
+            for line in result.stdout.split('\n'):
+                # Look for "X skipped" pattern
+                match = re.search(r'(\d+)\s+skipped', line)
+                if match:
+                    skipped = int(match.group(1))
+                    break
+                # Also check deselected (tests with skip markers at collection time)
+                match = re.search(r'(\d+)\s+deselected', line)
+                if match:
+                    skipped = int(match.group(1))
+                    break
+
+            # Fallback: count skip markers in test files
+            if skipped == 0:
+                result2 = subprocess.run(
+                    ["grep", "-r", "-c", "@pytest.mark.skip", "tests/"],
+                    capture_output=True,
+                    text=True
+                )
+                # Sum up counts from each file
+                for line in result2.stdout.strip().split('\n'):
+                    if ':' in line:
+                        try:
+                            count = int(line.split(':')[-1])
+                            skipped += count
+                        except ValueError:
+                            pass
+
+            if skipped > self.max_skipped:
+                return False, f"{skipped} tests skipped (max: {self.max_skipped}). Clean up or implement features."
+            return True, f"{skipped} tests skipped (within limit of {self.max_skipped})"
+
+        except subprocess.TimeoutExpired:
+            return False, "Timed out collecting test info"
+        except Exception as e:
+            return False, f"Error checking skipped tests: {str(e)}"
+
+
+class DependencyLockGate(VerificationGate):
+    """Verify critical dependencies have version bounds - prevents CI/local mismatch."""
+
+    def __init__(self):
+        super().__init__(
+            "Dependencies",
+            "Critical dependencies must have version bounds"
+        )
+        # Dependencies that MUST have upper bounds to prevent breaking changes
+        self.critical_deps = [
+            'pytest-asyncio',
+            'pytest',
+            'qdrant-client',
+            'sentence-transformers',
+        ]
+
+    def run(self) -> Tuple[bool, str]:
+        req_path = Path("requirements.txt")
+        if not req_path.exists():
+            return False, "requirements.txt not found"
+
+        content = req_path.read_text()
+        issues = []
+
+        for dep in self.critical_deps:
+            dep_lower = dep.lower()
+            found = False
+            for line in content.split('\n'):
+                line_stripped = line.strip().lower()
+                if not line_stripped or line_stripped.startswith('#'):
+                    continue
+                # Check if this line is for our dependency
+                if line_stripped.startswith(dep_lower) or f'{dep_lower}>' in line_stripped or f'{dep_lower}=' in line_stripped or f'{dep_lower}<' in line_stripped:
+                    found = True
+                    # Check if it has an upper bound
+                    has_upper = '<' in line
+                    has_exact = '==' in line
+
+                    if not has_upper and not has_exact:
+                        issues.append(f"{dep}: needs upper bound (found: {line.strip()})")
+                    break
+
+            if not found:
+                # Dependency not in requirements - might be transitive, that's ok
+                pass
+
+        if issues:
+            return False, "Unbounded deps risk CI/local mismatch:\n  - " + "\n  - ".join(issues)
+        return True, f"Critical dependencies have version bounds ({len(self.critical_deps)} checked)"
+
+
 class QdrantHealthGate(VerificationGate):
     """Verify Qdrant is running."""
 
@@ -345,11 +528,14 @@ def main():
     if fast_mode:
         print(f"{YELLOW}Running in FAST mode (skipping slow tests){RESET}\n")
 
-    # Define gates
+    # Define gates - order matters: fast checks first, then slow ones
     gates: List[VerificationGate] = [
+        CIStatusGate(),          # NEW: Check CI is green before anything else
         QdrantHealthGate(),
         SyntaxGate(),
+        DependencyLockGate(),    # NEW: Check deps have version bounds
         SpecValidationGate(),
+        SkippedTestsGate(),      # NEW: Check skipped test count
         TestsGate(fast_mode=fast_mode),
         CoverageGate(threshold=80),
         DocumentationGate(),
