@@ -1374,9 +1374,6 @@ class QdrantMemoryStore(MemoryStore):
         Returns:
             List of project names.
         """
-        if not self.client:
-            raise StorageError("Store not initialized")
-
         try:
             client = await self._get_client()
             # Scroll through all points and collect unique project names
@@ -1423,9 +1420,6 @@ class QdrantMemoryStore(MemoryStore):
         Returns:
             Dictionary with project statistics (total_memories, categories, etc.).
         """
-        if not self.client:
-            raise StorageError("Store not initialized")
-
         try:
             client = await self._get_client()
             # Get all memories for this project
@@ -1522,9 +1516,6 @@ class QdrantMemoryStore(MemoryStore):
         Returns:
             True if successful
         """
-        if not self.client:
-            raise StorageError("Store not initialized")
-
         try:
             client = await self._get_client()
             memory_id = usage_data["memory_id"]
@@ -1582,9 +1573,6 @@ class QdrantMemoryStore(MemoryStore):
         Returns:
             True if successful
         """
-        if not self.client:
-            raise StorageError("Store not initialized")
-
         try:
             client = await self._get_client()
             # Retrieve all points at once
@@ -1648,9 +1636,6 @@ class QdrantMemoryStore(MemoryStore):
         Returns:
             Usage stats dictionary, or None if not found
         """
-        if not self.client:
-            raise StorageError("Store not initialized")
-
         try:
             client = await self._get_client()
             points = client.retrieve(
@@ -1683,9 +1668,6 @@ class QdrantMemoryStore(MemoryStore):
 
     async def get_all_usage_stats(self) -> List[Dict[str, Any]]:
         """Get all usage statistics."""
-        if not self.client:
-            raise StorageError("Store not initialized")
-
         try:
             client = await self._get_client()
             stats = []
@@ -1737,9 +1719,6 @@ class QdrantMemoryStore(MemoryStore):
         Returns:
             True if deleted
         """
-        if not self.client:
-            raise StorageError("Store not initialized")
-
         try:
             client = await self._get_client()
             points = client.retrieve(
@@ -1809,9 +1788,6 @@ class QdrantMemoryStore(MemoryStore):
         Returns:
             List of memory dictionaries
         """
-        if not self.client:
-            raise StorageError("Store not initialized")
-
         try:
             client = await self._get_client()
             # Build filter conditions
@@ -1897,9 +1873,6 @@ class QdrantMemoryStore(MemoryStore):
         Returns:
             List of memory dictionaries
         """
-        if not self.client:
-            raise StorageError("Store not initialized")
-
         try:
             client = await self._get_client()
             offset = None
@@ -1974,9 +1947,6 @@ class QdrantMemoryStore(MemoryStore):
         Returns:
             List of all memory dictionaries
         """
-        if not self.client:
-            raise StorageError("Store not initialized")
-
         try:
             client = await self._get_client()
             offset = None
@@ -2026,9 +1996,6 @@ class QdrantMemoryStore(MemoryStore):
         Raises:
             StorageError: If migration fails
         """
-        if not self.client:
-            raise StorageError("Store not initialized")
-
         try:
             client = await self._get_client()
             # Get the memory
@@ -2091,9 +2058,6 @@ class QdrantMemoryStore(MemoryStore):
         Raises:
             StorageError: If update fails
         """
-        if not self.client:
-            raise StorageError("Store not initialized")
-
         try:
             client = await self._get_client()
             # Build filter
@@ -2191,9 +2155,6 @@ class QdrantMemoryStore(MemoryStore):
         Raises:
             StorageError: If search fails
         """
-        if not self.client:
-            raise StorageError("Store not initialized")
-
         try:
             client = await self._get_client()
             # Get all memories matching criteria
@@ -2284,9 +2245,6 @@ class QdrantMemoryStore(MemoryStore):
         Raises:
             StorageError: If merge fails
         """
-        if not self.client:
-            raise StorageError("Store not initialized")
-
         if len(memory_ids) < 2:
             raise StorageError("Need at least 2 memories to merge")
 
@@ -2366,9 +2324,6 @@ class QdrantMemoryStore(MemoryStore):
         Returns:
             Dictionary with recent_searches and recent_additions
         """
-        if not self.client:
-            raise StorageError("Store not initialized")
-
         try:
             client = await self._get_client()
             # Get recent searches from feedback database
@@ -2529,9 +2484,6 @@ class QdrantMemoryStore(MemoryStore):
         Raises:
             StorageError: If storage operation fails
         """
-        if not self.client:
-            raise StorageError("Store not initialized")
-
         if not commits:
             return 0
 
@@ -2625,9 +2577,6 @@ class QdrantMemoryStore(MemoryStore):
         Raises:
             StorageError: If storage operation fails
         """
-        if not self.client:
-            raise StorageError("Store not initialized")
-
         if not file_changes:
             return 0
 
@@ -2711,9 +2660,6 @@ class QdrantMemoryStore(MemoryStore):
         Raises:
             StorageError: If search operation fails
         """
-        if not self.client:
-            raise StorageError("Store not initialized")
-
         try:
             client = await self._get_client()
             # Build filter conditions
@@ -2835,9 +2781,6 @@ class QdrantMemoryStore(MemoryStore):
         Raises:
             StorageError: If retrieval operation fails
         """
-        if not self.client:
-            raise StorageError("Store not initialized")
-
         try:
             client = await self._get_client()
             # Search by commit_hash field since we use UUIDs for point IDs
@@ -2891,9 +2834,6 @@ class QdrantMemoryStore(MemoryStore):
         Raises:
             StorageError: If retrieval operation fails
         """
-        if not self.client:
-            raise StorageError("Store not initialized")
-
         try:
             client = await self._get_client()
             # First, find file changes for this file

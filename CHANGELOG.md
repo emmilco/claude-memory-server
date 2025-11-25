@@ -52,6 +52,13 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-24
+- **CRITICAL: Removed 20 broken initialization checks in QdrantMemoryStore**
+  - Removed `if not self.client: raise StorageError("Store not initialized")` checks from 20 methods
+  - Root cause: These checks fail when connection pooling is enabled because self.client is intentionally None when pooling
+  - The _get_client() method already handles initialization correctly for both pooled and non-pooled modes
+  - Fixed methods: get_all_memories, migrate_memory_scope, get_by_id, get_all_code_units, get_indexed_files, list_indexed_units, get_all_projects, get_project_stats, find_callers, find_callees, get_call_chain, find_implementations, find_file_dependencies, find_file_dependents, and 6 more
+  - Impact: Fixes integration test failures with "[E001] Store not initialized" errors (~15-20 health dashboard and concurrent operation test failures)
+
 - **CRITICAL: Fixed missing quality analysis component initialization in MemoryRAGServer**
   - Added imports for DuplicateDetector, ComplexityAnalyzer, QualityAnalyzer in src/core/server.py
   - Added initialization of all three components in initialize() method (lines 225-229)
