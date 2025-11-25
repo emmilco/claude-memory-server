@@ -149,7 +149,7 @@ class ConversationTracker:
 
         if session:
             # Check if expired
-            if session.is_expired(self.config.conversation_session_timeout_minutes):
+            if session.is_expired(self.config.memory.conversation_session_timeout_minutes):
                 logger.info(f"Session {session_id} has expired")
                 self.end_session(session_id)
                 return None

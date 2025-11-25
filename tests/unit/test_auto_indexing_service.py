@@ -418,8 +418,12 @@ class TestFileWatcher:
 
     @pytest.mark.asyncio
     async def test_respects_disabled_watcher_config(self, service):
-        """Test respects disabled file watcher config."""
-        service.config.enable_file_watcher = False
+        """Test respects disabled file watcher config.
+
+        Note: Uses nested config (config.indexing.file_watcher) since flat attributes
+        are deprecated Optional[None] for backward compatibility.
+        """
+        service.config.indexing.file_watcher = False
 
         await service.start_watching()
 

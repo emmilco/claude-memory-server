@@ -10,12 +10,17 @@ class TestGpuConfig:
     """Test GPU configuration settings."""
 
     def test_default_gpu_settings(self):
-        """Test default GPU configuration values."""
+        """Test default GPU configuration values.
+
+        Note: Uses nested config structure (config.performance.*) since flat
+        attributes are deprecated Optional[X] = None for backward compatibility.
+        """
         config = ServerConfig()
 
-        assert config.enable_gpu is True
-        assert config.force_cpu is False
-        assert config.gpu_memory_fraction == 0.8
+        # Use nested config structure (flat attrs are Optional[None] for backward compat)
+        assert config.performance.gpu_enabled is True
+        assert config.performance.force_cpu is False
+        assert config.performance.gpu_memory_fraction == 0.8
 
     def test_gpu_memory_fraction_valid(self):
         """Test valid GPU memory fraction values."""

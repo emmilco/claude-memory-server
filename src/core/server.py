@@ -53,8 +53,9 @@ from src.monitoring.metrics_collector import MetricsCollector
 from src.monitoring.alert_engine import AlertEngine
 from src.monitoring.health_reporter import HealthReporter
 from src.monitoring.capacity_planner import CapacityPlanner
+from src.core.tracing import new_operation, get_operation_id, get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class MemoryRAGServer:
@@ -308,7 +309,7 @@ class MemoryRAGServer:
 
         except (ImportError, ModuleNotFoundError) as e:
             # Missing dependency - provide actionable error message
-            logger.error(f"Missing dependency during initialization: {e}")
+            logger.error(f"Missing dependency during initialization: {e}", exc_info=True)
             missing_module = str(e).split("'")[1] if "'" in str(e) else "unknown"
             error_msg = (
                 f"Failed to initialize server - missing required dependency: {missing_module}. "
@@ -317,7 +318,7 @@ class MemoryRAGServer:
             )
             raise ImportError(error_msg) from e
         except Exception as e:
-            logger.error(f"Failed to initialize server: {e}")
+            logger.error(f"Failed to initialize server: {e}", exc_info=True)
             raise
 
     def _detect_project(self) -> Optional[str]:
@@ -395,6 +396,10 @@ class MemoryRAGServer:
         Returns:
             Dict with memory_id, status, and auto-classified context_level
         """
+        # Start new operation with unique ID for tracing
+        op_id = new_operation()
+        logger.info(f"Storing memory: {content[:50]}...")
+
         if self.config.read_only_mode:
             raise ReadOnlyError("Cannot store memory in read-only mode")
 
@@ -461,10 +466,10 @@ class MemoryRAGServer:
             }
 
         except ValidationError as e:
-            logger.error(f"Validation error: {e}")
+            logger.error(f"Validation error: {e}", exc_info=True)
             raise
         except Exception as e:
-            logger.error(f"Failed to store memory: {e}")
+            logger.error(f"Failed to store memory: {e}", exc_info=True)
             raise StorageError(f"Failed to store memory: {e}")
 
     async def retrieve_memories(
@@ -529,6 +534,10 @@ class MemoryRAGServer:
         Returns:
             Dict with results, relevance scores, total_found, query_time_ms, and used_cache
         """
+        # Start new operation with unique ID for tracing
+        op_id = new_operation()
+        logger.info(f"Retrieving memories: query='{query[:50]}', limit={limit}")
+
         try:
             import time
             start_time = time.time()
@@ -699,7 +708,7 @@ class MemoryRAGServer:
             return response.model_dump()
 
         except Exception as e:
-            logger.error(f"Failed to retrieve memories: {e}")
+            logger.error(f"Failed to retrieve memories: {e}", exc_info=True)
             raise RetrievalError(f"Failed to retrieve memories: {e}")
 
     async def delete_memory(self, memory_id: str) -> Dict[str, Any]:
@@ -715,6 +724,10 @@ class MemoryRAGServer:
         Returns:
             Dict with status ("success" or "not_found")
         """
+        # Start new operation with unique ID for tracing
+        op_id = new_operation()
+        logger.info(f"Deleting memory: {memory_id}")
+
         if self.config.read_only_mode:
             raise ReadOnlyError("Cannot delete memory in read-only mode")
 
@@ -730,7 +743,7 @@ class MemoryRAGServer:
                 return {"status": "not_found", "memory_id": memory_id}
 
         except Exception as e:
-            logger.error(f"Failed to delete memory: {e}")
+            logger.error(f"Failed to delete memory: {e}", exc_info=True)
             raise StorageError(f"Failed to delete memory: {e}")
 
     async def get_memory_by_id(self, memory_id: str) -> Dict[str, Any]:
@@ -774,7 +787,7 @@ class MemoryRAGServer:
                 }
 
         except Exception as e:
-            logger.error(f"Failed to get memory by ID: {e}")
+            logger.error(f"Failed to get memory by ID: {e}", exc_info=True)
             raise StorageError(f"Failed to get memory by ID: {e}")
 
     async def update_memory(
@@ -899,7 +912,7 @@ class MemoryRAGServer:
         except ReadOnlyError:
             raise
         except Exception as e:
-            logger.error(f"Failed to update memory {memory_id}: {e}")
+            logger.error(f"Failed to update memory {memory_id}: {e}", exc_info=True)
             raise StorageError(f"Failed to update memory: {e}")
 
     async def list_memories(
@@ -1025,7 +1038,7 @@ class MemoryRAGServer:
         except ValidationError:
             raise
         except Exception as e:
-            logger.error(f"Failed to list memories: {e}")
+            logger.error(f"Failed to list memories: {e}", exc_info=True)
             raise StorageError(f"Failed to list memories: {e}")
 
     async def get_indexed_files(
@@ -1086,7 +1099,7 @@ class MemoryRAGServer:
             return result
 
         except Exception as e:
-            logger.error(f"Failed to get indexed files: {e}")
+            logger.error(f"Failed to get indexed files: {e}", exc_info=True)
             raise StorageError(f"Failed to get indexed files: {e}")
 
     async def list_indexed_units(
@@ -1166,7 +1179,7 @@ class MemoryRAGServer:
             return result
 
         except Exception as e:
-            logger.error(f"Failed to list indexed units: {e}")
+            logger.error(f"Failed to list indexed units: {e}", exc_info=True)
             raise StorageError(f"Failed to list indexed units: {e}")
 
     async def migrate_memory_scope(
@@ -1203,7 +1216,7 @@ class MemoryRAGServer:
                 return {"status": "not_found", "memory_id": memory_id}
 
         except Exception as e:
-            logger.error(f"Failed to migrate memory scope: {e}")
+            logger.error(f"Failed to migrate memory scope: {e}", exc_info=True)
             raise StorageError(f"Failed to migrate memory scope: {e}")
 
     async def bulk_reclassify(
@@ -1251,7 +1264,7 @@ class MemoryRAGServer:
             }
 
         except Exception as e:
-            logger.error(f"Failed to bulk reclassify memories: {e}")
+            logger.error(f"Failed to bulk reclassify memories: {e}", exc_info=True)
             raise StorageError(f"Failed to bulk reclassify memories: {e}")
 
     async def find_duplicate_memories(
@@ -1285,7 +1298,7 @@ class MemoryRAGServer:
             }
 
         except Exception as e:
-            logger.error(f"Failed to find duplicate memories: {e}")
+            logger.error(f"Failed to find duplicate memories: {e}", exc_info=True)
             raise StorageError(f"Failed to find duplicate memories: {e}")
 
     async def merge_memories(
@@ -1324,7 +1337,7 @@ class MemoryRAGServer:
             }
 
         except Exception as e:
-            logger.error(f"Failed to merge memories: {e}")
+            logger.error(f"Failed to merge memories: {e}", exc_info=True)
             raise StorageError(f"Failed to merge memories: {e}")
 
     async def export_memories(
@@ -1488,7 +1501,7 @@ class MemoryRAGServer:
         except ValidationError:
             raise
         except Exception as e:
-            logger.error(f"Failed to export memories: {e}")
+            logger.error(f"Failed to export memories: {e}", exc_info=True)
             raise StorageError(f"Failed to export memories: {e}")
 
     async def import_memories(
@@ -1697,7 +1710,7 @@ class MemoryRAGServer:
         except ValidationError:
             raise
         except Exception as e:
-            logger.error(f"Failed to import memories: {e}")
+            logger.error(f"Failed to import memories: {e}", exc_info=True)
             raise StorageError(f"Failed to import memories: {e}")
 
     async def submit_search_feedback(
@@ -1742,7 +1755,7 @@ class MemoryRAGServer:
             }
 
         except Exception as e:
-            logger.error(f"Failed to submit search feedback: {e}")
+            logger.error(f"Failed to submit search feedback: {e}", exc_info=True)
             raise StorageError(f"Failed to submit search feedback: {e}")
 
     async def get_quality_metrics(
@@ -1776,7 +1789,7 @@ class MemoryRAGServer:
             }
 
         except Exception as e:
-            logger.error(f"Failed to retrieve quality metrics: {e}")
+            logger.error(f"Failed to retrieve quality metrics: {e}", exc_info=True)
             raise StorageError(f"Failed to retrieve quality metrics: {e}")
 
     async def get_dashboard_stats(self) -> Dict[str, Any]:
@@ -1858,7 +1871,7 @@ class MemoryRAGServer:
             }
 
         except Exception as e:
-            logger.error(f"Failed to retrieve dashboard stats: {e}")
+            logger.error(f"Failed to retrieve dashboard stats: {e}", exc_info=True)
             raise StorageError(f"Failed to retrieve dashboard stats: {e}")
 
     async def get_recent_activity(
@@ -1893,7 +1906,7 @@ class MemoryRAGServer:
             }
 
         except Exception as e:
-            logger.error(f"Failed to retrieve recent activity: {e}")
+            logger.error(f"Failed to retrieve recent activity: {e}", exc_info=True)
             raise StorageError(f"Failed to retrieve recent activity: {e}")
 
     async def retrieve_preferences(
@@ -2020,7 +2033,7 @@ class MemoryRAGServer:
             }
 
         except Exception as e:
-            logger.error(f"Failed to start conversation session: {e}")
+            logger.error(f"Failed to start conversation session: {e}", exc_info=True)
             return {
                 "error": str(e),
                 "status": "failed"
@@ -2063,7 +2076,7 @@ class MemoryRAGServer:
                 }
 
         except Exception as e:
-            logger.error(f"Failed to end conversation session: {e}")
+            logger.error(f"Failed to end conversation session: {e}", exc_info=True)
             return {
                 "error": str(e),
                 "status": "failed"
@@ -2098,7 +2111,7 @@ class MemoryRAGServer:
             }
 
         except Exception as e:
-            logger.error(f"Failed to list conversation sessions: {e}")
+            logger.error(f"Failed to list conversation sessions: {e}", exc_info=True)
             return {
                 "error": str(e),
                 "sessions": []
@@ -2524,7 +2537,7 @@ class MemoryRAGServer:
             raise
         except (ConnectionError, OSError) as e:
             # Network/connection failures - provide actionable error message
-            logger.error(f"Network error during code search: {e}")
+            logger.error(f"Network error during code search: {e}", exc_info=True)
             error_msg = (
                 f"Failed to connect to Qdrant vector database: {str(e)}. "
                 f"Please ensure Qdrant is running at {self.config.qdrant_url}. "
@@ -2534,7 +2547,7 @@ class MemoryRAGServer:
             raise RetrievalError(error_msg)
         except Exception as e:
             # Generic error with actionable guidance
-            logger.error(f"Failed to search code: {e}")
+            logger.error(f"Failed to search code: {e}", exc_info=True)
             error_type = type(e).__name__
             error_msg = (
                 f"Code search failed ({error_type}): {str(e)}. "
@@ -2697,7 +2710,7 @@ class MemoryRAGServer:
             }
 
         except Exception as e:
-            logger.error(f"Failed to find similar code: {e}")
+            logger.error(f"Failed to find similar code: {e}", exc_info=True)
             raise RetrievalError(f"Failed to find similar code: {e}")
 
     async def search_all_projects(
@@ -2860,7 +2873,7 @@ class MemoryRAGServer:
             }
 
         except Exception as e:
-            logger.error(f"Failed to search across projects: {e}")
+            logger.error(f"Failed to search across projects: {e}", exc_info=True)
             raise RetrievalError(f"Failed to search across projects: {e}")
 
     async def opt_in_cross_project(self, project_name: str) -> Dict[str, Any]:
@@ -2886,7 +2899,7 @@ class MemoryRAGServer:
             logger.info(f"Project '{project_name}' opted-in for cross-project search")
             return result
         except Exception as e:
-            logger.error(f"Failed to opt-in project: {e}")
+            logger.error(f"Failed to opt-in project: {e}", exc_info=True)
             raise StorageError(f"Failed to opt-in project: {e}")
 
     async def opt_out_cross_project(self, project_name: str) -> Dict[str, Any]:
@@ -2912,7 +2925,7 @@ class MemoryRAGServer:
             logger.info(f"Project '{project_name}' opted-out from cross-project search")
             return result
         except Exception as e:
-            logger.error(f"Failed to opt-out project: {e}")
+            logger.error(f"Failed to opt-out project: {e}", exc_info=True)
             raise StorageError(f"Failed to opt-out project: {e}")
 
     async def list_opted_in_projects(self) -> Dict[str, Any]:
@@ -2942,7 +2955,7 @@ class MemoryRAGServer:
                 "statistics": stats,
             }
         except Exception as e:
-            logger.error(f"Failed to list opted-in projects: {e}")
+            logger.error(f"Failed to list opted-in projects: {e}", exc_info=True)
             raise RetrievalError(f"Failed to list opted-in projects: {e}")
 
     async def index_codebase(
@@ -3032,7 +3045,7 @@ class MemoryRAGServer:
             }
 
         except Exception as e:
-            logger.error(f"Failed to index codebase: {e}")
+            logger.error(f"Failed to index codebase: {e}", exc_info=True)
             raise StorageError(f"Failed to index codebase: {e}")
 
     async def reindex_project(
@@ -3158,7 +3171,7 @@ class MemoryRAGServer:
             }
 
         except Exception as e:
-            logger.error(f"Failed to reindex project: {e}")
+            logger.error(f"Failed to reindex project: {e}", exc_info=True)
             raise StorageError(f"Failed to reindex project: {e}")
 
     async def get_file_dependencies(
@@ -3220,7 +3233,7 @@ class MemoryRAGServer:
             }
 
         except Exception as e:
-            logger.error(f"Failed to get file dependencies: {e}")
+            logger.error(f"Failed to get file dependencies: {e}", exc_info=True)
             raise RetrievalError(f"Failed to get file dependencies: {e}")
 
     async def get_file_dependents(
@@ -3265,7 +3278,7 @@ class MemoryRAGServer:
             }
 
         except Exception as e:
-            logger.error(f"Failed to get file dependents: {e}")
+            logger.error(f"Failed to get file dependents: {e}", exc_info=True)
             raise RetrievalError(f"Failed to get file dependents: {e}")
 
     async def find_dependency_path(
@@ -3329,7 +3342,7 @@ class MemoryRAGServer:
                 }
 
         except Exception as e:
-            logger.error(f"Failed to find dependency path: {e}")
+            logger.error(f"Failed to find dependency path: {e}", exc_info=True)
             raise RetrievalError(f"Failed to find dependency path: {e}")
 
     async def get_dependency_stats(
@@ -3367,7 +3380,7 @@ class MemoryRAGServer:
             }
 
         except Exception as e:
-            logger.error(f"Failed to get dependency stats: {e}")
+            logger.error(f"Failed to get dependency stats: {e}", exc_info=True)
             raise RetrievalError(f"Failed to get dependency stats: {e}")
 
     async def _build_dependency_graph(
@@ -3443,7 +3456,7 @@ class MemoryRAGServer:
                 storage_backend=self.config.storage_backend,
                 memory_count=memory_count,
                 qdrant_available=qdrant_available,
-                file_watcher_enabled=self.config.enable_file_watcher,
+                file_watcher_enabled=self.config.indexing.file_watcher,
             )
 
             return {
@@ -3453,7 +3466,7 @@ class MemoryRAGServer:
             }
 
         except Exception as e:
-            logger.error(f"Failed to get status: {e}")
+            logger.error(f"Failed to get status: {e}", exc_info=True)
             return {
                 "server_name": self.config.server_name,
                 "version": "2.0.0",
@@ -3517,7 +3530,7 @@ class MemoryRAGServer:
             }
 
         except Exception as e:
-            logger.error(f"Failed to get token analytics: {e}")
+            logger.error(f"Failed to get token analytics: {e}", exc_info=True)
             raise RetrievalError(f"Failed to get token analytics: {e}")
 
     async def search_git_history(
@@ -3636,7 +3649,7 @@ class MemoryRAGServer:
             }
 
         except Exception as e:
-            logger.error(f"Failed to search git history: {e}")
+            logger.error(f"Failed to search git history: {e}", exc_info=True)
             raise RetrievalError(f"Failed to search git history: {e}")
 
     async def index_git_history(
@@ -3761,7 +3774,7 @@ class MemoryRAGServer:
                 "Install with: pip install GitPython>=3.1.40"
             )
         except Exception as e:
-            logger.error(f"Failed to index git history: {e}")
+            logger.error(f"Failed to index git history: {e}", exc_info=True)
             raise StorageError(f"Failed to index git history: {e}")
 
     async def show_function_evolution(
@@ -3843,7 +3856,7 @@ class MemoryRAGServer:
             }
 
         except Exception as e:
-            logger.error(f"Failed to show function evolution: {e}")
+            logger.error(f"Failed to show function evolution: {e}", exc_info=True)
             raise RetrievalError(f"Failed to show function evolution: {e}")
 
     def _parse_date_filter(self, date_str: str) -> datetime:
@@ -4013,7 +4026,7 @@ class MemoryRAGServer:
             logger.info("Pruning scheduler started")
 
         except Exception as e:
-            logger.error(f"Failed to start pruning scheduler: {e}")
+            logger.error(f"Failed to start pruning scheduler: {e}", exc_info=True)
             # Don't fail server initialization if scheduler fails
             self.scheduler = None
 
@@ -4425,7 +4438,7 @@ class MemoryRAGServer:
             }
 
         except Exception as e:
-            logger.error(f"Error analyzing conversation: {e}")
+            logger.error(f"Error analyzing conversation: {e}", exc_info=True)
             raise RetrievalError(
                 f"Failed to analyze conversation: {str(e)}",
                 solution="Check the message format and try again",
@@ -4460,7 +4473,7 @@ class MemoryRAGServer:
         try:
             return self.suggestion_engine.get_stats()
         except Exception as e:
-            logger.error(f"Error getting suggestion stats: {e}")
+            logger.error(f"Error getting suggestion stats: {e}", exc_info=True)
             raise RetrievalError(f"Failed to get suggestion stats: {str(e)}")
 
     async def provide_suggestion_feedback(
@@ -4522,7 +4535,7 @@ class MemoryRAGServer:
                 }
 
         except Exception as e:
-            logger.error(f"Error recording feedback: {e}")
+            logger.error(f"Error recording feedback: {e}", exc_info=True)
             raise ValidationError(f"Failed to record feedback: {str(e)}")
 
     async def set_suggestion_mode(
@@ -4582,7 +4595,7 @@ class MemoryRAGServer:
             }
 
         except Exception as e:
-            logger.error(f"Error setting suggestion mode: {e}")
+            logger.error(f"Error setting suggestion mode: {e}", exc_info=True)
             raise ValidationError(f"Failed to set suggestion mode: {str(e)}")
 
     # FEAT-020: Usage Pattern Analytics MCP Tools
@@ -4631,7 +4644,7 @@ class MemoryRAGServer:
         except ValidationError:
             raise
         except Exception as e:
-            logger.error(f"Error getting usage statistics: {e}")
+            logger.error(f"Error getting usage statistics: {e}", exc_info=True)
             raise ValidationError(f"Failed to get usage statistics: {str(e)}")
 
     async def get_top_queries(self, limit: int = 10, days: int = 30) -> Dict[str, Any]:
@@ -4678,7 +4691,7 @@ class MemoryRAGServer:
         except ValidationError:
             raise
         except Exception as e:
-            logger.error(f"Error getting top queries: {e}")
+            logger.error(f"Error getting top queries: {e}", exc_info=True)
             raise ValidationError(f"Failed to get top queries: {str(e)}")
 
     async def get_frequently_accessed_code(
@@ -4729,7 +4742,7 @@ class MemoryRAGServer:
         except ValidationError:
             raise
         except Exception as e:
-            logger.error(f"Error getting frequently accessed code: {e}")
+            logger.error(f"Error getting frequently accessed code: {e}", exc_info=True)
             raise ValidationError(f"Failed to get frequently accessed code: {str(e)}")
 
     async def close(self) -> None:

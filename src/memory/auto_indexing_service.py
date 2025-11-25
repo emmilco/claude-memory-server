@@ -150,7 +150,7 @@ class AutoIndexingService:
             raise IndexingError("Service not initialized. Call initialize() first.")
 
         # Check if auto-indexing is enabled
-        if not getattr(self.config, 'auto_index_enabled', True):
+        if not self.config.indexing.auto_index_enabled:
             logger.info("Auto-indexing disabled in configuration")
             return False
 
@@ -239,7 +239,7 @@ class AutoIndexingService:
             # Index directory
             result = await self.indexer.index_directory(
                 self.project_path,
-                recursive=getattr(self.config, 'auto_index_recursive', True),
+                recursive=self.config.indexing.auto_index_recursive,
                 show_progress=False,
                 progress_callback=progress_callback,
             )
@@ -292,7 +292,7 @@ class AutoIndexingService:
             # Index directory
             result = await self.indexer.index_directory(
                 self.project_path,
-                recursive=getattr(self.config, 'auto_index_recursive', True),
+                recursive=self.config.indexing.auto_index_recursive,
                 show_progress=False,
                 progress_callback=progress_callback,
             )
@@ -353,7 +353,7 @@ class AutoIndexingService:
         logger.info(f"Found {file_count} indexable files in {self.project_name}")
 
         # Determine foreground vs background mode
-        size_threshold = getattr(self.config, 'auto_index_size_threshold', 500)
+        size_threshold = self.config.indexing.auto_index_size_threshold
 
         if file_count > size_threshold:
             # Background mode for large projects
@@ -382,7 +382,7 @@ class AutoIndexingService:
         if not self.is_initialized:
             raise IndexingError("Service not initialized. Call initialize() first.")
 
-        if not getattr(self.config, 'enable_file_watcher', True):
+        if not self.config.indexing.file_watcher:
             logger.info("File watcher disabled in configuration")
             return
 
