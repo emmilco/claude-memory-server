@@ -52,6 +52,14 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-24
+- **CRITICAL: Fixed overly aggressive health check timeouts causing integration test failures**
+  - Increased connection pool health check timeouts from 1ms/10ms/50ms to 50ms/100ms/200ms
+  - Root cause: FAST health check timeout (1ms) was too aggressive - `get_collections()` call often took >1ms even on localhost
+  - Example failure: Health check took 1.09ms, exceeded 1ms timeout, connection marked "unhealthy"
+  - Affected all integration tests using Qdrant connections (10+ test failures)
+  - Fixed in `src/store/connection_health_checker.py` lines 67-69
+  - Impact: Integration tests now pass reliably with realistic timeout thresholds
+
 - **CRITICAL: Fixed CI hanging - switched to sequential test execution**
   - **Removed parallel test execution** (`-n auto`) from CI to eliminate resource contention
   - **Increased timeout** from 30s to 60s per test

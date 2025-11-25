@@ -1,13 +1,14 @@
 """Connection health checking for Qdrant connection pool.
 
 Provides multi-tiered health checking:
-- Fast check (<1ms): Basic ping/readiness
-- Medium check (<10ms): Collection listing
-- Deep check (<50ms): Actual query test
+- Fast check (<50ms): Basic ping/readiness
+- Medium check (<100ms): Collection listing
+- Deep check (<200ms): Actual query test
 
 Supports auto-healing by identifying unhealthy connections for replacement.
 
 PERF-007: Connection Pooling - Day 2 Health Checking
+Note: Timeouts increased from (1ms/10ms/50ms) to be more realistic for CI and production
 """
 
 import asyncio
@@ -50,9 +51,9 @@ class ConnectionHealthChecker:
     """Health checker for Qdrant connections.
 
     Provides three levels of health checking:
-    1. Fast (<1ms): Basic connectivity via root endpoint
-    2. Medium (<10ms): Collection listing
-    3. Deep (<50ms): Actual search query
+    1. Fast (<50ms): Basic connectivity via collection listing
+    2. Medium (<100ms): Collection listing with validation
+    3. Deep (<200ms): Actual search query
 
     Example:
         >>> checker = ConnectionHealthChecker()
@@ -64,9 +65,9 @@ class ConnectionHealthChecker:
 
     def __init__(
         self,
-        fast_timeout: float = 0.001,    # 1ms
-        medium_timeout: float = 0.010,  # 10ms
-        deep_timeout: float = 0.050,    # 50ms
+        fast_timeout: float = 0.05,     # 50ms (was 1ms - too aggressive)
+        medium_timeout: float = 0.1,    # 100ms (was 10ms)
+        deep_timeout: float = 0.2,      # 200ms (was 50ms)
     ):
         """Initialize health checker.
 
