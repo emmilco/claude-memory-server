@@ -120,6 +120,7 @@ class TestGeneratorGpuSupport:
             assert mock_model.to.call_count == 2
             assert generator.device == "cpu"
 
+    @pytest.mark.requires_gpu
     def test_benchmark_includes_device(self):
         """Test that benchmark results include device information."""
         config = ServerConfig(enable_gpu=True, force_cpu=False)
