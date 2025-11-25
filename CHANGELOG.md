@@ -51,6 +51,20 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Fixed - 2025-11-25
+- **CRITICAL: Fixed pytest-asyncio version mismatch causing CI failures**
+  - Updated requirements.txt to require pytest-asyncio>=1.2.0,<2.0.0 (was <1.0.0)
+  - Root cause: CI installed 0.26.0 (old) while local had 1.2.0 from lock file
+  - Result: "Event loop is closed" errors in CI for all async tests
+  - Impact: Fixes ~112 CI test failures related to async event loop management
+
+- **CRITICAL: Fixed ComplexityAnalyzer and QualityAnalyzer initialization**
+  - Fixed ComplexityAnalyzer() called with incorrect self.store argument
+  - Fixed QualityAnalyzer() to receive ComplexityAnalyzer instance instead of store
+  - Root cause: ComplexityAnalyzer.__init__() takes no arguments, QualityAnalyzer needs analyzer instance
+  - Fixed in src/core/server.py lines 226-227
+  - Impact: Fixes integration test setup failures with TypeError
+
 ### Fixed - 2025-11-24
 - **CRITICAL: Removed 20 broken initialization checks in QdrantMemoryStore**
   - Removed `if not self.client: raise StorageError("Store not initialized")` checks from 20 methods

@@ -223,8 +223,8 @@ class MemoryRAGServer:
                 logger.info("Conversation tracking disabled")
 
             # Initialize quality analysis components (FEAT-060)
-            self.complexity_analyzer = ComplexityAnalyzer(self.store)
-            self.quality_analyzer = QualityAnalyzer(self.store)
+            self.complexity_analyzer = ComplexityAnalyzer()
+            self.quality_analyzer = QualityAnalyzer(self.complexity_analyzer)
             self.duplicate_detector = DuplicateDetector(self.store, self.embedding_generator)
             logger.info("Quality analysis components initialized")
 
