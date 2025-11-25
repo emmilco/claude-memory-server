@@ -420,6 +420,53 @@ claude-memory-server/
 
 ---
 
+## 🐛 Debugging Workflows (Lessons Learned)
+
+**When CI fails differently than local:**
+
+1. **Check version consistency first**
+   ```bash
+   # Compare CI vs local dependency versions
+   gh run view <run-id> --log | grep "Installing pytest"
+   pip list | grep pytest-asyncio
+   ```
+   - **Lesson**: Lock file vs requirements.txt mismatches cause CI-only failures
+   - **Example**: pytest-asyncio 1.2.0 (local) vs 0.26.0 (CI) → "Event loop is closed" errors
+
+2. **Validate lock file matches constraints**
+   ```bash
+   # Before committing requirements.txt changes
+   pip-compile requirements.txt --dry-run
+   ```
+
+3. **Run tests locally AND monitor CI in parallel**
+   - Compare failure counts: identical = code issue, different = environment issue
+   - Saves 30+ minutes vs sequential debugging
+
+4. **Search for affected tests proactively**
+   ```bash
+   # When changing default values or behavior
+   grep -r "assert.*old_default_value" tests/
+   grep -r "expect.*old_behavior" tests/
+   ```
+   - **Example**: Changed `fast_timeout` from 0.001 → 0.05, search finds test to update
+
+5. **Categorize failures before fixing**
+   ```bash
+   # Group by test file to identify patterns
+   pytest tests/ --tb=no | grep FAILED | cut -d: -f1 | sort | uniq -c
+   ```
+   - Fix by category (10 filtering tests) vs one-by-one (faster, fewer commits)
+
+6. **Use TodoWrite for complex debugging**
+   - Track progress through investigation stages
+   - Makes it clear what's done, what remains
+   - Example: "Fix version mismatch → Test locally → Push to CI → Fix remaining failures"
+
+**Key Insight**: CI-local consistency is the goal. Once both show same failures, you're debugging code, not environment.
+
+---
+
 ## 💡 Tips for Success
 
 1. **Progressive disclosure** - Read guides as you need them, not all at once
@@ -428,6 +475,7 @@ claude-memory-server/
 4. **Test early** - Write tests alongside code, not after
 5. **Document incrementally** - Update docs as you work, not at the end
 6. **Ask for help** - Check DEBUGGING.md first, then ask
+7. **Debug CI failures systematically** - See "Debugging Workflows" section above
 
 ---
 

@@ -49,9 +49,11 @@ class TestHealthCheckerInitialization:
         """Test health checker initialization with default timeouts."""
         checker = ConnectionHealthChecker()
 
-        assert checker.fast_timeout == 0.001
-        assert checker.medium_timeout == 0.010
-        assert checker.deep_timeout == 0.050
+        # Updated default timeouts (was 1ms/10ms/50ms, now 50ms/100ms/200ms)
+        # See CHANGELOG 2025-11-24: Fixed overly aggressive health check timeouts
+        assert checker.fast_timeout == 0.05
+        assert checker.medium_timeout == 0.1
+        assert checker.deep_timeout == 0.2
         assert checker.total_checks == 0
         assert checker.total_failures == 0
 
