@@ -13,7 +13,7 @@ class TestQdrantProjectStats:
     @pytest.mark.asyncio
     async def test_get_all_projects_empty(self):
         """Test get_all_projects with no projects."""
-        store = QdrantMemoryStore()
+        store = QdrantMemoryStore(use_pool=False)
         store.client = MagicMock()
         store.client.scroll.return_value = ([], None)
 
@@ -24,7 +24,7 @@ class TestQdrantProjectStats:
     @pytest.mark.asyncio
     async def test_get_all_projects_single_page(self):
         """Test get_all_projects with single page of results."""
-        store = QdrantMemoryStore()
+        store = QdrantMemoryStore(use_pool=False)
         store.client = MagicMock()
 
         # Mock points with project names
@@ -46,7 +46,7 @@ class TestQdrantProjectStats:
     @pytest.mark.asyncio
     async def test_get_all_projects_multiple_pages(self):
         """Test get_all_projects with pagination."""
-        store = QdrantMemoryStore()
+        store = QdrantMemoryStore(use_pool=False)
         store.client = MagicMock()
 
         # First page
@@ -73,7 +73,7 @@ class TestQdrantProjectStats:
     @pytest.mark.asyncio
     async def test_get_all_projects_filters_none(self):
         """Test that None project names are filtered out."""
-        store = QdrantMemoryStore()
+        store = QdrantMemoryStore(use_pool=False)
         store.client = MagicMock()
 
         mock_points = [
@@ -92,7 +92,7 @@ class TestQdrantProjectStats:
     @pytest.mark.asyncio
     async def test_get_all_projects_not_initialized(self):
         """Test get_all_projects when store not initialized."""
-        store = QdrantMemoryStore()
+        store = QdrantMemoryStore(use_pool=False)
         store.client = None
 
         with pytest.raises(StorageError, match="not initialized"):
@@ -101,7 +101,7 @@ class TestQdrantProjectStats:
     @pytest.mark.asyncio
     async def test_get_all_projects_error(self):
         """Test get_all_projects handles errors."""
-        store = QdrantMemoryStore()
+        store = QdrantMemoryStore(use_pool=False)
         store.client = MagicMock()
         store.client.scroll.side_effect = Exception("Scroll error")
 
@@ -111,7 +111,7 @@ class TestQdrantProjectStats:
     @pytest.mark.asyncio
     async def test_get_project_stats(self):
         """Test get_project_stats returns correct statistics."""
-        store = QdrantMemoryStore()
+        store = QdrantMemoryStore(use_pool=False)
         store.client = MagicMock()
 
         # Mock project memories
@@ -155,7 +155,7 @@ class TestQdrantProjectStats:
     @pytest.mark.asyncio
     async def test_get_project_stats_empty(self):
         """Test get_project_stats with no memories."""
-        store = QdrantMemoryStore()
+        store = QdrantMemoryStore(use_pool=False)
         store.client = MagicMock()
         store.client.scroll.return_value = ([], None)
 
@@ -169,7 +169,7 @@ class TestQdrantProjectStats:
     @pytest.mark.asyncio
     async def test_get_project_stats_not_initialized(self):
         """Test get_project_stats when store not initialized."""
-        store = QdrantMemoryStore()
+        store = QdrantMemoryStore(use_pool=False)
         store.client = None
 
         with pytest.raises(StorageError, match="not initialized"):
@@ -178,7 +178,7 @@ class TestQdrantProjectStats:
     @pytest.mark.asyncio
     async def test_get_project_stats_error(self):
         """Test get_project_stats handles errors."""
-        store = QdrantMemoryStore()
+        store = QdrantMemoryStore(use_pool=False)
         store.client = MagicMock()
         store.client.scroll.side_effect = Exception("Scroll error")
 

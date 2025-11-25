@@ -32,13 +32,13 @@ def config(unique_qdrant_collection):
 
 @pytest_asyncio.fixture
 async def store(config, qdrant_client):
-    """Create and initialize Qdrant store with pooled collection.
+    """Create and initialize Qdrant store without pooling for unit tests.
 
     Uses the session-scoped qdrant_client and unique_qdrant_collection
     fixtures from conftest.py to leverage collection pooling and prevent
     Qdrant deadlocks during parallel test execution.
     """
-    store = QdrantMemoryStore(config)
+    store = QdrantMemoryStore(config, use_pool=False)
     await store.initialize()
     yield store
 
