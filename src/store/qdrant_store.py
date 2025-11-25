@@ -96,8 +96,6 @@ class QdrantMemoryStore(MemoryStore):
                 await self.initialize()
             return await self.setup.pool.acquire()
         else:
-            if self.client is None:
-                await self.initialize()
             return self.client
 
     async def _release_client(self, client: QdrantClient) -> None:
@@ -150,7 +148,8 @@ class QdrantMemoryStore(MemoryStore):
             logger.error(f"Unexpected error storing memory: {e}")
             raise StorageError(f"Failed to store memory: {e}")
         finally:
-            await self._release_client(client)
+            if 'client' in locals():
+                await self._release_client(client)
 
     async def retrieve(
         self,
@@ -216,15 +215,14 @@ class QdrantMemoryStore(MemoryStore):
             logger.error(f"Unexpected error during retrieval: {e}")
             raise RetrievalError(f"Failed to retrieve memories from Qdrant: {e}")
         finally:
-            await self._release_client(client)
+            if 'client' in locals():
+                await self._release_client(client)
 
     async def delete(self, memory_id: str) -> bool:
         """Delete a memory by its ID."""
-        if self.client is None:
-            await self.initialize()
-
+        client = await self._get_client()
         try:
-            result = self.client.delete(
+            result = client.delete(
                 collection_name=self.collection_name,
                 points_selector=[memory_id],
             )
@@ -236,6 +234,9 @@ class QdrantMemoryStore(MemoryStore):
 
         except Exception as e:
             raise StorageError(f"Failed to delete memory: {e}")
+        finally:
+            if 'client' in locals():
+                await self._release_client(client)
 
     async def delete_code_units_by_project(self, project_name: str) -> int:
         """
@@ -250,9 +251,7 @@ class QdrantMemoryStore(MemoryStore):
         Raises:
             StorageError: If deletion fails.
         """
-        if self.client is None:
-            await self.initialize()
-
+        client = await self._get_client()
         try:
             # First, count how many units will be deleted by scrolling
             filter_conditions = Filter(
@@ -277,7 +276,7 @@ class QdrantMemoryStore(MemoryStore):
             count = 0
 
             while True:
-                results, offset = self.client.scroll(
+                results, offset = client.scroll(
                     collection_name=self.collection_name,
                     scroll_filter=filter_conditions,
                     limit=100,
@@ -293,7 +292,7 @@ class QdrantMemoryStore(MemoryStore):
 
             # Delete using filter
             if count > 0:
-                self.client.delete(
+                client.delete(
                     collection_name=self.collection_name,
                     points_selector=filter_conditions,
                 )
@@ -304,15 +303,15 @@ class QdrantMemoryStore(MemoryStore):
         except Exception as e:
             logger.error(f"Failed to delete code units for project {project_name}: {e}")
             raise StorageError(f"Failed to delete code units: {e}")
+        finally:
+            if 'client' in locals():
+                await self._release_client(client)
 
     async def batch_store(
         self,
         items: List[Tuple[str, List[float], Dict[str, Any]]],
     ) -> List[str]:
         """Store multiple memories in a batch operation."""
-        if self.client is None:
-            await self.initialize()
-
         try:
             if not items:
                 return []
@@ -331,8 +330,11 @@ class QdrantMemoryStore(MemoryStore):
                     payload=payload,
                 ))
 
+            # Get client from pool
+            client = await self._get_client()
+
             # Batch upsert
-            self.client.upsert(
+            client.upsert(
                 collection_name=self.collection_name,
                 points=points,
             )
@@ -349,6 +351,9 @@ class QdrantMemoryStore(MemoryStore):
         except Exception as e:
             logger.error(f"Unexpected error in batch store: {e}")
             raise StorageError(f"Failed to batch store memories: {e}")
+        finally:
+            if 'client' in locals():
+                await self._release_client(client)
 
     async def search_with_filters(
         self,
@@ -361,11 +366,9 @@ class QdrantMemoryStore(MemoryStore):
 
     async def get_by_id(self, memory_id: str) -> Optional[MemoryUnit]:
         """Retrieve a specific memory by its ID."""
-        if self.client is None:
-            await self.initialize()
-
+        client = await self._get_client()
         try:
-            result = self.client.retrieve(
+            result = client.retrieve(
                 collection_name=self.collection_name,
                 ids=[memory_id],
                 with_payload=True,
@@ -380,25 +383,26 @@ class QdrantMemoryStore(MemoryStore):
         except Exception as e:
             logger.error(f"Failed to get memory by ID: {e}")
             return None
+        finally:
+            if 'client' in locals():
+                await self._release_client(client)
 
     async def count(self, filters: Optional[SearchFilters] = None) -> int:
         """Count the number of memories, optionally with filters."""
-        if self.client is None:
-            await self.initialize()
-
+        client = await self._get_client()
         try:
             if not filters:
                 # No filters - return total collection count
-                collection_info = self.client.get_collection(self.collection_name)
+                collection_info = client.get_collection(self.collection_name)
                 return collection_info.points_count
-            
+
             # Count with filters by scrolling through all matching points
             filter_conditions = self._build_filter(filters)
             total = 0
             offset = None
-            
+
             while True:
-                points, offset = self.client.scroll(
+                points, offset = client.scroll(
                     collection_name=self.collection_name,
                     scroll_filter=filter_conditions,
                     offset=offset,
@@ -406,18 +410,21 @@ class QdrantMemoryStore(MemoryStore):
                     with_payload=False,
                     with_vectors=False,
                 )
-                
+
                 total += len(points)
-                
+
                 # No more points to scroll through
                 if not points or offset is None:
                     break
-            
+
             return total
 
         except Exception as e:
             logger.error(f"Failed to count memories: {e}")
             return 0
+        finally:
+            if 'client' in locals():
+                await self._release_client(client)
 
     async def update(
         self,
@@ -436,10 +443,9 @@ class QdrantMemoryStore(MemoryStore):
         Returns:
             bool: True if updated, False if not found
         """
-        if self.client is None:
-            await self.initialize()
 
         try:
+            client = await self._get_client()
             # Get existing memory
             existing = await self.get_by_id(memory_id)
             if not existing:
@@ -490,7 +496,7 @@ class QdrantMemoryStore(MemoryStore):
                         "verified": prov.verified,
                     }
 
-                self.client.upsert(
+                client.upsert(
                     collection_name=self.collection_name,
                     points=[PointStruct(
                         id=memory_id,
@@ -512,7 +518,7 @@ class QdrantMemoryStore(MemoryStore):
                     payload_updates.pop("metadata", None)
                     payload_updates.update(merged_metadata)
 
-                self.client.set_payload(
+                client.set_payload(
                     collection_name=self.collection_name,
                     payload=payload_updates,
                     points=[memory_id],
@@ -523,6 +529,10 @@ class QdrantMemoryStore(MemoryStore):
 
         except Exception as e:
             raise StorageError(f"Failed to update memory: {e}")
+
+        finally:
+            if 'client' in locals():
+                await self._release_client(client)
 
     async def health_check(self) -> bool:
         """Check if the storage backend is healthy and accessible."""
@@ -552,12 +562,11 @@ class QdrantMemoryStore(MemoryStore):
         Raises:
             StorageError: If listing operation fails.
         """
-        if self.client is None:
-            await self.initialize()
 
         filters = filters or {}
 
         try:
+            client = await self._get_client()
             # Build Qdrant filter conditions
             must_conditions = []
 
@@ -628,7 +637,7 @@ class QdrantMemoryStore(MemoryStore):
             scroll_offset = None
 
             while True:
-                result = self.client.scroll(
+                result = client.scroll(
                     collection_name=self.collection_name,
                     scroll_filter=qdrant_filter,
                     limit=100,  # Fetch in batches
@@ -686,6 +695,10 @@ class QdrantMemoryStore(MemoryStore):
             logger.error(f"Error listing memories: {e}")
             raise StorageError(f"Failed to list memories: {e}")
 
+        finally:
+            if 'client' in locals():
+                await self._release_client(client)
+
     async def get_indexed_files(
         self,
         project_name: Optional[str] = None,
@@ -703,14 +716,13 @@ class QdrantMemoryStore(MemoryStore):
         Returns:
             Dictionary with files list, total count, and pagination info
         """
-        if self.client is None:
-            await self.initialize()
 
         # Validate and cap limit
         limit = min(max(1, limit), 500)
         offset = max(0, offset)
 
         try:
+            client = await self._get_client()
             # Build filter for code category
             must_conditions = [
                 FieldCondition(
@@ -734,7 +746,7 @@ class QdrantMemoryStore(MemoryStore):
             scroll_offset = None
 
             while True:
-                result = self.client.scroll(
+                result = client.scroll(
                     collection_name=self.collection_name,
                     scroll_filter=qdrant_filter,
                     limit=100,
@@ -790,6 +802,10 @@ class QdrantMemoryStore(MemoryStore):
             logger.error(f"Error getting indexed files: {e}")
             raise StorageError(f"Failed to get indexed files: {e}")
 
+        finally:
+            if 'client' in locals():
+                await self._release_client(client)
+
     async def list_indexed_units(
         self,
         project_name: Optional[str] = None,
@@ -813,14 +829,13 @@ class QdrantMemoryStore(MemoryStore):
         Returns:
             Dictionary with units list, total count, and pagination info
         """
-        if self.client is None:
-            await self.initialize()
 
         # Validate and cap limit
         limit = min(max(1, limit), 500)
         offset = max(0, offset)
 
         try:
+            client = await self._get_client()
             # Build filter conditions
             must_conditions = [
                 FieldCondition(
@@ -860,7 +875,7 @@ class QdrantMemoryStore(MemoryStore):
             scroll_offset = None
 
             while True:
-                result = self.client.scroll(
+                result = client.scroll(
                     collection_name=self.collection_name,
                     scroll_filter=qdrant_filter,
                     limit=100,
@@ -919,6 +934,10 @@ class QdrantMemoryStore(MemoryStore):
         except Exception as e:
             logger.error(f"Error listing indexed units: {e}")
             raise StorageError(f"Failed to list indexed units: {e}")
+
+        finally:
+            if 'client' in locals():
+                await self._release_client(client)
 
     def get_pool_stats(self) -> Optional[Dict[str, Any]]:
         """Get connection pool statistics.
@@ -1357,12 +1376,13 @@ class QdrantMemoryStore(MemoryStore):
             raise StorageError("Store not initialized")
 
         try:
+            client = await self._get_client()
             # Scroll through all points and collect unique project names
             projects = set()
             offset = None
 
             while True:
-                results, offset = self.client.scroll(
+                results, offset = client.scroll(
                     collection_name=self.collection_name,
                     limit=100,
                     offset=offset,
@@ -1387,6 +1407,10 @@ class QdrantMemoryStore(MemoryStore):
             logger.error(f"Error getting all projects: {e}")
             raise StorageError(f"Failed to get projects: {e}")
 
+        finally:
+            if 'client' in locals():
+                await self._release_client(client)
+
     async def get_project_stats(self, project_name: str) -> Dict[str, Any]:
         """
         Get statistics for a specific project.
@@ -1401,6 +1425,7 @@ class QdrantMemoryStore(MemoryStore):
             raise StorageError("Store not initialized")
 
         try:
+            client = await self._get_client()
             # Get all memories for this project
             offset = None
             total_memories = 0
@@ -1410,7 +1435,7 @@ class QdrantMemoryStore(MemoryStore):
             file_paths = set()
 
             while True:
-                results, offset = self.client.scroll(
+                results, offset = client.scroll(
                     collection_name=self.collection_name,
                     scroll_filter=Filter(
                         must=[
@@ -1481,6 +1506,10 @@ class QdrantMemoryStore(MemoryStore):
             logger.error(f"Error getting project stats for {project_name}: {e}")
             raise StorageError(f"Failed to get project stats: {e}")
 
+        finally:
+            if 'client' in locals():
+                await self._release_client(client)
+
     async def update_usage(self, usage_data: Dict[str, Any]) -> bool:
         """
         Update usage tracking for a single memory (stored in payload).
@@ -1495,10 +1524,11 @@ class QdrantMemoryStore(MemoryStore):
             raise StorageError("Store not initialized")
 
         try:
+            client = await self._get_client()
             memory_id = usage_data["memory_id"]
 
             # Get current point
-            points = self.client.retrieve(
+            points = client.retrieve(
                 collection_name=self.collection_name,
                 ids=[memory_id],
                 with_payload=True,
@@ -1519,7 +1549,7 @@ class QdrantMemoryStore(MemoryStore):
             payload["usage_last_score"] = usage_data["last_search_score"]
 
             # Update point with new payload
-            self.client.upsert(
+            client.upsert(
                 collection_name=self.collection_name,
                 points=[
                     PointStruct(
@@ -1536,6 +1566,10 @@ class QdrantMemoryStore(MemoryStore):
             logger.error(f"Failed to update usage tracking: {e}")
             raise StorageError(f"Failed to update usage tracking: {e}")
 
+        finally:
+            if 'client' in locals():
+                await self._release_client(client)
+
     async def batch_update_usage(self, usage_data_list: List[Dict[str, Any]]) -> bool:
         """
         Batch update usage tracking for multiple memories.
@@ -1550,10 +1584,11 @@ class QdrantMemoryStore(MemoryStore):
             raise StorageError("Store not initialized")
 
         try:
+            client = await self._get_client()
             # Retrieve all points at once
             memory_ids = [data["memory_id"] for data in usage_data_list]
 
-            points = self.client.retrieve(
+            points = client.retrieve(
                 collection_name=self.collection_name,
                 ids=memory_ids,
                 with_payload=True,
@@ -1585,7 +1620,7 @@ class QdrantMemoryStore(MemoryStore):
                 )
 
             if updated_points:
-                self.client.upsert(
+                client.upsert(
                     collection_name=self.collection_name,
                     points=updated_points,
                 )
@@ -1596,6 +1631,10 @@ class QdrantMemoryStore(MemoryStore):
         except Exception as e:
             logger.error(f"Failed to batch update usage tracking: {e}")
             raise StorageError(f"Failed to batch update usage tracking: {e}")
+
+        finally:
+            if 'client' in locals():
+                await self._release_client(client)
 
     async def get_usage_stats(self, memory_id: str) -> Optional[Dict[str, Any]]:
         """
@@ -1611,7 +1650,8 @@ class QdrantMemoryStore(MemoryStore):
             raise StorageError("Store not initialized")
 
         try:
-            points = self.client.retrieve(
+            client = await self._get_client()
+            points = client.retrieve(
                 collection_name=self.collection_name,
                 ids=[memory_id],
                 with_payload=True,
@@ -1635,17 +1675,22 @@ class QdrantMemoryStore(MemoryStore):
             logger.error(f"Failed to get usage stats: {e}")
             return None
 
+        finally:
+            if 'client' in locals():
+                await self._release_client(client)
+
     async def get_all_usage_stats(self) -> List[Dict[str, Any]]:
         """Get all usage statistics."""
         if not self.client:
             raise StorageError("Store not initialized")
 
         try:
+            client = await self._get_client()
             stats = []
             offset = None
 
             while True:
-                results, offset = self.client.scroll(
+                results, offset = client.scroll(
                     collection_name=self.collection_name,
                     limit=100,
                     offset=offset,
@@ -1676,6 +1721,10 @@ class QdrantMemoryStore(MemoryStore):
             logger.error(f"Failed to get all usage stats: {e}")
             return []
 
+        finally:
+            if 'client' in locals():
+                await self._release_client(client)
+
     async def delete_usage_tracking(self, memory_id: str) -> bool:
         """
         Delete usage tracking for a memory (remove from payload).
@@ -1690,7 +1739,8 @@ class QdrantMemoryStore(MemoryStore):
             raise StorageError("Store not initialized")
 
         try:
-            points = self.client.retrieve(
+            client = await self._get_client()
+            points = client.retrieve(
                 collection_name=self.collection_name,
                 ids=[memory_id],
                 with_payload=True,
@@ -1710,7 +1760,7 @@ class QdrantMemoryStore(MemoryStore):
             payload.pop("usage_last_score", None)
 
             # Update point
-            self.client.upsert(
+            client.upsert(
                 collection_name=self.collection_name,
                 points=[
                     PointStruct(
@@ -1726,6 +1776,10 @@ class QdrantMemoryStore(MemoryStore):
         except Exception as e:
             logger.error(f"Failed to delete usage tracking: {e}")
             return False
+
+        finally:
+            if 'client' in locals():
+                await self._release_client(client)
 
     async def cleanup_orphaned_usage_tracking(self) -> int:
         """
@@ -1757,6 +1811,7 @@ class QdrantMemoryStore(MemoryStore):
             raise StorageError("Store not initialized")
 
         try:
+            client = await self._get_client()
             # Build filter conditions
             conditions = []
 
@@ -1778,7 +1833,7 @@ class QdrantMemoryStore(MemoryStore):
             results_list = []
 
             while True:
-                results, offset = self.client.scroll(
+                results, offset = client.scroll(
                     collection_name=self.collection_name,
                     scroll_filter=scroll_filter,
                     limit=100,
@@ -1821,6 +1876,10 @@ class QdrantMemoryStore(MemoryStore):
             logger.error(f"Failed to find memories by criteria: {e}")
             return []
 
+        finally:
+            if 'client' in locals():
+                await self._release_client(client)
+
     async def find_unused_memories(
         self,
         cutoff_time: datetime,
@@ -1840,11 +1899,12 @@ class QdrantMemoryStore(MemoryStore):
             raise StorageError("Store not initialized")
 
         try:
+            client = await self._get_client()
             offset = None
             results_list = []
 
             while True:
-                results, offset = self.client.scroll(
+                results, offset = client.scroll(
                     collection_name=self.collection_name,
                     limit=100,
                     offset=offset,
@@ -1901,6 +1961,10 @@ class QdrantMemoryStore(MemoryStore):
             logger.error(f"Failed to find unused memories: {e}")
             return []
 
+        finally:
+            if 'client' in locals():
+                await self._release_client(client)
+
     async def get_all_memories(self) -> List[Dict[str, Any]]:
         """
         Get all memories (for fallback queries).
@@ -1912,11 +1976,12 @@ class QdrantMemoryStore(MemoryStore):
             raise StorageError("Store not initialized")
 
         try:
+            client = await self._get_client()
             offset = None
             memories = []
 
             while True:
-                results, offset = self.client.scroll(
+                results, offset = client.scroll(
                     collection_name=self.collection_name,
                     limit=100,
                     offset=offset,
@@ -1941,6 +2006,10 @@ class QdrantMemoryStore(MemoryStore):
             logger.error(f"Failed to get all memories: {e}")
             return []
 
+        finally:
+            if 'client' in locals():
+                await self._release_client(client)
+
     async def migrate_memory_scope(self, memory_id: str, new_project_name: Optional[str]) -> bool:
         """
         Migrate a memory to a different scope (change project_name).
@@ -1959,8 +2028,9 @@ class QdrantMemoryStore(MemoryStore):
             raise StorageError("Store not initialized")
 
         try:
+            client = await self._get_client()
             # Get the memory
-            points = self.client.retrieve(
+            points = client.retrieve(
                 collection_name=self.collection_name,
                 ids=[memory_id],
                 with_payload=True,
@@ -1977,7 +2047,7 @@ class QdrantMemoryStore(MemoryStore):
             payload["project_name"] = new_project_name
 
             # Upsert with updated payload
-            self.client.upsert(
+            client.upsert(
                 collection_name=self.collection_name,
                 points=[
                     PointStruct(
@@ -1994,7 +2064,6 @@ class QdrantMemoryStore(MemoryStore):
 
         except StorageError:
             raise
-        except Exception as e:
             logger.error(f"Error migrating memory {memory_id}: {e}")
             raise StorageError(f"Failed to migrate memory scope: {e}")
 
@@ -2024,6 +2093,7 @@ class QdrantMemoryStore(MemoryStore):
             raise StorageError("Store not initialized")
 
         try:
+            client = await self._get_client()
             # Build filter
             conditions = []
             if project_name is not None:
@@ -2055,7 +2125,7 @@ class QdrantMemoryStore(MemoryStore):
             count = 0
 
             while True:
-                results, offset = self.client.scroll(
+                results, offset = client.scroll(
                     collection_name=self.collection_name,
                     scroll_filter=filter_obj,
                     limit=100,
@@ -2082,7 +2152,7 @@ class QdrantMemoryStore(MemoryStore):
                     count += 1
 
                 # Upsert updated points
-                self.client.upsert(
+                client.upsert(
                     collection_name=self.collection_name,
                     points=points_to_update,
                 )
@@ -2096,6 +2166,10 @@ class QdrantMemoryStore(MemoryStore):
         except Exception as e:
             logger.error(f"Error bulk updating context level: {e}")
             raise StorageError(f"Failed to bulk update context level: {e}")
+
+        finally:
+            if 'client' in locals():
+                await self._release_client(client)
 
     async def find_duplicate_memories(
         self,
@@ -2119,6 +2193,7 @@ class QdrantMemoryStore(MemoryStore):
             raise StorageError("Store not initialized")
 
         try:
+            client = await self._get_client()
             # Get all memories matching criteria
             filter_obj = None
             if project_name:
@@ -2135,7 +2210,7 @@ class QdrantMemoryStore(MemoryStore):
             memories = []
 
             while True:
-                results, offset = self.client.scroll(
+                results, offset = client.scroll(
                     collection_name=self.collection_name,
                     scroll_filter=filter_obj,
                     limit=100,
@@ -2185,6 +2260,10 @@ class QdrantMemoryStore(MemoryStore):
             logger.error(f"Error finding duplicate memories: {e}")
             raise StorageError(f"Failed to find duplicates: {e}")
 
+        finally:
+            if 'client' in locals():
+                await self._release_client(client)
+
     async def merge_memories(
         self,
         memory_ids: List[str],
@@ -2210,12 +2289,13 @@ class QdrantMemoryStore(MemoryStore):
             raise StorageError("Need at least 2 memories to merge")
 
         try:
+            client = await self._get_client()
             # Determine which memory to keep
             target_id = keep_id if keep_id and keep_id in memory_ids else memory_ids[0]
             other_ids = [mid for mid in memory_ids if mid != target_id]
 
             # Get all memories
-            points = self.client.retrieve(
+            points = client.retrieve(
                 collection_name=self.collection_name,
                 ids=memory_ids,
                 with_payload=True,
@@ -2244,7 +2324,7 @@ class QdrantMemoryStore(MemoryStore):
             target_payload["content"] = combined_content
             target_payload["updated_at"] = datetime.now(UTC).isoformat()
 
-            self.client.upsert(
+            client.upsert(
                 collection_name=self.collection_name,
                 points=[
                     PointStruct(
@@ -2256,7 +2336,7 @@ class QdrantMemoryStore(MemoryStore):
             )
 
             # Delete other memories
-            self.client.delete(
+            client.delete(
                 collection_name=self.collection_name,
                 points_selector=PointIdsList(points=other_ids),
             )
@@ -2266,7 +2346,6 @@ class QdrantMemoryStore(MemoryStore):
 
         except StorageError:
             raise
-        except Exception as e:
             logger.error(f"Error merging memories: {e}")
             raise StorageError(f"Failed to merge memories: {e}")
 
@@ -2289,6 +2368,7 @@ class QdrantMemoryStore(MemoryStore):
             raise StorageError("Store not initialized")
 
         try:
+            client = await self._get_client()
             # Get recent searches from feedback database
             # Use the feedback database path from config
             import sqlite3
@@ -2354,7 +2434,7 @@ class QdrantMemoryStore(MemoryStore):
             all_memories = []
 
             while len(all_memories) < limit * 10 and collected < 1000:  # Fetch up to 1000 to sort
-                results, next_offset = self.client.scroll(
+                results, next_offset = client.scroll(
                     collection_name=self.collection_name,
                     scroll_filter=scroll_filter,
                     limit=100,
@@ -2414,6 +2494,10 @@ class QdrantMemoryStore(MemoryStore):
     # Git History Storage and Search (FEAT-055)
     # ============================================================
 
+        finally:
+            if 'client' in locals():
+                await self._release_client(client)
+
     async def store_git_commits(
         self,
         commits: List[Dict[str, Any]],
@@ -2450,6 +2534,7 @@ class QdrantMemoryStore(MemoryStore):
             return 0
 
         try:
+            client = await self._get_client()
             import hashlib
             points = []
 
@@ -2498,7 +2583,7 @@ class QdrantMemoryStore(MemoryStore):
                 points.append(point)
 
             # Batch upsert all commits
-            self.client.upsert(
+            client.upsert(
                 collection_name=self.collection_name,
                 points=points,
             )
@@ -2509,6 +2594,10 @@ class QdrantMemoryStore(MemoryStore):
         except Exception as e:
             logger.error(f"Error storing git commits: {e}")
             raise StorageError(f"Failed to store git commits: {e}")
+
+        finally:
+            if 'client' in locals():
+                await self._release_client(client)
 
     async def store_git_file_changes(
         self,
@@ -2541,6 +2630,7 @@ class QdrantMemoryStore(MemoryStore):
             return 0
 
         try:
+            client = await self._get_client()
             points = []
 
             for change_data in file_changes:
@@ -2577,7 +2667,7 @@ class QdrantMemoryStore(MemoryStore):
                 points.append(point)
 
             # Batch upsert all file changes
-            self.client.upsert(
+            client.upsert(
                 collection_name=self.collection_name,
                 points=points,
             )
@@ -2588,6 +2678,10 @@ class QdrantMemoryStore(MemoryStore):
         except Exception as e:
             logger.error(f"Error storing git file changes: {e}")
             raise StorageError(f"Failed to store git file changes: {e}")
+
+        finally:
+            if 'client' in locals():
+                await self._release_client(client)
 
     async def search_git_commits(
         self,
@@ -2619,6 +2713,7 @@ class QdrantMemoryStore(MemoryStore):
             raise StorageError("Store not initialized")
 
         try:
+            client = await self._get_client()
             # Build filter conditions
             must_conditions = [
                 FieldCondition(key="type", match=MatchValue(value="git_commit"))
@@ -2667,7 +2762,7 @@ class QdrantMemoryStore(MemoryStore):
                 generator = EmbeddingGenerator(self.config)
                 query_embedding = await generator.generate(query)
 
-                search_results = self.client.search(
+                search_results = client.search(
                     collection_name=self.collection_name,
                     query_vector=query_embedding,
                     query_filter=search_filter,
@@ -2687,7 +2782,7 @@ class QdrantMemoryStore(MemoryStore):
                 collected = 0
 
                 while collected < limit:
-                    scroll_results, next_offset = self.client.scroll(
+                    scroll_results, next_offset = client.scroll(
                         collection_name=self.collection_name,
                         scroll_filter=search_filter,
                         limit=min(100, limit - collected),
@@ -2718,6 +2813,10 @@ class QdrantMemoryStore(MemoryStore):
             logger.error(f"Error searching git commits: {e}")
             raise StorageError(f"Failed to search git commits: {e}")
 
+        finally:
+            if 'client' in locals():
+                await self._release_client(client)
+
     async def get_git_commit(
         self,
         commit_hash: str,
@@ -2738,6 +2837,7 @@ class QdrantMemoryStore(MemoryStore):
             raise StorageError("Store not initialized")
 
         try:
+            client = await self._get_client()
             # Search by commit_hash field since we use UUIDs for point IDs
             search_filter = Filter(
                 must=[
@@ -2746,7 +2846,7 @@ class QdrantMemoryStore(MemoryStore):
                 ]
             )
 
-            results, _ = self.client.scroll(
+            results, _ = client.scroll(
                 collection_name=self.collection_name,
                 scroll_filter=search_filter,
                 limit=1,
@@ -2766,6 +2866,10 @@ class QdrantMemoryStore(MemoryStore):
         except Exception as e:
             logger.error(f"Error retrieving git commit {commit_hash}: {e}")
             raise StorageError(f"Failed to retrieve git commit: {e}")
+
+        finally:
+            if 'client' in locals():
+                await self._release_client(client)
 
     async def get_commits_by_file(
         self,
@@ -2789,6 +2893,7 @@ class QdrantMemoryStore(MemoryStore):
             raise StorageError("Store not initialized")
 
         try:
+            client = await self._get_client()
             # First, find file changes for this file
             search_filter = Filter(
                 must=[
@@ -2802,7 +2907,7 @@ class QdrantMemoryStore(MemoryStore):
             collected = 0
 
             while collected < limit:
-                scroll_results, next_offset = self.client.scroll(
+                scroll_results, next_offset = client.scroll(
                     collection_name=self.collection_name,
                     scroll_filter=search_filter,
                     limit=min(100, limit - collected),
@@ -2860,6 +2965,10 @@ class QdrantMemoryStore(MemoryStore):
         except Exception as e:
             logger.error(f"Error getting commits by file {file_path}: {e}")
             raise StorageError(f"Failed to get commits by file: {e}")
+
+        finally:
+            if 'client' in locals():
+                await self._release_client(client)
 
     def _deserialize_commit(
         self,

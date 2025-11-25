@@ -52,6 +52,14 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-24
+- **CRITICAL: Completed PERF-007 connection pooling refactoring in qdrant_store.py**
+  - Fixed incomplete refactoring where 24+ methods still accessed `self.client` directly instead of using connection pool
+  - Root cause: PERF-007 added connection pooling but didn't update all methods; `self.client` is None after pooling, clients must be acquired via `_get_client()`
+  - Removed 25 initialization checks, replaced all `self.client.<method>()` with pool-based `client.<method>()`
+  - Added `client = await self._get_client()` to 24 methods with safe release in `finally` blocks
+  - Fixed methods: update, list_memories, get_indexed_files, list_indexed_units, get_all_projects, get_project_stats, update_usage, batch_update_usage, get_usage_stats, and 15+ more
+  - Impact: Fixes 6-8 CI test failures in call_graph and integration tests, all 7 call_graph integration tests now pass
+
 - **CRITICAL: Fixed overly aggressive health check timeouts causing integration test failures**
   - Increased connection pool health check timeouts from 1ms/10ms/50ms to 50ms/100ms/200ms
   - Root cause: FAST health check timeout (1ms) was too aggressive - `get_collections()` call often took >1ms even on localhost
