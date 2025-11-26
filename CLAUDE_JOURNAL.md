@@ -115,3 +115,24 @@ User wants test suite back to 100% passing. Will investigate 6 failures + 65 err
 Test suite at 100% pass rate\! Fixed 3 tests: timeout tests (use sync time.sleep instead of async), parser languages (8 not 10). Results: 3113 passed, 353 skipped, 0 failed. Errors in parallel runs were from Qdrant contention, not test issues.
 ### 2025-11-25 21:39 | 075b877f | USER_PROMPT
 User wants to commit all work, then clean up stray documentation, old log files, and scripts. Will commit first, then audit project for cleanup.
+
+### 2025-11-25 22:11 | 075b877f | SESSION_SUMMARY
+
+**Duration:** ~2.5 hours (continuation from context restore)
+**Main work:** Project cleanup - analyzed and removed stray files from root directory after earlier test antipattern work.
+
+**What went well:**
+- Systematic analysis of 9 Python scripts against automated test suite to determine which were superseded
+- Clear categorization and explanation to user before taking action (delete vs move to scripts/)
+- Efficient parallel reads to analyze all scripts at once
+- Clean commit with 30 files changed, -22,697 lines removed
+- User gave clear go-aheads after each explanation
+
+**What went poorly or was difficult:**
+- Session started from context restore - had to reconstruct what happened in previous session
+- Background bash processes from previous session kept generating noise (stale test runs)
+- Some sed error in commit hook but didn't affect the actual commit
+
+**Open threads:**
+- User heading to new session to work on CI - test suite should be passing (3113 passed, 353 skipped, 0 failed)
+- benchmark_indexing.py moved to scripts/ - may need documentation update if it's meant to be a user-facing tool
