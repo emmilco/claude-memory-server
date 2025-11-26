@@ -550,8 +550,9 @@ def pytest_collection_modifyitems(config, items):
     Auto-applied markers:
     - unit: All tests in tests/unit/
     - integration: All tests in tests/integration/
+    - e2e: All tests in tests/e2e/
     - security: All tests in tests/security/
-    - requires_docker: Integration tests (most need Docker for Qdrant)
+    - requires_docker: Integration and E2E tests (most need Docker for Qdrant)
     """
     for item in items:
         # Get file path as string
@@ -564,8 +565,16 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(pytest.mark.integration)
             # Most integration tests require Docker for Qdrant
             item.add_marker(pytest.mark.requires_docker)
+        elif "tests/e2e/" in fspath:
+            item.add_marker(pytest.mark.e2e)
+            # E2E tests require Docker for Qdrant
+            item.add_marker(pytest.mark.requires_docker)
         elif "tests/security/" in fspath:
             item.add_marker(pytest.mark.security)
+        elif "tests/performance/" in fspath:
+            item.add_marker(pytest.mark.performance)
+            # Performance tests require Docker for Qdrant
+            item.add_marker(pytest.mark.requires_docker)
 
         # Skip GPU tests if GPU not available
         if "requires_gpu" in item.keywords:
