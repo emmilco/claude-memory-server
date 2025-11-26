@@ -1036,3 +1036,59 @@
 {"ts":"2025-11-26T02:39:48Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Bash","preview":"git status --short | tail -20 "}
 {"ts":"2025-11-26T02:39:55Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Bash","preview":"git log --oneline -5 "}
 {"ts":"2025-11-26T02:40:01Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Bash","preview":"git add -A && git status --short | wc -l "}
+{"ts":"2025-11-26T02:41:44Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Bash","preview":"git commit -m \"$(cat <<'EOF' Test antipattern fixes: 150+ tests improved, 100% p"}
+{"ts":"2025-11-26T02:48:58Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Read","preview":"CHANGELOG.md"}
+{"ts":"2025-11-26T02:49:04Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Grep","preview":"/## \[Unreleased\]/"}
+{"ts":"2025-11-26T02:49:14Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Edit","preview":"CHANGELOG.md: "### Added - 2025-11-25 - **PERF-008: Distributed T...""}
+{"ts":"2025-11-26T02:49:25Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Bash","preview":"git add CHANGELOG.md && git commit -m \"$(cat <<'EOF' Test antipattern fixes: 150"}
+{"ts":"2025-11-26T02:49:42Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Bash","preview":"find . -maxdepth 1 -type f -name \"*.log\" -o -name \"*.txt\" 2>/dev/null | sort "}
+{"ts":"2025-11-26T02:49:42Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Bash","preview":"find . -maxdepth 1 -type f -name \"*.py\" | sort "}
+{"ts":"2025-11-26T02:49:42Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Bash","preview":"find . -maxdepth 1 -type f -name \"*.md\" | sort "}
+{"ts":"2025-11-26T02:49:42Z","event":"INTERVAL_PROMPT","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","elapsed_mins":10}
+{"ts":"2025-11-26T02:49:42Z","event":"INTERVAL_PROMPT","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","elapsed_mins":10}
+{"ts":"2025-11-26T02:49:42Z","event":"INTERVAL_PROMPT","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","elapsed_mins":10}
+{"ts":"2025-11-26T02:49:59Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Bash","preview":"wc -l BUG_FIXING_STATUS.md E2E_TEST_REPORT.md E2E_TEST_SUMMARY.md FEAT-059_STATU"}
+{"ts":"2025-11-26T02:51:02Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Bash","preview":"mv BUG_FIXING_STATUS.md E2E_TEST_REPORT.md E2E_TEST_SUMMARY.md FEAT-059_STATUS_S"}
+{"ts":"2025-11-26T02:51:09Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Bash","preview":"wc -l benchmark_indexing.py proof_of_concept.py test_code_search.py test_importa"}
+{"ts":"2025-11-26T02:55:56Z","event":"SESSION_START","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349"}
+{"ts":"2025-11-26T02:56:08Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Read","preview":"test_indexing_performance.py"}
+{"ts":"2025-11-26T02:56:08Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Read","preview":"benchmark_indexing.py"}
+{"ts":"2025-11-26T02:56:08Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Read","preview":"test_code_search.py"}
+{"ts":"2025-11-26T02:56:08Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Read","preview":"test_qdrant_search.py"}
+{"ts":"2025-11-26T02:56:08Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Read","preview":"test_importance_manual.py"}
+{"ts":"2025-11-26T02:56:08Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Read","preview":"test_importance_simple.py"}
+{"ts":"2025-11-26T02:56:08Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Read","preview":"proof_of_concept.py"}
+{"ts":"2025-11-26T02:56:08Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Read","preview":"test_mcp_api.py"}
+{"ts":"2025-11-26T02:56:08Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Read","preview":"test_indexing.py"}
+{"ts":"2025-11-26T02:56:30Z","event":"STOP","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349"}
+{"ts":"2025-11-26T03:02:47Z","event":"USER_PROMPT","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","preview":"I'd like you to identify for me which files are superseded by automated tests, which have continued "}
+{"ts":"2025-11-26T03:03:01Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Grep","preview":"/store_memory|retrieve_memory|list_memori/"}
+{"ts":"2025-11-26T03:03:01Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Grep","preview":"/IncrementalIndex|index_directory|index_c/"}
+{"ts":"2025-11-26T03:03:01Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Glob","preview":"tests/**/test_*benchmark*.py"}
+{"ts":"2025-11-26T03:03:01Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Grep","preview":"/ImportanceScor|importance.*scor/"}
+{"ts":"2025-11-26T03:03:01Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Grep","preview":"/CallGraph|call_graph|find_callers|find_c/"}
+{"ts":"2025-11-26T03:03:01Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Grep","preview":"/class.*Test.*CodeSearch|def test.*code.*/"}
+{"ts":"2025-11-26T03:03:16Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Read","preview":"test_importance_scorer.py"}
+{"ts":"2025-11-26T03:03:16Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Bash","preview":"wc -l /Users/elliotmilco/Documents/GitHub/claude-memory-server/tests/unit/test_i"}
+{"ts":"2025-11-26T03:03:30Z","event":"STOP","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349"}
+{"ts":"2025-11-26T03:03:38Z","event":"USER_PROMPT","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","preview":"go ahead "}
+{"ts":"2025-11-26T03:03:43Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Bash","preview":"mv benchmark_indexing.py scripts/ "}
+{"ts":"2025-11-26T03:03:44Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Bash","preview":"rm proof_of_concept.py test_code_search.py test_importance_manual.py test_import"}
+{"ts":"2025-11-26T03:03:54Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Glob","preview":"*COMPLETION*.md"}
+{"ts":"2025-11-26T03:03:54Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Bash","preview":"ls -la *.md 2>/dev/null | grep -E \"(status|COMPLETION|SUMMARY)\" || echo \"No stat"}
+{"ts":"2025-11-26T03:03:54Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Glob","preview":"*status*.md"}
+{"ts":"2025-11-26T03:04:01Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Bash","preview":"ls -la *.txt *.log 2>/dev/null || echo \"No txt/log files in root\" "}
+{"ts":"2025-11-26T03:04:14Z","event":"STOP","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349"}
+{"ts":"2025-11-26T03:05:23Z","event":"USER_PROMPT","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","preview":"yes "}
+{"ts":"2025-11-26T03:05:26Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Bash","preview":"rm benchmark_output.txt DAY3_COMPLETION_SUMMARY.txt test_output.log test_output."}
+{"ts":"2025-11-26T03:05:32Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Bash","preview":"ls -la *.py *.txt *.log 2>/dev/null | head -20 "}
+{"ts":"2025-11-26T03:05:46Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Bash","preview":"git status --short "}
+{"ts":"2025-11-26T03:05:57Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Bash","preview":"git show HEAD:BUG_FIXING_STATUS.md 2>/dev/null | head -5 || echo \"File not in HE"}
+{"ts":"2025-11-26T03:05:57Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Bash","preview":"ls archived_docs/*.md | head -20 "}
+{"ts":"2025-11-26T03:05:57Z","event":"INTERVAL_PROMPT","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","elapsed_mins":10}
+{"ts":"2025-11-26T03:05:57Z","event":"INTERVAL_PROMPT","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","elapsed_mins":10}
+{"ts":"2025-11-26T03:06:09Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Read","preview":"CHANGELOG.md"}
+{"ts":"2025-11-26T03:06:13Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Bash","preview":"grep -n \"## \[Unreleased\]\" CHANGELOG.md "}
+{"ts":"2025-11-26T03:06:18Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Read","preview":"CHANGELOG.md"}
+{"ts":"2025-11-26T03:06:26Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Edit","preview":"CHANGELOG.md: "### Refactored - 2025-11-25 - **REF-018: Removed g...""}
+{"ts":"2025-11-26T03:06:32Z","event":"TOOL_USE","session":"075b877f-d3cc-4cc0-ac4b-7768c5d9b349","tool":"Bash","preview":"git add -A && git commit -m \"$(cat <<'EOF' Cleanup: Remove stray files from root"}

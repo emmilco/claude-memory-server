@@ -70,6 +70,13 @@ Organize entries under these headers in chronological order (newest first):
   - Added: tests/unit/test_tracing.py (15 comprehensive tests covering all tracing functionality)
   - All tests passing (100% pass rate)
 
+### Removed - 2025-11-25
+- **Project Cleanup: Removed stray files from root directory**
+  - Deleted 8 superseded manual test scripts (2,026 lines) - functionality covered by automated tests
+  - Deleted 7 old log/output files (~1.7MB) - benchmark_output.txt, test_*.log/txt
+  - Moved benchmark_indexing.py to scripts/ (performance benchmarking tool)
+  - Moved 10 status report .md files to archived_docs/
+
 ### Refactored - 2025-11-25
 - **REF-018: Removed global state patterns for improved test isolation**
   - Refactored DegradationTracker from module-level global to class-based singleton with reset capability

@@ -137,3 +137,9 @@
   "sentiment": "positive",
   "user_message": "Nice work. I'd like you to commit all your work, then after you commit, please look over the project for stray documentation that isn't filed correctly, old task-specific log files and scripts. and either delete them or re-file them. you can ask me case by case."
 }
+{
+  "timestamp": "2025-11-26T03:02:47Z",
+  "session_id": "075b877f-d3cc-4cc0-ac4b-7768c5d9b349",
+  "sentiment": "corrective",
+  "user_message": "I'd like you to identify for me which files are superseded by automated tests, which have continued value as manual tests, and which should be moved to scripts, and which are no longer relevant and should be deleted."
+}
