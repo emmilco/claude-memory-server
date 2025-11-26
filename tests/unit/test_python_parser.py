@@ -18,8 +18,7 @@ class TestPythonParserInitialization:
         """Test that parser initializes all supported languages."""
         parser = get_parser()
         # Languages supported by the Python parser (tree-sitter based)
-        # Note: PHP and Ruby require optional tree-sitter packages that may not be installed
-        expected_languages = ["python", "javascript", "typescript", "java", "go", "rust", "swift", "kotlin"]
+        expected_languages = ["python", "javascript", "typescript", "java", "go", "rust", "swift", "kotlin", "php", "ruby"]
         assert set(parser.parsers.keys()) == set(expected_languages)
 
     def test_parser_languages_initialized(self):
