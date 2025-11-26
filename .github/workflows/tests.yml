@@ -87,10 +87,19 @@ jobs:
         echo "❌ Qdrant failed to start"
         exit 1
 
+    - name: Clear HuggingFace cache
+      run: |
+        # Clear any cached models to force fresh download
+        # This prevents "meta tensor" issues from corrupted cache
+        rm -rf ~/.cache/huggingface/hub
+        rm -rf ~/.cache/torch/sentence_transformers
+        echo "Cleared HuggingFace and sentence-transformers cache"
+
     - name: Run tests
       env:
         QDRANT_URL: http://localhost:6333
         QDRANT_API_KEY: development
+        HF_HUB_DISABLE_SYMLINKS_WARNING: "1"
       run: |
         set -o pipefail
         pytest tests/ -v --tb=short --timeout=60 --timeout-method=thread -m "not skip_ci" --cov=src --cov-report=term-missing --cov-report=xml --junitxml=test-results.xml 2>&1 | tee pytest-output.txt
