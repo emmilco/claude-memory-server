@@ -77,8 +77,8 @@ def complex_func(a, b, c, d, e, f):
             line_count=10,
             has_documentation=True,
         )
-        assert mi >= 85, "Excellent code should have MI >= 85"
-        assert mi <= 100, "MI should not exceed 100"
+        # Low complexity + small size + docs should give very high MI
+        assert 90 <= mi <= 100, "Excellent code should have MI 90-100"
 
     def test_maintainability_index_moderate(self, analyzer):
         """Test MI calculation for moderate code."""
@@ -87,7 +87,8 @@ def complex_func(a, b, c, d, e, f):
             line_count=50,
             has_documentation=False,
         )
-        assert 65 <= mi < 85, "Moderate code should have 65 <= MI < 85"
+        # Moderate complexity/size, no docs
+        assert 68 <= mi < 80, "Moderate code should have 68 <= MI < 80"
 
     def test_maintainability_index_poor(self, analyzer):
         """Test MI calculation for poor code."""
@@ -96,7 +97,8 @@ def complex_func(a, b, c, d, e, f):
             line_count=200,
             has_documentation=False,
         )
-        assert mi < 65, "Poor code should have MI < 65"
+        # High complexity + large size + no docs gives very low MI
+        assert 25 <= mi < 50, "Poor code should have MI 25-50"
 
     def test_maintainability_index_with_docs_bonus(self, analyzer):
         """Test MI bonus for documentation."""

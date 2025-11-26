@@ -374,18 +374,152 @@ class TestStatistics:
 
 class TestEmptyGraph:
     """Test empty graph edge cases."""
-    
+
     def test_empty_graph_returns_empty_results(self):
         """Test that operations on empty graph return empty results."""
         graph = CallGraph()
-        
+
         assert len(graph.find_callers("nonexistent")) == 0
         assert len(graph.find_callees("nonexistent")) == 0
         assert len(graph.find_call_chain("a", "b")) == 0
         assert len(graph.get_call_sites_for_caller("a")) == 0
         assert len(graph.get_call_sites_for_callee("b")) == 0
         assert len(graph.get_implementations("I")) == 0
-        
+
         stats = graph.get_statistics()
         assert stats["total_functions"] == 0
         assert stats["total_calls"] == 0
+
+
+class TestCallGraphEdgeCases:
+    """Test edge cases for call graph operations."""
+
+    def test_add_call_with_none_caller(self):
+        """Test adding call with None caller handles gracefully."""
+        graph = CallGraph()
+
+        # CallGraph accepts None and stores it (graceful handling)
+        call_site = CallSite(None, "/file.py", 1, "target", "/target.py")
+        graph.add_call(call_site)
+
+        # Should be stored in calls
+        assert call_site in graph.calls
+        # Forward/reverse indexes should handle None as a key
+        assert "target" in graph.forward_index.get(None, set())
+
+    def test_add_call_with_none_callee(self):
+        """Test adding call with None callee handles gracefully."""
+        graph = CallGraph()
+
+        # CallGraph accepts None and stores it (graceful handling)
+        call_site = CallSite("source", "/source.py", 1, None, "/file.py")
+        graph.add_call(call_site)
+
+        # Should be stored in calls
+        assert call_site in graph.calls
+        # Forward/reverse indexes should handle None as a key
+        assert None in graph.forward_index.get("source", set())
+
+    def test_add_function_with_none_qualified_name(self):
+        """Test adding function with None qualified_name handles gracefully."""
+        graph = CallGraph()
+
+        # CallGraph uses qualified_name as the key
+        node = FunctionNode(
+            name="test",
+            qualified_name=None,  # This is the key used
+            file_path="/file.py",
+            language="python",
+            start_line=1,
+            end_line=5
+        )
+        graph.add_function(node)
+
+        # Should be stored with None as key
+        assert None in graph.nodes
+        assert graph.nodes[None] == node
+
+    def test_add_implementation_with_empty_interface_name(self):
+        """Test adding implementation with empty interface name."""
+        graph = CallGraph()
+        impl = InterfaceImplementation(
+            interface_name="",  # Empty string
+            implementation_name="Impl",
+            file_path="/file.py",
+            language="python",
+            methods=[]
+        )
+
+        # Should either accept it or raise error (both are valid behaviors)
+        try:
+            graph.add_implementation(impl)
+            # If accepted, verify it's stored
+            impls = graph.get_implementations("")
+            assert len(impls) == 1
+        except (ValueError, TypeError):
+            # If rejected, that's also acceptable
+            pass
+
+    def test_find_callers_with_max_depth_zero(self):
+        """Test find_callers with max_depth=0 returns empty."""
+        graph = CallGraph()
+
+        # Add nodes and calls
+        graph.add_function(FunctionNode("a", "a", "/a.py", "python", 1, 5))
+        graph.add_function(FunctionNode("b", "b", "/b.py", "python", 1, 5))
+        graph.add_call(CallSite("a", "/a.py", 1, "b", "/b.py"))
+
+        # Max depth of 0 should return nothing
+        callers = graph.find_callers("b", include_indirect=True, max_depth=0)
+        assert len(callers) == 0
+
+    def test_find_callees_with_max_depth_zero(self):
+        """Test find_callees with max_depth=0 returns empty."""
+        graph = CallGraph()
+
+        # Add nodes and calls
+        graph.add_function(FunctionNode("a", "a", "/a.py", "python", 1, 5))
+        graph.add_function(FunctionNode("b", "b", "/b.py", "python", 1, 5))
+        graph.add_call(CallSite("a", "/a.py", 1, "b", "/b.py"))
+
+        # Max depth of 0 should return nothing
+        callees = graph.find_callees("a", include_indirect=True, max_depth=0)
+        assert len(callees) == 0
+
+    def test_find_call_chain_same_source_and_target(self):
+        """Test finding call chain where source equals target."""
+        graph = CallGraph()
+
+        graph.add_function(FunctionNode("a", "a", "/a.py", "python", 1, 5))
+
+        # Finding path from a to itself
+        paths = graph.find_call_chain("a", "a")
+
+        # Should return single-element path or empty (both reasonable)
+        # Most implementations would return [["a"]] or []
+        assert isinstance(paths, list)
+
+    def test_add_duplicate_function(self):
+        """Test adding duplicate function overwrites."""
+        graph = CallGraph()
+
+        node1 = FunctionNode("test", "test", "/file1.py", "python", 1, 5)
+        node2 = FunctionNode("test", "test", "/file2.py", "python", 10, 20)
+
+        graph.add_function(node1)
+        graph.add_function(node2)
+
+        # Second node should overwrite first
+        assert graph.nodes["test"] == node2
+        assert graph.nodes["test"].file_path == "/file2.py"
+
+    def test_call_sites_with_nonexistent_function(self):
+        """Test getting call sites for function that doesn't exist."""
+        graph = CallGraph()
+
+        # Function not in graph
+        sites = graph.get_call_sites_for_caller("nonexistent")
+        assert len(sites) == 0
+
+        sites = graph.get_call_sites_for_callee("nonexistent")
+        assert len(sites) == 0

@@ -409,34 +409,60 @@ class TestPrintMethods:
     def test_print_section_with_rich(self):
         """Test print_section with rich available."""
         cmd = HealthCommand()
-        # Should not raise
-        cmd.print_section("Test Section")
+        with patch.object(cmd, 'console') as mock_console:
+            cmd.print_section("Test Section")
+            # Verify console.print was called to display section
+            assert mock_console.print.called
+            # Verify section title was included in output
+            call_args = str(mock_console.print.call_args)
+            assert "Test Section" in call_args
 
     def test_print_section_without_rich(self):
         """Test print_section without rich."""
         with patch('src.cli.health_command.RICH_AVAILABLE', False):
             cmd = HealthCommand()
             cmd.console = None
-            # Should not raise
-            cmd.print_section("Test Section")
+            # Mock print to verify fallback behavior
+            with patch('builtins.print') as mock_print:
+                cmd.print_section("Test Section")
+                # Verify print fallback was used
+                assert mock_print.called
+                # Verify section title was printed
+                call_args = str(mock_print.call_args_list)
+                assert "Test Section" in call_args
 
     def test_print_check_success(self):
         """Test print_check with success."""
         cmd = HealthCommand()
-        # Should not raise
-        cmd.print_check("Test", True, "Success message")
+        with patch.object(cmd, 'console') as mock_console:
+            cmd.print_check("Test", True, "Success message")
+            # Verify console.print was called
+            assert mock_console.print.called
+            # Verify success indicator and message were displayed
+            call_args = str(mock_console.print.call_args)
+            assert "Success message" in call_args
 
     def test_print_check_failure(self):
         """Test print_check with failure."""
         cmd = HealthCommand()
-        # Should not raise
-        cmd.print_check("Test", False, "Failure message")
+        with patch.object(cmd, 'console') as mock_console:
+            cmd.print_check("Test", False, "Failure message")
+            # Verify console.print was called
+            assert mock_console.print.called
+            # Verify failure indicator and message were displayed
+            call_args = str(mock_console.print.call_args)
+            assert "Failure message" in call_args
 
     def test_print_warning(self):
         """Test print_warning."""
         cmd = HealthCommand()
-        # Should not raise
-        cmd.print_warning("Test", "Warning message")
+        with patch.object(cmd, 'console') as mock_console:
+            cmd.print_warning("Test", "Warning message")
+            # Verify console.print was called
+            assert mock_console.print.called
+            # Verify warning message was displayed
+            call_args = str(mock_console.print.call_args)
+            assert "Warning message" in call_args
 
     def test_print_summary_all_healthy(self):
         """Test print_summary when all healthy."""
@@ -444,8 +470,14 @@ class TestPrintMethods:
         cmd.errors = []
         cmd.warnings = []
         cmd.recommendations = []
-        # Should not raise
-        cmd.print_summary()
+        with patch.object(cmd, 'console') as mock_console:
+            cmd.print_summary()
+            # Verify console.print was called to display summary
+            assert mock_console.print.called
+            # Verify healthy status message was shown
+            call_args = str(mock_console.print.call_args_list)
+            # Should contain success/healthy indicator
+            assert any(keyword in call_args.lower() for keyword in ['healthy', 'success', 'ready', 'ok'])
 
     def test_print_summary_with_errors(self):
         """Test print_summary with errors."""
@@ -453,8 +485,15 @@ class TestPrintMethods:
         cmd.errors = ["Error 1", "Error 2"]
         cmd.warnings = ["Warning 1"]
         cmd.recommendations = ["Rec 1"]
-        # Should not raise
-        cmd.print_summary()
+        with patch.object(cmd, 'console') as mock_console:
+            cmd.print_summary()
+            # Verify console.print was called to display summary
+            assert mock_console.print.called
+            # Verify errors and warnings were displayed
+            call_args = str(mock_console.print.call_args_list)
+            assert "Error 1" in call_args or "2" in call_args  # Error count or content
+            # Should indicate problems found
+            assert any(keyword in call_args.lower() for keyword in ['error', 'warning', 'issue', 'problem'])
 
 
 class TestRunCommand:

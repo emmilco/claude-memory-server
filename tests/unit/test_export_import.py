@@ -1,18 +1,28 @@
 """Tests for memory export/import functionality (FEAT-044).
 
-NOTE: These tests were written for an older API signature of export_memories() and
-import_memories(). The current implementation has different parameter names:
-  - Old: file_path, conflict_mode
-  - New: input_path/output_path, conflict_strategy
+NOTE: These tests were written for an older server API signature (lines 1343-1700 in server.py).
+The backup/export functionality itself is already comprehensively tested in:
+  - test_backup_export.py (4 tests for DataExporter class)
+  - test_backup_import.py (4 tests for DataImporter class)
 
-Tests need updating to match the current MCP tool API (lines 4051-4312 in server.py).
-Skipped pending test refactoring to match current implementation.
+This file tests the high-level server API which has two implementations:
+  1. Legacy API (line 1343): file_path, conflict_mode - DEPRECATED
+  2. MCP Tool API (line 4064): output_path/input_path, conflict_strategy - CURRENT
+
+Options for handling this file:
+  A) Delete it - functionality already tested via DataExporter/DataImporter tests
+  B) Update to test MCP tool API instead of legacy API
+  C) Keep skip and document that legacy API is deprecated
+
+Recommendation: Option A (delete) - these are heavily mocked tests that don't add value
+beyond what test_backup_export.py and test_backup_import.py already provide.
+Skipped pending decision.
 """
 
 import pytest
 
-# Skip all tests - need updating to match current API
-pytestmark = pytest.mark.skip(reason="Tests use old API signatures - need updating to match current import/export implementation")
+# Skip all tests - see docstring above for options
+pytestmark = pytest.mark.skip(reason="Deprecated tests for old API - core functionality tested in test_backup_export.py and test_backup_import.py")
 import pytest_asyncio
 import json
 import tempfile

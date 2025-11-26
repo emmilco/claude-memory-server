@@ -181,27 +181,27 @@ class TestNestingDepth:
     """Tests for nesting depth calculation."""
 
     def test_no_nesting(self, analyzer):
-        """No nesting = depth 0."""
+        """No nesting (function body only) = depth 1."""
         code = """
 def simple():
     x = 1
     return x
 """
         depth = analyzer._calculate_nesting_depth(code, "python")
-        assert depth >= 0
+        assert depth == 1  # Function body itself is depth 1
 
     def test_single_nesting(self, analyzer):
-        """Single level of nesting."""
+        """Single level of nesting (if inside function)."""
         code = """
 def single_nest():
     if True:
         return 1
 """
         depth = analyzer._calculate_nesting_depth(code, "python")
-        assert depth >= 1
+        assert depth == 2  # Function body + if statement
 
     def test_double_nesting(self, analyzer):
-        """Two levels of nesting."""
+        """Two levels of nesting (if + for inside function)."""
         code = """
 def double_nest():
     if True:
@@ -209,10 +209,10 @@ def double_nest():
             print(i)
 """
         depth = analyzer._calculate_nesting_depth(code, "python")
-        assert depth >= 2
+        assert depth == 3  # Function body + if + for
 
     def test_deep_nesting(self, analyzer):
-        """Deep nesting (4+ levels)."""
+        """Deep nesting (4+ levels inside function)."""
         code = """
 def deep_nest():
     if True:
@@ -222,7 +222,7 @@ def deep_nest():
                     print(i)
 """
         depth = analyzer._calculate_nesting_depth(code, "python")
-        assert depth >= 3
+        assert depth == 5  # Function body + if + for + while + if
 
 
 class TestParameterCount:

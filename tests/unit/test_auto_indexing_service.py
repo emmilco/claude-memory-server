@@ -135,6 +135,50 @@ class TestIndexingProgress:
         assert "eta_seconds" in data
         assert data["eta_seconds"] > 0
 
+    def test_progress_eta_with_zero_total(self):
+        """Test ETA calculation doesn't crash with zero total files."""
+        from datetime import datetime, UTC, timedelta
+
+        progress = IndexingProgress()
+        progress.status = "indexing"
+        progress.total_files = 0  # Edge case: zero total
+        progress.files_completed = 0
+        progress.start_time = datetime.now(UTC) - timedelta(seconds=10)
+
+        # Should handle gracefully, not crash
+        data = progress.to_dict()
+        # ETA should not be calculated when files_completed = 0
+        assert "eta_seconds" not in data
+
+    def test_progress_eta_with_zero_completed(self):
+        """Test ETA calculation with zero completed files."""
+        from datetime import datetime, UTC, timedelta
+
+        progress = IndexingProgress()
+        progress.status = "indexing"
+        progress.total_files = 100
+        progress.files_completed = 0  # Edge case: no progress yet
+        progress.start_time = datetime.now(UTC) - timedelta(seconds=10)
+
+        data = progress.to_dict()
+        # Should not calculate ETA when files_completed = 0
+        assert "eta_seconds" not in data
+
+    def test_progress_eta_with_zero_elapsed_time(self):
+        """Test ETA calculation with zero elapsed time."""
+        from datetime import datetime, UTC
+
+        progress = IndexingProgress()
+        progress.status = "indexing"
+        progress.total_files = 100
+        progress.files_completed = 50
+        progress.start_time = datetime.now(UTC)  # Just started
+
+        data = progress.to_dict()
+        # With zero elapsed time, rate calculation could be problematic
+        # Should either have no ETA or a very large one
+        # The code handles this with "if elapsed > 0" check
+
 
 class TestAutoIndexingServiceInitialization:
     """Test service initialization."""

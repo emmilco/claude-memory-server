@@ -89,8 +89,10 @@ class TestMetricsCollector:
 
         assert isinstance(metrics, HealthMetrics)
         assert isinstance(metrics.timestamp, datetime)
-        assert metrics.total_memories >= 0
-        assert metrics.avg_search_latency_ms >= 0
+        # mock_store.count returns 1000
+        assert metrics.total_memories == 1000
+        # Latency should be 0 or very small for mock store
+        assert metrics.avg_search_latency_ms == pytest.approx(0, abs=0.1)
 
     def test_log_query(self, collector):
         """Test query logging."""

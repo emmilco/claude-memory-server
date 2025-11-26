@@ -45,9 +45,9 @@ class TestQdrantSetupCoverage:
             mock_client = MagicMock()
             setup.client = mock_client
 
-            # Mock get_collections response
+            # Mock get_collections response - use actual collection name
             mock_collection = MagicMock()
-            mock_collection.name = "test_collection"
+            mock_collection.name = setup.collection_name  # Match actual collection name
             mock_collections = MagicMock()
             mock_collections.collections = [mock_collection]
             mock_client.get_collections.return_value = mock_collections
@@ -63,6 +63,11 @@ class TestQdrantSetupCoverage:
             result = setup.collection_exists()
 
             mock_connect.assert_called_once()
+            # Behavior: client should now be set
+            assert setup.client is not None
+            assert setup.client == mock_client
+            # Verify return value
+            assert result is True
 
     def test_collection_exists_error(self):
         """Test collection_exists error handling (lines 81-83)."""
@@ -98,6 +103,11 @@ class TestQdrantSetupCoverage:
                 setup.create_collection()
 
                 mock_connect.assert_called_once()
+                # Behavior: client should now be set
+                assert setup.client is not None
+                assert setup.client == mock_client
+                # Verify create_collection was called on client
+                mock_client.create_collection.assert_called_once()
 
     def test_create_collection_recreate(self):
         """Test create_collection with recreate=True (lines 101-102)."""
@@ -157,6 +167,11 @@ class TestQdrantSetupCoverage:
             setup.create_payload_indices()
 
             mock_connect.assert_called_once()
+            # Behavior: client should now be set
+            assert setup.client is not None
+            assert setup.client == mock_client
+            # Verify payload indices were created
+            assert mock_client.create_payload_index.call_count > 0
 
     def test_create_payload_indices_index_error(self):
         """Test create_payload_indices handles index creation errors (lines 174-176)."""
@@ -203,6 +218,9 @@ class TestQdrantSetupCoverage:
                 setup.ensure_collection_exists()
 
                 mock_connect.assert_called_once()
+                # Behavior: client should now be set
+                assert setup.client is not None
+                assert setup.client == mock_client
 
     def test_get_collection_info_auto_connect(self):
         """Test get_collection_info auto-connects if client is None (line 203)."""
@@ -230,7 +248,14 @@ class TestQdrantSetupCoverage:
             result = setup.get_collection_info()
 
             mock_connect.assert_called_once()
+            # Behavior: client should now be set
+            assert setup.client is not None
+            assert setup.client == mock_client
+            # Verify return value structure and content
             assert result["vectors_count"] == 100
+            assert result["points_count"] == 100
+            assert result["status"] == "green"
+            assert result["optimizer_status"] == "ok"
 
     def test_get_collection_info_error(self):
         """Test get_collection_info error handling (lines 215-217)."""
@@ -264,7 +289,13 @@ class TestQdrantSetupCoverage:
             result = setup.health_check()
 
             mock_connect.assert_called_once()
+            # Behavior: client should now be set
+            assert setup.client is not None
+            assert setup.client == mock_client
+            # Verify health check passed
             assert result is True
+            # Verify get_collections was called
+            mock_client.get_collections.assert_called_once()
 
     def test_health_check_error(self):
         """Test health_check error handling (lines 233-235)."""

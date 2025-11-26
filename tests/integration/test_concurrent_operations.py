@@ -426,21 +426,3 @@ class TestConcurrentStressTest:
         assert len(exceptions) == 0, f"Got {len(exceptions)} exceptions"
 
 
-def test_concurrent_operations_coverage():
-    """Report on concurrent operations test coverage."""
-    print("\n" + "=" * 70)
-    print("CONCURRENT OPERATIONS TEST COVERAGE")
-    print("=" * 70)
-    print("✓ Concurrent store operations")
-    print("✓ Concurrent batch store operations")
-    print("✓ Concurrent retrieve operations")
-    print("✓ Concurrent reads during writes")
-    print("✓ Concurrent embedding generation")
-    print("✓ Concurrent cache access (reads and writes)")
-    print("✓ Concurrent delete operations")
-    print("✓ Mixed operations (reads, writes, deletes)")
-    print("✓ Race conditions (same content, read while updating)")
-    print("✓ High concurrency stress tests (50-100 concurrent ops)")
-    print("=" * 70 + "\n")
-
-    assert True

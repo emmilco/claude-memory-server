@@ -40,7 +40,6 @@ async def store(config, qdrant_client):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Flaky test - race condition in parallel execution (passes individually)")
 async def test_immediate_retrieval_after_storage(store):
     """
     Test that a memory is immediately retrievable after storage.
@@ -48,23 +47,28 @@ async def test_immediate_retrieval_after_storage(store):
     This is the core regression test for BUG-018. Previously, the
     RetrievalGate would block queries, causing this test to fail.
     """
-    # Create a unique test embedding
+    # Create a unique test embedding to avoid collisions with parallel tests
+    import uuid
+    test_unique = str(uuid.uuid4())[:8]
     test_embedding = [0.5] * 384
 
     # Store a memory
     memory_id = await store.store(
-        content="Test memory for immediate retrieval - Python asyncio patterns",
+        content=f"Test memory for immediate retrieval - Python asyncio patterns {test_unique}",
         embedding=test_embedding,
         metadata={
             "category": MemoryCategory.FACT.value,
             "context_level": ContextLevel.PROJECT_CONTEXT.value,
             "scope": MemoryScope.GLOBAL.value,
             "importance": 0.8,
-            "tags": ["python", "asyncio", "test"],
+            "tags": ["python", "asyncio", "test", test_unique],
         }
     )
 
     assert memory_id is not None
+
+    # Small delay to ensure Qdrant indexing completes in parallel environment
+    await asyncio.sleep(0.05)
 
     # Immediately retrieve with very similar embedding
     query_embedding = [0.51] * 384  # Very close to original
@@ -128,38 +132,44 @@ async def test_multiple_immediate_retrievals(store):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Flaky test - race condition in parallel execution (passes individually)")
 async def test_retrieval_with_filters_after_storage(store):
     """
     Test that filtered retrieval works immediately after storage.
 
     This ensures the filtering logic doesn't interfere with immediate retrieval.
     """
+    # Use unique tags to avoid collisions with parallel tests
+    import uuid
+    test_unique = str(uuid.uuid4())[:8]
+
     # Store memories with different categories
     pref_id = await store.store(
-        content="User prefers FastAPI for Python web development",
+        content=f"User prefers FastAPI for Python web development {test_unique}",
         embedding=[0.1] * 384,
         metadata={
             "category": MemoryCategory.PREFERENCE.value,
             "context_level": ContextLevel.USER_PREFERENCE.value,
             "scope": MemoryScope.GLOBAL.value,
             "importance": 0.9,
-            "tags": ["python", "fastapi"],
+            "tags": ["python", "fastapi", test_unique],
         }
     )
 
     fact_id = await store.store(
-        content="Django is a Python web framework",
+        content=f"Django is a Python web framework {test_unique}",
         embedding=[0.11] * 384,
         metadata={
             "category": MemoryCategory.FACT.value,
             "context_level": ContextLevel.PROJECT_CONTEXT.value,
             "scope": MemoryScope.PROJECT.value,
-            "project_name": "test-project",
+            "project_name": f"test-project-{test_unique}",
             "importance": 0.7,
-            "tags": ["python", "django"],
+            "tags": ["python", "django", test_unique],
         }
     )
+
+    # Small delay to ensure Qdrant indexing completes in parallel environment
+    await asyncio.sleep(0.05)
 
     # Retrieve with filter for preferences only
     from src.core.models import SearchFilters

@@ -67,9 +67,12 @@ class TestClass:
             }
 
             # Run command
-            await index_command.run(args)
+            result = await index_command.run(args)
 
-            # Verify
+            # Verify return value (CLI command doesn't return a value, returns None)
+            assert result is None  # CLI commands print to console, don't return data
+
+            # Verify mock calls
             mock_indexer.initialize.assert_called_once()
             mock_indexer.index_file.assert_called_once_with(temp_python_file)
             mock_indexer.close.assert_called_once()
@@ -96,7 +99,10 @@ class TestClass:
             }
 
             # Run command
-            await index_command.run(args)
+            result = await index_command.run(args)
+
+            # Verify return value (CLI command doesn't return a value, returns None)
+            assert result is None  # CLI commands print to console, don't return data
 
             # Verify - with progress callback
             mock_indexer.index_directory.assert_called_once_with(
@@ -128,7 +134,10 @@ class TestClass:
             }
 
             # Run command
-            await index_command.run(args)
+            result = await index_command.run(args)
+
+            # Verify return value (CLI command doesn't return a value, returns None)
+            assert result is None  # CLI commands print to console, don't return data
 
             # Verify recursive=False was passed
             mock_indexer.index_directory.assert_called_once_with(
@@ -160,7 +169,10 @@ class TestClass:
             }
 
             # Run command
-            await index_command.run(args)
+            result = await index_command.run(args)
+
+            # Verify return value (CLI command doesn't return a value, returns None)
+            assert result is None  # CLI commands print to console, don't return data
 
             # Verify project name was auto-detected (should be directory name)
             expected_project_name = temp_directory.name
@@ -187,7 +199,10 @@ class TestClass:
             }
 
             # Run command
-            await index_command.run(args)
+            result = await index_command.run(args)
+
+            # Verify return value (CLI command doesn't return a value, returns None)
+            assert result is None  # CLI commands print to console, don't return data
 
             # Verify project name was auto-detected (should be parent directory name)
             expected_project_name = temp_python_file.parent.name
@@ -203,8 +218,12 @@ class TestClass:
             recursive=True
         )
 
-        # Should log error and return early without raising exception
-        await index_command.run(args)
+        # IndexCommand.run() logs the error and returns early without raising
+        # The Path.exists() check happens before indexer initialization
+        result = await index_command.run(args)
+
+        # Verify return value (returns None for error case as well)
+        assert result is None
         # If we get here without exception, test passes
 
     @pytest.mark.asyncio
@@ -229,7 +248,10 @@ class TestClass:
             }
 
             # Run command
-            await index_command.run(args)
+            result = await index_command.run(args)
+
+            # Verify return value (CLI command doesn't return a value, returns None)
+            assert result is None  # CLI commands print to console, don't return data
 
             # Should complete successfully and display failed files
             mock_indexer.index_directory.assert_called_once()
@@ -278,7 +300,10 @@ class TestClass:
             }
 
             # Run command
-            await index_command.run(args)
+            result = await index_command.run(args)
+
+            # Verify return value (CLI command doesn't return a value, returns None)
+            assert result is None  # CLI commands print to console, don't return data
 
             # If indexed_files > 0, throughput should be calculated
             # This is mainly to ensure code path is covered
@@ -318,7 +343,10 @@ class TestWatchCommand:
             mock_service.run_until_stopped.side_effect = KeyboardInterrupt()
 
             # Run command (will stop via KeyboardInterrupt)
-            await watch_command.run(args)
+            result = await watch_command.run(args)
+
+            # Verify return value (CLI command doesn't return a value, returns None)
+            assert result is None  # CLI commands print to console, don't return data
 
             # Verify initialization
             mock_service.initialize.assert_called_once()
@@ -345,7 +373,10 @@ class TestWatchCommand:
             mock_service.run_until_stopped.side_effect = KeyboardInterrupt()
 
             # Run command
-            await watch_command.run(args)
+            result = await watch_command.run(args)
+
+            # Verify return value (CLI command doesn't return a value, returns None)
+            assert result is None  # CLI commands print to console, don't return data
 
             # Verify project name was auto-detected (should be directory name)
             expected_project_name = temp_directory.name
@@ -363,8 +394,12 @@ class TestWatchCommand:
             project_name="test-project"
         )
 
-        # Should log error and return early without raising exception
-        await watch_command.run(args)
+        # WatchCommand.run() logs the error and returns early without raising
+        # The Path.exists() check happens before service initialization
+        result = await watch_command.run(args)
+
+        # Verify return value (returns None for error case as well)
+        assert result is None
         # If we get here without exception, test passes
 
     @pytest.mark.asyncio
@@ -379,7 +414,10 @@ class TestWatchCommand:
         )
 
         # Should log error and return (path must be directory)
-        await watch_command.run(args)
+        result = await watch_command.run(args)
+
+        # Verify return value (returns None for error case as well)
+        assert result is None
         # If we get here without exception, test passes
 
     @pytest.mark.asyncio
@@ -402,7 +440,10 @@ class TestWatchCommand:
             mock_service.run_until_stopped.side_effect = KeyboardInterrupt()
 
             # Run command
-            await watch_command.run(args)
+            result = await watch_command.run(args)
+
+            # Verify return value (CLI command doesn't return a value, returns None)
+            assert result is None  # CLI commands print to console, don't return data
 
             # Should handle gracefully and close service
             mock_service.close.assert_called_once()
@@ -451,7 +492,10 @@ class TestWatchCommand:
             mock_service.run_until_stopped.side_effect = KeyboardInterrupt()
 
             # Run command
-            await watch_command.run(args)
+            result = await watch_command.run(args)
+
+            # Verify return value (CLI command doesn't return a value, returns None)
+            assert result is None  # CLI commands print to console, don't return data
 
             # Verify custom project name was used
             mock_service_class.assert_called_once_with(

@@ -306,10 +306,15 @@ class NewClass:
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Flaky under parallel execution - needs Qdrant connection pooling")
 async def test_delete_file_index(temp_dir, config):
-    """Test deleting index for a file."""
-    sample_file = temp_dir / "deleteme.py"
+    """Test deleting index for a file.
+
+    Uses unique project name to avoid conflicts during parallel execution.
+    """
+    import uuid
+    test_unique = str(uuid.uuid4())[:8]
+
+    sample_file = temp_dir / f"deleteme_{test_unique}.py"
     sample_file.write_text(SAMPLE_PYTHON_CODE)
 
     store = QdrantMemoryStore(config)
@@ -319,7 +324,7 @@ async def test_delete_file_index(temp_dir, config):
         store=store,
         embedding_generator=embedding_gen,
         config=config,
-        project_name="test_delete",
+        project_name=f"test_delete_{test_unique}",
     )
 
     try:
@@ -333,6 +338,9 @@ async def test_delete_file_index(temp_dir, config):
         # Delete the index
         deleted_count = await indexer.delete_file_index(sample_file)
         assert deleted_count == units_indexed
+
+        # Small delay to ensure deletion propagates in Qdrant
+        await asyncio.sleep(0.05)
 
         # Verify units are gone
         query_embedding = await embedding_gen.generate("fibonacci")

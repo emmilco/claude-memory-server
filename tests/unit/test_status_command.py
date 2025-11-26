@@ -356,16 +356,25 @@ class TestPrintMethods:
     def test_print_header_with_rich(self):
         """Test print header with rich."""
         cmd = StatusCommand()
-        # Should not raise
-        cmd.print_header()
+        with patch.object(cmd.console, 'print') as mock_print:
+            cmd.print_header()
+            # Verify console.print was called (at least twice: blank line + panel)
+            assert mock_print.call_count >= 2
+            # The method should create a Panel with header text
+            # We just verify it was called, as Panel objects are complex to inspect
 
     def test_print_header_without_rich(self):
         """Test print header without rich."""
         with patch('src.cli.status_command.RICH_AVAILABLE', False):
             cmd = StatusCommand()
             cmd.console = None
-            # Should not raise
-            cmd.print_header()
+            with patch('builtins.print') as mock_print:
+                cmd.print_header()
+                # Verify print was called
+                assert mock_print.called
+                # Verify header contains expected text
+                call_args = str(mock_print.call_args_list)
+                assert any(keyword in call_args.lower() for keyword in ['status', 'memory', 'server'])
 
     def test_print_storage_stats_sqlite(self):
         """Test printing SQLite storage stats."""
@@ -376,8 +385,14 @@ class TestPrintMethods:
             "path": "/tmp/test.db",
             "size": 1024 * 1024
         }
-        # Should not raise
-        cmd.print_storage_stats(stats)
+        with patch.object(cmd.console, 'print') as mock_print:
+            cmd.print_storage_stats(stats)
+            # Verify console.print was called
+            assert mock_print.called
+            # Verify output contains storage info
+            call_args = str(mock_print.call_args_list)
+            assert 'sqlite' in call_args.lower()
+            assert 'test.db' in call_args or 'path' in call_args.lower()
 
     def test_print_storage_stats_qdrant(self):
         """Test printing Qdrant storage stats."""
@@ -388,8 +403,14 @@ class TestPrintMethods:
             "url": "http://localhost:6333",
             "collection": "test"
         }
-        # Should not raise
-        cmd.print_storage_stats(stats)
+        with patch.object(cmd.console, 'print') as mock_print:
+            cmd.print_storage_stats(stats)
+            # Verify console.print was called
+            assert mock_print.called
+            # Verify output contains Qdrant info
+            call_args = str(mock_print.call_args_list)
+            assert 'qdrant' in call_args.lower()
+            assert any(keyword in call_args for keyword in ['localhost', 'test', '6333'])
 
     def test_print_storage_stats_disconnected(self):
         """Test printing disconnected storage stats."""
@@ -399,8 +420,13 @@ class TestPrintMethods:
             "connected": False,
             "error": "Connection failed"
         }
-        # Should not raise
-        cmd.print_storage_stats(stats)
+        with patch.object(cmd.console, 'print') as mock_print:
+            cmd.print_storage_stats(stats)
+            # Verify console.print was called
+            assert mock_print.called
+            # Verify error message is shown
+            call_args = str(mock_print.call_args_list)
+            assert any(keyword in call_args.lower() for keyword in ['error', 'failed', 'disconnected'])
 
     def test_print_cache_stats_exists(self):
         """Test printing cache stats when cache exists."""
@@ -412,8 +438,13 @@ class TestPrintMethods:
             "total_entries": 1000,
             "hit_rate": 0.85
         }
-        # Should not raise
-        cmd.print_cache_stats(stats)
+        with patch.object(cmd.console, 'print') as mock_print:
+            cmd.print_cache_stats(stats)
+            # Verify console.print was called
+            assert mock_print.called
+            # Verify cache info is displayed
+            call_args = str(mock_print.call_args_list)
+            assert any(keyword in call_args.lower() for keyword in ['cache', 'hit', 'entries'])
 
     def test_print_cache_stats_not_exists(self):
         """Test printing cache stats when cache doesn't exist."""
@@ -421,8 +452,13 @@ class TestPrintMethods:
         stats = {
             "exists": False
         }
-        # Should not raise
-        cmd.print_cache_stats(stats)
+        with patch.object(cmd.console, 'print') as mock_print:
+            cmd.print_cache_stats(stats)
+            # Verify console.print was called
+            assert mock_print.called
+            # Verify message indicates cache doesn't exist
+            call_args = str(mock_print.call_args_list)
+            assert any(keyword in call_args.lower() for keyword in ['not', 'no cache', 'disabled'])
 
     def test_print_parser_info_rust(self):
         """Test printing Rust parser info."""
@@ -432,8 +468,14 @@ class TestPrintMethods:
             "rust_available": True,
             "description": "Optimal performance"
         }
-        # Should not raise
-        cmd.print_parser_info(info)
+        with patch.object(cmd.console, 'print') as mock_print:
+            cmd.print_parser_info(info)
+            # Verify console.print was called
+            assert mock_print.called
+            # Verify Rust parser info is displayed
+            call_args = str(mock_print.call_args_list)
+            assert 'rust' in call_args.lower()
+            assert any(keyword in call_args.lower() for keyword in ['optimal', 'performance'])
 
     def test_print_parser_info_python(self):
         """Test printing Python parser info."""
@@ -443,8 +485,14 @@ class TestPrintMethods:
             "rust_available": False,
             "description": "Fallback mode"
         }
-        # Should not raise
-        cmd.print_parser_info(info)
+        with patch.object(cmd.console, 'print') as mock_print:
+            cmd.print_parser_info(info)
+            # Verify console.print was called
+            assert mock_print.called
+            # Verify Python parser info is displayed
+            call_args = str(mock_print.call_args_list)
+            assert 'python' in call_args.lower()
+            assert any(keyword in call_args.lower() for keyword in ['fallback', 'mode'])
 
     def test_print_embedding_info(self):
         """Test printing embedding info."""
@@ -454,35 +502,54 @@ class TestPrintMethods:
             "dimensions": 384,
             "batch_size": 32
         }
-        # Should not raise
-        cmd.print_embedding_info(info)
+        with patch.object(cmd.console, 'print') as mock_print:
+            cmd.print_embedding_info(info)
+            # Verify console.print was called
+            assert mock_print.called
+            # Verify embedding model info is displayed
+            call_args = str(mock_print.call_args_list)
+            assert any(keyword in call_args for keyword in ['MiniLM', '384', '32'])
 
     def test_print_projects_table_empty(self):
         """Test printing projects table with no projects."""
         cmd = StatusCommand()
-        # Should not raise
-        cmd.print_projects_table([])
+        with patch.object(cmd.console, 'print') as mock_print:
+            cmd.print_projects_table([])
+            # Verify console.print was called
+            assert mock_print.called
+            # Verify message indicates no projects
+            call_args = str(mock_print.call_args_list)
+            assert any(keyword in call_args.lower() for keyword in ['no', 'empty', 'project'])
 
     def test_print_projects_table_with_projects(self):
         """Test printing projects table with projects."""
         cmd = StatusCommand()
         projects = [
             {
-                "name": "project1",
-                "files": 100,
-                "functions": 500,
-                "classes": 50,
+                "project_name": "project1",
+                "total_memories": 1000,
+                "num_files": 100,
+                "num_functions": 500,
+                "num_classes": 50,
                 "last_indexed": datetime.now(UTC) - timedelta(hours=2)
             }
         ]
-        # Should not raise
-        cmd.print_projects_table(projects)
+        with patch.object(cmd.console, 'print') as mock_print:
+            cmd.print_projects_table(projects)
+            # Verify console.print was called (header + table + blank line)
+            assert mock_print.call_count >= 2
+            # The method creates a Table object - we verify it was called properly
 
     def test_print_quick_commands(self):
         """Test printing quick commands."""
         cmd = StatusCommand()
-        # Should not raise
-        cmd.print_quick_commands()
+        with patch.object(cmd.console, 'print') as mock_print:
+            cmd.print_quick_commands()
+            # Verify console.print was called
+            assert mock_print.called
+            # Verify commands are displayed
+            call_args = str(mock_print.call_args_list)
+            assert any(keyword in call_args.lower() for keyword in ['command', 'index', 'search'])
 
 
 class TestRunCommand:
@@ -592,45 +659,60 @@ class TestFileWatcherInfo:
     def test_print_file_watcher_info_enabled_with_rich(self):
         """Test printing file watcher info when enabled with rich."""
         cmd = StatusCommand()
-        
+
         info = {
             "enabled": True,
             "debounce_ms": 1000,
             "supported_extensions": [".py", ".js", ".ts"],
             "description": "Auto-reindex files on change"
         }
-        
-        # Should not raise an error
-        cmd.print_file_watcher_info(info)
+
+        with patch.object(cmd.console, 'print') as mock_print:
+            cmd.print_file_watcher_info(info)
+            # Verify console.print was called
+            assert mock_print.called
+            # Verify file watcher info is displayed
+            call_args = str(mock_print.call_args_list)
+            assert any(keyword in call_args.lower() for keyword in ['watcher', 'enabled', 'auto'])
 
     def test_print_file_watcher_info_disabled_with_rich(self):
         """Test printing file watcher info when disabled with rich."""
         cmd = StatusCommand()
-        
+
         info = {
             "enabled": False,
             "debounce_ms": 1000,
             "supported_extensions": [".py"],
             "description": "Auto-reindex files on change"
         }
-        
-        # Should not raise an error
-        cmd.print_file_watcher_info(info)
+
+        with patch.object(cmd.console, 'print') as mock_print:
+            cmd.print_file_watcher_info(info)
+            # Verify console.print was called
+            assert mock_print.called
+            # Verify disabled state is shown
+            call_args = str(mock_print.call_args_list)
+            assert any(keyword in call_args.lower() for keyword in ['watcher', 'disabled', 'off'])
 
     def test_print_file_watcher_info_without_rich(self):
         """Test printing file watcher info without rich."""
         with patch('src.cli.status_command.RICH_AVAILABLE', False):
             cmd = StatusCommand()
-            
+
             info = {
                 "enabled": True,
                 "debounce_ms": 1000,
                 "supported_extensions": [".py", ".js"],
                 "description": "Auto-reindex files on change"
             }
-            
-            # Should not raise an error
-            cmd.print_file_watcher_info(info)
+
+            with patch('builtins.print') as mock_print:
+                cmd.print_file_watcher_info(info)
+                # Verify print was called
+                assert mock_print.called
+                # Verify file watcher info is displayed
+                call_args = str(mock_print.call_args_list)
+                assert any(keyword in call_args.lower() for keyword in ['watcher', 'enabled', 'auto'])
 
     @pytest.mark.asyncio
     async def test_run_includes_file_watcher_info(self):

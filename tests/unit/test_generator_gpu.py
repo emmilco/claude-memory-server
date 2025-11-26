@@ -83,6 +83,11 @@ class TestGeneratorGpuSupport:
             # Verify GPU memory fraction was set
             mock_torch.cuda.set_per_process_memory_fraction.assert_called_once_with(0.7, 0)
 
+            # BEHAVIORAL ASSERTIONS: Verify generator state reflects GPU configuration
+            assert generator.device == "cuda", "Generator device should be set to cuda"
+            assert generator.model is not None, "Model should be initialized"
+            assert generator.model == mock_model, "Model should be the loaded SentenceTransformer"
+
     def test_model_load_with_cpu(self):
         """Test model loading with CPU device."""
         config = ServerConfig(enable_gpu=False, force_cpu=True)
@@ -99,6 +104,11 @@ class TestGeneratorGpuSupport:
             # Verify model was moved to CPU
             mock_model.to.assert_called_with("cpu")
 
+            # BEHAVIORAL ASSERTIONS: Verify generator state reflects CPU configuration
+            assert generator.device == "cpu", "Generator device should be set to cpu"
+            assert generator.model is not None, "Model should be initialized"
+            assert generator.model == mock_model, "Model should be the loaded SentenceTransformer"
+
     def test_model_load_gpu_fallback_to_cpu(self):
         """Test fallback to CPU when GPU loading fails."""
         config = ServerConfig(enable_gpu=True, force_cpu=False)
@@ -114,11 +124,21 @@ class TestGeneratorGpuSupport:
              patch("src.embeddings.generator.SentenceTransformer", return_value=mock_model):
 
             generator = EmbeddingGenerator(config)
+
+            # Initially, device should be cuda (determined before model load)
+            assert generator.device == "cuda", "Device should initially be cuda before fallback"
+
             model = generator._load_model()
 
             # Verify it tried CUDA first, then fell back to CPU
             assert mock_model.to.call_count == 2
-            assert generator.device == "cpu"
+            mock_model.to.assert_any_call("cuda")
+            mock_model.to.assert_called_with("cpu")  # Final call should be CPU
+
+            # BEHAVIORAL ASSERTIONS: Verify generator state reflects CPU fallback
+            assert generator.device == "cpu", "Generator device should fall back to cpu after GPU error"
+            assert generator.model is not None, "Model should be initialized despite GPU error"
+            assert generator.model == mock_model, "Model should be the loaded SentenceTransformer"
 
     @pytest.mark.requires_gpu
     def test_benchmark_includes_device(self):

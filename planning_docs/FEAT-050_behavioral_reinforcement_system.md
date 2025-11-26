@@ -231,7 +231,7 @@ if [ -n "$SENTIMENT" ]; then
 
     # Create log entry
     LOG_ENTRY=$(cat <<EOF
-{"timestamp": "$TIMESTAMP", "session_id": "$SESSION_ID", "sentiment": "$SENTIMENT", "user_message": $ESCAPED_MESSAGE, "context": {"note": "Context populated by Claude during retro analysis"}}
+{"timestamp": "$TIMESTAMP", "session_id": "$SESSION_ID", "sentiment": "$SENTIMENT", "user_message": $ESCAPED_MESSAGE}
 EOF
 )
 
@@ -243,19 +243,13 @@ fi
 exit 0
 ```
 
-### Context Capture Challenge
+### Context via Activity Log
 
 **Problem:** The hook runs before Claude processes the message. It doesn't have access to "what Claude was doing" because Claude hasn't responded yet.
 
-**Solution Options:**
+**Solution:** Context is obtained from `.claude/logs/CLAUDE_LOGS.jsonl`, which records all tool usage (Edit, Write, Bash, Read, Grep, Glob), task delegations, and user prompts with timestamps. During `/retro` analysis, Claude correlates feedback timestamps with preceding activity log entries to understand what was happening when feedback was given.
 
-1. **Deferred context population:** Log entry without context at capture time. During retrospective analysis, Claude reads the conversation history to reconstruct what it was doing before the feedback message.
-
-2. **Previous response caching:** Maintain a rolling cache of last 5 Claude actions in a separate file (`.claude/feedback/recent_actions.jsonl`). The hook reads this cache when logging.
-
-3. **Conversation log mining:** The retrospective analyzer reads Claude's conversation logs (if available) to correlate feedback timestamps with preceding actions.
-
-**Recommended:** Option 1 (deferred context population). Keep the hook simple; do the heavy lifting during analysis when we have full context access.
+This keeps the feedback log minimal (just the signal) while maintaining full context availability.
 
 ### Output Format
 
@@ -266,10 +260,7 @@ Each feedback entry in `.claude/feedback/feedback_log.jsonl`:
   "timestamp": "2025-11-25T18:15:00Z",
   "session_id": "3e1cfa90",
   "sentiment": "positive",
-  "user_message": "Great, that's exactly what I needed!",
-  "context": {
-    "note": "Context populated during retro analysis"
-  }
+  "user_message": "Great, that's exactly what I needed!"
 }
 ```
 
@@ -298,29 +289,18 @@ interface FeedbackEntry {
 
   // The actual user message (for analysis)
   user_message: string;
-
-  // Contextual information (populated during analysis)
-  context: {
-    // Reconstructed during retro: what Claude was doing
-    last_actions?: string[];
-    // Topic/subject of the conversation
-    topic?: string;
-    // Any other relevant metadata
-    note?: string;
-  };
-
-  // Set to true after processed in a retro session
-  processed?: boolean;
 }
 ```
+
+Context is obtained separately from `.claude/logs/CLAUDE_LOGS.jsonl` during `/retro` analysis by correlating timestamps.
 
 ### Example Entries
 
 ```jsonl
-{"timestamp": "2025-11-25T10:15:00Z", "session_id": "abc123", "sentiment": "positive", "user_message": "Perfect, that's exactly what I needed", "context": {"note": "Context populated during retro analysis"}}
-{"timestamp": "2025-11-25T10:45:00Z", "session_id": "abc123", "sentiment": "negative", "user_message": "No, you completely missed the point. I wanted the function to return early.", "context": {"note": "Context populated during retro analysis"}}
-{"timestamp": "2025-11-25T14:20:00Z", "session_id": "def456", "sentiment": "corrective", "user_message": "Actually I meant the other config file, not this one", "context": {"note": "Context populated during retro analysis"}}
-{"timestamp": "2025-11-25T16:30:00Z", "session_id": "ghi789", "sentiment": "positive", "user_message": "Great job on the refactoring!", "context": {"note": "Context populated during retro analysis"}}
+{"timestamp": "2025-11-25T10:15:00Z", "session_id": "abc123", "sentiment": "positive", "user_message": "Perfect, that's exactly what I needed"}
+{"timestamp": "2025-11-25T10:45:00Z", "session_id": "abc123", "sentiment": "negative", "user_message": "No, you completely missed the point. I wanted the function to return early."}
+{"timestamp": "2025-11-25T14:20:00Z", "session_id": "def456", "sentiment": "corrective", "user_message": "Actually I meant the other config file, not this one"}
+{"timestamp": "2025-11-25T16:30:00Z", "session_id": "ghi789", "sentiment": "positive", "user_message": "Great job on the refactoring!"}
 ```
 
 ### Storage Considerations

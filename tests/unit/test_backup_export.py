@@ -1,14 +1,14 @@
 """Tests for backup export functionality.
 
-NOTE: These tests fail with embedding retrieval errors ('NoneType' object has no attribute 'retrieve').
-This indicates test fixture setup issues where embedding generator is not properly initialized.
-Skipped pending test fixture refactoring.
+Tests the DataExporter class which handles exporting memories to various formats:
+- JSON export with filtering
+- Portable archive creation (tar.gz with embeddings)
+- Markdown export for human-readable output
+
+These tests use the real QdrantMemoryStore with pooled connections.
 """
 
 import pytest
-
-# Skip all tests - fixture setup issues with embedding retrieval
-pytestmark = pytest.mark.skip(reason="Test fixture setup issues - embedding generator not properly initialized")
 import pytest_asyncio
 from pathlib import Path
 import json

@@ -130,8 +130,8 @@ class TestBulkDeleteManager:
 
         # Should be content + metadata + vector
         # ~500 + 200 + 1536 = ~2236 bytes
-        assert size > 500
-        assert size < 5000
+        # Allow 20% tolerance for encoding variations
+        assert size == pytest.approx(2236, rel=0.2)
 
     def test_calculate_breakdowns(self, bulk_manager, sample_memories):
         """Test breakdown calculations."""
@@ -370,3 +370,82 @@ class TestBulkDeleteManager:
         )
 
         assert result.rollback_id is None
+
+
+class TestBulkOperationsEdgeCases:
+    """Test edge cases for bulk operations."""
+
+    @pytest.mark.asyncio
+    async def test_execute_deletion_empty_list(self, bulk_manager):
+        """Test bulk delete with empty list doesn't crash."""
+        filters = BulkDeleteFilters()
+        result = await bulk_manager.execute_deletion(
+            [], filters, dry_run=False
+        )
+
+        assert result.total_deleted == 0
+        assert result.success is True  # Empty deletion is successful
+        assert len(result.failed_deletions) == 0
+        assert len(result.errors) == 0
+
+    @pytest.mark.asyncio
+    async def test_preview_deletion_empty_list(self, bulk_manager):
+        """Test preview with empty list returns zero matches."""
+        filters = BulkDeleteFilters()
+        preview = await bulk_manager.preview_deletion([], filters)
+
+        assert preview.total_matches == 0
+        assert len(preview.sample_memories) == 0
+        assert preview.estimated_storage_freed_mb == 0
+        assert preview.requires_confirmation is False
+
+    @pytest.mark.asyncio
+    async def test_execute_deletion_with_none_progress_callback(self, bulk_manager, sample_memories):
+        """Test deletion with None progress callback doesn't crash."""
+        filters = BulkDeleteFilters()
+        result = await bulk_manager.execute_deletion(
+            sample_memories[:5], filters, dry_run=False, progress_callback=None
+        )
+
+        assert result.total_deleted == 5
+        assert result.success is True
+
+    @pytest.mark.asyncio
+    async def test_max_count_zero_raises_validation_error(self):
+        """Test that max_count=0 raises validation error."""
+        with pytest.raises(Exception):  # Pydantic ValidationError
+            BulkDeleteFilters(max_count=0)
+
+    @pytest.mark.asyncio
+    async def test_importance_boundaries(self):
+        """Test importance filter boundaries."""
+        # Min = Max should work (exact match)
+        filters = BulkDeleteFilters(min_importance=0.5, max_importance=0.5)
+        assert filters.min_importance == 0.5
+        assert filters.max_importance == 0.5
+
+        # Min > Max should work (will filter out everything, but valid)
+        filters = BulkDeleteFilters(min_importance=0.8, max_importance=0.2)
+        assert filters.min_importance == 0.8
+        assert filters.max_importance == 0.2
+
+    @pytest.mark.asyncio
+    async def test_single_memory_deletion(self, bulk_manager):
+        """Test deletion of a single memory."""
+        single_memory = [
+            MemoryUnit(
+                id="single",
+                content="Single memory",
+                category=MemoryCategory.FACT,
+                context_level=ContextLevel.SESSION_STATE,
+            )
+        ]
+
+        filters = BulkDeleteFilters()
+        result = await bulk_manager.execute_deletion(
+            single_memory, filters, dry_run=False
+        )
+
+        assert result.total_deleted == 1
+        assert result.success is True
+        bulk_manager.store.delete.assert_called_once_with("single")

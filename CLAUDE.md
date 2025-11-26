@@ -559,6 +559,7 @@ A feedback loop for iterative behavioral improvement. User reactions (praise, cr
 | Command | Purpose |
 |---------|---------|
 | `/retro` | Run a retrospective analysis session |
+| `/wrapup` | Write a session summary before ending |
 
 ### Files
 
@@ -567,6 +568,8 @@ A feedback loop for iterative behavioral improvement. User reactions (praise, cr
 | `LEARNED_PRINCIPLES.md` | Extracted behavioral rules (consult alongside this file) |
 | `.claude/feedback/feedback_log.jsonl` | Raw feedback entries |
 | `.claude/feedback/retro_history.md` | Audit trail of retrospectives |
+| `.claude/feedback/reports/` | Detailed retro reports (one per session) |
+| `.claude/logs/CLAUDE_LOGS.jsonl` | Activity log (tool uses, tasks) for context correlation |
 
 ### Sentiment Detection
 

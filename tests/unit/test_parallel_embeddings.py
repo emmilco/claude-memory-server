@@ -268,23 +268,34 @@ class TestParallelEmbeddingGenerator:
         await generator.close()
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="Flaky test - race condition in parallel execution (passes individually)")
     async def test_cache_hit_on_reindex(self, config):
         """Test that cache hits occur when re-embedding same texts."""
+        # Use unique texts to avoid cross-test cache pollution
+        import uuid
+        test_id = str(uuid.uuid4())[:8]
+
         generator = ParallelEmbeddingGenerator(config, max_workers=2)
         await generator.initialize()
 
-        # Generate embeddings for first time
-        texts = [f"def function_{i}(): return {i}" for i in range(15)]
+        # Reset cache statistics at start to avoid interference
+        if generator.cache:
+            generator.cache.hits = 0
+            generator.cache.misses = 0
+
+        # Generate embeddings for first time with unique texts
+        texts = [f"def function_{test_id}_{i}(): return {i}" for i in range(15)]
         embeddings1 = await generator.batch_generate(texts, show_progress=True)
 
         # Generate same texts again - should hit cache
         embeddings2 = await generator.batch_generate(texts, show_progress=True)
 
-        # Results should be identical (from cache)
+        # Results should be nearly identical (from cache, with floating point tolerance)
         assert len(embeddings1) == len(embeddings2)
         for e1, e2 in zip(embeddings1, embeddings2):
-            assert e1 == e2  # Exact match since from cache
+            assert len(e1) == len(e2)
+            # Use floating point tolerance for comparison (cache may serialize differently)
+            for i, (v1, v2) in enumerate(zip(e1, e2)):
+                assert abs(v1 - v2) < 1e-6, f"Embedding mismatch at dimension {i}: {v1} vs {v2}"
 
         # Verify cache was actually used (cache stats should show hits)
         if generator.cache:

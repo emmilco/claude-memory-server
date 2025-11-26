@@ -1,5 +1,187 @@
 # TODO
 
+## 🚨 TEST ANTIPATTERN AUDIT (2025-11-25)
+
+**Source:** 6-agent parallel review analyzing 168 test files for validation theater and antipatterns.
+**Methodology:** Each agent reviewed ~25-30 test files for: no assertions, mock overuse, weak assertions, flaky tests, broad exceptions, ignored return values, misleading names.
+
+### 🔴 Critical - Validation Theater (Zero Real Coverage)
+
+- [ ] **TEST-013**: Remove/Fix Entirely Skipped Test Suites (~13 files, ~200+ tests) 🔥🔥🔥
+  - **Problem:** Module-level `pytest.mark.skip` disables entire test files, providing false coverage
+  - **Impact:** Features appear tested but have ZERO runtime validation
+  - **Files to address:**
+    - `tests/unit/test_get_dependency_graph.py` - FEAT-048 not implemented
+    - `tests/security/test_readonly_mode.py` - Critical security feature untested
+    - `tests/unit/test_backup_export.py` - Embedding fixture issues
+    - `tests/unit/test_backup_import.py` - Embedding fixture issues
+    - `tests/unit/test_export_import.py` - Old API signatures
+    - `tests/integration/test_call_graph_tools.py` - FEAT-059 not implemented
+    - `tests/integration/test_pattern_search_integration.py` - FEAT-058 API mismatches
+    - `tests/integration/test_suggest_queries_integration.py` - FEAT-057 not implemented
+    - `tests/integration/test_search_code_ux_integration.py` - v4.1 features
+    - `tests/integration/test_concurrent_operations.py` - Flaky under parallel execution
+  - **Fix options:**
+    1. Implement missing features and remove skip markers
+    2. Delete test files for unimplemented features (remove false coverage)
+    3. Fix fixture issues (backup tests) and remove skip markers
+  - **Tracking:** Create `tests/SKIPPED_FEATURES.md` documenting what's not tested
+
+- [ ] **TEST-014**: Remove `assert True` Validation Theater (4 instances) 🔥🔥
+  - **Problem:** Tests that always pass, providing zero validation
+  - **Locations:**
+    - `tests/unit/test_embedding_generator.py:378` - Coverage summary test
+    - `tests/security/test_readonly_mode.py:365` - Coverage summary (skipped anyway)
+    - `tests/security/test_injection_attacks.py:447` - Pattern coverage report
+    - `tests/integration/test_concurrent_operations.py:446` - Coverage report function
+  - **Fix:** Delete these "report" functions or convert to actual tests with assertions
+  - **Impact:** Remove 4 false-positive test results
+
+- [ ] **TEST-015**: Add Assertions to 23+ No-Assertion Tests 🔥🔥
+  - **Problem:** Tests that only check "function runs without error" (validation theater)
+  - **Primary files:**
+    - `tests/unit/test_status_command.py` - 16 instances (lines 359, 367, 379, 391, 402, 415, 424, 435, 446, 457, 463, 478, 484, 603, 617, 632)
+    - `tests/unit/test_health_command.py` - 7 instances (lines 412, 420, 426, 432, 438, 447, 456)
+  - **Pattern:** `cmd.print_something(); # Should not raise` with NO assertions
+  - **Fix:** Mock print/console output and assert correct content was displayed
+  - **Example fix:**
+    ```python
+    # Instead of:
+    cmd.print_header()  # Should not raise
+
+    # Do:
+    with patch.object(cmd.console, 'print') as mock_print:
+        cmd.print_header()
+        assert mock_print.called
+        assert "Status" in str(mock_print.call_args)
+    ```
+
+### 🟡 High Priority - Tests That Hide Bugs
+
+- [ ] **TEST-016**: Fix 20+ Flaky Tests Marked Skip (Race Conditions) 🔥🔥
+  - **Problem:** Tests skipped due to "race conditions" hide real concurrency bugs
+  - **Affected tests:**
+    - `tests/unit/test_pattern_detector.py:56-65, 94-100` - Race in parallel execution
+    - `tests/unit/test_parallel_embeddings.py:271-293` - Cache hit test race
+    - `tests/unit/test_project_reindexing.py:76-167` - 4+ tests skipped
+    - `tests/unit/test_connection_health_checker.py:84-92, 308-326` - Timing-sensitive
+    - `tests/unit/store/test_call_graph_store.py:149-191` - Upsert race
+    - `tests/integration/test_bug_018_regression.py:43, 131` - Core regression tests!
+    - `tests/integration/test_qdrant_store.py:51` - Store initialization timeout
+    - `tests/integration/test_indexing_integration.py:309` - Delete file index race
+  - **Fix approach:**
+    1. Add proper synchronization primitives
+    2. Use test locks for Qdrant access
+    3. Replace timing assertions with Event/Signal patterns
+    4. Fix underlying race conditions in implementation
+  - **Priority:** BUG-018 regression tests are CRITICAL - must be re-enabled
+
+- [ ] **TEST-017**: Replace 30+ Mock-Only Tests with Behavior Tests 🔥
+  - **Problem:** Tests that only verify `mock.assert_called()` don't test real behavior
+  - **Affected files:**
+    - `tests/unit/test_generator_gpu.py:61-121` - 3 GPU tests verify mocks only
+    - `tests/unit/test_qdrant_error_paths.py` - 15+ tests verify mock calls
+    - `tests/unit/test_qdrant_setup_coverage.py` - Multiple tests
+    - `tests/unit/test_health_scheduler.py:269-290` - Job execution mocked
+    - `tests/unit/test_status_command.py:315-350` - Store/config mocked
+    - `tests/unit/test_incremental_indexer.py:160-172` - Store mocked
+  - **Fix approach:**
+    1. Add assertions on actual return values/behavior
+    2. Test with real objects where possible (use temp files, in-memory DBs)
+    3. If mocking, verify BOTH mock call AND result correctness
+  - **Example fix:**
+    ```python
+    # Instead of:
+    mock_store.batch_store.assert_called_once()
+
+    # Do:
+    mock_store.batch_store.assert_called_once()
+    stored_items = mock_store.batch_store.call_args[0][0]
+    assert len(stored_items) == expected_count
+    assert all(item.has_embedding for item in stored_items)
+    ```
+
+- [ ] **TEST-018**: Strengthen 50+ Weak/Trivial Assertions 🔥
+  - **Problem:** Assertions that always pass or only verify type/existence
+  - **Categories:**
+    1. **Type-only:** `assert isinstance(x, list)` - doesn't verify contents
+    2. **Range too wide:** `assert value >= 0` - always true for unsigned
+    3. **Existence only:** `assert "key" in result` - doesn't verify value
+    4. **Conditional assertions:** `if "field" in x: assert x["field"] == y` - passes if field missing
+  - **Affected files:**
+    - `tests/unit/test_server.py:51-57` - Only `is not None` checks
+    - `tests/unit/test_server_extended.py:87-91` - Conditional field checks
+    - `tests/unit/test_complexity_analyzer.py:191-212` - `assert depth >= N`
+    - `tests/unit/test_criticality_analyzer.py:78, 216-259` - Weak boundary checks
+    - `tests/unit/test_quality_analyzer.py:73-100` - Wide range assertions
+    - `tests/unit/test_monitoring_system.py:85-93` - `>= 0` always true
+    - `tests/unit/test_bulk_operations.py:120-134` - 10x range (`> 500 and < 5000`)
+  - **Fix approach:**
+    1. Replace `>= 0` with exact expected values
+    2. Replace `is not None` with specific type/value checks
+    3. Make conditional assertions unconditional
+    4. Tighten range assertions to expected precision
+
+### 🟢 Medium Priority - Test Quality Improvements
+
+- [ ] **TEST-019**: Narrow 10+ Broad Exception Catches
+  - **Problem:** `pytest.raises(Exception)` catches any error, hiding wrong exception types
+  - **Affected tests:**
+    - `tests/unit/test_server_extended.py:129-136` - Should be `FileNotFoundError`
+    - `tests/unit/test_cli_commands.py:197-208, 357-368` - Should be specific
+    - `tests/unit/test_embedding_generator.py:210-213` - Catches 3 types!
+    - `tests/integration/test_error_recovery.py:296-326` - Should be `ValidationError`
+  - **Fix:** `pytest.raises(SpecificError, match="expected message")`
+
+- [ ] **TEST-020**: Rename 22+ Misleading Test Names
+  - **Problem:** Test names claim to test X but actually test Y
+  - **Pattern:** `test_print_X_with_Y` tests don't verify output content
+  - **Affected files:**
+    - `tests/unit/test_status_command.py` - 16+ "test_print_*" methods
+    - `tests/unit/test_health_command.py` - "test_check_*" methods
+    - `tests/unit/test_qdrant_error_paths.py` - 6+ methods
+  - **Fix:** Rename to match actual behavior (e.g., `test_print_X_no_error`)
+
+- [ ] **TEST-021**: Add Missing Edge Case Tests (~15 areas)
+  - **Problem:** Happy-path only testing misses boundary conditions
+  - **Missing tests for:**
+    - Division by zero (ETA calculation when `total_files=0`)
+    - Empty inputs (None, [], "")
+    - Boundary values (exactly at limits)
+    - Invalid states (corrupted data, disconnected services)
+  - **Affected files:**
+    - `tests/unit/test_auto_indexing_service.py:124-136` - No edge cases for ETA
+    - `tests/unit/test_bulk_operations.py` - No batching edge cases
+    - `tests/unit/test_call_graph.py` - No invalid input tests
+
+- [ ] **TEST-022**: Check Ignored Return Values (~10 tests)
+  - **Problem:** Tests call functions but don't verify return values
+  - **Pattern:** `await cmd.run(args)` with no assertion on result
+  - **Affected tests:**
+    - `tests/unit/test_cli_commands.py:50-75` - `run()` return ignored
+    - `tests/unit/test_server_extended.py:72-91` - Only structure checked
+    - `tests/integration/test_error_recovery.py:213-230` - `result` not fully checked
+
+### 📊 Test Antipattern Audit Summary
+
+| Category | Count | Severity | Status |
+|----------|-------|----------|--------|
+| Skipped test suites (0 coverage) | ~13 files | CRITICAL | ⬜ TODO |
+| `assert True` validation theater | 4 | CRITICAL | ⬜ TODO |
+| No-assertion tests | 23+ | CRITICAL | ⬜ TODO |
+| Flaky tests (skip hiding bugs) | 20+ | HIGH | ⬜ TODO |
+| Mock-only tests | 30+ | HIGH | ⬜ TODO |
+| Weak/trivial assertions | 50+ | HIGH | ⬜ TODO |
+| Broad exception catching | 10+ | MEDIUM | ⬜ TODO |
+| Misleading test names | 22+ | MEDIUM | ⬜ TODO |
+| Missing edge cases | 15+ areas | MEDIUM | ⬜ TODO |
+| Ignored return values | 10+ | MEDIUM | ⬜ TODO |
+
+**Estimated False Coverage:** 15-20% of test suite doesn't actually validate behavior
+**Tests That Could Pass With Bugs:** ~100+ tests would pass even with broken implementations
+
+---
+
 ## 🚨 CODE REVIEW FINDINGS (2025-11-25)
 
 **Source:** Comprehensive 4-agent code review analyzing architecture, testing, error handling, and developer experience.

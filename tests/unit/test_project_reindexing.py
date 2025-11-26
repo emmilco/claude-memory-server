@@ -73,17 +73,20 @@ async def server(unique_qdrant_collection):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Flaky test - race condition in parallel execution (passes individually)")
 async def test_reindex_project_basic(server, test_project_dir):
     """Test basic project reindexing."""
+    # Use unique project name to avoid cross-test interference
+    import uuid
+    project_name = f"test-project-{uuid.uuid4().hex[:8]}"
+
     # First index
     result1 = await server.reindex_project(
-        project_name="test-project",
+        project_name=project_name,
         directory_path=str(test_project_dir),
     )
 
     assert result1["status"] == "success"
-    assert result1["project_name"] == "test-project"
+    assert result1["project_name"] == project_name
     assert result1["files_indexed"] == 2  # main.py and app.js
     assert result1["units_indexed"] > 0  # At least some functions/classes
     assert result1["index_cleared"] is False
@@ -92,12 +95,15 @@ async def test_reindex_project_basic(server, test_project_dir):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Flaky under parallel execution - Qdrant fixture race conditions")
 async def test_reindex_with_clear_existing(server, test_project_dir):
     """Test reindexing with clear_existing flag."""
+    # Use unique project name to avoid cross-test interference
+    import uuid
+    project_name = f"test-project-{uuid.uuid4().hex[:8]}"
+
     # First index
     result1 = await server.reindex_project(
-        project_name="test-project",
+        project_name=project_name,
         directory_path=str(test_project_dir),
     )
 
@@ -106,7 +112,7 @@ async def test_reindex_with_clear_existing(server, test_project_dir):
 
     # Re-index with clear_existing
     result2 = await server.reindex_project(
-        project_name="test-project",
+        project_name=project_name,
         directory_path=str(test_project_dir),
         clear_existing=True,
     )
@@ -118,12 +124,15 @@ async def test_reindex_with_clear_existing(server, test_project_dir):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Flaky under parallel execution - Qdrant fixture race conditions")
 async def test_reindex_with_bypass_cache(server, test_project_dir):
     """Test reindexing with bypass_cache flag."""
+    # Use unique project name to avoid cross-test interference
+    import uuid
+    project_name = f"test-project-{uuid.uuid4().hex[:8]}"
+
     # First index (populate cache)
     result1 = await server.reindex_project(
-        project_name="test-project",
+        project_name=project_name,
         directory_path=str(test_project_dir),
     )
 
@@ -131,7 +140,7 @@ async def test_reindex_with_bypass_cache(server, test_project_dir):
 
     # Re-index with bypass_cache
     result2 = await server.reindex_project(
-        project_name="test-project",
+        project_name=project_name,
         directory_path=str(test_project_dir),
         bypass_cache=True,
     )
@@ -143,12 +152,15 @@ async def test_reindex_with_bypass_cache(server, test_project_dir):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Flaky under parallel execution - Qdrant fixture race conditions")
 async def test_reindex_with_both_flags(server, test_project_dir):
     """Test reindexing with both clear_existing and bypass_cache."""
+    # Use unique project name to avoid cross-test interference
+    import uuid
+    project_name = f"test-project-{uuid.uuid4().hex[:8]}"
+
     # First index
     result1 = await server.reindex_project(
-        project_name="test-project",
+        project_name=project_name,
         directory_path=str(test_project_dir),
     )
 
@@ -156,7 +168,7 @@ async def test_reindex_with_both_flags(server, test_project_dir):
 
     # Re-index with both flags (complete reset)
     result2 = await server.reindex_project(
-        project_name="test-project",
+        project_name=project_name,
         directory_path=str(test_project_dir),
         clear_existing=True,
         bypass_cache=True,
@@ -211,11 +223,14 @@ async def test_reindex_empty_directory(server):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Flaky test - race condition in parallel execution (passes individually)")
 async def test_reindex_stats_accuracy(server, test_project_dir):
     """Test that reindexing statistics are accurate."""
+    # Use unique project name to avoid cross-test interference
+    import uuid
+    project_name = f"test-project-{uuid.uuid4().hex[:8]}"
+
     result = await server.reindex_project(
-        project_name="test-project",
+        project_name=project_name,
         directory_path=str(test_project_dir),
     )
 
@@ -240,12 +255,15 @@ async def test_reindex_stats_accuracy(server, test_project_dir):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Flaky test - race condition in parallel execution (passes individually)")
 async def test_reindex_multiple_projects(server, test_project_dir):
     """Test reindexing same project multiple times."""
+    # Use unique project name to avoid cross-test interference
+    import uuid
+    project_name = f"test-project-{uuid.uuid4().hex[:8]}"
+
     # Index first time
     result1 = await server.reindex_project(
-        project_name="test-project",
+        project_name=project_name,
         directory_path=str(test_project_dir),
     )
 
@@ -255,7 +273,7 @@ async def test_reindex_multiple_projects(server, test_project_dir):
 
     # Index again without clearing (should update in place)
     result2 = await server.reindex_project(
-        project_name="test-project",
+        project_name=project_name,
         directory_path=str(test_project_dir),
     )
 
@@ -264,7 +282,7 @@ async def test_reindex_multiple_projects(server, test_project_dir):
 
     # Now clear and reindex
     result3 = await server.reindex_project(
-        project_name="test-project",
+        project_name=project_name,
         directory_path=str(test_project_dir),
         clear_existing=True,
     )
@@ -275,9 +293,12 @@ async def test_reindex_multiple_projects(server, test_project_dir):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Flaky under parallel execution - Qdrant fixture race conditions")
 async def test_reindex_with_progress_callback(server, test_project_dir):
     """Test reindexing with progress callback."""
+    # Use unique project name to avoid cross-test interference
+    import uuid
+    project_name = f"test-project-{uuid.uuid4().hex[:8]}"
+
     progress_calls = []
 
     def progress_callback(current, total, current_file, error_info):
@@ -289,7 +310,7 @@ async def test_reindex_with_progress_callback(server, test_project_dir):
         })
 
     result = await server.reindex_project(
-        project_name="test-project",
+        project_name=project_name,
         directory_path=str(test_project_dir),
         progress_callback=progress_callback,
     )

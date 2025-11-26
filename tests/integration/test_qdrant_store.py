@@ -48,11 +48,25 @@ async def store(config, qdrant_client):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Flaky under parallel execution - fixture initialization can timeout")
 async def test_store_initialization(store):
-    """Test that store initializes successfully."""
+    """Test that store initializes successfully.
+
+    Uses fixture with pre-initialized store to avoid timeout issues
+    during parallel test execution.
+    """
     assert store.client is not None
-    assert await store.health_check() is True
+
+    # Retry health check to handle transient issues in parallel execution
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            health = await store.health_check()
+            assert health is True
+            break
+        except Exception as e:
+            if attempt == max_retries - 1:
+                raise
+            await asyncio.sleep(0.1)
 
 
 @pytest.mark.asyncio

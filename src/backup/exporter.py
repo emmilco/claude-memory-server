@@ -373,11 +373,17 @@ class DataExporter:
         try:
             if isinstance(self.store, QdrantMemoryStore):
                 # Qdrant: use retrieve with with_vectors=True
-                result = self.store.client.retrieve(
+                # Use _get_client() to properly handle both pooled and legacy modes
+                client = await self.store._get_client()
+                result = client.retrieve(
                     collection_name=self.store.collection_name,
                     ids=[memory_id],
                     with_vectors=True,
                 )
+                # Release client back to pool if using pooled mode
+                if self.store.use_pool and self.store.setup.pool:
+                    await self.store.setup.pool.release(client)
+
                 if result and len(result) > 0:
                     return result[0].vector
                 raise StorageError(f"Embedding not found for memory {memory_id}")

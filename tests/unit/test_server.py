@@ -51,10 +51,22 @@ async def readonly_server(readonly_config):
 @pytest.mark.asyncio
 async def test_server_initialization(server):
     """Test that server initializes correctly."""
-    assert server is not None
-    assert server.store is not None
-    assert server.embedding_generator is not None
-    assert server.embedding_cache is not None
+    # Verify server instance type
+    assert isinstance(server, MemoryRAGServer)
+
+    # Verify store is initialized with correct type
+    from src.store.qdrant_store import QdrantMemoryStore
+    assert isinstance(server.store, QdrantMemoryStore)
+    assert server.store.collection_name is not None
+    assert isinstance(server.store.collection_name, str)
+
+    # Verify embedding generator is initialized
+    from src.embeddings.generator import EmbeddingGenerator
+    assert isinstance(server.embedding_generator, EmbeddingGenerator)
+
+    # Verify embedding cache is initialized
+    from src.embeddings.cache import EmbeddingCache
+    assert isinstance(server.embedding_cache, EmbeddingCache)
 
 
 @pytest.mark.asyncio

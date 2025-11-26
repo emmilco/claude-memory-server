@@ -9,7 +9,7 @@ from qdrant_client.http.exceptions import UnexpectedResponse
 
 from src.config import ServerConfig
 from src.core.server import MemoryRAGServer
-from src.core.exceptions import EmbeddingError, ReadOnlyError
+from src.core.exceptions import EmbeddingError, ReadOnlyError, SecurityError
 from src.store.qdrant_store import QdrantMemoryStore
 from src.embeddings.generator import EmbeddingGenerator
 
@@ -225,7 +225,12 @@ class TestCacheFailureRecovery:
             scope="global",
         )
 
+        # Verify return value structure and content
         assert result["status"] == "success"
+        assert "memory_id" in result
+        assert result["memory_id"] is not None
+        assert len(result["memory_id"]) > 0  # Should have a non-empty ID
+        assert "context_level" in result
 
         await server.close()
 
@@ -293,8 +298,8 @@ class TestValidationErrorRecovery:
         server = MemoryRAGServer(config)
         await server.initialize()
 
-        # Empty content
-        with pytest.raises(Exception):  # Should raise validation error
+        # Empty content raises ValueError from pydantic validation
+        with pytest.raises(ValueError, match="Content cannot be empty"):
             await server.store_memory(
                 content="",
                 category="fact",
@@ -317,8 +322,8 @@ class TestValidationErrorRecovery:
         server = MemoryRAGServer(config)
         await server.initialize()
 
-        # SQL injection attempt
-        with pytest.raises(Exception):  # Should raise validation error
+        # SQL injection attempt raises SecurityError from validation
+        with pytest.raises((SecurityError, ValueError), match="SQL injection|injection pattern"):
             await server.store_memory(
                 content="'; DROP TABLE memories--",
                 category="fact",

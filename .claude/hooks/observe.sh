@@ -72,6 +72,46 @@ EOF
 {"ts":"$TIMESTAMP","event":"SESSION_END","session":"$SESSION_ID"}
 EOF
     ;;
+
+  tool_use)
+    # Extract tool name and create appropriate preview based on tool type
+    TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // "unknown"' 2>/dev/null) || TOOL_NAME="unknown"
+
+    case "$TOOL_NAME" in
+      Edit)
+        FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // ""' 2>/dev/null | sed 's|.*/||') || FILE_PATH=""
+        OLD_STR=$(echo "$INPUT" | jq -r '.tool_input.old_string // ""' 2>/dev/null | head -c 50 | tr '\n' ' ' | sed 's/"/\\"/g') || OLD_STR=""
+        PREVIEW="$FILE_PATH: \"$OLD_STR...\""
+        ;;
+      Write)
+        FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // ""' 2>/dev/null | sed 's|.*/||') || FILE_PATH=""
+        PREVIEW="$FILE_PATH"
+        ;;
+      Bash)
+        CMD=$(echo "$INPUT" | jq -r '.tool_input.command // ""' 2>/dev/null | head -c 80 | tr '\n' ' ' | sed 's/"/\\"/g') || CMD=""
+        PREVIEW="$CMD"
+        ;;
+      Read)
+        FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // ""' 2>/dev/null | sed 's|.*/||') || FILE_PATH=""
+        PREVIEW="$FILE_PATH"
+        ;;
+      Grep)
+        PATTERN=$(echo "$INPUT" | jq -r '.tool_input.pattern // ""' 2>/dev/null | head -c 40 | sed 's/"/\\"/g') || PATTERN=""
+        PREVIEW="/$PATTERN/"
+        ;;
+      Glob)
+        PATTERN=$(echo "$INPUT" | jq -r '.tool_input.pattern // ""' 2>/dev/null | head -c 40 | sed 's/"/\\"/g') || PATTERN=""
+        PREVIEW="$PATTERN"
+        ;;
+      *)
+        PREVIEW="(unknown tool)"
+        ;;
+    esac
+
+    cat >> "$LOG_FILE" << EOF
+{"ts":"$TIMESTAMP","event":"TOOL_USE","session":"$SESSION_ID","tool":"$TOOL_NAME","preview":"$PREVIEW"}
+EOF
+    ;;
 esac
 
 # ─────────────────────────────────────────────────────────────
@@ -85,9 +125,10 @@ if [[ "$EVENT_TYPE" == "user_prompt" ]]; then
 
   if [[ -n "$PROMPT" ]]; then
     # Keyword patterns (case-insensitive matching)
-    POSITIVE_PATTERN="(^|\s)(great|perfect|exactly|excellent|nice|good job|well done|thanks|thank you|love it|awesome|wonderful|brilliant|fantastic|spot on|nailed it|that's it|yes!|correct|right|helpful|useful|works|working|fixed|solved)(\s|$|[!.,])"
-    NEGATIVE_PATTERN="(^|\s)(wrong|broke|broken|missed|not what|frustrat|stuck|bad|fail|didn't work|doesn't work|not right|incorrect|mistake|error|problem|issue|confused|off track|lost|ugh|sigh|annoying|slow|useless|unhelpful)(\s|$|[!.,])"
-    CORRECTIVE_PATTERN="(^|\s)(actually|not quite|I meant|try again|instead|rather|let me clarify|what I wanted|should be|supposed to|meant to|correction|rephrase|misunderstand|misunderstood)(\s|$|[!.,])"
+    # Philosophy: over-sensitive triggers, filter false positives during /retro analysis
+    POSITIVE_PATTERN="(^|\s)(great|perfect|exactly|excellent|nice|good job|well done|thanks|thank you|love it|awesome|wonderful|brilliant|fantastic|spot on|nailed it|that's it|yes!|correct|right|helpful|useful|works|working|fixed|solved|amazing|impressive|beautiful|elegant|clever|smart|cool|nice work|good work|solid|clean|neat|sweet|superb|outstanding|exceptional|incredible|remarkable|splendid|terrific|marvelous|delightful|pleased|happy|glad|excited|appreciate|grateful|that's perfect|exactly right|just what I needed|you got it|bingo|precisely|indeed|absolutely|definitely|certainly|affirmative|approved|accepted|confirmed|legit|fire|chef's kiss|10\/10|A\+|\+1)(\s|$|[!.,])"
+    NEGATIVE_PATTERN="(^|\s)(wrong|broke|broken|missed|not what|frustrat|stuck|bad|fail|didn't work|doesn't work|not right|incorrect|mistake|error|problem|issue|confused|off track|lost|ugh|sigh|annoying|slow|useless|unhelpful|terrible|awful|horrible|disaster|mess|ugly|hacky|gross|hate|dislike|disappointed|unfortunate|sadly|worse|stupid|dumb|silly|ridiculous|absurd|weird|strange|odd|unexpected|surprising|concerning|worrying|scary|yikes|oops|ouch|damn|crap|cmon|come on|seriously|really\?|what\?|huh\?|wtf|smh|facepalm|no no|nope|nah|not even close|way off|completely wrong|totally wrong|dead wrong)(\s|$|[!.,])"
+    CORRECTIVE_PATTERN="(^|\s)(actually|not quite|I meant|try again|instead|rather|let me clarify|what I wanted|should be|supposed to|meant to|correction|rephrase|misunderstand|misunderstood|wait|hold on|stop|hang on|pause|let me explain|to clarify|to be clear|what I'm saying|what I mean|I was asking|I wanted|I need|different|other|another|else|alternative|change|modify|adjust|revise|redo|again|back to|go back|revert|original|previous|before|earlier|no I|not that|the other|wrong one|wrong file|wrong thing)(\s|$|[!.,])"
 
     SENTIMENT=""
     if echo "$PROMPT" | grep -iE "$POSITIVE_PATTERN" > /dev/null 2>&1; then
@@ -106,8 +147,44 @@ if [[ "$EVENT_TYPE" == "user_prompt" ]]; then
         --arg sid "$SESSION_ID" \
         --arg sent "$SENTIMENT" \
         --arg msg "$PROMPT" \
-        '{timestamp: $ts, session_id: $sid, sentiment: $sent, user_message: $msg, context: {note: "Context to be populated during /retro analysis"}}' \
+        '{timestamp: $ts, session_id: $sid, sentiment: $sent, user_message: $msg}' \
         >> "$FEEDBACK_FILE" 2>/dev/null || true
+    fi
+  fi
+fi
+
+# ─────────────────────────────────────────────────────────────
+# LEARNED PRINCIPLES INJECTION (new sessions only)
+# ─────────────────────────────────────────────────────────────
+
+PRINCIPLES_OUTPUT=""
+SEEN_SESSIONS_FILE="${LOGS_DIR}/.seen_sessions"
+touch "$SEEN_SESSIONS_FILE" 2>/dev/null || true
+
+# Only inject on user_prompt (first user message triggers injection)
+if [[ "$EVENT_TYPE" == "user_prompt" ]]; then
+  if ! grep -q "^${SESSION_ID}$" "$SEEN_SESSIONS_FILE" 2>/dev/null; then
+    # New session - mark as seen
+    echo "$SESSION_ID" >> "$SEEN_SESSIONS_FILE"
+
+    # Keep only last 100 sessions (prevents unbounded growth)
+    tail -n 100 "$SEEN_SESSIONS_FILE" > "${SEEN_SESSIONS_FILE}.tmp" 2>/dev/null && \
+      mv "${SEEN_SESSIONS_FILE}.tmp" "$SEEN_SESSIONS_FILE" 2>/dev/null || true
+
+    # Read principles file
+    SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+    PRINCIPLES_FILE="${SCRIPT_DIR}/../../LEARNED_PRINCIPLES.md"
+
+    if [[ -f "$PRINCIPLES_FILE" ]]; then
+      # Extract Active Principles section (between "## Active Principles" and "## Retired")
+      # Note: Use sed '$d' twice instead of head -n -2 (macOS head doesn't support negative counts)
+      PRINCIPLES=$(sed -n '/^## Active Principles/,/^## Retired/p' "$PRINCIPLES_FILE" 2>/dev/null | sed '$d' | sed '$d')
+
+      # Only output if there are actual principles (not the placeholder text)
+      if [[ -n "$PRINCIPLES" ]] && [[ "$PRINCIPLES" != *"No principles yet"* ]]; then
+        PRINCIPLES_OUTPUT="[LEARNED PRINCIPLES - Behavioral guidelines from user feedback analysis:]
+$PRINCIPLES"
+      fi
     fi
   fi
 fi
@@ -159,8 +236,13 @@ fi
 # OUTPUT - Return context to Claude if needed
 # ─────────────────────────────────────────────────────────────
 
+# Output principles first (if new session), then journal prompt
+if [[ -n "$PRINCIPLES_OUTPUT" ]]; then
+  echo "$PRINCIPLES_OUTPUT"
+  echo ""
+fi
+
 if [[ -n "$JOURNAL_PROMPT" ]]; then
-  # Try plain text output (simpler approach per docs)
   echo "$JOURNAL_PROMPT"
 fi
 

@@ -6,7 +6,7 @@ import uuid
 from pathlib import Path
 from src.config import ServerConfig
 from src.core.server import MemoryRAGServer
-from src.core.exceptions import ReadOnlyError, ValidationError
+from src.core.exceptions import ReadOnlyError, ValidationError, StorageError
 
 
 @pytest.fixture
@@ -78,7 +78,12 @@ class TestCodeSearch:
             recursive=False
         )
 
+        # Verify return value structure and content
         assert "files_indexed" in result
+        assert result["status"] == "success"
+        assert result["files_indexed"] >= 0  # Should have indexed some files
+        assert "project_name" in result
+        assert result["project_name"] == "test-project"
 
         # Now search
         search_results = await server.search_code(
@@ -93,10 +98,14 @@ class TestCodeSearch:
     @pytest.mark.asyncio
     async def test_search_code_with_filters(self, server, small_test_project, mock_embeddings):
         """Test code search with language filter."""
-        await server.index_codebase(
+        index_result = await server.index_codebase(
             directory_path=str(small_test_project),
             project_name="test-project"
         )
+
+        # Verify indexing completed successfully
+        assert index_result["status"] == "success"
+        assert index_result["files_indexed"] >= 0
 
         # Search with language filter
         results = await server.search_code(
@@ -107,9 +116,10 @@ class TestCodeSearch:
         )
 
         assert "results" in results
+        # All results should have language field when searching indexed code
         for result in results["results"]:
-            if "language" in result:
-                assert result["language"].lower() == "python"
+            assert "language" in result, "Result missing required 'language' field"
+            assert result["language"].lower() == "python", f"Expected Python but got {result['language']}"
 
     @pytest.mark.asyncio
     async def test_search_code_no_results(self, server, mock_embeddings):
@@ -128,7 +138,8 @@ class TestCodeSearch:
     @pytest.mark.asyncio
     async def test_index_codebase_nonexistent_path(self, server):
         """Test indexing nonexistent directory."""
-        with pytest.raises(Exception):  # Should raise FileNotFoundError or similar
+        # ValueError is wrapped in StorageError by the server
+        with pytest.raises(StorageError, match="does not exist"):
             await server.index_codebase(
                 directory_path="/nonexistent/path/xyz",
                 project_name="test"
@@ -336,9 +347,11 @@ class TestSpecializedRetrieval:
         )
         
         # Results should be from project A
+        # When filtering by project, all results must have project_name and match the filter
         for result in results["results"]:
-            if result["memory"].get("project_name"):
-                assert result["memory"]["project_name"] == "project-a"
+            assert "project_name" in result["memory"], "Result missing required 'project_name' field"
+            assert result["memory"]["project_name"] == "project-a", \
+                f"Expected project-a but got {result['memory']['project_name']}"
 
 
 class TestErrorHandling:
@@ -359,7 +372,8 @@ class TestErrorHandling:
     @pytest.mark.asyncio
     async def test_store_with_invalid_category(self, server):
         """Test storing with invalid category."""
-        with pytest.raises(Exception):  # Should raise validation error
+        # ValueError is wrapped in StorageError by the server
+        with pytest.raises(StorageError, match="not a valid MemoryCategory"):
             await server.store_memory(
                 content="test",
                 category="invalid_category",
@@ -492,9 +506,10 @@ def test_example():
         )
 
         assert "results" in results
+        # All results should have language field when using language filter
         for result in results["results"]:
-            if "language" in result:
-                assert result["language"].lower() == "python"
+            assert "language" in result, "Result missing required 'language' field"
+            assert result["language"].lower() == "python", f"Expected Python but got {result['language']}"
 
     @pytest.mark.asyncio
     async def test_find_similar_code_no_results(self, server, mock_embeddings):

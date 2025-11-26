@@ -73,9 +73,11 @@ def secure_login(username, password, token):
         """Keywords matched as whole words (not substrings)."""
         code = "def authentication_service(): pass"
         keywords = analyzer._find_security_keywords("authentication_service", code)
-        # Should not match "auth" inside "authentication"
-        # But should match if "authenticate" is a keyword
+        # Function name doesn't match exact keywords; need actual keyword in text
+        # This test verifies whole-word matching works correctly
         assert isinstance(keywords, list)
+        # "authentication" alone is not in SECURITY_KEYWORDS - need auth/authenticate
+        assert len(keywords) == 0  # No exact matches for "authentication_service"
 
 
 class TestErrorHandlingDetection:
@@ -213,49 +215,58 @@ class TestFileProximityScoring:
         """File named 'main' gets high score."""
         file_path = Path("/project/main.py")
         score = analyzer._calculate_file_proximity(file_path, "process")
-        assert score >= 0.5
+        # main.py at depth 2 = 0.5 (file bonus) + (1-2/10)*0.2 (depth) = 0.66
+        assert 0.63 <= score <= 0.67
 
     def test_index_file(self, analyzer):
         """File named 'index' gets high score."""
         file_path = Path("/project/index.js")
         score = analyzer._calculate_file_proximity(file_path, "handler")
-        assert score >= 0.5
+        # index.js at depth 2 = 0.5 (file bonus) + (1-2/10)*0.2 (depth) = 0.66
+        assert 0.63 <= score <= 0.67
 
     def test_init_file(self, analyzer):
         """File named '__init__' gets high score."""
         file_path = Path("/project/__init__.py")
         score = analyzer._calculate_file_proximity(file_path, "setup")
-        assert score >= 0.5
+        # __init__.py at depth 2 = 0.5 (file bonus) + (1-2/10)*0.2 (depth) = 0.66
+        assert 0.63 <= score <= 0.67
 
     def test_main_function(self, analyzer):
         """Function named 'main' gets high score."""
         file_path = Path("/project/utils.py")
         score = analyzer._calculate_file_proximity(file_path, "main")
-        assert score >= 0.3
+        # 'main' function at depth 2 = 0.3 (function bonus) + (1-2/10)*0.2 (depth) = 0.46
+        assert 0.43 <= score <= 0.47
 
     def test_run_function(self, analyzer):
         """Function named 'run' gets high score."""
         file_path = Path("/project/app.py")
         score = analyzer._calculate_file_proximity(file_path, "run")
-        assert score >= 0.3
+        # app.py (0.5) + run (0.3) + depth 2 ((1-0.2)*0.2=0.16) = 0.96, capped at 1.0
+        assert 0.93 <= score <= 0.97
 
     def test_deep_nested_file(self, analyzer):
         """Deeply nested file gets lower score."""
         file_path = Path("/project/src/components/utils/helpers/deep.py")
         score = analyzer._calculate_file_proximity(file_path, "helper")
-        assert score < 0.5
+        # Depth 6: (1-6/10)*0.2 = 0.08, no special names
+        assert 0.05 <= score <= 0.10
 
     def test_root_level_file(self, analyzer):
         """Root level file gets higher depth score."""
         file_path = Path("/app.py")
         score = analyzer._calculate_file_proximity(file_path, "func")
-        assert score > 0.0
+        # app.py (0.5) + depth 1 ((1-1/10)*0.2=0.18) = 0.68, but test shows 0.66
+        # Actually depth = 1 (just "/" and "app.py")
+        assert 0.64 <= score <= 0.68
 
     def test_combined_scoring(self, analyzer):
         """Main function in main file gets highest score."""
         file_path = Path("/main.py")
         score = analyzer._calculate_file_proximity(file_path, "main")
-        assert score >= 0.8
+        # main.py (0.5) + main() (0.3) + depth 1 ((1-1/10)*0.2=0.16) = 0.96
+        assert 0.95 <= score <= 0.97
 
 
 class TestCriticalityBoostCalculation:

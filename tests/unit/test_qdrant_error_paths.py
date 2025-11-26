@@ -28,7 +28,7 @@ class TestQdrantStoreErrorPaths:
             assert store.config == mock_config
 
     @pytest.mark.asyncio
-    async def test_initialize_failure(self):
+    async def test_initialize_raises_storage_error_on_connection_failure(self):
         """Test initialization failure error handling (lines 52-53)."""
         config = ServerConfig(qdrant_url="http://invalid:9999")
         store = QdrantMemoryStore(config, use_pool=False)
@@ -69,6 +69,9 @@ class TestQdrantStoreErrorPaths:
 
             # Should have called initialize
             mock_init.assert_called_once()
+            # Behavior: client should now be set
+            assert store.client is not None
+            assert store.client == mock_client
 
     @pytest.mark.asyncio
     async def test_store_validation_error(self):
@@ -131,7 +134,7 @@ class TestQdrantStoreErrorPaths:
         assert "Failed to store memory" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_retrieve_invalid_payload_parsing(self):
+    async def test_retrieve_returns_empty_list_on_invalid_payload(self):
         """Test retrieve ValueError when parsing payload (lines 138-140)."""
         config = ServerConfig(qdrant_url="http://localhost:6333")
         store = QdrantMemoryStore(config, use_pool=False)
@@ -154,7 +157,7 @@ class TestQdrantStoreErrorPaths:
         assert results == []
 
     @pytest.mark.asyncio
-    async def test_retrieve_connection_error(self):
+    async def test_retrieve_raises_retrieval_error_on_connection_failure(self):
         """Test retrieve ConnectionError handling (lines 145-147)."""
         config = ServerConfig(qdrant_url="http://localhost:6333")
         store = QdrantMemoryStore(config, use_pool=False)
@@ -167,7 +170,7 @@ class TestQdrantStoreErrorPaths:
         assert "Failed to connect to Qdrant" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_retrieve_value_error(self):
+    async def test_retrieve_raises_retrieval_error_on_invalid_filter(self):
         """Test retrieve ValueError handling (lines 148-150)."""
         from src.core.models import SearchFilters, MemoryCategory
 
@@ -185,7 +188,7 @@ class TestQdrantStoreErrorPaths:
             assert "Invalid search parameters" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_retrieve_generic_error(self):
+    async def test_retrieve_raises_retrieval_error_on_runtime_error(self):
         """Test retrieve generic Exception handling (lines 151-153)."""
         config = ServerConfig(qdrant_url="http://localhost:6333")
         store = QdrantMemoryStore(config, use_pool=False)
@@ -221,9 +224,14 @@ class TestQdrantStoreErrorPaths:
             await store.delete("test-id")
 
             mock_init.assert_called_once()
+            # Behavior: client should now be set
+            assert store.client is not None
+            assert store.client == mock_client
+            # Verify delete was actually called on the client
+            mock_client.delete.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_delete_error(self):
+    async def test_delete_raises_storage_error_on_runtime_error(self):
         """Test delete error handling (lines 171-172)."""
         config = ServerConfig(qdrant_url="http://localhost:6333")
         store = QdrantMemoryStore(config, use_pool=False)
@@ -271,6 +279,11 @@ class TestQdrantStoreEdgeCases:
             await store.batch_store(items)
 
             mock_init.assert_called_once()
+            # Behavior: client should now be set
+            assert store.client is not None
+            assert store.client == mock_client
+            # Verify batch upsert was called
+            mock_client.upsert.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_get_by_id_auto_initialize(self):
@@ -292,6 +305,12 @@ class TestQdrantStoreEdgeCases:
             result = await store.get_by_id("test-id")
 
             mock_init.assert_called_once()
+            # Behavior: client should now be set
+            assert store.client is not None
+            assert store.client == mock_client
+            # Verify retrieve was called
+            mock_client.retrieve.assert_called_once()
+            # Verify return value when no results
             assert result is None
 
     @pytest.mark.asyncio
@@ -315,4 +334,8 @@ class TestQdrantStoreEdgeCases:
                 result = await store.update("test-id", {"importance": 0.9})
 
             mock_init.assert_called_once()
+            # Behavior: client should now be set
+            assert store.client is not None
+            assert store.client == mock_client
+            # Verify return value when item not found
             assert result is False

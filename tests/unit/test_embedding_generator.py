@@ -209,7 +209,8 @@ class TestErrorHandling:
     @pytest.mark.asyncio
     async def test_generate_with_none_text(self, generator):
         """Test that None text raises appropriate error."""
-        with pytest.raises((EmbeddingError, TypeError, AttributeError)):
+        # None text is caught by the "if not text" check and raises EmbeddingError
+        with pytest.raises(EmbeddingError, match="Cannot generate embedding for empty text"):
             await generator.generate(None)
 
     @pytest.mark.asyncio
@@ -358,21 +359,3 @@ class TestResourceManagement:
         await gen.close()
 
 
-def test_embedding_generator_coverage_summary():
-    """Report on embedding generator test coverage."""
-    print("\n" + "=" * 70)
-    print("EMBEDDING GENERATOR TEST COVERAGE")
-    print("=" * 70)
-    print("✓ Initialization and model loading")
-    print("✓ Single and batch embedding generation")
-    print("✓ Embedding dimensions (384 and 768)")
-    print("✓ Normalization verification")
-    print("✓ Empty and long text handling")
-    print("✓ Batch size configuration")
-    print("✓ Error handling (None inputs, invalid models)")
-    print("✓ Concurrent generation")
-    print("✓ Semantic similarity validation")
-    print("✓ Resource management and cleanup")
-    print("=" * 70 + "\n")
-
-    assert True

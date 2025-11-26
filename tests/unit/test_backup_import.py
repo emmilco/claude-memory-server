@@ -1,13 +1,15 @@
 """Tests for backup import functionality.
 
-NOTE: These tests likely fail with similar embedding retrieval errors as test_backup_export.py.
-Skipped pending test fixture refactoring to properly initialize embedding generator.
+Tests the DataImporter class which handles importing memories from backups:
+- Import from JSON with conflict resolution strategies
+- Import from portable archives (tar.gz)
+- Dry-run mode for previewing imports
+- Various conflict strategies: keep_newer, keep_older, keep_both, skip, merge_metadata
+
+These tests use the real QdrantMemoryStore with pooled connections.
 """
 
 import pytest
-
-# Skip all tests - fixture setup issues with embedding retrieval
-pytestmark = pytest.mark.skip(reason="Test fixture setup issues - embedding generator not properly initialized")
 import pytest_asyncio
 import uuid
 from pathlib import Path
