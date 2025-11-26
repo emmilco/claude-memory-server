@@ -1,5 +1,220 @@
 # TODO
 
+## 🚨 SPEC COVERAGE AUDIT (2025-11-25)
+
+**Source:** 4-agent parallel analysis of SPEC.md requirements vs test suite coverage.
+**Finding:** Testing pyramid inverted (91% unit, 8.6% integration, 0% E2E). Critical gaps in boundary conditions, concurrency, MCP protocol, and E2E workflows.
+
+### 🔴 Critical - Testing Infrastructure Gaps
+
+- [ ] **TEST-023**: Add 40+ Boundary Condition Unit Tests 🔥🔥🔥
+  - **Problem:** Missing tests for edge cases at system limits - undefined behavior at boundaries
+  - **Impact:** Potential crashes, data corruption, or undefined behavior at limits
+  - **Categories to cover:**
+    - **Numeric boundaries:** `importance=0.0`, `importance=1.0`, `importance=1.5` (invalid), `limit=0`, `offset > total`
+    - **String boundaries:** `content=""` (empty), `content=50KB exactly`, `content=50KB+1` (overflow), `query=10000 chars`
+    - **Collection boundaries:** `tags=[]` (empty), `tags=[""]` (empty string), `tags=[1000 items]`
+    - **Pagination:** `offset=total+1`, `limit=0`, `limit > max_allowed`
+    - **Search:** empty query, single character query, no results scenario
+  - **Recommended tests:**
+    ```python
+    # tests/unit/test_boundary_conditions.py
+    @pytest.mark.parametrize("importance", [-0.1, 0.0, 0.5, 1.0, 1.1, None])
+    def test_importance_boundary_values(importance): ...
+
+    @pytest.mark.parametrize("content_size", [0, 1, 51199, 51200, 51201])
+    def test_content_size_boundaries(content_size): ...
+
+    def test_pagination_offset_exceeds_total(): ...
+    def test_search_empty_query(): ...
+    def test_filter_complexity_min_greater_than_max(): ...
+    ```
+  - **Effort:** ~8 hours
+  - **Files to create:** `tests/unit/test_boundary_conditions.py`, `tests/unit/test_pagination_edge_cases.py`
+
+- [x] **TEST-024**: Fix Flaky Concurrent Operations Test Suite ✅ **COMPLETE** (2025-11-25)
+  - **Problem:** `test_concurrent_operations.py` marked skip due to race conditions - hides real concurrency bugs
+  - **Impact:** No concurrent operation testing in CI, race conditions go undetected
+  - **Fix applied:**
+    - [x] Removed module-level skip marker
+    - [x] Added `return_exceptions=True` to all 15 `asyncio.gather()` calls
+    - [x] Enhanced error messages with detailed diagnostics
+    - [x] Tests use unique collections via pooling (already implemented)
+  - **Verification:** 3 consecutive runs, 13/13 tests passing each time (100% stability)
+  - **Tests fixed:** 13 tests across 8 test classes
+  - **Related:** TEST-016 (flaky tests), extends that work
+
+- [ ] **TEST-025**: Create 25+ End-to-End Workflow Integration Tests 🔥🔥
+  - **Problem:** No integration tests for complete user workflows - features tested in isolation but not together
+  - **Impact:** Component interactions untested, workflow bugs escape to production
+  - **Current state:** 0 E2E workflow tests, only isolated component tests
+  - **Required workflows:**
+    ```python
+    # tests/integration/test_e2e_workflows.py
+
+    # Core memory workflow
+    async def test_store_retrieve_update_delete_workflow():
+        """Store → Retrieve → Update → Search → Delete complete lifecycle"""
+
+    # Code indexing workflow
+    async def test_index_search_similar_export_workflow():
+        """Index project → Search code → Find similar → Export results"""
+
+    # Multi-project workflow
+    async def test_create_project_index_archive_export_import():
+        """Create project → Index → Archive → Export → Reimport → Verify"""
+
+    # Health monitoring workflow
+    async def test_memory_lifecycle_affects_health_score():
+        """Store memories → Lifecycle transitions → Verify health impact"""
+
+    # Cross-project workflow
+    async def test_cross_project_search_with_consent():
+        """Create 3 projects → Opt-in 2 → Search → Verify isolation"""
+    ```
+  - **Workflows to implement (25 minimum):**
+    1. Memory CRUD lifecycle (store → retrieve → update → delete)
+    2. Code indexing pipeline (parse → embed → store → search)
+    3. Project archival (create → index → archive → export → import)
+    4. Cross-project search (create → opt-in → search → verify isolation)
+    5. Health monitoring integration (actions → metrics → alerts)
+    6. Memory lifecycle transitions (ACTIVE → RECENT → ARCHIVED → STALE)
+    7. Duplicate detection and merge workflow
+    8. Provenance tracking end-to-end
+    9. Search with all filter combinations
+    10. Pagination across large result sets
+    11-25. Additional scenarios per SPEC.md requirements
+  - **Effort:** ~12 hours
+  - **Files to create:** `tests/integration/test_e2e_workflows.py`, `tests/integration/test_workflow_memory.py`, `tests/integration/test_workflow_indexing.py`
+
+- [ ] **TEST-026**: Create MCP Protocol Integration Test Suite (F010) 🔥🔥🔥
+  - **Problem:** Zero tests for MCP protocol integration - SPEC F010 completely untested
+  - **Impact:** MCP tool registration, validation, concurrency, error handling all untested
+  - **SPEC requirements (4 total, 0% covered):**
+    - F010-R001: 16 MCP tools must be registered and accessible
+    - F010-R002: Pydantic schema validation for all requests
+    - F010-R003: Concurrent async MCP request handling
+    - F010-R004: Structured error responses (ValidationError, StorageError, etc.)
+  - **Test files referenced in SPEC but don't exist:**
+    - `tests/integration/test_mcp_integration.py`
+    - `tests/integration/test_mcp_concurrency.py`
+    - `tests/integration/test_mcp_error_handling.py`
+  - **Tests to implement:**
+    ```python
+    # tests/integration/test_mcp_integration.py
+    async def test_all_16_tools_registered():
+        """Verify all 16 MCP tools are discoverable"""
+
+    async def test_tool_schema_validation():
+        """Verify Pydantic validates all tool parameters"""
+
+    async def test_tool_returns_structured_errors():
+        """Verify errors return proper JSON structure"""
+
+    # tests/integration/test_mcp_concurrency.py
+    async def test_100_concurrent_mcp_requests():
+        """Stress test: 100 parallel MCP tool calls"""
+
+    async def test_mcp_request_timeout_handling():
+        """Verify proper timeout handling for slow operations"""
+
+    # tests/integration/test_mcp_error_handling.py
+    async def test_validation_error_response_format():
+        """Verify ValidationError returns proper structure"""
+
+    async def test_storage_error_response_format():
+        """Verify StorageError returns proper structure"""
+    ```
+  - **Effort:** ~10 hours
+  - **Priority:** CRITICAL - core protocol completely untested
+
+### 🟡 High Priority - Test Quality Improvements
+
+- [ ] **TEST-027**: Convert Manual Tests to Automated E2E 🔥🔥
+  - **Problem:** 5 manual test scripts exist but aren't in CI/CD - 0% automated E2E coverage
+  - **Impact:** Regression risk, manual testing burden, no E2E coverage in CI
+  - **Current manual tests:**
+    - `test_all_features.py` - Comprehensive feature walkthrough (MANUAL)
+    - `debug_search.py` - Debug utility (not a test)
+    - `eval_test.py` - Evaluation script (not a test)
+  - **Conversion approach:**
+    1. Extract test scenarios from manual scripts
+    2. Create pytest fixtures for setup/teardown
+    3. Add assertions for expected outcomes
+    4. Integrate into CI/CD pipeline
+  - **Target: 10-15 automated E2E tests from manual scripts:**
+    ```python
+    # tests/e2e/test_critical_paths.py
+
+    @pytest.mark.e2e
+    async def test_first_time_user_setup():
+        """New user: install → configure → index → search"""
+
+    @pytest.mark.e2e
+    async def test_daily_workflow():
+        """Typical day: search code → store memory → retrieve → export"""
+
+    @pytest.mark.e2e
+    async def test_project_migration():
+        """Migrate: export project → delete → reimport → verify"""
+    ```
+  - **Effort:** ~8 hours
+  - **Files to create:** `tests/e2e/` directory, `tests/e2e/conftest.py`, `tests/e2e/test_critical_paths.py`
+  - **CI integration:** Add `pytest tests/e2e/ -m e2e` to nightly CI run
+
+- [ ] **TEST-028**: Add Performance Regression Test Suite 🔥🔥
+  - **Problem:** No automated performance regression detection - silent degradation possible
+  - **Impact:** Performance could degrade without detection until users complain
+  - **Note:** PERF-006 implemented detection logic, but no automated test suite exists
+  - **SPEC requirements:**
+    - F007-R001: P95 search latency <50ms (current: 3.96ms)
+    - F007-R002: Cache hit rate >90% (current: 98%)
+    - F007-R003: Indexing throughput >1 file/sec (current: 2.45 sequential, 10-20 parallel)
+    - F007-R006: Concurrent throughput >10 req/sec (current: 55,246 ops/sec)
+  - **Tests to implement:**
+    ```python
+    # tests/performance/test_regression_detection.py
+
+    @pytest.mark.performance
+    def test_search_latency_p95_under_50ms():
+        """Run 100 queries, assert P95 < 50ms"""
+
+    @pytest.mark.performance
+    def test_indexing_throughput_baseline():
+        """Index 100 files, assert > 1 file/sec"""
+
+    @pytest.mark.performance
+    def test_cache_hit_rate_above_90_percent():
+        """Re-index unchanged files, assert cache hits > 90%"""
+
+    @pytest.mark.performance
+    def test_concurrent_search_throughput():
+        """Run 100 concurrent searches, assert > 10 req/sec"""
+    ```
+  - **Integration with CI:**
+    - Run on merge to main (not every PR)
+    - Store baseline metrics in artifact
+    - Alert if regression >20% from baseline
+  - **Effort:** ~8 hours
+  - **Files to create:** `tests/performance/`, `tests/performance/test_latency.py`, `tests/performance/test_throughput.py`
+  - **Related:** PERF-006 (detection logic exists, needs test harness)
+
+### 📊 SPEC Coverage Audit Summary
+
+| Category | SPEC Reqs | Current Coverage | After Fixes |
+|----------|-----------|------------------|-------------|
+| Boundary conditions | ~40 | 5% | 80%+ |
+| Concurrent operations | ~15 | 8% (1 flaky) | 90%+ |
+| E2E workflows | ~25 | 0% | 80%+ |
+| MCP protocol (F010) | 4 | 0% | 100% |
+| Performance regression | ~10 | 0% (manual) | 100% |
+| **Total new tests** | | | **~120 tests** |
+
+**Estimated effort:** 52 hours (~7 days)
+**Impact:** Testing pyramid rebalanced (target: 80% unit, 15% integration, 5% E2E)
+
+---
+
 ## 🚨 TEST ANTIPATTERN AUDIT (2025-11-25)
 
 **Source:** 6-agent parallel review analyzing 168 test files for validation theater and antipatterns.

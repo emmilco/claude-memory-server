@@ -53,8 +53,17 @@ async def test_store_initialization(store):
 
     Uses fixture with pre-initialized store to avoid timeout issues
     during parallel test execution.
+
+    NOTE: Store now uses connection pooling by default, so self.client is None.
+    Instead, clients are acquired from the pool via _get_client().
     """
-    assert store.client is not None
+    # Check that store is initialized - either via pool or direct client
+    if store.use_pool:
+        # Pool-based: check that pool is available
+        assert store.setup.pool is not None, "Pool should be initialized"
+    else:
+        # Legacy direct client mode
+        assert store.client is not None, "Client should be initialized"
 
     # Retry health check to handle transient issues in parallel execution
     max_retries = 3

@@ -318,10 +318,11 @@ class QdrantMemoryStore(MemoryStore):
         items: List[Tuple[str, List[float], Dict[str, Any]]],
     ) -> List[str]:
         """Store multiple memories in a batch operation."""
-        try:
-            if not items:
-                return []
+        if not items:
+            return []
 
+        client = None
+        try:
             points = []
             memory_ids = []
 
