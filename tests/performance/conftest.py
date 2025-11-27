@@ -112,6 +112,7 @@ class Service{i}:
     # Create server and index project
     config = get_config()
     server = MemoryRAGServer(config)
+    await server.initialize()
 
     # Index the project
     await server.index_codebase(
@@ -123,7 +124,7 @@ class Service{i}:
     yield server
 
     # Cleanup
-    await server.cleanup()
+    await server.close()
 
 
 @pytest_asyncio.fixture
@@ -131,6 +132,7 @@ async def server_with_memories(tmp_path, unique_qdrant_collection, mock_embeddin
     """Server with pre-populated memories for performance testing."""
     config = get_config()
     server = MemoryRAGServer(config)
+    await server.initialize()
 
     # Store 100 test memories
     for i in range(100):
@@ -144,7 +146,7 @@ async def server_with_memories(tmp_path, unique_qdrant_collection, mock_embeddin
     yield server
 
     # Cleanup
-    await server.cleanup()
+    await server.close()
 
 
 @pytest.fixture
@@ -186,8 +188,9 @@ async def fresh_server(unique_qdrant_collection, mock_embeddings):
     """Fresh server instance for performance testing."""
     config = get_config()
     server = MemoryRAGServer(config)
+    await server.initialize()
 
     yield server
 
     # Cleanup
-    await server.cleanup()
+    await server.close()

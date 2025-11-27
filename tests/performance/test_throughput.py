@@ -1,15 +1,8 @@
-"""Performance tests for throughput (SPEC F007-R003, F007-R006).
-
-NOTE: These tests are currently skipped pending async fixture fixes.
-See TEST-028 for tracking.
-"""
+"""Performance tests for throughput (SPEC F007-R003, F007-R006)."""
 
 import pytest
 import time
 import asyncio
-
-# Skip all tests in this module - async fixture issues need fixing
-pytestmark = pytest.mark.skip(reason="Performance tests need async fixture fixes (TEST-028)")
 
 
 @pytest.mark.performance

@@ -1,0 +1,173 @@
+name: Sequential Integration Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  sequential-tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+
+    services:
+      qdrant:
+        image: qdrant/qdrant:latest
+        ports:
+          - 6333:6333
+          - 6334:6334
+        env:
+          QDRANT_API_KEY: development
+        options: >-
+          --health-cmd "timeout 2 bash -c 'cat < /dev/null > /dev/tcp/localhost/6333' || exit 1"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+        enable-cache: true
+        cache-dependency-glob: "requirements.txt"
+
+    - name: Set up Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: stable
+
+    - name: Cache Rust compilation
+      uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: rust_core
+        cache-on-failure: true
+        shared-key: "rust-build-${{ runner.os }}"
+        save-if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'pull_request' }}
+
+    - name: Install Python dependencies
+      run: |
+        uv pip install --system maturin
+        uv pip install --system -r requirements.txt
+        uv pip install --system pytest pytest-asyncio pytest-cov pytest-timeout
+
+    - name: Build Rust module
+      run: |
+        cd rust_core
+        maturin build --release --interpreter python3.13
+        pip install target/wheels/mcp_performance_core-*-cp313-cp313-manylinux*.whl
+        cd ..
+
+    - name: Wait for Qdrant
+      run: |
+        echo "Waiting for Qdrant to be ready..."
+
+        for i in {1..20}; do
+          if curl -f http://localhost:6333/ > /dev/null 2>&1; then
+            echo "✓ Qdrant is ready!"
+            curl http://localhost:6333/
+            exit 0
+          fi
+          echo "Attempt $i: Qdrant not ready, waiting..."
+          sleep 2
+        done
+
+        echo "❌ Qdrant failed to start"
+        exit 1
+
+    - name: Clear HuggingFace cache
+      run: |
+        # Clear any cached models to force fresh download
+        # This prevents "meta tensor" issues from corrupted cache
+        rm -rf ~/.cache/huggingface/hub
+        rm -rf ~/.cache/torch/sentence_transformers
+        echo "Cleared HuggingFace and sentence-transformers cache"
+
+    - name: Run sequential integration tests
+      env:
+        QDRANT_URL: http://localhost:6333
+        QDRANT_API_KEY: development
+        HF_HUB_DISABLE_SYMLINKS_WARNING: "1"
+      run: |
+        set -o pipefail
+
+        echo "Running flaky tests sequentially (without -n auto)..."
+        echo "These tests pass individually but fail in parallel execution"
+        echo ""
+
+        pytest \
+          tests/integration/test_concurrent_operations.py \
+          tests/integration/test_mcp_concurrency.py \
+          tests/integration/test_hybrid_search_integration.py \
+          tests/integration/test_bug_018_regression.py \
+          tests/integration/test_pool_store_integration.py \
+          -v --tb=short --timeout=60 --timeout-method=thread \
+          --cov=src --cov-report=term-missing --cov-report=xml \
+          --junitxml=sequential-test-results.xml 2>&1 | tee sequential-pytest-output.txt
+
+        echo "PYTEST_EXIT_CODE=${PIPESTATUS[0]}" >> $GITHUB_ENV
+
+    - name: Generate test summary
+      if: always()
+      run: |
+        echo "## Sequential Integration Test Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "These tests are run **sequentially** (without pytest-xdist) because they are flaky in parallel execution." >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Test Files:**" >> $GITHUB_STEP_SUMMARY
+        echo "- test_concurrent_operations.py (12 tests)" >> $GITHUB_STEP_SUMMARY
+        echo "- test_mcp_concurrency.py (9 tests)" >> $GITHUB_STEP_SUMMARY
+        echo "- test_hybrid_search_integration.py (20 tests)" >> $GITHUB_STEP_SUMMARY
+        echo "- test_bug_018_regression.py (24 tests)" >> $GITHUB_STEP_SUMMARY
+        echo "- test_pool_store_integration.py (17 tests)" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        # Extract test counts from pytest output
+        if [ -f sequential-pytest-output.txt ]; then
+          SUMMARY_LINE=$(grep -E "^=+ .* (passed|failed|error)" sequential-pytest-output.txt | tail -1)
+          if [ -n "$SUMMARY_LINE" ]; then
+            echo "**Result:** $SUMMARY_LINE" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Extract coverage percentage
+          COV_LINE=$(grep "^TOTAL" sequential-pytest-output.txt | tail -1)
+          if [ -n "$COV_LINE" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Coverage:**" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "$COV_LINE" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+        fi
+
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "📊 See [full test logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for detailed output" >> $GITHUB_STEP_SUMMARY
+
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v4
+      if: always()
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: false
+        token: ${{ secrets.CODECOV_TOKEN }}
+      continue-on-error: true
+
+    - name: Publish test results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always() && hashFiles('sequential-test-results.xml') != ''
+      with:
+        files: sequential-test-results.xml
+        check_name: Sequential Test Results
+        comment_mode: off

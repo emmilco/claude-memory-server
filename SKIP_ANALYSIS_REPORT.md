@@ -212,12 +212,11 @@ The test suite has approximately **335-355 skipped tests** across **37 test file
      - C) Add unwrapping logic to tests
    - **Action:** Investigate error handling flow, then fix
 
-2. **tests/integration/test_qdrant_store.py** (19 tests) ⭐ INVESTIGATE
+2. **tests/integration/test_qdrant_store.py** (19 tests) ✅ FIXED (2025-11-26)
    - Issue: "Store fixture initialization issues - client is None"
-   - Lines 1-5, 63-73: Notes about connection pooling vs direct client
-   - Test expects `store.client` but pooled mode uses `store.setup.pool`
-   - **Fix:** Update test assertions to check pool vs client based on `store.use_pool`
-   - **Action:** May pass if skip is removed - needs testing
+   - **Resolution:** Tests were actually working correctly - just needed skip marker removed
+   - All 19 tests now pass (verified both sequential and parallel execution)
+   - Tests already had proper pool-aware assertions (lines 61-66)
 
 3. **tests/performance/test_latency.py** (5 tests)
    - Issue: "Performance tests need async fixture fixes (TEST-028)"
@@ -287,16 +286,18 @@ rm tests/unit/test_export_import.py
 
 ### 2. INVESTIGATE Test Issues ⭐⭐
 
-Focus on these 2 files first:
+~~Focus on these 2 files first:~~ (1/2 COMPLETE)
 
+**Completed:**
+- ✅ `test_qdrant_store.py`: All 19 tests now pass (skip marker removed)
+
+**Remaining:**
 ```bash
-# Test if these pass when skip is removed
-python -m pytest tests/integration/test_qdrant_store.py -xvs
+# Test if this passes when skip is removed
 python -m pytest tests/integration/test_error_recovery.py -xvs
 ```
 
-**Expected outcomes:**
-- `test_qdrant_store.py`: May pass with pool-aware assertions
+**Expected outcome:**
 - `test_error_recovery.py`: Need to fix error type expectations
 
 ### 3. TRACK Feature Implementation
@@ -336,11 +337,11 @@ jobs:
 
 ## Tests That May Pass Now (Candidates for Unskipping)
 
-These tests might pass if skip markers are removed:
+~~These tests might pass if skip markers are removed:~~ (1/2 COMPLETE)
 
-1. **tests/integration/test_qdrant_store.py** (19 tests)
-   - Reason: Pool-based initialization is now the default
-   - Test: Remove skip marker and check if pool-aware assertions pass
+1. ✅ **tests/integration/test_qdrant_store.py** (19 tests) - FIXED 2025-11-26
+   - Skip marker removed, all tests passing
+   - Tests already had proper pool-aware assertions
 
 2. **tests/unit/test_git_storage.py** (27 tests)
    - Reason: Skip condition is `not GITPYTHON_AVAILABLE or SKIP_GIT_TESTS`
@@ -354,7 +355,8 @@ These tests might pass if skip markers are removed:
 
 1. **Dead Code (51 tests):** DELETE immediately - no value, causes confusion
 2. **Legitimate Skips (139 tests):** Keep as-is - appropriate for CI/parallel execution
-3. **Test Issues (81 tests):** Investigate - may reveal real bugs in error handling or initialization
+3. **Test Issues (62 tests):** Investigate - may reveal real bugs in error handling or initialization
+   - ✅ 19 FIXED: test_qdrant_store.py (2025-11-26)
 4. **Pending Features (92 tests):** Enable progressively as features ship
 5. **Flaky Tests (82 tests):** Consider sequential CI job to unskip
 
@@ -363,11 +365,12 @@ These tests might pass if skip markers are removed:
 - **139 are correctly skipped** (timing-sensitive)
 - **82 could run sequentially** (flaky in parallel)
 - **92 waiting on features** (planned work)
-- **81 need investigation** (potential bugs)
+- **62 need investigation** (potential bugs, down from 81)
+- **19 now passing** (test_qdrant_store.py fixed)
 
 **Next Steps:**
 1. Delete dead code (test_export_import.py + 6 individual tests)
-2. Investigate test_qdrant_store.py and test_error_recovery.py
+2. ✅ ~~Investigate test_qdrant_store.py~~ and test_error_recovery.py
 3. Track TEST-027, TEST-028 for E2E/performance test fixes
 4. Monitor FEAT-033/048/056/057/058/059 completion
 

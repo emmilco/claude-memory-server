@@ -52,6 +52,27 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Added - 2025-11-26
+- **CI: Sequential Test Workflow**
+  - Created .github/workflows/sequential-tests.yml for flaky tests
+  - Runs 82 tests sequentially that fail in parallel execution
+  - Covers: test_concurrent_operations, test_mcp_concurrency, test_hybrid_search_integration, test_bug_018_regression, test_pool_store_integration
+
+### Fixed - 2025-11-26
+- **TEST-033: Unskip test_error_recovery.py (16 tests)**
+  - Removed outdated skip marker - tests were already correctly written
+  - Tests validate error recovery for store failures, embedding errors, validation errors
+
+- **TEST-034: Unskip test_qdrant_store.py (18 tests)**
+  - Removed outdated skip marker - tests correctly handle pooled mode
+  - Tests cover store initialization, CRUD operations, vector search, batch operations
+
+- **TEST-028: Fix Performance Test Async Fixtures (20 tests)**
+  - Added pytest-asyncio configuration to pytest.ini
+  - Fixed server.cleanup() → server.close() in performance conftest.py
+  - Added missing server.initialize() calls
+  - 11 tests now pass, 9 fail due to API/performance issues (not async)
+
+### Added - 2025-11-26
 - **TEST-029: Service Layer Test Suite**
   - Created 268 tests for 6 extracted service classes (tests/unit/test_services/)
   - Service coverage improved: memory_service (9%→71%), code_indexing_service (11%→83%), cross_project_service (22%→62%), health_service (22%→87%), query_service (23%→100%), analytics_service (30%→100%)

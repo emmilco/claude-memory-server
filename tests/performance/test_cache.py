@@ -1,16 +1,9 @@
-"""Performance tests for cache (SPEC F007-R002).
-
-NOTE: These tests are currently skipped pending async fixture fixes.
-See TEST-028 for tracking.
-"""
+"""Performance tests for cache (SPEC F007-R002)."""
 
 import pytest
 import time
 import shutil
 from pathlib import Path
-
-# Skip all tests in this module - async fixture issues need fixing
-pytestmark = pytest.mark.skip(reason="Performance tests need async fixture fixes (TEST-028)")
 
 
 @pytest.mark.performance

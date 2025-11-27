@@ -1,7 +1,13 @@
 """Tests for error recovery and resilience.
 
-NOTE: These tests are currently skipped due to test design issues.
-The tests expect ValidationError but the server wraps them in StorageError.
+Tests verify that the server handles various error conditions gracefully:
+- Store failures and connection loss
+- Embedding generation errors and timeouts
+- Cache corruption and unavailability
+- Read-only mode enforcement
+- Validation errors (empty content, injection attacks)
+- Resource exhaustion (large batches, oversized content)
+- Health check resilience
 """
 
 import asyncio
@@ -17,8 +23,6 @@ from src.core.exceptions import EmbeddingError, ReadOnlyError, SecurityError
 from src.store.qdrant_store import QdrantMemoryStore
 from src.embeddings.generator import EmbeddingGenerator
 
-# Skip all tests in this module - test design issues
-pytestmark = pytest.mark.skip(reason="Tests expect ValidationError but server wraps in StorageError")
 
 
 @pytest.fixture
