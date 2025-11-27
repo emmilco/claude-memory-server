@@ -233,9 +233,9 @@ async def reindex_project(
             "project_name": str,
             "files_deleted": int,  # If clear_existing
             "files_indexed": int,
-            "units_extracted": int,
+            "units_indexed": int,
             "cache_bypassed": bool,
-            "indexing_time_seconds": float
+            "total_time_s": float
         }
     """
 ```

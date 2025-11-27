@@ -559,11 +559,13 @@ Index code files for semantic search.
 **Response:**
 ```json
 {
-  "status": "completed",
+  "status": "success",
+  "project_name": "my-app",
+  "directory": "/path/to/my-app",
   "files_indexed": 29,
-  "semantic_units_extracted": 175,
-  "indexing_time_seconds": 2.99,
-  "project_name": "my-app"
+  "units_indexed": 175,
+  "total_time_s": 2.99,
+  "languages": {"python": 15, "javascript": 14}
 }
 ```
 

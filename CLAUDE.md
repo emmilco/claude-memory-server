@@ -161,6 +161,16 @@ git branch -d $TASK_ID
 
 **Why?** Enables parallel work without conflicts (up to 6 tasks).
 
+**When Direct Commits to Main Are Acceptable:**
+- Single-file typo/documentation fixes
+- Emergency hotfixes with immediate verification
+- CI configuration adjustments during active debugging
+
+**When Worktrees Are Required:**
+- Any task with an ID (FEAT-XXX, BUG-XXX, TEST-XXX, etc.)
+- Changes touching 3+ files
+- Any work expected to take multiple commits
+
 **Details:** See TASK_WORKFLOW.md and ADVANCED.md for complete workflow and conflict resolution.
 
 ### 2. Task Tracking

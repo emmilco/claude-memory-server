@@ -30,6 +30,12 @@ Thumbs.db
 
 # Claude Code
 .claude/settings.local.json
+.claude/logs/
+.claude/feedback/
+
+# Behavioral reinforcement system
+CLAUDE_JOURNAL.md
+LEARNED_PRINCIPLES.md
 
 # Archived documentation
 archived_docs/
