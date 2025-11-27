@@ -120,7 +120,6 @@ class TestMemoryUpdateIntegration:
         assert set(retrieved["memory"]["tags"]) == {"updated", "tags", "new"}
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="Flaky in parallel execution - Qdrant resource contention")
     async def test_update_metadata(self, test_server, test_memory_id):
         """Test updating memory metadata."""
         result = await test_server.update_memory(

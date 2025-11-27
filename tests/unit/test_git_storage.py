@@ -176,15 +176,21 @@ class TestStoreGitCommits:
         assert result["parent_hashes"] == []
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="Flaky test - race condition in parallel execution (passes individually)")
     async def test_store_commit_fts_index(self, store, sample_commit):
         """Test FTS index is created for commit message."""
-        await store.store_git_commits([sample_commit])
+        import uuid
+        # Use unique commit hash to avoid conflicts in parallel execution
+        unique_hash = f"test{uuid.uuid4().hex[:32]}"
+        unique_commit = {**sample_commit, "commit_hash": unique_hash}
 
-        # Search using FTS
+        await store.store_git_commits([unique_commit])
+
+        # Search using FTS with unique message
         results = await store.search_git_commits(query="Test commit")
-        assert len(results) == 1
-        assert results[0]["commit_hash"] == sample_commit["commit_hash"]
+        # Find our specific commit in results
+        matching = [r for r in results if r["commit_hash"] == unique_hash]
+        assert len(matching) == 1
+        assert matching[0]["commit_hash"] == unique_hash
 
 
 class TestStoreGitFileChanges:

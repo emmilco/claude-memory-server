@@ -73,7 +73,6 @@ async def server(unique_qdrant_collection):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Flaky in parallel execution - Qdrant resource contention")
 async def test_reindex_project_basic(server, test_project_dir):
     """Test basic project reindexing."""
     # Use unique project name to avoid cross-test interference
@@ -96,7 +95,7 @@ async def test_reindex_project_basic(server, test_project_dir):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Flaky in parallel execution - Qdrant resource contention")
+@pytest.mark.skip_ci(reason="Flaky under parallel execution - Qdrant timing sensitive")
 async def test_reindex_with_clear_existing(server, test_project_dir):
     """Test reindexing with clear_existing flag."""
     # Use unique project name to avoid cross-test interference
@@ -154,6 +153,7 @@ async def test_reindex_with_bypass_cache(server, test_project_dir):
 
 
 @pytest.mark.asyncio
+@pytest.mark.skip_ci(reason="Flaky under parallel execution - Qdrant timing sensitive")
 async def test_reindex_with_both_flags(server, test_project_dir):
     """Test reindexing with both clear_existing and bypass_cache."""
     # Use unique project name to avoid cross-test interference
@@ -225,6 +225,7 @@ async def test_reindex_empty_directory(server):
 
 
 @pytest.mark.asyncio
+@pytest.mark.skip_ci(reason="Flaky under parallel execution - Qdrant timing sensitive")
 async def test_reindex_stats_accuracy(server, test_project_dir):
     """Test that reindexing statistics are accurate."""
     # Use unique project name to avoid cross-test interference

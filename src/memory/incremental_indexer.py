@@ -651,47 +651,66 @@ class IncrementalIndexer(BaseCodeIndexer):
 
             # Handle Qdrant store
             if has_client:
-                # Initialize store if needed
-                if self.store.client is None:
-                    await self.store.initialize()
+                # Get client - either directly or from pool
+                client = None
+                # Check if store uses connection pool (must be explicit bool True)
+                use_pool = getattr(self.store, 'use_pool', None)
+                use_pool = use_pool is True  # Ensure it's explicitly True, not just truthy
 
-                # Check again after initialization
-                if self.store.client is None:
-                    logger.warning(f"Store not initialized, skipping cleanup for {file_path}")
-                    return 0
+                if use_pool:
+                    # Acquire client from pool
+                    client = await self.store._get_client()
+                    if client is None:
+                        logger.warning(f"Could not acquire client from pool, skipping cleanup for {file_path}")
+                        return 0
+                else:
+                    # Initialize store if needed
+                    if self.store.client is None:
+                        await self.store.initialize()
 
-                # Build proper Qdrant filter
-                from qdrant_client.models import Filter, FieldCondition, MatchValue
+                    # Check again after initialization
+                    if self.store.client is None:
+                        logger.warning(f"Store not initialized, skipping cleanup for {file_path}")
+                        return 0
+                    client = self.store.client
 
-                file_filter = Filter(
-                    must=[
-                        FieldCondition(
-                            key="file_path",
-                            match=MatchValue(value=file_path_str),
-                        )
-                    ]
-                )
+                try:
+                    # Build proper Qdrant filter
+                    from qdrant_client.models import Filter, FieldCondition, MatchValue
 
-                # Get all points for this file using scroll
-                points, _ = self.store.client.scroll(
-                    collection_name=self.store.collection_name,
-                    scroll_filter=file_filter,
-                    limit=10000,  # Max units per file
-                    with_payload=False,
-                    with_vectors=False,
-                )
-
-                point_ids = [point.id for point in points]
-
-                if point_ids:
-                    # Delete all points
-                    self.store.client.delete(
-                        collection_name=self.store.collection_name,
-                        points_selector=point_ids,
+                    file_filter = Filter(
+                        must=[
+                            FieldCondition(
+                                key="file_path",
+                                match=MatchValue(value=file_path_str),
+                            )
+                        ]
                     )
+
+                    # Get all points for this file using scroll
+                    points, _ = client.scroll(
+                        collection_name=self.store.collection_name,
+                        scroll_filter=file_filter,
+                        limit=10000,  # Max units per file
+                        with_payload=False,
+                        with_vectors=False,
+                    )
+
+                    point_ids = [point.id for point in points]
+
+                    if point_ids:
+                        # Delete all points
+                        client.delete(
+                            collection_name=self.store.collection_name,
+                            points_selector=point_ids,
+                        )
                     logger.debug(f"Deleted {len(point_ids)} units for {file_path.name}")
 
-                return len(point_ids)
+                    return len(point_ids)
+                finally:
+                    # Release client back to pool if we acquired it
+                    if use_pool:
+                        await self.store._release_client(client)
 
             # Handle SQLite store
             else:

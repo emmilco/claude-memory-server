@@ -234,7 +234,7 @@ class TestErrorRecovery:
         assert isinstance(results, dict)
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="Flaky in parallel execution - Qdrant resource contention")
+    @pytest.mark.skip_ci(reason="Flaky under parallel execution - Qdrant timing sensitive")
     async def test_partial_batch_failure_reported(self, server):
         """
         F010-R004: Batch operations with some failures report clearly.

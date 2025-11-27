@@ -417,10 +417,12 @@ async def test_retrieve_with_limit(store):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Flaky test - race condition in parallel execution (passes individually)")
-async def test_retrieve_with_large_limit(store):
+async def test_retrieve_with_large_limit(store, test_project_name):
     """Test that retrieve caps limit to prevent memory issues."""
+    from src.core.models import SearchFilters
+
     # Store MORE than the cap (100) to properly test capping logic
+    # Use unique project_name for isolation in parallel execution
     for i in range(150):
         await store.store(
             content=f"Memory {i}",
@@ -428,12 +430,17 @@ async def test_retrieve_with_large_limit(store):
             metadata={
                 "category": MemoryCategory.FACT.value,
                 "context_level": ContextLevel.PROJECT_CONTEXT.value,
-                "scope": MemoryScope.GLOBAL.value,
+                "scope": MemoryScope.PROJECT.value,
+                "project_name": test_project_name,
             }
         )
 
-    # Request excessive limit
-    results = await store.retrieve([0.5] * 384, limit=1000)
+    # Request excessive limit, filtered by project name
+    results = await store.retrieve(
+        [0.5] * 384,
+        limit=1000,
+        filters=SearchFilters(project_name=test_project_name, scope=MemoryScope.PROJECT)
+    )
 
     # Should cap to exactly 100 (the safe limit)
     assert len(results) == 100, f"Expected exactly 100 results (capped), got {len(results)}"

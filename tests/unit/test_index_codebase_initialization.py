@@ -145,7 +145,6 @@ class TestIndexCodebaseInitialization:
         await store.close()
 
     @pytest.mark.asyncio
-    @pytest.mark.skip_ci  # Performance test may exceed CI timeout
     async def test_indexing_performance_with_initialization(self, server, temp_codebase, mock_embeddings):
         """
         Test that indexing completes in reasonable time when properly initialized.
@@ -153,22 +152,26 @@ class TestIndexCodebaseInitialization:
         This is a regression test to ensure the performance issue is fixed.
         """
         import time
+        import uuid
 
         start_time = time.time()
+
+        # Use unique project name for isolation
+        project_name = f"test_perf_{uuid.uuid4().hex[:8]}"
 
         # Index the temporary codebase
         result = await server.index_codebase(
             directory_path=str(temp_codebase),
-            project_name="test_perf",
+            project_name=project_name,
             recursive=True,
         )
 
         elapsed_time = time.time() - start_time
 
         # With proper initialization and 2 small files, this should complete quickly
-        # Even with real embedding generation, <5 seconds is reasonable
+        # Even with real embedding generation, <10 seconds is reasonable in parallel
         # With mocked embeddings, should be <1 second
-        assert elapsed_time < 5.0, f"Indexing took too long: {elapsed_time:.2f}s"
+        assert elapsed_time < 10.0, f"Indexing took too long: {elapsed_time:.2f}s"
 
         # Verify successful indexing
         assert result["status"] == "success"

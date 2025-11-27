@@ -55,6 +55,14 @@ from src.monitoring.health_reporter import HealthReporter
 from src.monitoring.capacity_planner import CapacityPlanner
 from src.core.tracing import new_operation, get_operation_id, get_logger
 
+# Service layer imports (REF-016: Split MemoryRAGServer God Class)
+from src.services.memory_service import MemoryService
+from src.services.code_indexing_service import CodeIndexingService
+from src.services.cross_project_service import CrossProjectService
+from src.services.health_service import HealthService
+from src.services.query_service import QueryService
+from src.services.analytics_service import AnalyticsService
+
 logger = get_logger(__name__)
 
 
@@ -141,6 +149,15 @@ class MemoryRAGServer:
             "server_start_time": datetime.now().isoformat(),
             "last_query_time": None,
         }
+
+        # Service layer (REF-016: Split MemoryRAGServer God Class)
+        # These services encapsulate focused functionality extracted from this class
+        self.memory_service: Optional[MemoryService] = None
+        self.code_indexing_service: Optional[CodeIndexingService] = None
+        self.cross_project_service: Optional[CrossProjectService] = None
+        self.health_service: Optional[HealthService] = None
+        self.query_service: Optional[QueryService] = None
+        self.analytics_service: Optional[AnalyticsService] = None
 
     async def initialize(self, defer_preload: bool = False) -> None:
         """Initialize async components.
@@ -305,6 +322,11 @@ class MemoryRAGServer:
                 self.pattern_tracker = None
                 logger.info("Usage pattern analytics disabled")
 
+            # Initialize service layer (REF-016: Split MemoryRAGServer God Class)
+            # Services provide focused interfaces to functionality previously in this class
+            self._initialize_services()
+            logger.info("Service layer initialized")
+
             logger.info("Server initialized successfully")
 
         except (ImportError, ModuleNotFoundError) as e:
@@ -342,6 +364,79 @@ class MemoryRAGServer:
         except (subprocess.TimeoutExpired, FileNotFoundError, Exception) as e:
             logger.debug(f"Failed to detect git project: {e}")
         return None
+
+    def _initialize_services(self) -> None:
+        """
+        Initialize service layer components (REF-016).
+
+        Creates focused service instances that encapsulate specific functionality
+        previously scattered throughout this class. Services provide clean
+        interfaces while this class acts as a facade.
+        """
+        # Memory Service - Core CRUD operations and memory lifecycle
+        self.memory_service = MemoryService(
+            store=self.store,
+            embedding_generator=self.embedding_generator,
+            embedding_cache=self.embedding_cache,
+            config=self.config,
+            usage_tracker=self.usage_tracker,
+            conversation_tracker=self.conversation_tracker,
+            query_expander=self.query_expander,
+            metrics_collector=self.metrics_collector,
+            project_name=self.project_name,
+        )
+
+        # Code Indexing Service - Code search, indexing, and dependency analysis
+        self.code_indexing_service = CodeIndexingService(
+            store=self.store,
+            embedding_generator=self.embedding_generator,
+            embedding_cache=self.embedding_cache,
+            config=self.config,
+            hybrid_searcher=self.hybrid_searcher,
+            metrics_collector=self.metrics_collector,
+            duplicate_detector=self.duplicate_detector,
+            quality_analyzer=self.quality_analyzer,
+            project_name=self.project_name,
+        )
+
+        # Cross-Project Service - Multi-project search and consent
+        self.cross_project_service = CrossProjectService(
+            store=self.store,
+            embedding_generator=self.embedding_generator,
+            config=self.config,
+            cross_project_consent=self.cross_project_consent,
+            metrics_collector=self.metrics_collector,
+        )
+
+        # Health Service - Monitoring, metrics, and alerting
+        self.health_service = HealthService(
+            store=self.store,
+            config=self.config,
+            metrics_collector=self.metrics_collector,
+            alert_engine=self.alert_engine,
+            health_reporter=self.health_reporter,
+            capacity_planner=self.capacity_planner,
+        )
+
+        # Query Service - Query expansion, sessions, suggestions
+        self.query_service = QueryService(
+            config=self.config,
+            conversation_tracker=self.conversation_tracker,
+            query_expander=self.query_expander,
+            suggestion_engine=self.suggestion_engine,
+            hybrid_searcher=self.hybrid_searcher,
+        )
+
+        # Analytics Service - Usage analytics and patterns
+        self.analytics_service = AnalyticsService(
+            store=self.store,
+            config=self.config,
+            usage_tracker=self.usage_tracker,
+            pattern_tracker=self.pattern_tracker,
+            metrics_collector=self.metrics_collector,
+        )
+
+        logger.debug("All services initialized")
 
     async def store_memory(
         self,

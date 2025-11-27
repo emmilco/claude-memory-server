@@ -409,8 +409,31 @@ def code_sample_factory():
 
 # Collection pool: Pre-created collections reused across tests
 # This prevents Qdrant overload from 8 parallel workers creating/deleting collections
+# With 10 collections and 8 workers, each worker gets a dedicated collection
 COLLECTION_POOL = [f"test_pool_{i}" for i in range(10)]
 _collection_cycle = cycle(COLLECTION_POOL)
+
+# Worker ID to collection mapping (Option E: worker-specific isolation)
+# Each worker gets a dedicated collection to eliminate cross-worker data contamination
+def _get_worker_collection(worker_id: str) -> str:
+    """Map worker ID to a specific collection for true isolation.
+
+    Args:
+        worker_id: "master" for serial, "gw0"-"gw9" for parallel
+
+    Returns:
+        Collection name dedicated to this worker
+    """
+    if worker_id == "master":
+        return COLLECTION_POOL[0]  # Serial execution uses first pool
+    # Extract worker number from "gwN" format
+    try:
+        worker_num = int(worker_id.replace("gw", ""))
+        # Map to collection pool (wrap around if more workers than collections)
+        return COLLECTION_POOL[worker_num % len(COLLECTION_POOL)]
+    except (ValueError, IndexError):
+        # Fallback for unexpected worker IDs
+        return COLLECTION_POOL[0]
 
 
 @pytest.fixture(scope="session")
@@ -481,18 +504,34 @@ def setup_qdrant_pool(qdrant_client):
     # Tests clear collection contents before use via unique_qdrant_collection fixture
 
 
+@pytest.fixture(scope="session")
+def worker_id(request):
+    """Get pytest-xdist worker ID for collection isolation.
+
+    Returns:
+    - "gw0", "gw1", ... "gw7" when running with pytest -n 8
+    - "master" when running without xdist (serial execution)
+
+    This fixture enables worker-specific collection assignment.
+    """
+    workerinput = getattr(request.config, "workerinput", None)
+    if workerinput is not None:
+        return workerinput.get("workerid", "master")
+    return "master"
+
+
 @pytest.fixture
-def unique_qdrant_collection(monkeypatch, qdrant_client, setup_qdrant_pool):
-    """Provide clean collection from pool (prevents Qdrant deadlocks).
+def unique_qdrant_collection(monkeypatch, qdrant_client, setup_qdrant_pool, worker_id):
+    """Provide worker-specific collection for true parallel isolation.
 
-    Instead of creating new collections per test (which overwhelms Qdrant),
-    this fixture:
-    1. Gets a collection from the pre-created pool
-    2. Clears it (10x faster than recreate)
-    3. Returns it for the test
+    Instead of round-robin allocation (which causes cross-worker contamination),
+    this fixture assigns each worker its own dedicated collection:
+    - gw0 -> test_pool_0
+    - gw1 -> test_pool_1
+    - etc.
 
-    QA Best Practice: Collection pooling prevents infrastructure deadlocks
-    while maintaining test isolation through clearing.
+    This is Option E from TEST_PARALLELIZATION_ANALYSIS.md, using the existing
+    pool infrastructure for zero overhead.
     """
     import os
     from qdrant_client.models import PointIdsList
@@ -506,8 +545,8 @@ def unique_qdrant_collection(monkeypatch, qdrant_client, setup_qdrant_pool):
         yield unique_collection
         return
 
-    # Get next collection from pool (round-robin)
-    collection_name = next(_collection_cycle)
+    # Get worker-specific collection (true isolation)
+    collection_name = _get_worker_collection(worker_id)
     monkeypatch.setenv("CLAUDE_RAG_QDRANT_COLLECTION_NAME", collection_name)
 
     # Clear collection before test (faster than recreate)
@@ -534,6 +573,39 @@ def unique_qdrant_collection(monkeypatch, qdrant_client, setup_qdrant_pool):
     yield collection_name
 
     # No cleanup needed - collection stays in pool for next test
+
+
+# ============================================================================
+# Test Project Isolation (TEST-016 Fix)
+# ============================================================================
+
+@pytest.fixture
+def test_project_name(request):
+    """Generate unique project name per test for data isolation.
+
+    This fixture ensures each test operates on isolated data by providing
+    a unique project_name. Tests should use this when storing/retrieving
+    data to avoid cross-test contamination in parallel execution.
+
+    Usage:
+        async def test_something(server, test_project_name):
+            await server.store_memory(
+                content="test",
+                project_name=test_project_name,
+                scope="project"
+            )
+            results = await server.retrieve_memories(
+                query="test",
+                project_name=test_project_name
+            )
+
+    The name format is: test_{test_name}_{random_8chars}
+    """
+    import uuid
+    # Use test name + random suffix for uniqueness
+    test_name = request.node.name[:30]  # Truncate long test names
+    unique_suffix = uuid.uuid4().hex[:8]
+    return f"test_{test_name}_{unique_suffix}"
 
 
 # ============================================================================
