@@ -160,13 +160,16 @@ class MemoryRAGServer(StructuralQueryMixin):
         self.query_service: Optional[QueryService] = None
         self.analytics_service: Optional[AnalyticsService] = None
 
-    async def initialize(self, defer_preload: bool = False) -> None:
+    async def initialize(self, defer_preload: bool = False, defer_auto_index: bool = False) -> None:
         """Initialize async components.
 
         Args:
             defer_preload: If True, skip embedding model preloading for faster startup.
                           Model will be loaded on first use instead.
+            defer_auto_index: If True, skip auto-indexing during initialization.
+                             Call start_deferred_auto_indexing() later to trigger it.
         """
+        self._defer_auto_index = defer_auto_index
         try:
             # Initialize store
             self.store = create_memory_store(config=self.config)
@@ -288,7 +291,9 @@ class MemoryRAGServer(StructuralQueryMixin):
                 logger.info("Cross-project search disabled")
 
             # Initialize auto-indexing service if enabled (FEAT-016)
-            if self.config.indexing.auto_index_enabled and self.config.indexing.auto_index_on_startup:
+            if defer_auto_index:
+                logger.info("Auto-indexing deferred - call start_deferred_auto_indexing() when ready")
+            elif self.config.indexing.auto_index_enabled and self.config.indexing.auto_index_on_startup:
                 await self._start_auto_indexing()
             else:
                 logger.info("Auto-indexing disabled or not configured for startup")
@@ -4248,6 +4253,24 @@ class MemoryRAGServer(StructuralQueryMixin):
         from pathlib import Path
 
         # Validate parameters
+
+    async def start_deferred_auto_indexing(self) -> None:
+        """
+        Start auto-indexing that was deferred during initialization.
+
+        Call this after the server is ready to accept requests, to run
+        auto-indexing in the background without blocking startup.
+        """
+        if not getattr(self, '_defer_auto_index', False):
+            logger.debug("Auto-indexing was not deferred, skipping")
+            return
+
+        if self.config.indexing.auto_index_enabled and self.config.indexing.auto_index_on_startup:
+            logger.info("Starting deferred auto-indexing...")
+            await self._start_auto_indexing()
+        else:
+            logger.info("Auto-indexing disabled in config")
+
     async def _start_auto_indexing(self) -> None:
         """
         Start auto-indexing on server startup (FEAT-016).

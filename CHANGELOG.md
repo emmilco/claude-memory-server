@@ -51,6 +51,14 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Fixed - 2025-11-27
+- **BUG: MCP server startup timeout due to blocking auto-indexing**
+  - Auto-indexing now deferred until after MCP protocol handshake completes
+  - Added `defer_auto_index` parameter to `MemoryRAGServer.initialize()`
+  - Added `start_deferred_auto_indexing()` method for background startup
+  - MCP server connects immediately, indexing runs in background
+  - Files: src/core/server.py, src/mcp_server.py
+
 ### Changed - 2025-11-26
 - **REF-013 Phase 2: Wire up service layer in server.py to eliminate duplicate code**
   - Converted MemoryRAGServer from God Class to thin facade delegating to services

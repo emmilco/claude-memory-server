@@ -1328,7 +1328,7 @@ async def main():
     memory_server = MemoryRAGServer(config)
 
     # Fast initialization - defer expensive operations until after MCP is listening
-    await memory_server.initialize(defer_preload=True)
+    await memory_server.initialize(defer_preload=True, defer_auto_index=True)
 
     logger.info(f"Server initialized (project: {memory_server.project_name or 'global'})")
     logger.info(f"Storage backend: {config.storage_backend}")
@@ -1362,6 +1362,12 @@ async def main():
                         logger.warning("Some features may not work correctly. See docs/TROUBLESHOOTING.md")
                     else:
                         logger.info("✅ Background initialization complete - all systems ready")
+
+                    # Start deferred auto-indexing (runs in background, non-blocking)
+                    try:
+                        await memory_server.start_deferred_auto_indexing()
+                    except Exception as e:
+                        logger.warning(f"Background: Auto-indexing failed: {e}")
                 except Exception as e:
                     logger.error(f"Background initialization error: {e}")
 
