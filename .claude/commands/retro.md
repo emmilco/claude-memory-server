@@ -15,15 +15,22 @@ Read the following files:
 1. `.claude/feedback/feedback_log.jsonl` - Accumulated feedback entries
 2. `LEARNED_PRINCIPLES.md` - Existing behavioral principles (if it exists)
 3. `CLAUDE.md` - Core behavioral guidance (for conflict checking)
+4. `CLAUDE_JOURNAL.md` - **REQUIRED:** Work journal with session summaries, reflections, and meta-learning entries
+5. `.claude/logs/CLAUDE_LOGS.jsonl` - **REQUIRED:** Activity logs (TOOL_USE, USER_PROMPT, TASK_START events)
+
+**IMPORTANT:** You MUST analyze all three data sources (feedback log, journal, and activity logs) to conduct a thorough retrospective. The journal contains rich context like "what went well", "what went poorly", and explicit META_LEARNING entries that are essential for identifying patterns. The activity logs provide correlation context for when feedback occurred.
+
+**Determine the date range:** Check when the last retro was run (from `LEARNED_PRINCIPLES.md` "Last updated" date or `.claude/feedback/retro_history.md`). Only analyze entries **since the last retro**.
 
 If `feedback_log.jsonl` doesn't exist or is empty, inform the user:
 > "No feedback has been captured yet. Feedback is logged automatically as you work. Run `/retro` again after a few sessions."
 
 Then stop.
 
-## Step 2: Parse Feedback Entries
+## Step 2: Parse All Data Sources
 
-Read all entries from `feedback_log.jsonl`. Each entry has this structure:
+### 2a. Feedback Log
+Read all entries from `feedback_log.jsonl` **since the last retro**. Each entry has this structure:
 ```json
 {
   "timestamp": "2025-11-25T18:00:00Z",
@@ -33,11 +40,22 @@ Read all entries from `feedback_log.jsonl`. Each entry has this structure:
 }
 ```
 
-To understand what Claude was doing before the feedback, also read `.claude/logs/CLAUDE_LOGS.jsonl` and correlate by timestamp and session_id. Look for TOOL_USE, USER_PROMPT, and TASK_START events preceding each feedback entry.
+### 2b. Journal Entries (CRITICAL)
+Read `CLAUDE_JOURNAL.md` and extract all entries **since the last retro**. Pay special attention to:
+- **SESSION_SUMMARY entries:** These contain "What went well" and "What went poorly" sections that reveal behavioral patterns
+- **META_LEARNING entries:** These are explicit behavioral observations recorded during work
+- **Open threads:** These may indicate incomplete work or recurring issues
 
+The journal provides richer context than feedback alone because it captures Claude's own reflection on what worked and what didn't.
+
+### 2c. Activity Logs
+Read `.claude/logs/CLAUDE_LOGS.jsonl` and correlate by timestamp and session_id. Look for TOOL_USE, USER_PROMPT, and TASK_START events preceding each feedback entry to understand what Claude was doing when feedback occurred.
+
+### Summary
 Create a summary:
-- Total entries: X
-- By sentiment: Y positive, Z negative, W corrective
+- Feedback entries: X total (Y positive, Z negative, W corrective)
+- Journal entries: N session summaries, M meta-learning entries
+- Activity log entries: P (sampled if file is large)
 - Date range: [earliest] to [latest]
 
 ## Step 3: Filter False Positives
@@ -92,7 +110,17 @@ Now look for **patterns** - recurring themes across multiple entries:
 - Are there clusters around specific contexts? (config files, tests, documentation, etc.)
 - Are there repeated themes across different sessions?
 
-**Pattern threshold:** Only consider patterns with **2 or more** supporting data points. Single instances are anecdotal, not patterns.
+### Cross-Reference with Journal
+
+**CRITICAL:** Cross-reference feedback with journal SESSION_SUMMARY entries to enrich pattern analysis:
+- Do journal "What went poorly" sections correlate with negative/corrective feedback?
+- Do journal "What went well" sections correlate with positive feedback?
+- Are there journal observations that explain WHY feedback occurred?
+- Are there META_LEARNING entries that provide explicit behavioral insights?
+
+The journal often provides the "why" behind feedback patterns. For example, negative feedback about "rushing" might correlate with journal entries noting "spent ~1 hour in inefficient debugging loops."
+
+**Pattern threshold:** Only consider patterns with **2 or more** supporting data points. Single instances are anecdotal, not patterns. However, explicit META_LEARNING journal entries can count as strong individual signals worth capturing.
 
 Report your findings:
 > "Patterns identified:

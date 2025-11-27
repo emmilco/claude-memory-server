@@ -6,6 +6,145 @@ Work session entries from Claude agents. See [Work Journal Protocol](CLAUDE.md#-
 
 ---
 
+### 2025-11-27 13:40 | 31cab3fc | USER_PROMPT
+User ran /retro command. Initial analysis missed journal entries and activity logs - user caught this and asked for a more thorough analysis. Re-ran with all three data sources (feedback, journal, claude logs). Identified 4 new principles (LP-004 through LP-007). User approved all and requested updates to retro.md to make journal/log analysis mandatory for future retros.
+
+---
+
+### 2025-11-27 18:27 | eaa59370 | SESSION_SUMMARY
+
+**Duration:** ~2 hours
+**Main work:** Fixed 28 test failures after config migration, investigated parallel test hanging issue
+
+**What went well:**
+- Quick identification and fix of 27 initial test failures (structural queries, git_indexer, models)
+- Used `--durations` to identify 470-second hanging test (`test_search_all_projects_disabled`)
+- Simple fix for hanging test: removed unnecessary `srv.initialize()` call (470s → 3s)
+- Sequential unit tests confirmed passing (3376 passed, 92 skipped)
+
+**What went poorly or was difficult:**
+- Extremely inefficient debugging loop: spent ~1 hour repeatedly waiting for hung parallel tests instead of investigating immediately
+- User rightfully frustrated by long feedback cycles - should have used `--durations` much earlier
+- Failed to resolve parallel test hang at 89% despite fixing the main slow test
+- Parallel tests that worked in 2 minutes yesterday now hang - regression not fully diagnosed
+- Too many background processes accumulated, causing confusion
+
+**Files changed:**
+- `src/core/server.py` - Added StructuralQueryMixin inheritance (line 70)
+- `tests/unit/test_git_indexer.py` - Fixed config path (lines 541, 556)
+- `tests/unit/test_models.py` - Fixed StatusResponse test (line 228)
+- `tests/unit/test_cross_project.py` - Removed unnecessary initialize() call (lines 127-133)
+
+**Open threads:**
+- **Critical:** Parallel test suite hangs at 89% - needs investigation next session
+- Secondary slow tests in `test_web_server.py` have 10s timeouts that may be contributing
+- Changes are uncommitted - verify they don't break CI before committing
+
+---
+
+### 2025-11-27 16:40 | eaa59370 | INTERVAL
+Continuing from previous session after other agent's config work committed. Fixed 27 test failures:
+1. **Structural queries (24)**: Wired up `StructuralQueryMixin` into `MemoryRAGServer` - just needed import and inheritance
+2. **Git indexer (2)**: Fixed config path `config.git_index_branches` → `config.indexing.git_index_branches`
+3. **Models (1)**: Fixed `StatusResponse` test to use `read_only_mode` directly instead of nested in `advanced`
+
+Qdrant was unhealthy (restarted it). Full test suite runs slowly (~16min for unit tests sequentially). Verified all 91 tests in fixed files pass.
+
+---
+
+### 2025-11-27 09:12 | a93ad4eb | SESSION_SUMMARY
+
+**Duration:** ~30 minutes (continuation from 23:47 session)
+**Main work:** Completed config migration - updated remaining test files and source files to use feature group syntax, used 3 parallel agents to speed up work.
+
+**What went well:**
+- Parallel agent strategy effective: 3 agents (test_server_extended, integration tests, source files) worked simultaneously
+- Significant improvement: tests went from 77 failed/114 errors → 40 failed/71 errors (+50 passing)
+- Agents correctly identified that remaining errors in test_server_extended.py were NOT config-related (fixture issues)
+- Systematic approach: grep for patterns → sed batch updates → verify syntax → run tests
+
+**What went poorly or was difficult:**
+- sed replacement introduced double comma syntax error in test_cross_project_consent.py (easy fix but caused collection error)
+- Long test runs (~9 minutes) made verification slow
+- Many stale background bash processes accumulated from previous work
+
+**Open threads:**
+- 40 test failures and 71 errors remain - NOT config-related (missing fixtures, test_structural_queries.py issues)
+- Files with most issues: test_server_extended.py (30 errors), test_structural_queries.py (24 failures), test_services/test_memory_service.py (24 failures)
+- Config migration is COMPLETE - remaining issues are separate fixture/test infrastructure problems
+
+---
+
+### 2025-11-27 09:11 | eaa59370 | SESSION_SUMMARY
+
+**Duration:** ~2 hours (21:32 - 23:27)
+**Main work:** Launched 6 parallel agents for quality/validation tasks (TEST-006, REF-013, REF-014, FEAT-059, DOC-010, UX-032), then 4 more for bug fixes - discovered multi-agent conflict and rolled back.
+
+**What went well:**
+- Effective parallel agent deployment: 6 agents completed substantial work (E2E testing, config guide, structural queries, health improvements)
+- Good bug discovery through TEST-006: 9 bugs documented with reproduction steps
+- REF-013 Phase 2 analysis correctly identified the service delegation gap (~4,000 lines duplicate code)
+- Quick diagnosis of the root cause when tests started failing massively (config.py backward-compat removal)
+
+**What went poorly or was difficult:**
+- Multi-agent conflict: Session a93ad4eb removed backward-compatibility code from config.py while this session's agents still depended on legacy attribute access patterns (config.enable_* vs config.analytics.*)
+- Made things worse before better: tried to fix config access issues incrementally, causing failures to balloon from 10 → 126 before realizing the root cause
+- Wasted significant time applying fixes that were immediately invalidated by conflicting changes
+- Had to fully restore src/ and tests/ to HEAD to get a clean baseline
+
+**Open threads:**
+- All agent work (FEAT-059 structural queries, DOC-010 config guide, UX-032 health improvements, REF-013 Phase 2 wiring) needs to be re-applied after config.py changes are committed
+- 28 test failures remain in baseline (mostly new FEAT-059 structural query tests)
+- The service delegation work (REF-013 Phase 2) is valid but needs to be applied on stable foundation
+- Bug fixes for BUG-016, BUG-022, health MCP tools exposure still need to be re-applied
+
+### 2025-11-26 23:47 | a93ad4eb | SESSION_SUMMARY
+
+**Duration:** ~45 minutes
+**Main work:** Config cleanup - removed ~45 deprecated legacy flat flags and migration logic from ServerConfig, reducing config options from ~150 to ~80.
+
+**What went well:**
+- Clear user direction: "backwards compatibility is never an issue" (0 users) simplified approach significantly
+- Identified root cause of config bloat: ~45 legacy flags duplicated feature group settings
+- Successful batch updates using sed to fix multiple source files quickly
+- Test pass count improved from 3134 to 3185 after source file updates
+- User clarified parallel agent conflict early, preventing further confusion
+
+**What went poorly or was difficult:**
+- Parallel agent conflict caused work to be undone repeatedly - took time to diagnose
+- Pydantic v2 quirks: `@property` and `@computed_field` don't work as expected when field names overlap
+- Many test files still use legacy `ServerConfig(enable_*=True)` patterns - tedious to update all
+- Source files also needed updating (not just tests) - `config.read_only_mode` vs `config.advanced.read_only_mode`
+
+**Open threads:**
+- 77 failed tests, 114 errors remain - mostly test files using legacy ServerConfig constructor patterns
+- Test files needing updates: test_server_extended.py, test_cross_project*.py, test_proactive_suggestions.py, etc.
+- Pattern to fix: `ServerConfig(enable_gpu=True)` → `ServerConfig(performance={"gpu_enabled": True})`
+- Memory stored: "backwards compatibility is never a concern" for future sessions
+
+### 2025-11-26 21:30 | 0731c581 | SESSION_SUMMARY
+
+**Duration:** ~70 minutes
+**Main work:** Comprehensive project evaluation leading to major test suite improvements - 400+ new tests, 45 unskipped tests, 28 dead tests removed, new CI workflow.
+
+**What went well:**
+- Effective parallel agent strategy: launched 4 test-architect/general-purpose agents simultaneously to tackle service layer tests, retrieval_predictor tests, flaky test fixes, and skipped test analysis
+- Clean identification of dead code: SKIP_ANALYSIS_REPORT analysis correctly identified 28 obsolete tests for deletion with clear justification
+- Several "stale skip markers" discovered - tests were already fixed but skip markers never removed (test_error_recovery.py, test_qdrant_store.py)
+- User engaged with incremental results ("tell me about these 51 dead code tests") before approving deletion - good collaborative flow
+- Service layer coverage jumped from ~18% to ~79% with 268 new tests
+
+**What went poorly or was difficult:**
+- Initial dead test count estimate was 51 but actual was 28 - analysis over-counted SQLite tests
+- Background processes from agent work kept generating reminders throughout session (minor noise)
+- Performance tests still have 9 failures due to API issues (not async fixture issues) - deferred to future session
+
+**Open threads:**
+- 9 performance tests fail because cache_hits/total_files not returned in API response
+- E2E tests (TEST-027) need API compatibility fixes - 18 tests
+- ~92 tests waiting on feature implementation (FEAT-033/048/056/057/058/059)
+- New sequential-tests.yml workflow created but not yet tested in CI
+
 ### 2025-11-26 20:19 | 1e1ee69c | SESSION_SUMMARY
 
 **Duration:** ~35 minutes (continuation from context restore at 19:47)
@@ -238,3 +377,6 @@ User wants to commit all work, then clean up stray documentation, old log files,
 - 310 skipped tests pass in isolation but fail in parallel due to Qdrant resource contention
 - These could be unskipped if tests were run sequentially or with better Qdrant isolation
 - Coverage is ~60% overall, ~71% core modules (target is 80%)
+
+### 2025-11-26 23:09 | a93ad4eb | PROJECT_FACT
+**Backwards compatibility is never a concern in this project.** There are 0 active users. Breaking changes, API changes, and config restructuring are all acceptable without migration paths or deprecation warnings. User will notify if this ever changes.
