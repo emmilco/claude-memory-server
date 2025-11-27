@@ -62,11 +62,12 @@ from src.services.cross_project_service import CrossProjectService
 from src.services.health_service import HealthService
 from src.services.query_service import QueryService
 from src.services.analytics_service import AnalyticsService
+from src.core.structural_query_tools import StructuralQueryMixin
 
 logger = get_logger(__name__)
 
 
-class MemoryRAGServer:
+class MemoryRAGServer(StructuralQueryMixin):
     """
     MCP Server for memory and RAG operations.
 
@@ -94,7 +95,7 @@ class MemoryRAGServer:
 
         logger.info("Initializing Claude Memory RAG Server")
         logger.info(f"Storage backend: {config.storage_backend}")
-        logger.info(f"Read-only mode: {config.read_only_mode}")
+        logger.info(f"Read-only mode: {config.advanced.read_only_mode}")
         logger.info(f"Project: {self.project_name or 'global'}")
 
         # Initialize components
@@ -172,7 +173,7 @@ class MemoryRAGServer:
             await self.store.initialize()
 
             # Wrap in read-only wrapper if needed
-            if self.config.read_only_mode:
+            if self.config.advanced.read_only_mode:
                 from src.store.readonly_wrapper import ReadOnlyStoreWrapper
                 self.store = ReadOnlyStoreWrapper(self.store)
                 logger.info("Read-only mode enabled")
@@ -191,7 +192,7 @@ class MemoryRAGServer:
             self.embedding_cache = EmbeddingCache(self.config)
 
             # Initialize usage tracker if enabled
-            if self.config.enable_usage_tracking:
+            if self.config.analytics.usage_tracking:
                 self.usage_tracker = UsageTracker(self.config, self.store)
                 await self.usage_tracker.start()
                 logger.info("Usage tracking enabled")
@@ -218,16 +219,16 @@ class MemoryRAGServer:
             logger.info(f"Performance monitoring enabled (metrics DB: {monitoring_db_path})")
 
             # Initialize background scheduler for auto-pruning
-            if self.config.enable_auto_pruning:
+            if self.config.memory.auto_pruning:
                 await self._start_pruning_scheduler()
                 logger.info(
-                    f"Auto-pruning enabled (schedule: {self.config.pruning_schedule})"
+                    f"Auto-pruning enabled (schedule: {self.config.memory.pruning_schedule})"
                 )
             else:
                 logger.info("Auto-pruning disabled")
 
             # Initialize conversation tracker if enabled
-            if self.config.enable_conversation_tracking:
+            if self.config.memory.conversation_tracking:
                 self.conversation_tracker = ConversationTracker(self.config)
                 await self.conversation_tracker.start()
                 logger.info("Conversation tracking enabled")
@@ -247,7 +248,7 @@ class MemoryRAGServer:
             logger.info("Quality analysis components initialized")
 
             # Initialize hybrid searcher if enabled
-            if self.config.enable_hybrid_search:
+            if self.config.search.hybrid_search:
                 fusion_method_map = {
                     "weighted": FusionMethod.WEIGHTED,
                     "rrf": FusionMethod.RRF,
@@ -272,14 +273,14 @@ class MemoryRAGServer:
                 logger.info("Hybrid search disabled")
 
             # Initialize cross-project consent manager if enabled
-            if self.config.enable_cross_project_search:
+            if self.config.search.cross_project_enabled:
                 from src.memory.cross_project_consent import CrossProjectConsent
                 self.cross_project_consent = CrossProjectConsent(
                     self.config.cross_project_opt_in_file
                 )
                 opted_in_count = len(self.cross_project_consent.get_opted_in_projects())
                 logger.info(
-                    f"Cross-project search enabled (default: {self.config.cross_project_default_mode}, "
+                    f"Cross-project search enabled (default: {self.config.search.cross_project_default_mode}, "
                     f"opted-in projects: {opted_in_count})"
                 )
             else:
@@ -287,14 +288,14 @@ class MemoryRAGServer:
                 logger.info("Cross-project search disabled")
 
             # Initialize auto-indexing service if enabled (FEAT-016)
-            if self.config.auto_index_enabled and self.config.auto_index_on_startup:
+            if self.config.indexing.auto_index_enabled and self.config.indexing.auto_index_on_startup:
                 await self._start_auto_indexing()
             else:
                 logger.info("Auto-indexing disabled or not configured for startup")
 
             # Initialize suggestion engine for proactive context
             # Only enabled if store is initialized (needed for searches)
-            if self.config.enable_proactive_suggestions:
+            if self.config.memory.proactive_suggestions:
                 self.suggestion_engine = SuggestionEngine(
                     config=self.config,
                     store=self.store,
@@ -309,14 +310,14 @@ class MemoryRAGServer:
 
             # Initialize usage pattern analytics (FEAT-020)
             # Note: os module imported at module level (line 6)
-            if self.config.enable_usage_pattern_analytics:
+            if self.config.analytics.usage_pattern_analytics:
                 # Store analytics DB in same directory as SQLite memory DB
                 sqlite_dir = os.path.dirname(os.path.expanduser(self.config.sqlite_path))
                 analytics_db_path = os.path.join(sqlite_dir, "usage_analytics.db")
                 self.pattern_tracker = UsagePatternTracker(db_path=analytics_db_path)
                 logger.info(
                     f"Usage pattern analytics enabled "
-                    f"(retention: {self.config.usage_analytics_retention_days} days)"
+                    f"(retention: {self.config.analytics.usage_analytics_retention_days} days)"
                 )
             else:
                 self.pattern_tracker = None
@@ -495,7 +496,7 @@ class MemoryRAGServer:
         op_id = new_operation()
         logger.info(f"Storing memory: {content[:50]}...")
 
-        if self.config.read_only_mode:
+        if self.config.advanced.read_only_mode:
             raise ReadOnlyError("Cannot store memory in read-only mode")
 
         try:
@@ -725,7 +726,7 @@ class MemoryRAGServer:
             self.stats["queries_retrieved"] += 1
 
             # Apply composite ranking if usage tracking is enabled
-            if self.usage_tracker and self.config.enable_usage_tracking:
+            if self.usage_tracker and self.config.analytics.usage_tracking:
                 reranked_results = []
 
                 for memory, similarity_score in results:
@@ -786,7 +787,7 @@ class MemoryRAGServer:
                     session_id=session_id,
                     query=query,
                     results_shown=results_shown,
-                    query_embedding=query_embedding if self.config.enable_conversation_tracking else None,
+                    query_embedding=query_embedding if self.config.memory.conversation_tracking else None,
                 )
                 logger.debug(f"Tracked {len(results_shown)} results in session {session_id}")
 
@@ -823,7 +824,7 @@ class MemoryRAGServer:
         op_id = new_operation()
         logger.info(f"Deleting memory: {memory_id}")
 
-        if self.config.read_only_mode:
+        if self.config.advanced.read_only_mode:
             raise ReadOnlyError("Cannot delete memory in read-only mode")
 
         try:
@@ -918,7 +919,7 @@ class MemoryRAGServer:
                 "updated_at": ISO timestamp
             }
         """
-        if self.config.read_only_mode:
+        if self.config.advanced.read_only_mode:
             raise ReadOnlyError("Cannot update memory in read-only mode")
 
         try:
@@ -1292,7 +1293,7 @@ class MemoryRAGServer:
         Returns:
             Dict with status and scope information
         """
-        if self.config.read_only_mode:
+        if self.config.advanced.read_only_mode:
             raise ReadOnlyError("Cannot migrate memory in read-only mode")
 
         try:
@@ -1333,7 +1334,7 @@ class MemoryRAGServer:
         Returns:
             Dict with count of updated memories
         """
-        if self.config.read_only_mode:
+        if self.config.advanced.read_only_mode:
             raise ReadOnlyError("Cannot reclassify memories in read-only mode")
 
         try:
@@ -1411,7 +1412,7 @@ class MemoryRAGServer:
         Returns:
             Dict with merged memory ID
         """
-        if self.config.read_only_mode:
+        if self.config.advanced.read_only_mode:
             raise ReadOnlyError("Cannot merge memories in read-only mode")
 
         if len(memory_ids) < 2:
@@ -2844,7 +2845,7 @@ class MemoryRAGServer:
             Dict with results grouped by project, total_found, projects_searched
         """
         # Check if cross-project search is enabled
-        if not self.config.enable_cross_project_search or not self.cross_project_consent:
+        if not self.config.search.cross_project_enabled or not self.cross_project_consent:
             raise ValidationError(
                 "Cross-project search is disabled. Enable it in config to use this feature."
             )
@@ -2854,7 +2855,7 @@ class MemoryRAGServer:
             start_time = time.time()
 
             # Determine which projects to search
-            search_all_mode = self.config.cross_project_default_mode == "all"
+            search_all_mode = self.config.search.cross_project_default_mode == "all"
             searchable_projects = self.cross_project_consent.get_searchable_projects(
                 current_project=self.project_name,
                 search_all=search_all_mode
@@ -2984,7 +2985,7 @@ class MemoryRAGServer:
         Returns:
             Dict with project_name, opted_in status, granted_at timestamp
         """
-        if not self.config.enable_cross_project_search or not self.cross_project_consent:
+        if not self.config.search.cross_project_enabled or not self.cross_project_consent:
             raise ValidationError(
                 "Cross-project search is disabled. Enable it in config to use this feature."
             )
@@ -3010,7 +3011,7 @@ class MemoryRAGServer:
         Returns:
             Dict with project_name, opted_in=false status, revoked_at timestamp
         """
-        if not self.config.enable_cross_project_search or not self.cross_project_consent:
+        if not self.config.search.cross_project_enabled or not self.cross_project_consent:
             raise ValidationError(
                 "Cross-project search is disabled. Enable it in config to use this feature."
             )
@@ -3032,7 +3033,7 @@ class MemoryRAGServer:
         Returns:
             Dict with opted_in_projects list, opted_out_projects list, and statistics
         """
-        if not self.config.enable_cross_project_search or not self.cross_project_consent:
+        if not self.config.search.cross_project_enabled or not self.cross_project_consent:
             raise ValidationError(
                 "Cross-project search is disabled. Enable it in config to use this feature."
             )
@@ -3083,7 +3084,7 @@ class MemoryRAGServer:
         Returns:
             Dict with status, project_name, files_indexed, units_indexed, total_time_s
         """
-        if self.config.read_only_mode:
+        if self.config.advanced.read_only_mode:
             raise ReadOnlyError("Cannot index codebase in read-only mode")
 
         try:
@@ -3183,7 +3184,7 @@ class MemoryRAGServer:
                 "units_deleted": int (if index was cleared),
             }
         """
-        if self.config.read_only_mode:
+        if self.config.advanced.read_only_mode:
             raise ReadOnlyError("Cannot reindex project in read-only mode")
 
         from pathlib import Path
@@ -3547,7 +3548,7 @@ class MemoryRAGServer:
             response = StatusResponse(
                 server_name=self.config.server_name,
                 version="2.0.0",
-                read_only_mode=self.config.read_only_mode,
+                read_only_mode=self.config.advanced.read_only_mode,
                 storage_backend=self.config.storage_backend,
                 memory_count=memory_count,
                 qdrant_available=qdrant_available,
@@ -3769,7 +3770,7 @@ class MemoryRAGServer:
         Returns:
             Dict with indexing statistics
         """
-        if self.config.read_only_mode:
+        if self.config.advanced.read_only_mode:
             raise ReadOnlyError("Cannot index git history in read-only mode")
 
         try:
@@ -4090,7 +4091,7 @@ class MemoryRAGServer:
 
             # Parse cron schedule (format: "minute hour day month day_of_week")
             # Default: "0 2 * * *" = 2 AM daily
-            schedule_parts = self.config.pruning_schedule.split()
+            schedule_parts = self.config.memory.pruning_schedule.split()
 
             self.scheduler.add_job(
                 self._auto_prune_job,
@@ -4291,7 +4292,7 @@ class MemoryRAGServer:
                     )
 
                 # Start file watcher after initial indexing
-                if self.config.enable_file_watcher:
+                if self.config.indexing.file_watcher:
                     await self.auto_indexing_service.start_watching()
                     logger.info(f"File watcher started for {project_name}")
             else:

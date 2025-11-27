@@ -51,6 +51,81 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Changed - 2025-11-26
+- **REF-013 Phase 2: Wire up service layer in server.py to eliminate duplicate code**
+  - Converted MemoryRAGServer from God Class to thin facade delegating to services
+  - Eliminated 686 lines of duplicate implementation code from src/core/server.py
+  - All MemoryService methods now delegate (store_memory, retrieve_memories, delete_memory, update_memory, list_memories, get_memory_by_id)
+  - All CodeIndexingService methods now delegate (search_code - saved 243 lines alone)
+  - All AnalyticsService methods now delegate (get_usage_statistics, get_top_queries, get_frequently_accessed_code)
+  - All CrossProjectService methods now delegate (opt_in/out, list_opted_in_projects)
+  - Reduced server.py from 4,878 lines to 4,192 lines (14% reduction)
+  - Maintains 100% backward compatibility - all method signatures unchanged
+  - Service layer tests continue passing (268 tests)
+
+### Added - 2025-11-27
+- **TEST-027: E2E Test Expansion**
+  - Added 55 new E2E tests across 3 new test files
+  - tests/e2e/test_cli_commands.py: 19 tests for CLI commands
+  - tests/e2e/test_mcp_protocol.py: 15 tests for MCP tool discovery/invocation
+  - tests/e2e/test_health_monitoring.py: 21 tests for health checks and remediation
+  - Fixed existing E2E tests (test_critical_paths.py, test_first_run.py)
+  - Total E2E coverage: 67 tests passing, 4 appropriately skipped
+
+### Fixed - 2025-11-27
+- **BUG-022 / BUG-E2E-003: Documentation Mismatch for index_codebase Response**
+  - Updated API documentation (docs/API.md) to reflect actual response field names
+  - Changed `semantic_units_extracted` → `units_indexed` (matches implementation)
+  - Changed `indexing_time_seconds` → `total_time_s` (matches implementation)
+  - Added missing fields: `status`, `directory`, `languages` to documentation
+  - Updated planning docs (FEAT-042-048) to use correct field names
+  - Marked BUG-E2E-003 as resolved (was a false alarm - code worked correctly)
+  - Added regression test: test_index_codebase_response_format() in tests/unit/test_server_extended.py
+  - Verified E2E: 2 files with 9 units indexed correctly
+
+### Fixed - 2025-11-26
+- **BUG-E2E-006: Health Monitoring MCP Tools Not Exposed**
+  - Added missing MCP tool methods to src/core/server.py:
+    - `get_performance_metrics()` - Get current and historical performance metrics
+    - `get_health_score()` - Get overall system health score (0-100) with component breakdown
+    - `get_active_alerts()` - Get active system alerts filtered by severity
+    - `start_dashboard()` - Start web dashboard server for visual monitoring
+  - Fixed src/services/health_service.py to use correct API methods from monitoring components
+  - All four tools now properly delegate to HealthService and monitoring infrastructure
+  - Tests: 8 comprehensive tests in tests/unit/test_health_monitoring_tools.py (100% passing)
+
+### Added - 2025-11-26
+- **FEAT-059: Structural/Relational Queries for Call Graph Analysis**
+  - Added 6 new MCP tools for code structure analysis:
+    - `find_callers()` - Find all functions calling a given function (direct and transitive)
+    - `find_callees()` - Find all functions called by a given function (direct and transitive)
+    - `find_implementations()` - Find all implementations of an interface/trait/abstract class
+    - `find_dependencies()` - Get file dependencies (what it imports)
+    - `find_dependents()` - Get reverse dependencies (what imports it)
+    - `get_call_chain()` - Show call paths between two functions
+  - Created src/core/structural_query_tools.py - StructuralQueryMixin with all 6 tools
+  - Integrated with existing call graph infrastructure (src/graph/call_graph.py, src/store/call_graph_store.py)
+  - Tools enable architecture discovery, refactoring analysis, and execution flow tracing
+  - Tests: 24 comprehensive tests in tests/unit/test_structural_queries.py (100% passing)
+
+### Documentation - 2025-11-26
+- **DOC-010: Comprehensive Configuration Guide**
+  - Created docs/CONFIGURATION_GUIDE.md (1,200+ lines) documenting all 150+ configuration options
+  - Organized options into feature groups: performance, search, analytics, memory, indexing, advanced
+  - Added 6 configuration profiles: minimal, development, production, high-performance, privacy-focused, resource-constrained
+  - Documented feature level presets (basic, advanced, experimental) for quick setup
+  - Included troubleshooting section for common misconfigurations and silent failures
+  - Provided migration guide from legacy flat flags to new feature group structure
+  - Complete reference for all storage, embedding, ranking, and tuning options
+
+### Added - 2025-11-26
+- **UX-032: Health Check Improvements**
+  - Added token savings tracking to health command (7-day summary)
+  - Enhanced Qdrant latency monitoring with 20ms warning threshold (was 50ms)
+  - Reduced stale project detection threshold from 90 days to 30 days
+  - Added proactive recommendations for significant cost savings ($1+ per week)
+  - Tests: 11 new tests covering token savings, latency thresholds, and stale project detection
+
 ### Added - 2025-11-26
 - **CI: Sequential Test Workflow**
   - Created .github/workflows/sequential-tests.yml for flaky tests

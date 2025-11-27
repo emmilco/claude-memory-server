@@ -30,7 +30,7 @@ class HealthMonitorCommand:
 
     def __init__(self):
         """Initialize health monitor command."""
-        self.config = load_config()
+        self.config = get_config()
         self.db_path = str(Path.home() / ".claude-rag" / "metrics.db")
 
     async def run(self, args):

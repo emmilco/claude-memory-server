@@ -81,13 +81,13 @@ class EmbeddingGenerator:
             str: "cuda" if GPU available and enabled, otherwise "cpu"
         """
         # Check if user forced CPU
-        if self.config.force_cpu:
+        if self.config.performance.force_cpu:
             logger.info("GPU disabled via force_cpu config")
             return "cpu"
 
-        # Check if GPU is disabled
-        if not self.config.enable_gpu:
-            logger.info("GPU disabled via enable_gpu config")
+        # Check if GPU is disabled (use feature group accessor)
+        if not self.config.performance.gpu_enabled:
+            logger.info("GPU disabled via gpu_enabled config")
             return "cpu"
 
         # Auto-detect optimal device
@@ -140,13 +140,13 @@ class EmbeddingGenerator:
                 logger.info(f"Model moved to {self.device}")
 
                 # Set GPU memory fraction if using CUDA
-                if self.device == "cuda" and self.config.gpu_memory_fraction < 1.0:
+                if self.device == "cuda" and self.config.performance.gpu_memory_fraction < 1.0:
                     import torch
                     torch.cuda.set_per_process_memory_fraction(
-                        self.config.gpu_memory_fraction, 0
+                        self.config.performance.gpu_memory_fraction, 0
                     )
                     logger.info(
-                        f"GPU memory fraction set to {self.config.gpu_memory_fraction}"
+                        f"GPU memory fraction set to {self.config.performance.gpu_memory_fraction}"
                     )
 
             except Exception as e:

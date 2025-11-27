@@ -12,8 +12,7 @@ import os
 import sys
 from pathlib import Path
 
-# Skip all tests in this module - API compatibility issues need fixing
-pytestmark = pytest.mark.skip(reason="E2E tests need API compatibility fixes (TEST-027)")
+# E2E tests for first-run experience - API compatibility fixed
 
 
 # ============================================================================
@@ -98,15 +97,18 @@ async def test_embedding_model_loadable():
     # Create generator (model loads lazily on first use)
     generator = EmbeddingGenerator()
 
-    # Try generating a test embedding (this triggers model loading)
+    # Explicitly preload the model to test loading works
+    await generator.initialize()
+
+    # Verify model is loaded
+    assert generator.model is not None
+
+    # Try generating a test embedding
     embedding = await generator.generate("test text for embedding")
 
     # Verify embedding has correct dimensions
     assert len(embedding) == 384  # all-MiniLM-L6-v2 produces 384-dimensional embeddings
     assert all(isinstance(x, (int, float)) for x in embedding)
-
-    # Verify model is now loaded
-    assert generator.model is not None
 
 
 # ============================================================================
@@ -334,7 +336,8 @@ async def test_readme_quick_start_works(fresh_server, sample_code_project):
     status = await server.get_status()
 
     assert status is not None
-    assert status.get("total_projects", 0) >= 1
-    print(f"✓ Status: {status['total_projects']} projects indexed")
+    assert "error" not in status, f"Status returned error: {status.get('error')}"
+    assert status.get("qdrant_available", False), "Qdrant should be available"
+    print(f"✓ Status: {status.get('memory_count', 0)} memories indexed")
 
     print("\n✅ All README quick start steps verified!")
