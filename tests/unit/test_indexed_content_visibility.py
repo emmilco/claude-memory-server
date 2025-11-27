@@ -151,10 +151,14 @@ async def test_get_indexed_files_by_project(server_with_indexed_code, indexed_pr
 
 
 @pytest.mark.asyncio
-async def test_get_indexed_files_pagination(server_with_indexed_code):
+async def test_get_indexed_files_pagination(server_with_indexed_code, indexed_project_name):
     """Test pagination of indexed files."""
-    # Get first page
-    page1 = await server_with_indexed_code.get_indexed_files(limit=2, offset=0)
+    # Get first page - filter by project name for test isolation in parallel execution
+    page1 = await server_with_indexed_code.get_indexed_files(
+        project_name=indexed_project_name,
+        limit=2,
+        offset=0
+    )
 
     assert page1["limit"] == 2
     assert page1["offset"] == 0
@@ -165,7 +169,11 @@ async def test_get_indexed_files_pagination(server_with_indexed_code):
         assert page1["has_more"] is True
 
         # Get second page
-        page2 = await server_with_indexed_code.get_indexed_files(limit=2, offset=2)
+        page2 = await server_with_indexed_code.get_indexed_files(
+            project_name=indexed_project_name,
+            limit=2,
+            offset=2
+        )
         assert page2["offset"] == 2
         assert len(page2["files"]) >= 1
 
@@ -286,10 +294,14 @@ async def test_list_indexed_units_by_type_class(server_with_indexed_code, indexe
 
 
 @pytest.mark.asyncio
-async def test_list_indexed_units_pagination(server_with_indexed_code):
+async def test_list_indexed_units_pagination(server_with_indexed_code, indexed_project_name):
     """Test pagination of indexed units."""
-    # Get first page
-    page1 = await server_with_indexed_code.list_indexed_units(limit=3, offset=0)
+    # Get first page - filter by project name for test isolation in parallel execution
+    page1 = await server_with_indexed_code.list_indexed_units(
+        project_name=indexed_project_name,
+        limit=3,
+        offset=0
+    )
 
     assert page1["limit"] == 3
     assert page1["offset"] == 0
@@ -300,7 +312,11 @@ async def test_list_indexed_units_pagination(server_with_indexed_code):
         assert page1["has_more"] is True
 
         # Get second page
-        page2 = await server_with_indexed_code.list_indexed_units(limit=3, offset=3)
+        page2 = await server_with_indexed_code.list_indexed_units(
+            project_name=indexed_project_name,
+            limit=3,
+            offset=3
+        )
         assert page2["offset"] == 3
         assert len(page2["units"]) >= 1
 
@@ -394,19 +410,27 @@ async def test_list_indexed_units_validation_offset_autocap(config):
 
 
 @pytest.mark.asyncio
-async def test_has_more_flag_accuracy(server_with_indexed_code):
+async def test_has_more_flag_accuracy(server_with_indexed_code, indexed_project_name):
     """Test accuracy of has_more flag."""
-    # Get total count first
-    all_files = await server_with_indexed_code.get_indexed_files(limit=500)
+    # Get total count first - filter by project name for test isolation in parallel execution
+    all_files = await server_with_indexed_code.get_indexed_files(
+        project_name=indexed_project_name,
+        limit=500
+    )
     total_files = all_files["total"]
 
     # Test with limit less than total
     if total_files > 1:
-        result = await server_with_indexed_code.get_indexed_files(limit=1, offset=0)
+        result = await server_with_indexed_code.get_indexed_files(
+            project_name=indexed_project_name,
+            limit=1,
+            offset=0
+        )
         assert result["has_more"] is True
 
     # Test with limit + offset >= total
     result = await server_with_indexed_code.get_indexed_files(
+        project_name=indexed_project_name,
         limit=total_files,
         offset=0
     )

@@ -51,6 +51,24 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Added - 2025-11-26
+- **TEST-029: Service Layer Test Suite**
+  - Created 268 tests for 6 extracted service classes (tests/unit/test_services/)
+  - Service coverage improved: memory_service (9%→71%), code_indexing_service (11%→83%), cross_project_service (22%→62%), health_service (22%→87%), query_service (23%→100%), analytics_service (30%→100%)
+
+- **TEST-030: Retrieval Predictor Test Suite**
+  - Created 134 tests for src/router/retrieval_predictor.py (coverage 0%→100%)
+  - Full coverage of utility prediction, signal extraction, and explanation generation
+
+- **TEST-031: Skipped Tests Analysis**
+  - Created SKIP_ANALYSIS_REPORT.md documenting all 290 skipped tests
+  - Identified 51 dead code tests for removal, 82 flaky tests for sequential CI
+
+### Fixed - 2025-11-26
+- **Test Isolation: test_indexed_content_visibility.py**
+  - Added project_name filtering to 3 pagination tests
+  - Fixes intermittent failures in parallel test execution
+
 ### Fixed - 2025-11-26
 - **Test Suite: 100% Pass Rate with Flaky Test Skip Markers**
   - Added `pytestmark = pytest.mark.skip_ci` to 6 additional flaky modules
