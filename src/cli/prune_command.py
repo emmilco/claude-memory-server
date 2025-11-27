@@ -48,7 +48,7 @@ async def prune_command(
 
         # Prune expired SESSION_STATE memories
         console.print("\n[bold]Pruning Expired SESSION_STATE Memories[/bold]")
-        console.print(f"TTL: {ttl_hours or config.session_state_ttl_hours} hours")
+        console.print(f"TTL: {ttl_hours or config.memory.session_state_ttl_hours} hours")
         console.print(f"Mode: {'DRY RUN' if dry_run else 'EXECUTE'}\n")
 
         # First, do a dry run to see what would be deleted

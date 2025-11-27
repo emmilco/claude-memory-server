@@ -230,8 +230,8 @@ class StatusCommand:
         config = get_config()
 
         return {
-            "enabled": config.enable_file_watcher,
-            "debounce_ms": config.watch_debounce_ms,
+            "enabled": config.indexing.file_watcher,
+            "debounce_ms": config.indexing.watch_debounce_ms,
             "supported_extensions": list(IncrementalIndexer.SUPPORTED_EXTENSIONS),
             "description": "Auto-reindex files on change",
         }

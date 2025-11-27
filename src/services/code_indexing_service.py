@@ -561,7 +561,7 @@ class CodeIndexingService:
         Returns:
             Dict with status, files_indexed, units_indexed, total_time_s
         """
-        if self.config.read_only_mode:
+        if self.config.advanced.read_only_mode:
             raise ReadOnlyError("Cannot index codebase in read-only mode")
 
         try:
@@ -640,7 +640,7 @@ class CodeIndexingService:
         Returns:
             Dict with reindexing statistics
         """
-        if self.config.read_only_mode:
+        if self.config.advanced.read_only_mode:
             raise ReadOnlyError("Cannot reindex project in read-only mode")
 
         from src.memory.incremental_indexer import IncrementalIndexer

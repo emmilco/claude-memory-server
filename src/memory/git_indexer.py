@@ -116,7 +116,7 @@ class GitIndexer:
         Raises:
             ValueError: If repo_path is not a git repository
         """
-        if not self.config.enable_git_indexing:
+        if not self.config.indexing.git_indexing:
             logger.info("Git indexing is disabled in configuration")
             return [], []
 
@@ -131,7 +131,7 @@ class GitIndexer:
             raise ValueError(f"Not a git repository: {repo_path}")
 
         # Determine settings
-        num_commits = num_commits or self.config.git_index_commit_count
+        num_commits = num_commits or self.config.indexing.git_index_commit_count
 
         if include_diffs is None:
             # Auto-detect based on repo size
@@ -218,7 +218,7 @@ class GitIndexer:
         """
         try:
             # Get current branch
-            if self.config.git_index_branches == "current":
+            if self.config.indexing.git_index_branches == "current":
                 # Index current branch only
                 commits = list(repo.iter_commits(max_count=num_commits))
             else:

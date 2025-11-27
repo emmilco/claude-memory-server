@@ -124,7 +124,7 @@ class UsageTracker:
             memory_id: Memory ID
             search_score: Search similarity score
         """
-        if not self.config.enable_usage_tracking:
+        if not self.config.analytics.usage_tracking:
             return
 
         async with self._lock:

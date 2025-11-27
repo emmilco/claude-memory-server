@@ -13,7 +13,7 @@ def config():
     return ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
-        read_only_mode=False,
+        advanced={"read_only_mode": False},
     )
 
 

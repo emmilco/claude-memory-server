@@ -1,7 +1,7 @@
 """Configuration management for Claude Memory RAG Server."""
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import BaseModel, model_validator, field_validator
+from pydantic import BaseModel, model_validator, field_validator, computed_field
 from typing import Optional, Literal
 from pathlib import Path
 from enum import Enum
@@ -202,53 +202,6 @@ class ServerConfig(BaseSettings):
     # Feature level presets (NEW!)
     feature_level: Optional[FeatureLevel] = None
 
-    # Legacy flat flags (DEPRECATED - for backward compatibility)
-    # These will be removed in v5.0.0 - migrate to feature groups
-    enable_parallel_embeddings: Optional[bool] = None
-    embedding_parallel_workers: Optional[int] = None
-    enable_input_validation: Optional[bool] = None
-    enable_file_watcher: Optional[bool] = None
-    enable_importance_scoring: Optional[bool] = None
-    allow_rust_fallback: Optional[bool] = None
-    warn_on_degradation: Optional[bool] = None
-    auto_index_enabled: Optional[bool] = None
-    auto_index_on_startup: Optional[bool] = None
-    auto_index_size_threshold: Optional[int] = None
-    auto_index_recursive: Optional[bool] = None
-    auto_index_show_progress: Optional[bool] = None
-    auto_index_exclude_patterns: Optional[list[str]] = None
-    enable_retrieval_gate: Optional[bool] = None
-    retrieval_gate_threshold: Optional[float] = None
-    enable_auto_pruning: Optional[bool] = None
-    pruning_schedule: Optional[str] = None
-    session_state_ttl_hours: Optional[int] = None
-    enable_usage_tracking: Optional[bool] = None
-    enable_usage_pattern_analytics: Optional[bool] = None
-    usage_analytics_retention_days: Optional[int] = None
-    enable_conversation_tracking: Optional[bool] = None
-    conversation_session_timeout_minutes: Optional[int] = None
-    enable_query_expansion: Optional[bool] = None
-    query_expansion_synonyms: Optional[bool] = None
-    query_expansion_code_context: Optional[bool] = None
-    query_expansion_max_synonyms: Optional[int] = None
-    query_expansion_max_context_terms: Optional[int] = None
-    enable_git_indexing: Optional[bool] = None
-    git_index_commit_count: Optional[int] = None
-    git_index_branches: Optional[str] = None
-    git_index_tags: Optional[bool] = None
-    git_index_diffs: Optional[bool] = None
-    enable_hybrid_search: Optional[bool] = None
-    enable_cross_project_search: Optional[bool] = None
-    cross_project_default_mode: Optional[str] = None
-    enable_gpu: Optional[bool] = None
-    force_cpu: Optional[bool] = None
-    gpu_memory_fraction: Optional[float] = None
-    enable_multi_repository: Optional[bool] = None
-    multi_repo_max_parallel: Optional[int] = None
-    enable_proactive_suggestions: Optional[bool] = None
-    proactive_suggestions_threshold: Optional[float] = None
-    read_only_mode: Optional[bool] = None
-
     # Other settings (not feature flags)
     max_memory_size_bytes: int = 10240  # 10KB
     watch_debounce_ms: int = 1000
@@ -279,154 +232,6 @@ class ServerConfig(BaseSettings):
         case_sensitive=False,
         extra="ignore"  # REF-010: Ignore deprecated config options for backward compatibility
     )
-
-    @model_validator(mode='after')
-    def migrate_legacy_flags(self) -> 'ServerConfig':
-        """
-        Migrate legacy flat flags to feature groups (REF-017).
-
-        This ensures backward compatibility - old configs continue to work
-        with deprecation warnings pointing users to the new structure.
-        """
-        # Track if any legacy flags were used
-        legacy_used = False
-
-        # Performance features migration
-        if self.enable_parallel_embeddings is not None:
-            self.performance.parallel_embeddings = self.enable_parallel_embeddings
-            legacy_used = True
-        if self.embedding_parallel_workers is not None:
-            self.performance.parallel_workers = self.embedding_parallel_workers
-        if self.enable_importance_scoring is not None:
-            self.performance.importance_scoring = self.enable_importance_scoring
-            legacy_used = True
-        if self.enable_gpu is not None:
-            self.performance.gpu_enabled = self.enable_gpu
-            legacy_used = True
-        if self.force_cpu is not None:
-            self.performance.force_cpu = self.force_cpu
-            legacy_used = True
-        if self.gpu_memory_fraction is not None:
-            self.performance.gpu_memory_fraction = self.gpu_memory_fraction
-
-        # Search features migration
-        if self.enable_hybrid_search is not None:
-            self.performance.hybrid_search = self.enable_hybrid_search
-            self.search.hybrid_search = self.enable_hybrid_search
-            legacy_used = True
-        if self.enable_retrieval_gate is not None:
-            self.search.retrieval_gate_enabled = self.enable_retrieval_gate
-            legacy_used = True
-        if self.retrieval_gate_threshold is not None:
-            self.search.retrieval_gate_threshold = self.retrieval_gate_threshold
-        if self.enable_cross_project_search is not None:
-            self.search.cross_project_enabled = self.enable_cross_project_search
-            legacy_used = True
-        if self.cross_project_default_mode is not None:
-            self.search.cross_project_default_mode = self.cross_project_default_mode
-        if self.enable_query_expansion is not None:
-            self.search.query_expansion_enabled = self.enable_query_expansion
-            legacy_used = True
-        if self.query_expansion_synonyms is not None:
-            self.search.query_expansion_synonyms = self.query_expansion_synonyms
-        if self.query_expansion_code_context is not None:
-            self.search.query_expansion_code_context = self.query_expansion_code_context
-        if self.query_expansion_max_synonyms is not None:
-            self.search.query_expansion_max_synonyms = self.query_expansion_max_synonyms
-        if self.query_expansion_max_context_terms is not None:
-            self.search.query_expansion_max_context_terms = self.query_expansion_max_context_terms
-
-        # Analytics features migration
-        if self.enable_usage_tracking is not None:
-            self.analytics.usage_tracking = self.enable_usage_tracking
-            legacy_used = True
-        if self.enable_usage_pattern_analytics is not None:
-            self.analytics.usage_pattern_analytics = self.enable_usage_pattern_analytics
-            legacy_used = True
-        if self.usage_analytics_retention_days is not None:
-            self.analytics.usage_analytics_retention_days = self.usage_analytics_retention_days
-
-        # Memory features migration
-        if self.enable_auto_pruning is not None:
-            self.memory.auto_pruning = self.enable_auto_pruning
-            legacy_used = True
-        if self.pruning_schedule is not None:
-            self.memory.pruning_schedule = self.pruning_schedule
-        if self.session_state_ttl_hours is not None:
-            self.memory.session_state_ttl_hours = self.session_state_ttl_hours
-        if self.enable_conversation_tracking is not None:
-            self.memory.conversation_tracking = self.enable_conversation_tracking
-            legacy_used = True
-        if self.conversation_session_timeout_minutes is not None:
-            self.memory.conversation_session_timeout_minutes = self.conversation_session_timeout_minutes
-        if self.enable_proactive_suggestions is not None:
-            self.memory.proactive_suggestions = self.enable_proactive_suggestions
-            legacy_used = True
-        if self.proactive_suggestions_threshold is not None:
-            self.memory.proactive_suggestions_threshold = self.proactive_suggestions_threshold
-
-        # Indexing features migration
-        if self.enable_file_watcher is not None:
-            self.indexing.file_watcher = self.enable_file_watcher
-            legacy_used = True
-        if self.watch_debounce_ms is not None:
-            self.indexing.watch_debounce_ms = self.watch_debounce_ms
-        if self.auto_index_enabled is not None:
-            self.indexing.auto_index_enabled = self.auto_index_enabled
-            legacy_used = True
-        if self.auto_index_on_startup is not None:
-            self.indexing.auto_index_on_startup = self.auto_index_on_startup
-            legacy_used = True
-        if self.auto_index_size_threshold is not None:
-            self.indexing.auto_index_size_threshold = self.auto_index_size_threshold
-        if self.auto_index_recursive is not None:
-            self.indexing.auto_index_recursive = self.auto_index_recursive
-            legacy_used = True
-        if self.auto_index_show_progress is not None:
-            self.indexing.auto_index_show_progress = self.auto_index_show_progress
-            legacy_used = True
-        if self.auto_index_exclude_patterns is not None:
-            self.indexing.auto_index_exclude_patterns = self.auto_index_exclude_patterns
-        if self.enable_git_indexing is not None:
-            self.indexing.git_indexing = self.enable_git_indexing
-            legacy_used = True
-        if self.git_index_commit_count is not None:
-            self.indexing.git_index_commit_count = self.git_index_commit_count
-        if self.git_index_branches is not None:
-            self.indexing.git_index_branches = self.git_index_branches
-        if self.git_index_tags is not None:
-            self.indexing.git_index_tags = self.git_index_tags
-        if self.git_index_diffs is not None:
-            self.indexing.git_index_diffs = self.git_index_diffs
-
-        # Advanced features migration
-        if self.enable_multi_repository is not None:
-            self.advanced.multi_repository = self.enable_multi_repository
-            legacy_used = True
-        if self.multi_repo_max_parallel is not None:
-            self.advanced.multi_repo_max_parallel = self.multi_repo_max_parallel
-        if self.allow_rust_fallback is not None:
-            self.advanced.rust_fallback = self.allow_rust_fallback
-            legacy_used = True
-        if self.warn_on_degradation is not None:
-            self.advanced.warn_on_degradation = self.warn_on_degradation
-            legacy_used = True
-        if self.read_only_mode is not None:
-            self.advanced.read_only_mode = self.read_only_mode
-            legacy_used = True
-        if self.enable_input_validation is not None:
-            self.advanced.input_validation = self.enable_input_validation
-            legacy_used = True
-
-        # Log deprecation warning if legacy flags were used
-        if legacy_used:
-            logger.warning(
-                "DEPRECATION WARNING: Legacy flat feature flags are deprecated and will be removed in v5.0.0. "
-                "Please migrate to feature groups (e.g., use 'performance.parallel_embeddings' instead of 'enable_parallel_embeddings'). "
-                "See documentation for migration guide."
-            )
-
-        return self
 
     @model_validator(mode='after')
     def apply_feature_level_preset(self) -> 'ServerConfig':
@@ -684,7 +489,6 @@ class ServerConfig(BaseSettings):
         path = self.get_expanded_path(self.sqlite_path)
         path.parent.mkdir(parents=True, exist_ok=True)
         return path
-
 
 # Global config instance
 _config: Optional[ServerConfig] = None

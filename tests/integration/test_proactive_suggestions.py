@@ -24,8 +24,10 @@ class TestProactiveSuggestionsIntegration:
             storage_backend="qdrant",
             qdrant_url="http://localhost:6333",
             qdrant_collection_name=unique_qdrant_collection,
-            enable_proactive_suggestions=True,
-            proactive_suggestions_threshold=0.90,
+            memory={
+                "proactive_suggestions": True,
+                "proactive_suggestions_threshold": 0.90,
+            },
         )
         server_instance = MemoryRAGServer(config=config)
         await server_instance.initialize()
@@ -134,7 +136,7 @@ class TestProactiveSuggestionsIntegration:
             storage_backend="qdrant",
             qdrant_url="http://localhost:6333",
             qdrant_collection_name=unique_qdrant_collection,
-            enable_proactive_suggestions=False,
+            memory={"proactive_suggestions": False},
         )
         server_instance = MemoryRAGServer(config=config)
         await server_instance.initialize()

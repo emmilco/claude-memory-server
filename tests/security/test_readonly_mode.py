@@ -25,7 +25,7 @@ async def qdrant_store(unique_qdrant_collection):
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
         qdrant_collection_name=unique_qdrant_collection,
-        read_only_mode=False,
+        advanced={"read_only_mode": False},
     )
 
     store = QdrantMemoryStore(config)
@@ -323,11 +323,11 @@ class TestReadOnlyModeWithConfig:
         # The config should have read_only_mode setting
         from src.config import ServerConfig
 
-        config = ServerConfig(read_only_mode=True)
-        assert config.read_only_mode is True
+        config = ServerConfig(advanced={"read_only_mode": True})
+        assert config.advanced.read_only_mode is True
 
-        config2 = ServerConfig(read_only_mode=False)
-        assert config2.read_only_mode is False
+        config2 = ServerConfig(advanced={"read_only_mode": False})
+        assert config2.advanced.read_only_mode is False
 
 
 # ============================================================================

@@ -62,7 +62,7 @@ class GitIndexCommand:
                 console=console,
             ) as progress:
                 task = progress.add_task(
-                    f"Indexing git history (commits: {num_commits or config.git_index_commit_count})...",
+                    f"Indexing git history (commits: {num_commits or config.indexing.git_index_commit_count})...",
                     total=None,
                 )
 

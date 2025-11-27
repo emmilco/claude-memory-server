@@ -337,7 +337,7 @@ class FileWatcherService:
         self.event_handler = DebouncedFileWatcher(
             watch_path=self.watch_path,
             callback=self.callback,
-            debounce_ms=self.config.watch_debounce_ms,
+            debounce_ms=self.config.indexing.watch_debounce_ms,
             recursive=True,
             loop=self.loop,
         )

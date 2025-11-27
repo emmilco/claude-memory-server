@@ -21,12 +21,10 @@ def test_config_defaults():
 def test_config_from_env(monkeypatch):
     """Test that configuration loads from environment variables."""
     monkeypatch.setenv("CLAUDE_RAG_LOG_LEVEL", "DEBUG")
-    monkeypatch.setenv("CLAUDE_RAG_READ_ONLY_MODE", "true")
     monkeypatch.setenv("CLAUDE_RAG_QDRANT_URL", "http://custom:6333")
 
     config = ServerConfig()
     assert config.log_level == "DEBUG"
-    assert config.read_only_mode is True
     assert config.qdrant_url == "http://custom:6333"
 
 
@@ -147,18 +145,6 @@ def test_advanced_features():
     assert config.advanced.warn_on_degradation is True
     assert config.advanced.read_only_mode is False
     assert config.advanced.input_validation is True
-
-
-def test_legacy_flag_migration():
-    """Test that legacy flags migrate to feature groups."""
-    config = ServerConfig(enable_parallel_embeddings=False)
-    assert config.performance.parallel_embeddings is False
-
-    config = ServerConfig(enable_usage_tracking=False)
-    assert config.analytics.usage_tracking is False
-
-    config = ServerConfig(enable_file_watcher=False)
-    assert config.indexing.file_watcher is False
 
 
 def test_gpu_cpu_mutual_exclusion():

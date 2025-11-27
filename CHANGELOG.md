@@ -72,6 +72,14 @@ Organize entries under these headers in chronological order (newest first):
   - Fixed existing E2E tests (test_critical_paths.py, test_first_run.py)
   - Total E2E coverage: 67 tests passing, 4 appropriately skipped
 
+### Changed - 2025-11-27
+- **REF-013 Phase 3: Config migration cleanup**
+  - Updated all src/ modules to use new nested config structure
+  - config.read_only_mode -> config.advanced.read_only_mode
+  - config.force_cpu/enable_gpu -> config.performance.force_cpu/gpu_enabled
+  - Updated 30+ test files to match new config structure
+  - Removed legacy config compatibility shims from src/config.py
+
 ### Fixed - 2025-11-27
 - **BUG-022 / BUG-E2E-003: Documentation Mismatch for index_codebase Response**
   - Updated API documentation (docs/API.md) to reflect actual response field names

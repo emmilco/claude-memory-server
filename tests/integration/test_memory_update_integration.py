@@ -28,7 +28,7 @@ async def test_server(tmp_path, qdrant_client, unique_qdrant_collection):
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
         qdrant_collection_name=unique_qdrant_collection,
-        read_only_mode=False,
+        advanced={"read_only_mode": False},
         embedding_model="all-MiniLM-L6-v2",
     )
     server = MemoryRAGServer(config)
@@ -250,7 +250,7 @@ class TestMemoryUpdateIntegration:
             storage_backend="qdrant",
             qdrant_url="http://localhost:6333",
             qdrant_collection_name=unique_qdrant_collection,
-            read_only_mode=True,
+            advanced={"read_only_mode": True},
         )
         server = MemoryRAGServer(config)
         await server.initialize()

@@ -36,7 +36,7 @@ def config(unique_qdrant_collection):
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
         qdrant_collection_name=unique_qdrant_collection,
-        read_only_mode=False,
+        advanced={"read_only_mode": False},
     )
 
 
@@ -256,7 +256,7 @@ class TestReadOnlyModeEnforcement:
             storage_backend="qdrant",
             qdrant_url="http://localhost:6333",
             qdrant_collection_name=unique_qdrant_collection,
-            read_only_mode=True,
+            advanced={"read_only_mode": True},
         )
 
         server = MemoryRAGServer(config)
@@ -282,7 +282,7 @@ class TestReadOnlyModeEnforcement:
             storage_backend="qdrant",
             qdrant_url="http://localhost:6333",
             qdrant_collection_name=unique_qdrant_collection,
-            read_only_mode=True,
+            advanced={"read_only_mode": True},
         )
 
         server = MemoryRAGServer(config)

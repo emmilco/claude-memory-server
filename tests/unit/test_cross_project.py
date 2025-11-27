@@ -16,10 +16,12 @@ def config(tmp_path):
     return ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
-        read_only_mode=False,
-        enable_retrieval_gate=False,
-        enable_cross_project_search=True,
-        cross_project_default_mode="current",
+        advanced={"read_only_mode": False},
+        search={
+            "retrieval_gate_enabled": False,
+            "cross_project_enabled": True,
+            "cross_project_default_mode": "current",
+        },
         cross_project_opt_in_file=str(consent_file),
     )
 
@@ -114,19 +116,18 @@ class TestSearchAllProjects:
         config = ServerConfig(
             storage_backend="qdrant",
             qdrant_url="http://localhost:6333",
-            read_only_mode=False,
-            enable_retrieval_gate=False,
-            enable_cross_project_search=False,  # Disabled
+            advanced={"read_only_mode": False},
+            search={
+                "retrieval_gate_enabled": False,
+                "cross_project_enabled": False,  # Disabled
+            },
         )
 
+        # Don't need to initialize - validation happens before any real work
         srv = MemoryRAGServer(config)
-        await srv.initialize()
 
-        try:
-            with pytest.raises(ValidationError):
-                await srv.search_all_projects(query="test")
-        finally:
-            await srv.close()
+        with pytest.raises(ValidationError):
+            await srv.search_all_projects(query="test")
 
     @pytest.mark.asyncio
     async def test_search_all_projects_no_opted_in(self, server):

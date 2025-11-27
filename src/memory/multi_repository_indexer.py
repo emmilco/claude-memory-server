@@ -170,7 +170,7 @@ class MultiRepositoryIndexer:
 
         # Initialize embedding generator if needed
         if self.embedding_generator is None:
-            if self.config.enable_parallel_embeddings:
+            if self.config.performance.parallel_embeddings:
                 logger.info("Using parallel embedding generator")
                 self.embedding_generator = ParallelEmbeddingGenerator(self.config)
             else:

@@ -90,7 +90,7 @@ Claude Memory RAG Server gives Claude **persistent memory** and **semantic code 
     # Show configuration
     console.print(f"✓ Storage backend: [green]{config.storage_backend}[/green]")
     console.print(f"✓ Embedding model: [green]{config.embedding_model}[/green]")
-    console.print(f"✓ Parallel embeddings: [green]{'enabled' if config.enable_parallel_embeddings else 'disabled'}[/green]")
+    console.print(f"✓ Parallel embeddings: [green]{'enabled' if config.performance.parallel_embeddings else 'disabled'}[/green]")
 
     if config.storage_backend == "qdrant":
         console.print(f"✓ Qdrant URL: [green]{config.qdrant_url}[/green]")

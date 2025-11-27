@@ -230,10 +230,10 @@ def test_status_response():
         memory_count=100,
         qdrant_available=True,
         file_watcher_enabled=True,
-        retrieval_gate_enabled=True,
     )
     assert status.server_name == "test-server"
     assert status.memory_count == 100
+    assert status.read_only_mode is False
     assert isinstance(status.timestamp, datetime)
 
 

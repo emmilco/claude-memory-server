@@ -94,8 +94,10 @@ class MockStore:
 def config():
     """Create test configuration."""
     return ServerConfig(
-        session_state_ttl_hours=48,
-        enable_auto_pruning=True,
+        memory={
+            "session_state_ttl_hours": 48,
+            "auto_pruning": True,
+        },
     )
 
 

@@ -32,7 +32,7 @@ class MockStore:
 def config():
     """Create test configuration."""
     return ServerConfig(
-        enable_usage_tracking=True,
+        analytics={"usage_tracking": True},
         usage_batch_size=10,
         usage_flush_interval_seconds=1,
         ranking_weight_similarity=0.6,

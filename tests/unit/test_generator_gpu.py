@@ -12,7 +12,7 @@ class TestGeneratorGpuSupport:
 
     def test_device_determination_gpu_enabled_available(self):
         """Test device determination when GPU is enabled and available."""
-        config = ServerConfig(enable_gpu=True, force_cpu=False)
+        config = ServerConfig(performance={"gpu_enabled": True, "force_cpu": False})
 
         with patch("src.embeddings.generator.get_optimal_device", return_value="cuda"), \
              patch("src.embeddings.generator.get_gpu_info", return_value={
@@ -27,7 +27,7 @@ class TestGeneratorGpuSupport:
 
     def test_device_determination_force_cpu(self):
         """Test device determination when CPU is forced."""
-        config = ServerConfig(enable_gpu=True, force_cpu=True)
+        config = ServerConfig(performance={"gpu_enabled": False, "force_cpu": True})
 
         with patch("src.embeddings.generator.get_optimal_device") as mock_device:
             generator = EmbeddingGenerator(config)
@@ -38,18 +38,18 @@ class TestGeneratorGpuSupport:
 
     def test_device_determination_gpu_disabled(self):
         """Test device determination when GPU is disabled."""
-        config = ServerConfig(enable_gpu=False, force_cpu=False)
+        config = ServerConfig(performance={"gpu_enabled": False, "force_cpu": False})
 
         with patch("src.embeddings.generator.get_optimal_device") as mock_device:
             generator = EmbeddingGenerator(config)
 
             assert generator.device == "cpu"
-            # Should not call get_optimal_device if enable_gpu is False
+            # Should not call get_optimal_device if gpu_enabled is False
             mock_device.assert_not_called()
 
     def test_device_determination_gpu_unavailable(self):
         """Test device determination when GPU is not available."""
-        config = ServerConfig(enable_gpu=True, force_cpu=False)
+        config = ServerConfig(performance={"gpu_enabled": True, "force_cpu": False})
 
         with patch("src.embeddings.generator.get_optimal_device", return_value="cpu"), \
              patch("src.embeddings.generator.get_gpu_info", return_value=None):
@@ -60,7 +60,7 @@ class TestGeneratorGpuSupport:
 
     def test_model_load_with_gpu(self):
         """Test model loading with GPU device."""
-        config = ServerConfig(enable_gpu=True, force_cpu=False, gpu_memory_fraction=0.7)
+        config = ServerConfig(performance={"gpu_enabled": True, "force_cpu": False, "gpu_memory_fraction": 0.7})
 
         mock_model = Mock()
         mock_model.to = Mock(return_value=mock_model)
@@ -90,7 +90,7 @@ class TestGeneratorGpuSupport:
 
     def test_model_load_with_cpu(self):
         """Test model loading with CPU device."""
-        config = ServerConfig(enable_gpu=False, force_cpu=True)
+        config = ServerConfig(performance={"gpu_enabled": False, "force_cpu": True})
 
         mock_model = Mock()
         mock_model.to = Mock(return_value=mock_model)
@@ -111,7 +111,7 @@ class TestGeneratorGpuSupport:
 
     def test_model_load_gpu_fallback_to_cpu(self):
         """Test fallback to CPU when GPU loading fails."""
-        config = ServerConfig(enable_gpu=True, force_cpu=False)
+        config = ServerConfig(performance={"gpu_enabled": True, "force_cpu": False})
 
         mock_model = Mock()
         # First call to .to("cuda") fails, second call to .to("cpu") succeeds
@@ -143,7 +143,7 @@ class TestGeneratorGpuSupport:
     @pytest.mark.requires_gpu
     def test_benchmark_includes_device(self):
         """Test that benchmark results include device information."""
-        config = ServerConfig(enable_gpu=True, force_cpu=False)
+        config = ServerConfig(performance={"gpu_enabled": True, "force_cpu": False})
 
         mock_model = Mock()
         mock_model.to = Mock(return_value=mock_model)
@@ -173,7 +173,7 @@ class TestGeneratorGpuSupport:
 
     def test_gpu_memory_fraction_not_set_when_full(self):
         """Test that GPU memory fraction is not set when it's 1.0."""
-        config = ServerConfig(enable_gpu=True, force_cpu=False, gpu_memory_fraction=1.0)
+        config = ServerConfig(performance={"gpu_enabled": True, "force_cpu": False, "gpu_memory_fraction": 1.0})
 
         mock_model = Mock()
         mock_model.to = Mock(return_value=mock_model)

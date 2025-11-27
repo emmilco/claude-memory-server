@@ -21,13 +21,14 @@ from src.embeddings.generator import EmbeddingGenerator
 @pytest.fixture
 def config():
     """Create test configuration."""
-    config = ServerConfig()
-    config.enable_git_indexing = True
-    config.git_index_commit_count = 10
-    config.git_index_branches = "current"
-    config.git_index_diffs = True
-    config.git_auto_size_threshold_mb = 500
-    config.git_diff_size_limit_kb = 10
+    config = ServerConfig(
+        indexing={
+            "git_indexing": True,
+            "git_index_commit_count": 10,
+            "git_index_branches": "current",
+            "git_index_diffs": True,
+        }
+    )
     return config
 
 
@@ -83,7 +84,7 @@ class TestRepositoryIndexing:
     @pytest.mark.asyncio
     async def test_index_repository_disabled(self, git_indexer):
         """Test indexing returns empty when disabled."""
-        git_indexer.config.enable_git_indexing = False
+        git_indexer.config.indexing.git_indexing = False
         commits, changes = await git_indexer.index_repository("/fake/path", "test")
         assert commits == []
         assert changes == []
@@ -537,7 +538,7 @@ class TestHelperMethods:
         mock_repo = Mock()
         mock_repo.iter_commits.return_value = [mock_commit1, mock_commit2]
 
-        git_indexer.config.git_index_branches = "current"
+        git_indexer.config.indexing.git_index_branches = "current"
         commits = git_indexer._get_commits_to_index(mock_repo, 10)
 
         assert len(commits) == 2
@@ -552,7 +553,7 @@ class TestHelperMethods:
         mock_repo = Mock()
         mock_repo.iter_commits.return_value = [mock_commit1, mock_commit2, mock_commit3]
 
-        git_indexer.config.git_index_branches = "all"
+        git_indexer.config.indexing.git_index_branches = "all"
         commits = git_indexer._get_commits_to_index(mock_repo, 10)
 
         assert len(commits) == 3

@@ -160,9 +160,9 @@ class TestConfigAdditional:
 
     def test_config_read_only_mode(self):
         """Test read-only mode configuration."""
-        config = ServerConfig(read_only_mode=True)
+        config = ServerConfig(advanced={"read_only_mode": True})
 
-        assert config.read_only_mode is True
+        assert config.advanced.read_only_mode is True
 
     def test_config_log_level(self):
         """Test log level configuration."""

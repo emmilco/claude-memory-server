@@ -628,8 +628,8 @@ class TestFileWatcherInfo:
 
         with patch('src.config.get_config') as mock_get_config:
             mock_config = MagicMock()
-            mock_config.enable_file_watcher = True
-            mock_config.watch_debounce_ms = 1000
+            mock_config.indexing.file_watcher = True
+            mock_config.indexing.watch_debounce_ms = 1000
             mock_get_config.return_value = mock_config
 
             info = await cmd.get_file_watcher_info()
@@ -647,8 +647,8 @@ class TestFileWatcherInfo:
 
         with patch('src.config.get_config') as mock_get_config:
             mock_config = MagicMock()
-            mock_config.enable_file_watcher = False
-            mock_config.watch_debounce_ms = 500
+            mock_config.indexing.file_watcher = False
+            mock_config.indexing.watch_debounce_ms = 500
             mock_get_config.return_value = mock_config
 
             info = await cmd.get_file_watcher_info()

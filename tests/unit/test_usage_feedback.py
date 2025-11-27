@@ -12,7 +12,7 @@ def mock_server():
     """Create a mock server for testing."""
     server = MagicMock(spec=MemoryRAGServer)
     server.config = MagicMock()
-    server.config.read_only_mode = False
+    server.config.advanced.read_only_mode = False
     server.store = AsyncMock()
     server.stats = {}
     return server

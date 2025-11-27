@@ -255,7 +255,7 @@ class MemoryService:
         op_id = new_operation()
         logger.info(f"Storing memory: {content[:50]}...")
 
-        if self.config.read_only_mode:
+        if self.config.advanced.read_only_mode:
             raise ReadOnlyError("Cannot store memory in read-only mode")
 
         try:
@@ -442,7 +442,7 @@ class MemoryService:
             self.stats["queries_retrieved"] += 1
 
             # Apply composite ranking if usage tracking is enabled
-            if self.usage_tracker and self.config.enable_usage_tracking:
+            if self.usage_tracker and self.config.analytics.usage_tracking:
                 reranked_results = []
 
                 for memory, similarity_score in results:
@@ -496,7 +496,7 @@ class MemoryService:
                     session_id=session_id,
                     query=query,
                     results_shown=results_shown,
-                    query_embedding=query_embedding if self.config.enable_conversation_tracking else None,
+                    query_embedding=query_embedding if self.config.memory.conversation_tracking else None,
                 )
 
             # Log metrics for performance monitoring
@@ -528,7 +528,7 @@ class MemoryService:
         op_id = new_operation()
         logger.info(f"Deleting memory: {memory_id}")
 
-        if self.config.read_only_mode:
+        if self.config.advanced.read_only_mode:
             raise ReadOnlyError("Cannot delete memory in read-only mode")
 
         try:
@@ -615,7 +615,7 @@ class MemoryService:
         Returns:
             Dict with status and update details
         """
-        if self.config.read_only_mode:
+        if self.config.advanced.read_only_mode:
             raise ReadOnlyError("Cannot update memory in read-only mode")
 
         try:
@@ -823,7 +823,7 @@ class MemoryService:
         Returns:
             Dict with status and scope information
         """
-        if self.config.read_only_mode:
+        if self.config.advanced.read_only_mode:
             raise ReadOnlyError("Cannot migrate memory in read-only mode")
 
         try:
@@ -864,7 +864,7 @@ class MemoryService:
         Returns:
             Dict with count of updated memories
         """
-        if self.config.read_only_mode:
+        if self.config.advanced.read_only_mode:
             raise ReadOnlyError("Cannot reclassify memories in read-only mode")
 
         try:
@@ -942,7 +942,7 @@ class MemoryService:
         Returns:
             Dict with merged memory ID
         """
-        if self.config.read_only_mode:
+        if self.config.advanced.read_only_mode:
             raise ReadOnlyError("Cannot merge memories in read-only mode")
 
         if len(memory_ids) < 2:

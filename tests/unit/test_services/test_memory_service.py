@@ -327,7 +327,7 @@ class TestStoreMemory:
     @pytest.mark.asyncio
     async def test_store_memory_read_only_mode_raises(self, service):
         """Test storing in read-only mode raises ReadOnlyError."""
-        service.config.read_only_mode = True
+        service.config.advanced.read_only_mode = True
 
         with pytest.raises(ReadOnlyError):
             await service.store_memory(content="Test", category="fact")
@@ -471,7 +471,7 @@ class TestDeleteMemory:
     @pytest.mark.asyncio
     async def test_delete_memory_read_only_raises(self, service):
         """Test deletion in read-only mode raises ReadOnlyError."""
-        service.config.read_only_mode = True
+        service.config.advanced.read_only_mode = True
 
         with pytest.raises(ReadOnlyError):
             await service.delete_memory("mem_123")
@@ -591,7 +591,7 @@ class TestUpdateMemory:
     @pytest.mark.asyncio
     async def test_update_memory_read_only_raises(self, service):
         """Test update in read-only mode raises ReadOnlyError."""
-        service.config.read_only_mode = True
+        service.config.advanced.read_only_mode = True
 
         with pytest.raises(ReadOnlyError):
             await service.update_memory(
@@ -747,7 +747,7 @@ class TestBulkReclassify:
     @pytest.mark.asyncio
     async def test_bulk_reclassify_read_only_raises(self, service):
         """Test bulk reclassify in read-only mode raises."""
-        service.config.read_only_mode = True
+        service.config.advanced.read_only_mode = True
 
         with pytest.raises(ReadOnlyError):
             await service.bulk_reclassify(new_context_level="SESSION_STATE")

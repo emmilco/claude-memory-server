@@ -35,12 +35,12 @@ async def server_with_hybrid_search(qdrant_client, unique_qdrant_collection):
             storage_backend="qdrant",
             qdrant_url="http://localhost:6333",
             qdrant_collection_name=unique_qdrant_collection,
-            enable_hybrid_search=True,
+            search={"hybrid_search": True},
+            advanced={"read_only_mode": False},
             hybrid_search_alpha=0.5,
             hybrid_fusion_method="weighted",
             bm25_k1=1.5,
             bm25_b=0.75,
-            read_only_mode=False,
         )
 
         server = MemoryRAGServer(config=config)
@@ -71,8 +71,8 @@ async def server_without_hybrid_search(qdrant_client, unique_qdrant_collection):
             storage_backend="qdrant",
             qdrant_url="http://localhost:6333",
             qdrant_collection_name=unique_qdrant_collection,
-            enable_hybrid_search=False,
-            read_only_mode=False,
+            search={"hybrid_search": False},
+            advanced={"read_only_mode": False},
         )
 
         server = MemoryRAGServer(config=config)
@@ -148,7 +148,7 @@ class TestHybridSearchIntegration:
         server = server_with_hybrid_search
 
         assert server.hybrid_searcher is not None
-        assert server.config.enable_hybrid_search is True
+        assert server.config.search.hybrid_search is True
         assert server.hybrid_searcher.alpha == 0.5
 
     @pytest.mark.asyncio
@@ -157,7 +157,7 @@ class TestHybridSearchIntegration:
         server = server_without_hybrid_search
 
         assert server.hybrid_searcher is None
-        assert server.config.enable_hybrid_search is False
+        assert server.config.search.hybrid_search is False
 
     @pytest.mark.asyncio
     async def test_search_code_with_hybrid_mode(self, indexed_code_server):
@@ -299,9 +299,9 @@ class TestHybridSearchIntegration:
                     storage_backend="qdrant",
                     qdrant_url="http://localhost:6333",
                     qdrant_collection_name=f"test_fusion_{fusion_method}",
-                    enable_hybrid_search=True,
+                    search={"hybrid_search": True},
+                    advanced={"read_only_mode": False},
                     hybrid_fusion_method=fusion_method,
-                    read_only_mode=False,
                 )
 
                 server = MemoryRAGServer(config=config)
@@ -524,9 +524,9 @@ class TestHybridSearchConfiguration:
                     storage_backend="qdrant",
                     qdrant_url="http://localhost:6333",
                     qdrant_collection_name=f"test_alpha_{int(alpha*100)}",
-                    enable_hybrid_search=True,
+                    search={"hybrid_search": True},
+                    advanced={"read_only_mode": False},
                     hybrid_search_alpha=alpha,
-                    read_only_mode=False,
                 )
 
                 server = MemoryRAGServer(config=config)
@@ -550,10 +550,10 @@ class TestHybridSearchConfiguration:
                     storage_backend="qdrant",
                     qdrant_url="http://localhost:6333",
                     qdrant_collection_name=f"test_bm25_k{int(k1*10)}_b{int(b*100)}",
-                    enable_hybrid_search=True,
+                    search={"hybrid_search": True},
+                    advanced={"read_only_mode": False},
                     bm25_k1=k1,
                     bm25_b=b,
-                    read_only_mode=False,
                 )
 
                 server = MemoryRAGServer(config=config)

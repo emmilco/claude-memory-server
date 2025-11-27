@@ -11,7 +11,7 @@ def mock_server():
     """Create a mock server for testing."""
     server = MagicMock(spec=MemoryRAGServer)
     server.config = MagicMock()
-    server.config.read_only_mode = False
+    server.config.advanced.read_only_mode = False
     server.store = AsyncMock()
     server.stats = {"memories_deleted": 0}
     return server
@@ -103,7 +103,7 @@ class TestMigrateMemoryScope:
         from src.core.server import MemoryRAGServer
 
         # Setup
-        mock_server.config.read_only_mode = True
+        mock_server.config.advanced.read_only_mode = True
 
         # Create real instance with mocked store
         server = MemoryRAGServer.__new__(MemoryRAGServer)
@@ -225,7 +225,7 @@ class TestBulkReclassify:
         from src.core.server import MemoryRAGServer
 
         # Setup
-        mock_server.config.read_only_mode = True
+        mock_server.config.advanced.read_only_mode = True
 
         # Create real instance with mocked store
         server = MemoryRAGServer.__new__(MemoryRAGServer)
@@ -400,7 +400,7 @@ class TestMergeMemories:
         from src.core.server import MemoryRAGServer
 
         # Setup
-        mock_server.config.read_only_mode = True
+        mock_server.config.advanced.read_only_mode = True
 
         # Create real instance with mocked store
         server = MemoryRAGServer.__new__(MemoryRAGServer)

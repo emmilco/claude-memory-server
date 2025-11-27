@@ -77,7 +77,7 @@ class MemoryPruner:
             List of expired memory dicts with id, created_at, last_used
         """
         if ttl_hours is None:
-            ttl_hours = self.config.session_state_ttl_hours
+            ttl_hours = self.config.memory.session_state_ttl_hours
 
         # Calculate cutoff time
         cutoff_time = datetime.now(UTC) - timedelta(hours=ttl_hours)

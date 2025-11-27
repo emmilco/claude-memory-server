@@ -277,7 +277,7 @@ class IncrementalIndexer(BaseCodeIndexer):
         # Use parallel embedding generator if enabled, otherwise use standard generator
         if embedding_generator is not None:
             self.embedding_generator = embedding_generator
-        elif config.enable_parallel_embeddings:
+        elif config.performance.parallel_embeddings:
             logger.info("Using parallel embedding generator for improved throughput")
             self.embedding_generator = ParallelEmbeddingGenerator(config)
         else:
@@ -295,7 +295,7 @@ class IncrementalIndexer(BaseCodeIndexer):
         logger.info("Call graph store initialized for call extraction")
 
         # Importance scorer for intelligent code importance (FEAT-049)
-        if config.enable_importance_scoring:
+        if config.performance.importance_scoring:
             from src.analysis.importance_scorer import ImportanceScorer
             self.importance_scorer = ImportanceScorer(
                 complexity_weight=config.importance_complexity_weight,

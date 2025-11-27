@@ -129,7 +129,7 @@ class QueryExpander:
         if not recent_queries:
             return query  # No context to use
 
-        if not self.config.enable_conversation_tracking:
+        if not self.config.memory.conversation_tracking:
             return query  # Feature disabled
 
         try:

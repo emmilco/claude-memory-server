@@ -36,7 +36,7 @@ async def server():
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
         qdrant_collection_name="test_cross_project_consent",
-        enable_cross_project_search=True,
+        search={"cross_project_enabled": True},
     )
 
     server = MemoryRAGServer(config)
@@ -288,7 +288,7 @@ async def test_tools_with_cross_project_disabled():
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
         qdrant_collection_name="test_cross_project_disabled",
-        enable_cross_project_search=False,  # Disabled
+        search={"cross_project_enabled": False},
     )
 
     server = MemoryRAGServer(config)

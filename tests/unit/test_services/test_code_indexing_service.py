@@ -549,7 +549,7 @@ class TestIndexCodebase:
     @pytest.mark.asyncio
     async def test_index_codebase_read_only_mode_raises(self, service, tmp_path):
         """Test indexing in read-only mode raises."""
-        service.config.read_only_mode = True
+        service.config.advanced.read_only_mode = True
 
         with pytest.raises(ReadOnlyError):
             await service.index_codebase(directory_path=str(tmp_path))
@@ -626,7 +626,7 @@ class TestReindexProject:
     @pytest.mark.asyncio
     async def test_reindex_project_read_only_raises(self, service, tmp_path):
         """Test reindexing in read-only mode raises."""
-        service.config.read_only_mode = True
+        service.config.advanced.read_only_mode = True
 
         with pytest.raises(ReadOnlyError):
             await service.reindex_project(

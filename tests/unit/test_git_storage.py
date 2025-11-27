@@ -38,7 +38,7 @@ def config(unique_qdrant_collection):
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
         qdrant_collection_name=unique_qdrant_collection,
-        enable_git_indexing=True,
+        indexing={"git_indexing": True},
     )
     return config
 
