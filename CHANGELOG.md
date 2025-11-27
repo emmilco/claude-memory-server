@@ -69,6 +69,13 @@ Organize entries under these headers in chronological order (newest first):
   - Added project_name filtering to 3 pagination tests
   - Fixes intermittent failures in parallel test execution
 
+### Removed - 2025-11-26
+- **TEST-032: Dead Code Test Cleanup**
+  - Deleted test_export_import.py (19 tests) - replaced by test_backup_export/import.py
+  - Removed 2 obsolete initialization tests from test_store_project_stats.py
+  - Removed SQLite test class from test_dashboard_api.py (4 tests) - SQLite support removed
+  - Removed 3 relationship detection tests from test_provenance_trust_integration.py - feature removed
+
 ### Fixed - 2025-11-26
 - **Test Suite: 100% Pass Rate with Flaky Test Skip Markers**
   - Added `pytestmark = pytest.mark.skip_ci` to 6 additional flaky modules

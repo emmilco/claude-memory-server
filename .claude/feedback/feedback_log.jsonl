@@ -149,3 +149,75 @@
   "sentiment": "positive",
   "user_message": "ok, good work. i'm going to wrap up this chat and then work on CI in a new one. hopefully things are passing"
 }
+{
+  "timestamp": "2025-11-26T03:49:05Z",
+  "session_id": "2ebd368f-9566-47b1-b513-d54680a4cc23",
+  "sentiment": "positive",
+  "user_message": "i am truly amazed. great job!!!!"
+}
+{
+  "timestamp": "2025-11-26T17:59:30Z",
+  "session_id": "e44a811d-865e-4d71-b75d-3fbfaacb959b",
+  "sentiment": "negative",
+  "user_message": "Can you check over the skip markers you just added? I think you may have added one in the wrong place in tests/integration/test_concurrent_operations.py"
+}
+{
+  "timestamp": "2025-11-26T18:48:08Z",
+  "session_id": "e44a811d-865e-4d71-b75d-3fbfaacb959b",
+  "sentiment": "positive",
+  "user_message": "Nice work. What's the status of the project overall? Then I'll wrap up this conversation."
+}
+{
+  "timestamp": "2025-11-26T18:59:21Z",
+  "session_id": "1e1ee69c-047d-48f1-94ac-a15e312e349c",
+  "sentiment": "corrective",
+  "user_message": "there should be a task in the TODO to break up a massive server class. do you see it?"
+}
+{
+  "timestamp": "2025-11-26T20:02:36Z",
+  "session_id": "1e1ee69c-047d-48f1-94ac-a15e312e349c",
+  "sentiment": "positive",
+  "user_message": "Nice work. It seems like we have a lot of issues with test parallelization and flakiness. Is there a TODO dedicated to investigating and fixing this?"
+}
+{
+  "timestamp": "2025-11-26T20:44:40Z",
+  "session_id": "1e1ee69c-047d-48f1-94ac-a15e312e349c",
+  "sentiment": "corrective",
+  "user_message": "Yes go for it. And please don't stop until you've achieve a 100% pass rate"
+}
+{
+  "timestamp": "2025-11-26T23:48:46Z",
+  "session_id": "20c503fe-0c7a-412e-b2e2-67e9173cc6c3",
+  "sentiment": "negative",
+  "user_message": "One thing I've noticed in our work together this week is that you seem to do better figuring out bugs when you employ either of the following strategies:\n- simulate a pair programming session between two engineers debugging the issue\n- consider the problem from all the angles and do a differential diagonsis that will help you pinpoint the root cause.\n\nCould you make a journal entry that records this?"
+}
+{
+  "timestamp": "2025-11-27T00:34:31Z",
+  "session_id": "1e1ee69c-047d-48f1-94ac-a15e312e349c",
+  "sentiment": "corrective",
+  "user_message": "Is it different tests failing each time?"
+}
+{
+  "timestamp": "2025-11-27T00:37:11Z",
+  "session_id": "1e1ee69c-047d-48f1-94ac-a15e312e349c",
+  "sentiment": "corrective",
+  "user_message": "Hang on, you have several results already. I'm asking about runs you've already done. In those runs was it the same test failing every time?"
+}
+{
+  "timestamp": "2025-11-27T01:54:25Z",
+  "session_id": "5aa0803d-a448-430a-a6db-f3fa0f88ade6",
+  "sentiment": "positive",
+  "user_message": "1. Ideally? I'd love to learn a new technology while building a portfolio piece, and building something functional that improves my life owuld be awesome. I think the fun is in that stuff.\n2. I'm a staff level sofware engineer with eight years of fullstack web application development. Primarily backend focused, primarily in python, but also some typescript. I'm interested in automation tooling, machine learning, llms, philosophy, math, poetry, and chemistry. I'm open to working within the familiar or getting stretched if the project involves some new or important tool, language, or technology that would be valuable to know.\n3. You tend to be bad with timescales, but let's say months to a year, long term project. Maybe even longer than that.\n4. automation, AI/ML, data/analytics, and productivity."
+}
+{
+  "timestamp": "2025-11-27T01:58:11Z",
+  "session_id": "5aa0803d-a448-430a-a6db-f3fa0f88ade6",
+  "sentiment": "positive",
+  "user_message": "I'm totally interested in learning Rust, that could be cool. #4 is pretty close to a project i'm working on now (which consists of two systems in the current project: the AI workflow and journaling system, and the claude memory mcp rag). "
+}
+{
+  "timestamp": "2025-11-27T02:09:00Z",
+  "session_id": "5aa0803d-a448-430a-a6db-f3fa0f88ade6",
+  "sentiment": "corrective",
+  "user_message": "Yeah this project doesn't really do anything for me, let's consider other options"
+}

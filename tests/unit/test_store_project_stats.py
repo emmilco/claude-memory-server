@@ -89,21 +89,6 @@ class TestQdrantProjectStats:
         assert len(projects) == 1
         assert projects == ["project1"]
 
-    @pytest.mark.skip(reason="Initialization checks removed in CHANGELOG 2025-11-24 - store now auto-initializes via _get_client()")
-    @pytest.mark.asyncio
-    async def test_get_all_projects_not_initialized(self):
-        """Test get_all_projects when store not initialized.
-
-        NOTE: This test is obsolete. Initialization checks were removed because they
-        broke connection pooling. The store now auto-initializes correctly in both
-        pooled and non-pooled modes via _get_client().
-        """
-        store = QdrantMemoryStore(use_pool=False)
-        store.client = None
-
-        with pytest.raises(StorageError, match="not initialized"):
-            await store.get_all_projects()
-
     @pytest.mark.asyncio
     async def test_get_all_projects_error(self):
         """Test get_all_projects handles errors."""
@@ -171,21 +156,6 @@ class TestQdrantProjectStats:
         assert stats["num_files"] == 0
         assert stats["num_functions"] == 0
         assert stats["categories"] == {}
-
-    @pytest.mark.skip(reason="Initialization checks removed in CHANGELOG 2025-11-24 - store now auto-initializes via _get_client()")
-    @pytest.mark.asyncio
-    async def test_get_project_stats_not_initialized(self):
-        """Test get_project_stats when store not initialized.
-
-        NOTE: This test is obsolete. Initialization checks were removed because they
-        broke connection pooling. The store now auto-initializes correctly in both
-        pooled and non-pooled modes via _get_client().
-        """
-        store = QdrantMemoryStore(use_pool=False)
-        store.client = None
-
-        with pytest.raises(StorageError, match="not initialized"):
-            await store.get_project_stats("test-project")
 
     @pytest.mark.asyncio
     async def test_get_project_stats_error(self):

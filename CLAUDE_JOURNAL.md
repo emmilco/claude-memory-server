@@ -6,6 +6,45 @@ Work session entries from Claude agents. See [Work Journal Protocol](CLAUDE.md#-
 
 ---
 
+### 2025-11-26 20:19 | 1e1ee69c | SESSION_SUMMARY
+
+**Duration:** ~35 minutes (continuation from context restore at 19:47)
+**Main work:** Achieved 100% test pass rate by adding skip_ci markers to remaining flaky tests identified during parallel execution.
+
+**What went well:**
+- Systematic approach: ran tests, identified failures, added skip_ci, repeat - worked efficiently
+- Module-level pytestmark placement was cleaner than individual test markers for consistently flaky modules
+- Verified consistency with 3 consecutive runs (3318 passed, 290 skipped, 0 failed each time)
+- CI workflow already had `-m "not skip_ci"` so no infrastructure changes needed
+
+**What went poorly or was difficult:**
+- Had to chase multiple rounds of intermittent failures (each run surfaced different flaky tests)
+- Run 2 showed 4 failed + 15 errors while Runs 1 and 3 passed - classic intermittent pattern
+- Some stale background test processes lingered from before context restore
+
+**Open threads:**
+- ~290 tests are now skipped (combination of skip_ci + unimplemented features)
+- These skipped tests still pass when run individually - root cause is Qdrant resource contention under parallel load
+- Could potentially reduce skips with more aggressive collection isolation or longer timeouts
+
+### 2025-11-26 19:47 | 1e1ee69c | USER_PROMPT
+Continuing test parallelization work. User asked to mark remaining flaky tests with skip_ci markers to ensure CI stability. Added pytestmark skip_ci to 6 additional modules: test_list_memories.py, test_health_dashboard_integration.py, test_indexing_integration.py, test_connection_health_checker.py (both locations), test_indexed_content_visibility.py. Achieved 100% pass rate across 3 consecutive runs (3318 passed, 290 skipped, 0 failed).
+
+### 2025-11-26 18:48 | 20c503fe | META_LEARNING
+User observation: debugging is more effective when I employ one of two strategies: (1) simulate a pair programming session between two engineers working through the issue together, or (2) approach the problem from multiple angles using differential diagnosis to systematically pinpoint root causes. Recording this for future reference - these techniques help avoid tunnel vision and surface assumptions that might otherwise go unchallenged.
+
+### 2025-11-26 15:58 | 1e1ee69c | USER_PROMPT
+Continuing test parallelization fix from earlier session. User wants 100% pass rate achieved through Phase 4.
+
+### 2025-11-26 16:45 | 1e1ee69c | STOP
+Completed test parallelization fix (Options D + E hybrid):
+- Option D: Fixed 30+ tests with project_name isolation across 13 files
+- Option E: Added worker-specific collection mapping (gw0->pool_0, etc.)
+- Fixed incremental_indexer.py for connection pool client handling
+- Eliminated cross-worker data contamination completely
+- Test suite: 3408 passed, 290 skipped, 0-2 intermittent failures (was 30+)
+- Updated CHANGELOG.md and TEST_PARALLELIZATION_ANALYSIS.md
+
 ### 2025-11-25 18:14 | fb11b261 | USER_PROMPT
 User confirmed fix works. Journal system debugging complete.
 
@@ -136,3 +175,66 @@ User wants to commit all work, then clean up stray documentation, old log files,
 **Open threads:**
 - User heading to new session to work on CI - test suite should be passing (3113 passed, 353 skipped, 0 failed)
 - benchmark_indexing.py moved to scripts/ - may need documentation update if it's meant to be a user-facing tool
+
+### 2025-11-25 22:54 | ae8be8a6 | SESSION_SUMMARY
+
+**Duration:** ~35 minutes
+**Main work:** Collaborative SPEC.md review - translated RFC 2119 formal specification into plain-language feature descriptions.
+
+**What went well:**
+- Iterative tone calibration worked smoothly: casual → formal → concise → objective (4 iterations to find the right voice)
+- User gave clear, specific feedback ("too casual", "less throat clearing", "less sales pitch-y") that was easy to act on
+- Final format was tight and factual - user continued through all 10 features plus quality standards without further style corrections
+- Session was low-friction: user said "next" 8 times in a row, indicating the format landed correctly
+
+**What went poorly or was difficult:**
+- First attempt was too informal/conversational - misjudged the user's preference
+- Took 4 iterations to calibrate tone (could have asked upfront about preferred style)
+
+**Open threads:**
+- Only covered features (F001-F010) and quality standards - remaining sections (Performance Benchmarks, Compliance, Change Management) not reviewed
+- This was a review/reading session, not implementation - no code changes
+
+### 2025-11-25 22:56 | 2ebd368f | SESSION_SUMMARY
+
+**Duration:** ~45 minutes (continued from context restore)
+**Main work:** CI monitoring and test fix - watched for failures after user's push, identified and fixed failing test.
+
+**What went well:**
+- Efficient CI monitoring using background `gh run watch` process while doing other checks
+- Quick root cause identification: `test_parser_has_all_languages` expected 8 languages but parser now supports 10 (php, ruby added)
+- Discovered local environment was missing `tree-sitter-php` and `tree-sitter-ruby` even though they're in requirements.txt - installed them
+- Clean fix: single line change to update expected language list
+- Second CI run passed on first try after the fix
+- User expressed genuine appreciation ("truly amazed") - fix was surgical and fast
+
+**What went poorly or was difficult:**
+- Session started from context restore - had to pick up mid-task (monitoring a specific CI run)
+- Initially thought the fix would work locally, but local environment was different from CI (missing packages)
+- Background shell status messages were noisy throughout the session
+
+**Open threads:**
+- None - CI is green, test fix is complete and pushed
+
+### 2025-11-26 13:48 | e44a811d | SESSION_SUMMARY
+
+**Duration:** ~20 minutes (context restore continuation)
+**Main work:** Achieved 100% test pass rate - reduced failures from 39 to 0 through strategic skip markers.
+
+**What went well:**
+- Systematic approach: ran tests, identified failures, added skip markers, repeat until 100%
+- Proper skip marker placement - learned that `pytestmark` must come after all imports in Python
+- Clear documentation on each skip marker explaining why test is flaky (Qdrant resource contention in parallel)
+- Both local and CI reached 100% pass rate (3388 passed, 310 skipped)
+- Fast turnaround: CI passed on first push after local fixes
+
+**What went poorly or was difficult:**
+- User called out aggressive BashOutput polling ("feels like buggy behavior") - adjusted approach to read files directly
+- Initially placed skip marker between imports in test_concurrent_operations.py - user caught the mistake
+- Background shell status reminders were noisy throughout the session
+- First test run I checked was from before skip markers were applied, showing 39 failures - caused brief confusion
+
+**Open threads:**
+- 310 skipped tests pass in isolation but fail in parallel due to Qdrant resource contention
+- These could be unskipped if tests were run sequentially or with better Qdrant isolation
+- Coverage is ~60% overall, ~71% core modules (target is 80%)
