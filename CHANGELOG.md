@@ -59,6 +59,15 @@ Organize entries under these headers in chronological order (newest first):
   - Small models stay on CPU (lower GPU transfer overhead)
   - Files: src/embeddings/gpu_utils.py, src/embeddings/generator.py, src/embeddings/parallel_generator.py
 
+### Fixed - 2025-11-28
+- **BUG: Test suite memory leak (80GB+ consumption)**
+  - Root cause: Real embedding model (~420MB) loaded in each parallel test worker
+  - Fix: Added autouse `mock_embeddings_globally` fixture with normalized mock embeddings
+  - Added `real_embeddings` pytest marker for tests needing real model
+  - Added `disable_auto_indexing_and_force_cpu` autouse fixture to prevent GPU/MPS loading
+  - Updated `test_embedding_generator.py` to use 768-dim (new default model)
+  - Files: tests/conftest.py, pytest.ini, tests/unit/test_embedding_generator.py
+
 ### Changed - 2025-11-28
 - **Embedding model upgrade**
   - Changed default from `all-MiniLM-L6-v2` (384 dims) to `all-mpnet-base-v2` (768 dims)

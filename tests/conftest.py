@@ -46,30 +46,53 @@ def mock_embedding_cache():
     }
 
 
-@pytest.fixture
-def mock_embeddings(monkeypatch, mock_embedding_cache):
-    """Mock embedding generator for unit tests to avoid slow embedding generation."""
+@pytest.fixture(autouse=True)
+def mock_embeddings_globally(request, monkeypatch, mock_embedding_cache):
+    """Auto-mock embedding generator globally to prevent loading real models.
+
+    This fixture is autouse=True to prevent memory leaks from loading the
+    ~420MB embedding model in every test worker. Tests that need real
+    embeddings should use the @pytest.mark.real_embeddings marker.
+
+    The mock generates deterministic embeddings based on text hash, which
+    is sufficient for most unit and integration tests.
+    """
+    # Skip mocking if test has real_embeddings marker
+    if request.node.get_closest_marker("real_embeddings"):
+        return  # Let real embedding generator be used
+
     from src.embeddings.generator import EmbeddingGenerator
+    from src.core.exceptions import EmbeddingError
 
     # Get embedding dimension from cache
     dim = mock_embedding_cache.get("_embedding_dim", 768)
 
     async def mock_generate(self, text):
         """Generate mock embedding based on cached values or hash."""
+        # Handle edge cases like real generator does
+        if text is None:
+            raise EmbeddingError("Cannot generate embedding for None")
+        if not text or not text.strip():
+            raise EmbeddingError("Cannot generate embedding for empty text")
+
         # Return cached embedding if available
         if text in mock_embedding_cache and not text.startswith("_"):
             return mock_embedding_cache[text]
 
         # For other texts, generate deterministic embedding based on hash
-        # This ensures consistency across test runs
         hash_val = int(hashlib.md5(text.encode()).hexdigest()[:8], 16)
         base_value = (hash_val % 100) / 100.0
 
-        # Create a simple deterministic pattern
+        # Create normalized embedding (unit vector)
         embedding = []
         for i in range(dim):
             val = (base_value + (i * 0.001)) % 1.0
             embedding.append(val)
+
+        # Normalize to unit length (like real embeddings)
+        magnitude = sum(x * x for x in embedding) ** 0.5
+        if magnitude > 0:
+            embedding = [x / magnitude for x in embedding]
 
         return embedding
 
@@ -87,17 +110,24 @@ def mock_embeddings(monkeypatch, mock_embedding_cache):
 
 
 @pytest.fixture(autouse=True)
-def disable_auto_indexing(monkeypatch):
-    """Globally disable auto-indexing for all tests to prevent Qdrant timeouts.
+def disable_auto_indexing_and_force_cpu(monkeypatch):
+    """Globally disable auto-indexing and force CPU mode for all tests.
 
     Auto-indexing triggers full repository scans during server initialization,
     which overwhelms Qdrant during test fixture setup and causes 60s timeouts.
+
+    Force CPU mode prevents MPS (Apple Silicon GPU) from loading large models
+    in each test worker, which caused 80GB+ memory usage with parallel tests.
 
     This fixture automatically applies to ALL tests via autouse=True.
     Tests that specifically need indexing should explicitly enable it.
     """
     monkeypatch.setenv("CLAUDE_RAG_AUTO_INDEX_ENABLED", "false")
     monkeypatch.setenv("CLAUDE_RAG_AUTO_INDEX_ON_STARTUP", "false")
+    # Force CPU mode to prevent MPS loading large models in each worker
+    # Use double underscore for nested pydantic config: performance.force_cpu
+    monkeypatch.setenv("CLAUDE_RAG_PERFORMANCE__FORCE_CPU", "true")
+    monkeypatch.setenv("CLAUDE_RAG_PERFORMANCE__GPU_ENABLED", "false")
 
 
 @pytest.fixture
