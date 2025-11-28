@@ -49,17 +49,16 @@ class TestParallelEmbeddingGenerator:
         await generator.close()
 
     @pytest.mark.asyncio
-    async def test_auto_worker_count(self):
-        """Test automatic worker count detection."""
+    async def test_default_worker_count(self):
+        """Test default worker count is 3."""
         config = ServerConfig(
             embedding_model="all-MiniLM-L6-v2",
             enable_parallel_embeddings=True,
         )
         generator = ParallelEmbeddingGenerator(config)
 
-        # Should default to CPU count
-        expected_workers = os.cpu_count() or 4
-        assert generator.max_workers == expected_workers
+        # Should default to 3 workers (config.performance.parallel_workers)
+        assert generator.max_workers == 3
 
         await generator.close()
 

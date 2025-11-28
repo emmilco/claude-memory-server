@@ -206,11 +206,9 @@ class ParallelEmbeddingGenerator:
 
         self.embedding_dim = self.MODELS[self.model_name]
 
-        # Determine worker count
+        # Determine worker count from config.performance.parallel_workers (default: 3)
         if max_workers is None:
-            max_workers = getattr(config, 'embedding_parallel_workers', None)
-        if max_workers is None:
-            max_workers = os.cpu_count() or 4
+            max_workers = getattr(config.performance, 'parallel_workers', 3)
 
         self.max_workers = max_workers
         self.executor: Optional[ProcessPoolExecutor] = None

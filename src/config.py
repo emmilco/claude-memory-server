@@ -24,7 +24,7 @@ class PerformanceFeatures(BaseModel):
 
     # Embedding generation
     parallel_embeddings: bool = True  # Use multiprocessing for faster embedding generation
-    parallel_workers: Optional[int] = None  # Auto-detect CPU count if None
+    parallel_workers: int = 3  # Number of worker processes for parallel embedding generation
 
     # Search optimizations
     hybrid_search: bool = True  # BM25 + Vector hybrid search
