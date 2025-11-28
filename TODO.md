@@ -666,6 +666,35 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Tests:** 20-25 tests for visualization, exports, patterns
   - **See:** planning_docs/FEAT-062_architecture_visualization_plan.md
 
+### 🟠 Test Suite Optimization
+
+- [ ] **TEST-029**: Test Suite Optimization Refactoring 🔥🔥
+  - **Source:** 4-agent parallel analysis (2025-11-28)
+  - **Problem:** Test suite has compute waste and missed data sharing opportunities
+  - **Analysis:** `planning_docs/TEST-029_test_suite_optimization_analysis.md`
+  - **Phase 1 - Quick Wins (~1-2 days):**
+    - [ ] Reduce performance test data volumes in `test_scalability.py` (6000→600 memories)
+    - [ ] Create session-scoped `config` fixture in `tests/unit/conftest.py`
+    - [ ] Remove `assert True` validation theater in `test_file_watcher_indexing.py`
+    - [ ] Convert loop-based tests to `@pytest.mark.parametrize` in `test_server_extended.py`
+  - **Phase 2 - Medium Effort (~3-5 days):**
+    - [ ] Create session-scoped `pre_indexed_server` fixture for E2E tests
+    - [ ] Parameterize fusion method tests in `test_hybrid_search_integration.py`
+    - [ ] Change `sample_memories` to module scope in `test_hybrid_search.py`
+    - [ ] Parameterize language parsing tests (`test_kotlin_parsing.py`, etc.)
+  - **Phase 3 - Larger Refactor (~1-2 weeks):**
+    - [ ] Fix/restore skipped integration tests (3 files with module-level skip)
+    - [ ] Deduplicate `search_code` test coverage across multiple files
+    - [ ] Reorganize benchmark tests to `tests/performance/`
+    - [ ] Create read-only vs write test distinction with fixture scoping
+  - **Expected Impact:** 30-50% reduction in test execution time
+  - **Key Findings:**
+    - `test_scalability.py` stores 6000 memories sequentially (only needs 600)
+    - E2E tests re-index same project 10+ times (should be session-scoped)
+    - Server initialization in loops instead of parameterization
+    - ~45 language parsing tests could be ~15 with parameterization
+  - **See:** `planning_docs/TEST-029_test_suite_optimization_analysis.md`
+
 ### 🟢 Tier 3: UX Improvements & Performance Optimizations
 
 **User experience and performance improvements**
