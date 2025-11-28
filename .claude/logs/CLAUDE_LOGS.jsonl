@@ -4875,3 +4875,20 @@
 {"ts":"2025-11-28T15:10:02Z","event":"INTERVAL_PROMPT","session":"76885070-c23d-462a-926d-3e1d9ff32ae5","elapsed_mins":13}
 {"ts":"2025-11-28T15:10:14Z","event":"STOP","session":"76885070-c23d-462a-926d-3e1d9ff32ae5"}
 {"ts":"2025-11-28T15:11:04Z","event":"SESSION_END","session":"361f79a9-e3d2-4888-a913-51514dc77652"}
+{"ts":"2025-11-28T15:55:00Z","event":"TOOL_USE","session":"76885070-c23d-462a-926d-3e1d9ff32ae5","tool":"Bash","preview":"python3 -m py_compile tests/unit/conftest.py tests/unit/test_language_parsing_pa"}
+{"ts":"2025-11-28T15:55:00Z","event":"INTERVAL_PROMPT","session":"76885070-c23d-462a-926d-3e1d9ff32ae5","elapsed_mins":44}
+{"ts":"2025-11-28T15:55:06Z","event":"TOOL_USE","session":"76885070-c23d-462a-926d-3e1d9ff32ae5","tool":"Bash","preview":"timeout 120 pytest tests/unit/test_hybrid_search.py tests/unit/test_language_par"}
+{"ts":"2025-11-28T15:55:12Z","event":"TOOL_USE","session":"76885070-c23d-462a-926d-3e1d9ff32ae5","tool":"Bash","preview":"gtimeout 120 pytest tests/unit/test_hybrid_search.py tests/unit/test_language_pa"}
+{"ts":"2025-11-28T15:55:19Z","event":"TOOL_USE","session":"76885070-c23d-462a-926d-3e1d9ff32ae5","tool":"Bash","preview":"python -m pytest tests/unit/test_hybrid_search.py tests/unit/test_language_parsi"}
+{"ts":"2025-11-28T15:55:35Z","event":"TOOL_USE","session":"76885070-c23d-462a-926d-3e1d9ff32ae5","tool":"Bash","preview":"python -m pytest tests/unit/test_server_extended.py::TestRetrieveMemories -v --t"}
+{"ts":"2025-11-28T15:55:44Z","event":"TOOL_USE","session":"76885070-c23d-462a-926d-3e1d9ff32ae5","tool":"Bash","preview":"python -m pytest tests/integration/test_file_watcher_indexing.py -v --tb=short 2"}
+{"ts":"2025-11-28T15:55:57Z","event":"TOOL_USE","session":"76885070-c23d-462a-926d-3e1d9ff32ae5","tool":"Bash","preview":"grep -n \"test_retrieve_with_limit\|test_retrieve_with_various\" tests/unit/test_s"}
+{"ts":"2025-11-28T15:56:03Z","event":"TOOL_USE","session":"76885070-c23d-462a-926d-3e1d9ff32ae5","tool":"Bash","preview":"grep -B5 \"test_retrieve_with_limit\" tests/unit/test_server_extended.py | head -1"}
+{"ts":"2025-11-28T15:56:10Z","event":"TOOL_USE","session":"76885070-c23d-462a-926d-3e1d9ff32ae5","tool":"Bash","preview":"grep -n \"class.*Error\" tests/unit/test_server_extended.py | head -5 "}
+{"ts":"2025-11-28T15:56:16Z","event":"TOOL_USE","session":"76885070-c23d-462a-926d-3e1d9ff32ae5","tool":"Read","preview":"test_server_extended.py"}
+{"ts":"2025-11-28T15:56:21Z","event":"TOOL_USE","session":"76885070-c23d-462a-926d-3e1d9ff32ae5","tool":"Bash","preview":"python -m pytest \"tests/unit/test_server_extended.py::TestErrorHandling::test_re"}
+{"ts":"2025-11-28T16:01:01Z","event":"TOOL_USE","session":"76885070-c23d-462a-926d-3e1d9ff32ae5","tool":"Read","preview":"test_scalability.py"}
+{"ts":"2025-11-28T16:03:02Z","event":"TOOL_USE","session":"76885070-c23d-462a-926d-3e1d9ff32ae5","tool":"Read","preview":"CHANGELOG.md"}
+{"ts":"2025-11-28T16:03:06Z","event":"TOOL_USE","session":"76885070-c23d-462a-926d-3e1d9ff32ae5","tool":"Read","preview":"CHANGELOG.md"}
+{"ts":"2025-11-28T16:03:18Z","event":"TOOL_USE","session":"76885070-c23d-462a-926d-3e1d9ff32ae5","tool":"Edit","preview":"CHANGELOG.md: "- **Test Infrastructure Improvements**   - Reduced...""}
+{"ts":"2025-11-28T16:03:24Z","event":"TOOL_USE","session":"76885070-c23d-462a-926d-3e1d9ff32ae5","tool":"Bash","preview":"git add -A && git status --short "}

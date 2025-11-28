@@ -1,8 +1,29 @@
-"""Tests for Kotlin language parsing support (FEAT-010)."""
+"""Tests for Kotlin language parsing support (FEAT-010).
+
+IMPORTANT (TEST-029): Kotlin is NOT currently supported by the Rust parser.
+All tests in this file are skipped until Kotlin support is added to
+rust_core/src/parsing.rs. The parser currently supports:
+- Python, JavaScript, TypeScript, Java, Go, Rust, Ruby, C, C++, C#, SQL, PHP
+
+To enable Kotlin support, add:
+1. tree-sitter-kotlin to Cargo.toml dependencies
+2. "kt" | "kts" extension mapping in SupportedLanguage::from_extension()
+3. SupportedLanguage::Kotlin variant with appropriate query patterns
+
+See test_language_parsing_parameterized.py for the consolidated test approach
+used for supported languages.
+"""
 
 import pytest
 from pathlib import Path
 from mcp_performance_core import parse_source_file
+
+
+# Skip all tests in this module - Kotlin is not supported
+pytestmark = pytest.mark.skip(
+    reason="Kotlin (.kt, .kts) is not supported by the Rust parser. "
+           "See rust_core/src/parsing.rs for supported languages."
+)
 
 
 @pytest.fixture

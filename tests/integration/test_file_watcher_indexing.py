@@ -410,19 +410,3 @@ class TestFileWatcherIndexerIntegration:
         await indexer.close()
 
 
-def test_file_watcher_indexer_integration_coverage():
-    """Report on integration test coverage."""
-    print("\n" + "=" * 70)
-    print("FILE WATCHER + INDEXER INTEGRATION TEST COVERAGE")
-    print("=" * 70)
-    print("✓ File change triggers re-indexing")
-    print("✓ File modification updates index")
-    print("✓ Multiple files indexed independently")
-    print("✓ Debouncing prevents redundant indexing")
-    print("✓ Directory indexing workflow")
-    print("✓ Recursive directory indexing")
-    print("✓ File extension filtering")
-    print("✓ Error handling (one bad file doesn't stop others)")
-    print("=" * 70 + "\n")
-
-    assert True

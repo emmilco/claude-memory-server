@@ -136,6 +136,18 @@ def small_test_project(tmp_path):
 
     This fixture creates a minimal test project that indexes quickly,
     reducing test time from 60-80s to 10-15s for tests that need indexed code.
+
+    Scope: function (cannot be session-scoped)
+
+    Why function-scoped:
+    1. Depends on tmp_path which is function-scoped (pytest constraint)
+    2. Tests using this fixture typically index into the database with
+       the same project_name, causing cross-test contamination if shared
+    3. Each test expects a fresh indexing operation
+
+    To create a session-scoped version, use tmp_path_factory and ensure
+    tests use unique project names. See test_project_factory for a
+    reusable alternative.
     """
     project = tmp_path / "test_project"
     project.mkdir()

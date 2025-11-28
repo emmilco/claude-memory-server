@@ -381,16 +381,19 @@ class TestErrorHandling:
             )
 
     @pytest.mark.asyncio
-    async def test_retrieve_with_various_limits(self, server, mock_embeddings):
-        """Test retrieval with different limit values."""
-        # Test various valid limits
-        for limit in [1, 5, 10, 50, 100]:
-            results = await server.retrieve_memories(
-                query="test",
-                limit=limit
-            )
-            assert "results" in results
-            assert len(results["results"]) <= limit
+    @pytest.mark.parametrize("limit", [1, 5, 10, 50, 100])
+    async def test_retrieve_with_limit(self, server, mock_embeddings, limit):
+        """Test retrieval with limit={limit}.
+
+        Each limit value is tested in isolation for better failure reporting.
+        If a specific limit fails, the test output clearly shows which value.
+        """
+        results = await server.retrieve_memories(
+            query="test",
+            limit=limit
+        )
+        assert "results" in results, f"Results missing from response with limit={limit}"
+        assert len(results["results"]) <= limit, f"Got {len(results['results'])} results but limit was {limit}"
 
     @pytest.mark.asyncio
     async def test_get_status_structure(self, server):

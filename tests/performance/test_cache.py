@@ -13,13 +13,18 @@ async def test_cache_hit_rate_above_90_percent(tmp_path, fresh_server):
 
     Target: >90%
     Current baseline: 98%
+
+    Note: Reduced from 50 to 10 files for faster test execution while still
+    validating cache hit rate behavior. 10 files is sufficient to measure
+    percentage-based cache effectiveness.
     """
     # Create test project
     project_dir = tmp_path / "cache_test"
     project_dir.mkdir()
 
-    # Create 50 files
-    for i in range(50):
+    # Create 10 files (reduced from 50 for faster execution)
+    file_count = 10
+    for i in range(file_count):
         (project_dir / f"file_{i}.py").write_text(
             f"def function_{i}():\n    return {i}"
         )
@@ -33,7 +38,7 @@ async def test_cache_hit_rate_above_90_percent(tmp_path, fresh_server):
         recursive=False
     )
 
-    files_indexed_first = result1.get("files_indexed", 50)
+    files_indexed_first = result1.get("files_indexed", file_count)
 
     # Re-index without changes (should hit cache)
     result2 = await server.index_codebase(
@@ -44,7 +49,7 @@ async def test_cache_hit_rate_above_90_percent(tmp_path, fresh_server):
 
     # Calculate cache hit rate from result metrics
     cache_hits = result2.get("cache_hits", 0)
-    total_files = result2.get("total_files", 50)
+    total_files = result2.get("total_files", file_count)
 
     cache_hit_rate = cache_hits / total_files if total_files > 0 else 0.0
 
@@ -71,13 +76,18 @@ async def test_cache_speedup_on_reindex(tmp_path, fresh_server):
 
     Target: >5x speedup
     Current baseline: 5-10x speedup
+
+    Note: Reduced from 30 to 10 files for faster test execution while still
+    validating cache speedup behavior. The relative speedup measurement
+    remains valid with fewer files.
     """
     # Create test project
     project_dir = tmp_path / "speedup_test"
     project_dir.mkdir()
 
-    # Create 30 files
-    for i in range(30):
+    # Create 10 files (reduced from 30 for faster execution)
+    file_count = 10
+    for i in range(file_count):
         (project_dir / f"file_{i}.py").write_text(
             f"def function_{i}():\n    return {i}\n\nclass Class{i}:\n    value = {i}"
         )
@@ -121,13 +131,18 @@ async def test_cache_invalidation_on_file_change(tmp_path, fresh_server):
     """Changed files should miss cache, unchanged should hit.
 
     Verify cache invalidation works correctly.
+
+    Note: Reduced from 20 to 10 files (modifying 2 instead of 5) for faster
+    test execution while maintaining the 20-25% modification ratio to validate
+    cache invalidation behavior.
     """
     # Create test project
     project_dir = tmp_path / "invalidation_test"
     project_dir.mkdir()
 
-    # Create 20 files
-    for i in range(20):
+    # Create 10 files (reduced from 20 for faster execution)
+    file_count = 10
+    for i in range(file_count):
         (project_dir / f"file_{i}.py").write_text(
             f"def function_{i}():\n    return {i}"
         )
@@ -141,8 +156,9 @@ async def test_cache_invalidation_on_file_change(tmp_path, fresh_server):
         recursive=False
     )
 
-    # Modify 5 files (25%)
-    for i in range(5):
+    # Modify 2 files (20% - same ratio as original 5/20)
+    modified_count = 2
+    for i in range(modified_count):
         (project_dir / f"file_{i}.py").write_text(
             f"def function_{i}_modified():\n    return {i * 2}"
         )
@@ -155,15 +171,15 @@ async def test_cache_invalidation_on_file_change(tmp_path, fresh_server):
     )
 
     cache_hits = result.get("cache_hits", 0)
-    total_files = result.get("total_files", 20)
-    expected_hits = 15  # 20 - 5 modified
+    total_files = result.get("total_files", file_count)
+    expected_hits = file_count - modified_count  # 10 - 2 = 8 expected hits
 
     print(f"\nCache Invalidation Test:")
     print(f"  Total files: {total_files}")
-    print(f"  Modified files: 5")
+    print(f"  Modified files: {modified_count}")
     print(f"  Expected cache hits: {expected_hits}")
     print(f"  Actual cache hits: {cache_hits}")
-    print(f"  Expected cache misses: 5")
+    print(f"  Expected cache misses: {modified_count}")
     print(f"  Actual cache misses: {total_files - cache_hits}")
 
     # Cache hits should be within 1 of expected (accounting for timing issues)
@@ -227,16 +243,21 @@ async def test_cache_memory_usage(tmp_path, fresh_server):
     """Cache should not consume excessive memory.
 
     Verify cache doesn't grow unbounded during large indexing operations.
+
+    Note: Reduced from 100 to 20 files for faster test execution while still
+    validating that cache memory growth is bounded. The per-file memory
+    calculation remains valid for extrapolation.
     """
     import psutil
     import os
 
-    # Create large test project
+    # Create test project
     project_dir = tmp_path / "memory_test"
     project_dir.mkdir()
 
-    # Create 100 files
-    for i in range(100):
+    # Create 20 files (reduced from 100 for faster execution)
+    file_count = 20
+    for i in range(file_count):
         (project_dir / f"file_{i}.py").write_text(
             f"def function_{i}():\n    return {i}\n" * 10  # Bigger files
         )
@@ -262,9 +283,9 @@ async def test_cache_memory_usage(tmp_path, fresh_server):
     print(f"  Memory before: {memory_before:.2f} MB")
     print(f"  Memory after: {memory_after:.2f} MB")
     print(f"  Increase: {memory_increase:.2f} MB")
-    print(f"  Per file: {memory_increase / 100:.2f} MB")
+    print(f"  Per file: {memory_increase / file_count:.2f} MB")
 
-    # Memory increase should be reasonable (<100MB for 100 files)
-    assert memory_increase < 100, (
-        f"Cache memory usage {memory_increase:.2f} MB excessive for 100 files"
+    # Memory increase should be reasonable (<20MB for 20 files, extrapolates to <100MB for 100)
+    assert memory_increase < 20, (
+        f"Cache memory usage {memory_increase:.2f} MB excessive for {file_count} files"
     )

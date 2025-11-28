@@ -90,6 +90,18 @@ Organize entries under these headers in chronological order (newest first):
   - Dynamic vector size in conftest.py based on embedding model
   - Files: tests/conftest.py, pytest.ini, docker-compose.yml
 
+- **TEST-029: Test Suite Optimization**
+  - Reduced performance test data volumes by 10x (6000→600 memories) in test_scalability.py
+  - Reduced cache test file counts by 2-5x in test_cache.py
+  - Added session-scoped `pre_indexed_server` fixture for read-only E2E tests
+  - Converted loop-based tests to `@pytest.mark.parametrize` for better isolation
+  - Created `test_language_parsing_parameterized.py` consolidating Ruby/Python/JS tests
+  - Fixed fixture scopes: `sample_memories` now module-scoped in test_hybrid_search.py
+  - Added `tests/unit/conftest.py` with shared module-scoped fixtures
+  - Removed validation theater (`assert True`) from test_file_watcher_indexing.py
+  - Skipped unsupported Kotlin/Swift tests with clear documentation
+  - Expected 30-50% reduction in test execution time
+
 ### Added - 2025-11-27
 - **FEAT-061: Git/Historical Integration**
   - Added 5 new MCP tools for git history analysis and change tracking:
