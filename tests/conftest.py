@@ -128,6 +128,9 @@ def disable_auto_indexing_and_force_cpu(monkeypatch):
     # Use double underscore for nested pydantic config: performance.force_cpu
     monkeypatch.setenv("CLAUDE_RAG_PERFORMANCE__FORCE_CPU", "true")
     monkeypatch.setenv("CLAUDE_RAG_PERFORMANCE__GPU_ENABLED", "false")
+    # Disable parallel embeddings to prevent spawning worker processes that
+    # each load the 420MB model (causing 15GB+ memory usage)
+    monkeypatch.setenv("CLAUDE_RAG_PERFORMANCE__PARALLEL_EMBEDDINGS", "false")
 
 
 @pytest.fixture
