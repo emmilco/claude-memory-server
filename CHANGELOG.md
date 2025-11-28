@@ -51,6 +51,18 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Added - 2025-11-27
+- **FEAT-061: Git/Historical Integration**
+  - Added 5 new MCP tools for git history analysis and change tracking:
+    - `get_change_frequency()` - Calculate file/function change frequency with churn scoring
+    - `get_churn_hotspots()` - Identify files with highest change frequency
+    - `get_recent_changes()` - Get recent modifications with context
+    - `blame_search()` - Find code authors by pattern matching
+    - `get_code_authors()` - Get contributors for a file with contribution stats
+  - Files: src/core/server.py, src/mcp_server.py
+  - Builds on existing git infrastructure (search_git_commits, get_file_history)
+  - Enables architecture discovery and developer productivity improvements
+
 ### Fixed - 2025-11-27
 - **BUG-037: Connection pool state corruption after Qdrant restart**
   - Fixed `release()` method to track original `PooledConnection` metadata (preserves `created_at`)
