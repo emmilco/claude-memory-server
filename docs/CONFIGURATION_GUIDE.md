@@ -272,8 +272,8 @@ If no configuration is provided, the server uses sensible defaults optimized for
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `embedding_model` | string | `"all-MiniLM-L6-v2"` | Sentence transformer model |
-| `embedding_batch_size` | int | `32` | Batch size for embedding generation |
+| `embedding_model` | string | `"all-mpnet-base-v2"` | Sentence transformer model (768 dims) |
+| `embedding_batch_size` | int | `128` | Batch size for embedding generation |
 | `embedding_cache_enabled` | bool | `true` | Enable embedding cache for faster re-indexing |
 | `embedding_cache_path` | string | `"~/.claude-rag/embedding_cache.db"` | SQLite cache file path |
 | `embedding_cache_ttl_days` | int | `30` | Cache entry time-to-live |
@@ -285,8 +285,8 @@ If no configuration is provided, the server uses sensible defaults optimized for
 **Example - Performance Optimized:**
 ```json
 {
-  "embedding_model": "all-MiniLM-L6-v2",
-  "embedding_batch_size": 64,
+  "embedding_model": "all-mpnet-base-v2",
+  "embedding_batch_size": 128,
   "embedding_cache_enabled": true,
   "embedding_cache_ttl_days": 90
 }
@@ -582,7 +582,7 @@ Advanced and experimental features.
 |--------|------|---------|-------------|
 | `multi_repository` | bool | `true` | Enable multi-repository features |
 | `multi_repo_max_parallel` | int | `3` | Max concurrent repository operations (1-10) |
-| `rust_fallback` | bool | `true` | Fall back to Python parser if Rust unavailable |
+| `rust_fallback` | bool | `true` | (Deprecated) Rust parser is now required |
 | `warn_on_degradation` | bool | `true` | Show warnings in degraded mode |
 | `read_only_mode` | bool | `false` | Restrict to read-only operations |
 | `input_validation` | bool | `true` | Validate all inputs |
@@ -1247,8 +1247,8 @@ docker-compose restart
 - `sqlite_path` - string, default: "~/.claude-rag/metadata.db"
 
 **Embeddings (6):**
-- `embedding_model` - string, default: "all-MiniLM-L6-v2"
-- `embedding_batch_size` - int, default: 32
+- `embedding_model` - string, default: "all-mpnet-base-v2"
+- `embedding_batch_size` - int, default: 128
 - `embedding_cache_enabled` - bool, default: true
 - `embedding_cache_path` - string, default: "~/.claude-rag/embedding_cache.db"
 - `embedding_cache_ttl_days` - int, default: 30
@@ -1401,8 +1401,8 @@ CLAUDE_RAG_QDRANT_URL=http://localhost:6333
 CLAUDE_RAG_QDRANT_API_KEY=your-key-here
 
 # Embeddings
-CLAUDE_RAG_EMBEDDING_MODEL=all-MiniLM-L6-v2
-CLAUDE_RAG_EMBEDDING_BATCH_SIZE=32
+CLAUDE_RAG_EMBEDDING_MODEL=all-mpnet-base-v2
+CLAUDE_RAG_EMBEDDING_BATCH_SIZE=128
 ```
 
 ---

@@ -44,11 +44,11 @@ A **Model Context Protocol (MCP) server** providing persistent memory, documenta
 
 - **Language:** Python 3.13+ (159 modules, ~4MB code)
 - **Vector DB:** Qdrant (Docker, localhost:6333)
-- **Embeddings:** all-MiniLM-L6-v2 (384 dimensions)
+- **Embeddings:** all-mpnet-base-v2 (768 dimensions)
 - **Search:** Hybrid (BM25 + vector)
 - **Testing:** pytest (~2,740 tests, 59.6% coverage overall / 71.2% core)
 - **Framework:** MCP - 16 tools + 28 CLI commands
-- **Optional:** Rust module (6x faster parsing)
+- **Parser:** Rust module (mcp_performance_core) - required for code indexing
 
 ---
 

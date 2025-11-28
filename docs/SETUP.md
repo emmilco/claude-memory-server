@@ -34,10 +34,9 @@ cd claude-memory-server
 # Run setup wizard
 python setup.py
 
-# Follow prompts to choose:
-# - minimal: SQLite + Python parser (no dependencies, ~3 min)
-# - standard: SQLite + Rust parser (faster, ~5 min)
-# - full: Qdrant + Rust parser (production, ~10 min)
+# Follow prompts to set up:
+# - Qdrant (required for semantic search)
+# - Rust parser (required for code indexing)
 ```
 
 The wizard will:
@@ -65,31 +64,28 @@ cd claude-memory-server
 pip install -r requirements.txt
 ```
 
-### 3. Start Qdrant (Optional - for production)
+### 3. Start Qdrant (Required)
 
 ```bash
-# Only needed if using Qdrant instead of SQLite
 docker-compose up -d
 ```
 
 Verify Qdrant is running:
 ```bash
-curl http://localhost:6333/health
-# Should return: OK
+curl http://localhost:6333/
+# Should return version info
 ```
 
-**Note:** SQLite works out-of-the-box with no Docker required!
-
-### 4. Build Rust Module (Optional - for performance)
+### 4. Build Rust Module (Required for code indexing)
 
 ```bash
-# Only needed for 50-100x faster parsing
 cd rust_core
-maturin develop
+maturin build --release
+pip install target/wheels/*.whl
 cd ..
 ```
 
-**Note:** Pure Python parser works automatically if Rust is not available!
+**Note:** The Rust parser is required for code indexing. There is no Python fallback.
 
 ### 5. Run Health Check
 
@@ -256,9 +252,8 @@ CLAUDE_RAG_QDRANT_URL=http://localhost:6333
 CLAUDE_RAG_COLLECTION_NAME=memory
 
 # Embeddings
-CLAUDE_RAG_EMBEDDING_MODEL=all-MiniLM-L6-v2
-CLAUDE_RAG_EMBEDDING_DIMENSION=384
-CLAUDE_RAG_EMBEDDING_BATCH_SIZE=32
+CLAUDE_RAG_EMBEDDING_MODEL=all-mpnet-base-v2  # 768 dims, better quality
+CLAUDE_RAG_EMBEDDING_BATCH_SIZE=128  # Larger batches for GPU acceleration
 CLAUDE_RAG_ENABLE_PARALLEL_EMBEDDINGS=true  # 4-8x faster indexing
 CLAUDE_RAG_EMBEDDING_PARALLEL_WORKERS=auto  # auto-detects CPU count
 

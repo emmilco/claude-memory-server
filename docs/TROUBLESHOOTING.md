@@ -390,11 +390,11 @@ docker ps
 
 ---
 
-### Rust Not Installed (Optional)
+### Rust Not Installed (Required)
 
-**Error:** `Failed to build Rust parser`
+**Error:** `Failed to build Rust parser` or `mcp_performance_core not installed`
 
-**Note:** Rust is optional. The system will automatically use Python parser fallback (10-20x slower but functional).
+**Note:** Rust parser is required for code indexing. There is no Python fallback.
 
 **To install Rust:**
 
@@ -773,15 +773,7 @@ ERROR: Command 'maturin develop' failed
 
 **Solutions:**
 
-1. **Use Python parser fallback** (recommended for quick start)
-   ```bash
-   # Skip Rust build entirely - Python parser works automatically
-   # Performance: 10-20x slower but fully functional
-   # Just run: python -m src.cli health
-   # It will detect and use Python parser
-   ```
-
-2. **Ensure Rust is installed**
+1. **Ensure Rust is installed** (required for code indexing)
    ```bash
    rustc --version
    # Should show: rustc 1.91+
