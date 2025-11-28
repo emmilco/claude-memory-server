@@ -52,6 +52,14 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-27
+- **BUG-037: Connection pool state corruption after Qdrant restart**
+  - Fixed `release()` method to track original `PooledConnection` metadata (preserves `created_at`)
+  - Added `_client_map` dict for proper client -> PooledConnection tracking
+  - Added `reset()` method for recovery from corrupted pool state
+  - Added `is_healthy()` method to detect pool state corruption
+  - Added 11 new tests for BUG-037 fixes
+  - Files: src/store/connection_pool.py, tests/unit/test_connection_pool.py
+
 - **BUG: MCP server startup timeout due to blocking auto-indexing**
   - Auto-indexing now deferred until after MCP protocol handshake completes
   - Added `defer_auto_index` parameter to `MemoryRAGServer.initialize()`

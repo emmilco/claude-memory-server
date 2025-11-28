@@ -760,3 +760,223 @@ class TestMonitoringIntegration:
             assert monitor == pool._monitor
 
             await pool.close()
+
+
+class TestBUG037ClientTracking:
+    """Test BUG-037 fix: client -> PooledConnection tracking.
+
+    BUG-037: Connection pool state corruption after Qdrant restart
+    """
+
+    @pytest.mark.asyncio
+    async def test_client_map_populated_on_acquire(self, mock_config, mock_qdrant_client):
+        """Test that client mapping is populated when connection is acquired."""
+        pool = QdrantConnectionPool(config=mock_config, min_size=1, max_size=3, enable_health_checks=False)
+
+        with patch('src.store.connection_pool.QdrantClient', return_value=mock_qdrant_client):
+            await pool.initialize()
+
+            # Initially empty
+            assert len(pool._client_map) == 0
+
+            # Acquire connection
+            client = await pool.acquire()
+
+            # Client should be in map
+            assert len(pool._client_map) == 1
+            assert id(client) in pool._client_map
+
+            await pool.release(client)
+            await pool.close()
+
+    @pytest.mark.asyncio
+    async def test_client_map_cleared_on_release(self, mock_config, mock_qdrant_client):
+        """Test that client is removed from map on release."""
+        pool = QdrantConnectionPool(config=mock_config, min_size=1, max_size=3, enable_health_checks=False)
+
+        with patch('src.store.connection_pool.QdrantClient', return_value=mock_qdrant_client):
+            await pool.initialize()
+
+            client = await pool.acquire()
+            client_id = id(client)
+            assert client_id in pool._client_map
+
+            await pool.release(client)
+
+            # Client should be removed from map
+            assert client_id not in pool._client_map
+
+            await pool.close()
+
+    @pytest.mark.asyncio
+    async def test_release_preserves_original_created_at(self, mock_config, mock_qdrant_client):
+        """Test that release preserves original PooledConnection metadata."""
+        pool = QdrantConnectionPool(config=mock_config, min_size=1, max_size=3, enable_health_checks=False)
+
+        with patch('src.store.connection_pool.QdrantClient', return_value=mock_qdrant_client):
+            await pool.initialize()
+
+            # Get initial connection and record its created_at
+            client = await pool.acquire()
+            original_pooled = pool._client_map[id(client)]
+            original_created_at = original_pooled.created_at
+
+            await pool.release(client)
+
+            # Re-acquire (should get same connection from pool)
+            client2 = await pool.acquire()
+            new_pooled = pool._client_map[id(client2)]
+
+            # created_at should be preserved (not reset to now)
+            assert new_pooled.created_at == original_created_at
+
+            await pool.release(client2)
+            await pool.close()
+
+    @pytest.mark.asyncio
+    async def test_multiple_concurrent_acquires_tracked(self, mock_config):
+        """Test that multiple concurrent acquires are all tracked."""
+        pool = QdrantConnectionPool(config=mock_config, min_size=3, max_size=5, enable_health_checks=False)
+
+        # Create unique mock clients for each connection
+        def create_unique_client(*args, **kwargs):
+            client = Mock(spec=QdrantClient)
+            client.get_collections.return_value = Mock(collections=[])
+            client.close = Mock()
+            return client
+
+        with patch('src.store.connection_pool.QdrantClient', side_effect=create_unique_client):
+            await pool.initialize()
+
+            # Acquire 3 connections (pool starts with 3, so no new creations needed)
+            clients = [await pool.acquire() for _ in range(3)]
+
+            # All should be tracked with unique IDs
+            assert len(pool._client_map) == 3
+            client_ids = {id(c) for c in clients}
+            assert len(client_ids) == 3  # All unique
+            for client in clients:
+                assert id(client) in pool._client_map
+
+            # Release all
+            for client in clients:
+                await pool.release(client)
+
+            # Map should be empty
+            assert len(pool._client_map) == 0
+
+            await pool.close()
+
+
+class TestBUG037PoolReset:
+    """Test BUG-037 fix: pool reset for recovery from corrupted state."""
+
+    @pytest.mark.asyncio
+    async def test_reset_reinitializes_pool(self, mock_config, mock_qdrant_client):
+        """Test that reset closes and reinitializes the pool."""
+        pool = QdrantConnectionPool(config=mock_config, min_size=2, max_size=5, enable_health_checks=False)
+
+        with patch('src.store.connection_pool.QdrantClient', return_value=mock_qdrant_client):
+            await pool.initialize()
+            assert pool._initialized
+
+            # Acquire a connection to put pool in active state
+            client = await pool.acquire()
+
+            # Reset should close and reinitialize
+            await pool.reset()
+
+            assert pool._initialized
+            assert pool._pool.qsize() == 2  # min_size connections
+            assert len(pool._client_map) == 0  # tracking cleared
+            assert pool._active_connections == 0
+
+    @pytest.mark.asyncio
+    async def test_reset_on_uninitialized_pool(self, mock_config, mock_qdrant_client):
+        """Test reset on pool that was never initialized."""
+        pool = QdrantConnectionPool(config=mock_config, min_size=1, max_size=3, enable_health_checks=False)
+
+        with patch('src.store.connection_pool.QdrantClient', return_value=mock_qdrant_client):
+            # Reset without initializing first
+            await pool.reset()
+
+            # Should not initialize (wasn't initialized before)
+            assert not pool._initialized
+
+    @pytest.mark.asyncio
+    async def test_reset_clears_client_map(self, mock_config):
+        """Test that reset clears the client tracking map."""
+        pool = QdrantConnectionPool(config=mock_config, min_size=2, max_size=3, enable_health_checks=False)
+
+        # Create unique mock clients for each connection
+        def create_unique_client(*args, **kwargs):
+            client = Mock(spec=QdrantClient)
+            client.get_collections.return_value = Mock(collections=[])
+            client.close = Mock()
+            return client
+
+        with patch('src.store.connection_pool.QdrantClient', side_effect=create_unique_client):
+            await pool.initialize()
+
+            # Acquire connections to populate map
+            clients = [await pool.acquire() for _ in range(2)]
+            assert len(pool._client_map) == 2
+
+            # Reset
+            await pool.reset()
+
+            # Map should be cleared
+            assert len(pool._client_map) == 0
+
+
+class TestBUG037PoolHealthCheck:
+    """Test BUG-037 fix: pool health checking for corrupted state detection."""
+
+    @pytest.mark.asyncio
+    async def test_is_healthy_returns_true_for_healthy_pool(self, mock_config, mock_qdrant_client):
+        """Test is_healthy returns True for properly functioning pool."""
+        pool = QdrantConnectionPool(config=mock_config, min_size=2, max_size=5, enable_health_checks=False)
+
+        with patch('src.store.connection_pool.QdrantClient', return_value=mock_qdrant_client):
+            await pool.initialize()
+
+            assert pool.is_healthy()
+
+            await pool.close()
+
+    @pytest.mark.asyncio
+    async def test_is_healthy_returns_false_for_closed_pool(self, mock_config, mock_qdrant_client):
+        """Test is_healthy returns False for closed pool."""
+        pool = QdrantConnectionPool(config=mock_config, min_size=1, max_size=3, enable_health_checks=False)
+
+        with patch('src.store.connection_pool.QdrantClient', return_value=mock_qdrant_client):
+            await pool.initialize()
+            await pool.close()
+
+            assert not pool.is_healthy()
+
+    def test_is_healthy_returns_false_for_uninitialized_pool(self, mock_config):
+        """Test is_healthy returns False for uninitialized pool."""
+        pool = QdrantConnectionPool(config=mock_config, min_size=1, max_size=3)
+
+        assert not pool.is_healthy()
+
+    @pytest.mark.asyncio
+    async def test_is_healthy_detects_corrupted_state(self, mock_config, mock_qdrant_client):
+        """Test is_healthy detects pool state corruption."""
+        pool = QdrantConnectionPool(config=mock_config, min_size=1, max_size=2, enable_health_checks=False)
+
+        with patch('src.store.connection_pool.QdrantClient', return_value=mock_qdrant_client):
+            await pool.initialize()
+
+            # Simulate corrupted state: created_count at max, but no connections available
+            # This can happen when connections fail without being properly released
+            pool._created_count = pool.max_size
+            # Drain the pool
+            while not pool._pool.empty():
+                pool._pool.get_nowait()
+            # Clear client map (simulating lost connections)
+            pool._client_map.clear()
+
+            # Pool should be detected as unhealthy
+            assert not pool.is_healthy()

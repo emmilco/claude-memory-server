@@ -10,8 +10,9 @@ import asyncio
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Optional, List
+from typing import Optional, List, Dict
 from datetime import datetime, UTC
+from weakref import WeakValueDictionary
 
 from qdrant_client import QdrantClient
 
@@ -127,6 +128,8 @@ class QdrantConnectionPool:
         self._active_connections: int = 0
         self._created_count: int = 0
         self._lock = asyncio.Lock()
+        # BUG-037: Track client -> PooledConnection mapping for proper release()
+        self._client_map: Dict[int, PooledConnection] = {}
 
         # Metrics
         self._stats = PoolStats()
@@ -301,6 +304,9 @@ class QdrantConnectionPool:
                 self._acquire_times.append(duration_ms)
                 self._update_acquire_stats()
 
+            # BUG-037: Track client -> PooledConnection mapping for proper release()
+            self._client_map[id(pooled_conn.client)] = pooled_conn
+
             logger.debug(
                 f"Acquired connection (active: {self._active_connections}, "
                 f"idle: {self._pool.qsize()}, acquire_time: {duration_ms:.2f}ms)"
@@ -328,14 +334,24 @@ class QdrantConnectionPool:
             return
 
         try:
-            # Find the pooled connection wrapper
-            # Note: In production, we'd track client -> pooled_conn mapping
-            # For now, we'll create a new wrapper (simplified)
-            pooled_conn = PooledConnection(
-                client=client,
-                created_at=datetime.now(UTC),  # Approximate
-                last_used=datetime.now(UTC),
-            )
+            # BUG-037: Look up original PooledConnection to preserve metadata
+            client_id = id(client)
+            pooled_conn = self._client_map.pop(client_id, None)
+
+            if pooled_conn is None:
+                # Fallback: client not in map (shouldn't happen in normal operation)
+                logger.warning(
+                    "Released client not found in tracking map - creating new wrapper. "
+                    "This may indicate a bug or the client was acquired before BUG-037 fix."
+                )
+                pooled_conn = PooledConnection(
+                    client=client,
+                    created_at=datetime.now(UTC),
+                    last_used=datetime.now(UTC),
+                )
+            else:
+                # Update last_used timestamp
+                pooled_conn.last_used = datetime.now(UTC)
 
             # Put back in pool
             await self._pool.put(pooled_conn)
@@ -370,7 +386,15 @@ class QdrantConnectionPool:
             await self._monitor.stop()
             logger.info("Pool monitoring stopped")
 
-        # Drain and close all connections
+        # Close any active connections tracked in client map
+        for client_id, pooled_conn in list(self._client_map.items()):
+            try:
+                pooled_conn.client.close()
+            except Exception as e:
+                logger.warning(f"Error closing active connection: {e}")
+        self._client_map.clear()
+
+        # Drain and close all connections in pool queue
         closed_count = 0
         while not self._pool.empty():
             try:
@@ -389,6 +413,58 @@ class QdrantConnectionPool:
         self._active_connections = 0
         self._created_count = 0
         self._initialized = False
+
+    async def reset(self) -> None:
+        """Reset pool to recover from corrupted state.
+
+        BUG-037: Added recovery mechanism for when pool state becomes corrupted
+        (e.g., after Qdrant restart, network issues, or connection leaks).
+
+        This closes all existing connections and reinitializes the pool.
+        """
+        logger.warning("Resetting connection pool to recover from corrupted state")
+
+        # Close existing pool
+        was_initialized = self._initialized
+        await self.close()
+
+        # Reset closed flag to allow reinitialization
+        self._closed = False
+
+        # Clear any stale state
+        self._client_map.clear()
+        self._pool = asyncio.Queue(maxsize=self.max_size)
+
+        # Reinitialize if pool was previously initialized
+        if was_initialized:
+            await self.initialize()
+            logger.info("Connection pool reset and reinitialized successfully")
+        else:
+            logger.info("Connection pool reset (not reinitialized - was not initialized before)")
+
+    def is_healthy(self) -> bool:
+        """Check if pool is in a healthy state.
+
+        BUG-037: Added health check to detect corrupted pool state.
+
+        Returns:
+            bool: True if pool appears healthy, False if corrupted
+        """
+        if self._closed or not self._initialized:
+            return False
+
+        # Check for state corruption: created_count at max but nothing available
+        idle_count = self._pool.qsize()
+        active_count = len(self._client_map)  # More accurate than self._active_connections
+
+        if self._created_count >= self.max_size and idle_count == 0 and active_count == 0:
+            logger.warning(
+                f"Pool state corruption detected: created_count={self._created_count}, "
+                f"idle={idle_count}, active={active_count}, max={self.max_size}"
+            )
+            return False
+
+        return True
 
     def stats(self) -> PoolStats:
         """Get current pool statistics.
