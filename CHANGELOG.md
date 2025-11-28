@@ -154,13 +154,16 @@ Organize entries under these headers in chronological order (newest first):
   - Provided migration guide from legacy flat flags to new feature group structure
   - Complete reference for all storage, embedding, ranking, and tuning options
 
-### Added - 2025-11-26
+### Enhanced - 2025-11-27
 - **UX-032: Health Check Improvements**
-  - Added token savings tracking to health command (7-day summary)
-  - Enhanced Qdrant latency monitoring with 20ms warning threshold (was 50ms)
-  - Reduced stale project detection threshold from 90 days to 30 days
-  - Added proactive recommendations for significant cost savings ($1+ per week)
-  - Tests: 11 new tests covering token savings, latency thresholds, and stale project detection
+  - Added token savings tracking to health command (estimates tokens saved via caching)
+  - Enhanced Qdrant latency monitoring with performance thresholds (excellent <20ms, good <50ms, warning ≥50ms)
+  - Enhanced cache hit rate display with <70% warning threshold
+  - Reduced stale project detection threshold from 90 days to 30 days for proactive warnings
+  - Added proactive recommendations based on metrics (cache optimization, re-indexing, resource allocation)
+  - Enhanced project summary with detailed stats (project count, memory count, index size)
+  - Added 15 new comprehensive tests (52 total tests passing)
+  - Files: src/cli/health_command.py, tests/unit/test_health_command.py
 
 ### Added - 2025-11-26
 - **CI: Sequential Test Workflow**

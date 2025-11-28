@@ -664,3 +664,320 @@ class TestEdgeCases:
 
                 assert success is True
                 assert isinstance(projects, list)
+
+
+class TestStaleProjectChecks:
+    """Test stale project detection."""
+
+    @pytest.mark.asyncio
+    async def test_check_stale_projects_all_current(self):
+        """Test stale projects check when all projects are current."""
+        cmd = HealthCommand()
+
+        with patch('src.store.create_memory_store') as mock_create:
+            mock_store = AsyncMock()
+            mock_store.initialize = AsyncMock()
+            mock_store.get_all_projects = AsyncMock(return_value=["project1", "project2"])
+
+            from datetime import datetime, UTC
+            recent_date = datetime.now(UTC).isoformat()
+
+            mock_store.get_project_stats = AsyncMock(return_value={
+                "last_updated": recent_date
+            })
+            mock_store.close = AsyncMock()
+            mock_create.return_value = mock_store
+
+            with patch('src.config.get_config') as mock_config:
+                config = MagicMock()
+                mock_config.return_value = config
+
+                success, message, stale = await cmd.check_stale_projects()
+
+                assert success is True
+                assert "All projects current" in message
+                assert stale == []
+
+    @pytest.mark.asyncio
+    async def test_check_stale_projects_has_stale(self):
+        """Test stale projects check when there are stale projects."""
+        cmd = HealthCommand()
+
+        with patch('src.store.create_memory_store') as mock_create:
+            mock_store = AsyncMock()
+            mock_store.initialize = AsyncMock()
+            mock_store.get_all_projects = AsyncMock(return_value=["old_project"])
+
+            from datetime import datetime, timedelta, UTC
+            old_date = (datetime.now(UTC) - timedelta(days=45)).isoformat()
+
+            mock_store.get_project_stats = AsyncMock(return_value={
+                "last_updated": old_date
+            })
+            mock_store.close = AsyncMock()
+            mock_create.return_value = mock_store
+
+            with patch('src.config.get_config') as mock_config:
+                config = MagicMock()
+                mock_config.return_value = config
+
+                success, message, stale = await cmd.check_stale_projects()
+
+                assert success is False
+                assert "30+ days" in message
+                assert len(stale) == 1
+                assert stale[0]["name"] == "old_project"
+                assert stale[0]["days_old"] >= 45
+
+    @pytest.mark.asyncio
+    async def test_check_stale_projects_error(self):
+        """Test stale projects check with error."""
+        cmd = HealthCommand()
+
+        with patch('src.store.create_memory_store', side_effect=Exception("Store error")):
+            success, message, stale = await cmd.check_stale_projects()
+
+            assert success is False
+            assert "Could not check" in message
+            assert stale == []
+
+
+class TestTokenSavingsEstimation:
+    """Test token savings estimation."""
+
+    @pytest.mark.asyncio
+    async def test_estimate_token_savings_no_hits(self):
+        """Test token savings estimation with no cache hits."""
+        cmd = HealthCommand()
+
+        with patch('src.embeddings.cache.EmbeddingCache') as mock_cache_cls:
+            mock_cache = MagicMock()
+            mock_cache.get_stats.return_value = {
+                "cache_hits": 0
+            }
+            mock_cache_cls.return_value = mock_cache
+
+            with patch('src.config.get_config') as mock_config:
+                config = MagicMock()
+                mock_config.return_value = config
+
+                success, message, tokens = await cmd.estimate_token_savings()
+
+                assert success is True
+                assert "No cache hits yet" in message
+                assert tokens == 0
+
+    @pytest.mark.asyncio
+    async def test_estimate_token_savings_small(self):
+        """Test token savings estimation with small number of hits."""
+        cmd = HealthCommand()
+
+        with patch('src.embeddings.cache.EmbeddingCache') as mock_cache_cls:
+            mock_cache = MagicMock()
+            mock_cache.get_stats.return_value = {
+                "cache_hits": 5
+            }
+            mock_cache_cls.return_value = mock_cache
+
+            with patch('src.config.get_config') as mock_config:
+                config = MagicMock()
+                mock_config.return_value = config
+
+                success, message, tokens = await cmd.estimate_token_savings()
+
+                assert success is True
+                assert "500 tokens saved" in message
+                assert tokens == 500
+
+    @pytest.mark.asyncio
+    async def test_estimate_token_savings_thousands(self):
+        """Test token savings estimation with thousands of tokens."""
+        cmd = HealthCommand()
+
+        with patch('src.embeddings.cache.EmbeddingCache') as mock_cache_cls:
+            mock_cache = MagicMock()
+            mock_cache.get_stats.return_value = {
+                "cache_hits": 50
+            }
+            mock_cache_cls.return_value = mock_cache
+
+            with patch('src.config.get_config') as mock_config:
+                config = MagicMock()
+                mock_config.return_value = config
+
+                success, message, tokens = await cmd.estimate_token_savings()
+
+                assert success is True
+                assert "5.0K tokens saved" in message
+                assert tokens == 5000
+
+    @pytest.mark.asyncio
+    async def test_estimate_token_savings_millions(self):
+        """Test token savings estimation with millions of tokens."""
+        cmd = HealthCommand()
+
+        with patch('src.embeddings.cache.EmbeddingCache') as mock_cache_cls:
+            mock_cache = MagicMock()
+            mock_cache.get_stats.return_value = {
+                "cache_hits": 50000
+            }
+            mock_cache_cls.return_value = mock_cache
+
+            with patch('src.config.get_config') as mock_config:
+                config = MagicMock()
+                mock_config.return_value = config
+
+                success, message, tokens = await cmd.estimate_token_savings()
+
+                assert success is True
+                assert "5.0M tokens saved" in message
+                assert tokens == 5000000
+
+    @pytest.mark.asyncio
+    async def test_estimate_token_savings_error(self):
+        """Test token savings estimation with error."""
+        cmd = HealthCommand()
+
+        with patch('src.embeddings.cache.EmbeddingCache', side_effect=Exception("Cache error")):
+            success, message, tokens = await cmd.estimate_token_savings()
+
+            assert success is False
+            assert "Could not estimate" in message
+            assert tokens is None
+
+
+class TestQdrantLatencyChecks:
+    """Test Qdrant latency monitoring."""
+
+    @pytest.mark.asyncio
+    async def test_check_qdrant_latency_excellent(self):
+        """Test Qdrant latency check with excellent performance."""
+        cmd = HealthCommand()
+
+        with patch('src.store.create_memory_store') as mock_create:
+            mock_store = AsyncMock()
+            mock_store.initialize = AsyncMock()
+            mock_store.client = MagicMock()
+            mock_store.collection_name = "test_collection"
+            mock_store.client.get_collection = MagicMock()
+            mock_store.close = AsyncMock()
+            mock_create.return_value = mock_store
+
+            with patch('src.config.get_config') as mock_config:
+                config = MagicMock()
+                config.storage_backend = "qdrant"
+                mock_config.return_value = config
+
+                with patch('time.time', side_effect=[0, 0.010]):  # 10ms
+                    success, message, latency = await cmd.check_qdrant_latency()
+
+                    assert success is True
+                    assert "excellent" in message.lower()
+                    assert latency < 20
+
+    @pytest.mark.asyncio
+    async def test_check_qdrant_latency_warning(self):
+        """Test Qdrant latency check with warning threshold."""
+        cmd = HealthCommand()
+
+        with patch('src.store.create_memory_store') as mock_create:
+            mock_store = AsyncMock()
+            mock_store.initialize = AsyncMock()
+            mock_store.client = MagicMock()
+            mock_store.collection_name = "test_collection"
+            mock_store.client.get_collection = MagicMock()
+            mock_store.close = AsyncMock()
+            mock_create.return_value = mock_store
+
+            with patch('src.config.get_config') as mock_config:
+                config = MagicMock()
+                config.storage_backend = "qdrant"
+                mock_config.return_value = config
+
+                with patch('time.time', side_effect=[0, 0.060]):  # 60ms
+                    success, message, latency = await cmd.check_qdrant_latency()
+
+                    assert success is False
+                    assert "slow" in message.lower()
+                    assert latency >= 50
+
+    @pytest.mark.asyncio
+    async def test_check_qdrant_latency_sqlite_backend(self):
+        """Test Qdrant latency check when using SQLite."""
+        cmd = HealthCommand()
+
+        with patch('src.config.get_config') as mock_config:
+            config = MagicMock()
+            config.storage_backend = "sqlite"
+            mock_config.return_value = config
+
+            success, message, latency = await cmd.check_qdrant_latency()
+
+            assert success is True
+            assert "N/A" in message
+            assert latency is None
+
+
+class TestEnhancedRunChecks:
+    """Test enhanced run_checks with new features."""
+
+    @pytest.mark.asyncio
+    async def test_run_checks_includes_token_savings(self):
+        """Test that run_checks includes token savings check."""
+        cmd = HealthCommand()
+
+        # Mock all checks
+        cmd.check_python_version = AsyncMock(return_value=(True, "3.13.6"))
+        cmd.check_disk_space = AsyncMock(return_value=(True, "100 GB"))
+        cmd.check_memory = AsyncMock(return_value=(True, "16 GB"))
+        cmd.check_rust_parser = AsyncMock(return_value=(True, "Available"))
+        cmd.check_python_parser = AsyncMock(return_value=(True, "Available"))
+        cmd.check_storage_backend = AsyncMock(return_value=(True, "SQLite", "OK"))
+        cmd.check_embedding_model = AsyncMock(return_value=(True, "Model OK"))
+        cmd.check_embedding_cache = AsyncMock(return_value=(True, "Cache OK"))
+        cmd.check_qdrant_latency = AsyncMock(return_value=(True, "10ms", 10.0))
+        cmd.check_cache_hit_rate = AsyncMock(return_value=(True, "85%", 85.0))
+        cmd.estimate_token_savings = AsyncMock(return_value=(True, "5.0K tokens", 5000))
+        cmd.check_stale_projects = AsyncMock(return_value=(True, "All current", []))
+        cmd.get_project_stats_summary = AsyncMock(return_value={
+            "total_projects": 1,
+            "total_memories": 100,
+            "total_files": 50,
+            "index_size_bytes": 1024 * 1024
+        })
+
+        await cmd.run_checks()
+
+        # Verify token savings check was called
+        cmd.estimate_token_savings.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_run_checks_low_cache_hit_adds_recommendation(self):
+        """Test that low cache hit rate adds recommendations."""
+        cmd = HealthCommand()
+
+        # Mock all checks
+        cmd.check_python_version = AsyncMock(return_value=(True, "3.13.6"))
+        cmd.check_disk_space = AsyncMock(return_value=(True, "100 GB"))
+        cmd.check_memory = AsyncMock(return_value=(True, "16 GB"))
+        cmd.check_rust_parser = AsyncMock(return_value=(True, "Available"))
+        cmd.check_python_parser = AsyncMock(return_value=(True, "Available"))
+        cmd.check_storage_backend = AsyncMock(return_value=(True, "SQLite", "OK"))
+        cmd.check_embedding_model = AsyncMock(return_value=(True, "Model OK"))
+        cmd.check_embedding_cache = AsyncMock(return_value=(True, "Cache OK"))
+        cmd.check_qdrant_latency = AsyncMock(return_value=(True, "10ms", 10.0))
+        cmd.check_cache_hit_rate = AsyncMock(return_value=(False, "50% (low)", 50.0))
+        cmd.estimate_token_savings = AsyncMock(return_value=(True, "1.0K tokens", 1000))
+        cmd.check_stale_projects = AsyncMock(return_value=(True, "All current", []))
+        cmd.get_project_stats_summary = AsyncMock(return_value={
+            "total_projects": 1,
+            "total_memories": 100,
+            "total_files": 50,
+            "index_size_bytes": 1024 * 1024
+        })
+
+        await cmd.run_checks()
+
+        # Verify warning and recommendation were added
+        assert any("cache hit rate" in w.lower() for w in cmd.warnings)
+        assert any("re-indexing" in r.lower() for r in cmd.recommendations)
