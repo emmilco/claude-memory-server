@@ -89,14 +89,18 @@ async def test_health_check_embedding_model():
 @pytest.mark.e2e
 @pytest.mark.asyncio
 async def test_health_check_parser_availability():
-    """Test: Health check detects parser (Rust or Python fallback)."""
+    """Test: Health check detects Rust parser (now required, Python fallback removed)."""
     cmd = HealthCommand()
 
     rust_available, rust_msg = await cmd.check_rust_parser()
     python_available, python_msg = await cmd.check_python_parser()
 
-    # At least one parser should be available
-    assert rust_available or python_available, "No parser available"
+    # Rust parser is now required (Python fallback was removed)
+    assert rust_available, f"Rust parser must be available: {rust_msg}"
+
+    # Python parser should report as removed
+    assert python_available is False, "Python parser should be marked as removed"
+    assert "Removed" in python_msg or "Rust" in python_msg
 
     # Messages should be informative
     assert rust_msg is not None

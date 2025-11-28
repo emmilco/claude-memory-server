@@ -139,24 +139,14 @@ class TestParserChecks:
             assert "fallback" in message.lower()
 
     @pytest.mark.asyncio
-    async def test_check_python_parser_available(self):
-        """Test Python parser check when available."""
+    async def test_check_python_parser_removed(self):
+        """Test Python parser check - always returns removed (Rust required)."""
         cmd = HealthCommand()
         success, message = await cmd.check_python_parser()
 
-        # Should be available in our test environment
-        assert success is True
-        assert "fallback" in message.lower()
-
-    @pytest.mark.asyncio
-    async def test_check_python_parser_not_available(self):
-        """Test Python parser check when not available."""
-        cmd = HealthCommand()
-
-        with patch('src.memory.python_parser.get_parser', side_effect=ImportError("No tree-sitter")):
-            success, message = await cmd.check_python_parser()
-            assert success is False
-            assert "Not available" in message
+        # Python parser was removed - Rust parser is now required
+        assert success is False
+        assert "Removed" in message or "Rust" in message
 
 
 class TestStorageChecks:
