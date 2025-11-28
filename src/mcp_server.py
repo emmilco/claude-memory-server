@@ -391,6 +391,123 @@ async def list_tools() -> List[Tool]:
                 "required": ["file_path"],
             },
         ),
+        # Git Analysis Tools (FEAT-061)
+        Tool(
+            name="get_change_frequency",
+            description="Calculate how often a file or function changes",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "file_or_function": {
+                        "type": "string",
+                        "description": "File path (e.g., 'src/auth.py') or function name",
+                    },
+                    "project_name": {
+                        "type": "string",
+                        "description": "Optional project filter",
+                    },
+                    "since": {
+                        "type": "string",
+                        "description": "Optional start date for analysis (e.g., '2024-01-01', 'last month')",
+                    },
+                },
+                "required": ["file_or_function"],
+            },
+        ),
+        Tool(
+            name="get_churn_hotspots",
+            description="Find files with highest change frequency (churn hotspots)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "project_name": {
+                        "type": "string",
+                        "description": "Optional project filter",
+                    },
+                    "limit": {
+                        "type": "number",
+                        "description": "Max results (default: 10)",
+                    },
+                    "min_changes": {
+                        "type": "number",
+                        "description": "Minimum changes to qualify (default: 5)",
+                    },
+                    "days": {
+                        "type": "number",
+                        "description": "Analysis window in days (default: 90)",
+                    },
+                },
+            },
+        ),
+        Tool(
+            name="get_recent_changes",
+            description="Get recent file modifications with context",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "project_name": {
+                        "type": "string",
+                        "description": "Optional project filter",
+                    },
+                    "days": {
+                        "type": "number",
+                        "description": "Look back period (default: 30)",
+                    },
+                    "limit": {
+                        "type": "number",
+                        "description": "Max results (default: 50)",
+                    },
+                    "file_pattern": {
+                        "type": "string",
+                        "description": "Optional file filter (e.g., 'src/api/*.py')",
+                    },
+                },
+            },
+        ),
+        Tool(
+            name="blame_search",
+            description="Find who wrote code matching a pattern (git blame integration)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "pattern": {
+                        "type": "string",
+                        "description": "Code pattern or natural language query",
+                    },
+                    "project_name": {
+                        "type": "string",
+                        "description": "Optional project filter",
+                    },
+                    "file_pattern": {
+                        "type": "string",
+                        "description": "Optional file filter (e.g., 'src/auth/*.py')",
+                    },
+                    "limit": {
+                        "type": "number",
+                        "description": "Max results (default: 20)",
+                    },
+                },
+                "required": ["pattern"],
+            },
+        ),
+        Tool(
+            name="get_code_authors",
+            description="Get contributors for a file with their contribution counts",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "file_path": {
+                        "type": "string",
+                        "description": "Path to the file",
+                    },
+                    "limit": {
+                        "type": "number",
+                        "description": "Maximum number of commits to analyze (default: 100)",
+                    },
+                },
+                "required": ["file_path"],
+            },
+        ),
         # Monitoring Tools
         Tool(
             name="get_performance_metrics",
@@ -971,6 +1088,109 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
 
             if len(commits) > 10:
                 output += f"... and {len(commits) - 10} more commits\n"
+
+            return [TextContent(type="text", text=output)]
+
+        elif name == "get_change_frequency":
+            result = await memory_server.get_change_frequency(**arguments)
+            if result["total_changes"] == 0:
+                return [TextContent(type="text", text=f"No changes found for {arguments['file_or_function']}.")]
+
+            output = f"Change frequency for {result['file_path']}:\n\n"
+            output += f"Total changes: {result['total_changes']}\n"
+            output += f"Changes per week: {result['changes_per_week']:.2f}\n"
+            output += f"Churn score: {result['churn_score']:.2f} ({result['interpretation']})\n"
+            output += f"Time span: {result['time_span_days']:.1f} days\n"
+            output += f"Unique authors: {result['unique_authors']}\n"
+            output += f"Lines: +{result['total_lines_added']} -{result['total_lines_deleted']}\n"
+
+            if result.get("first_change"):
+                output += f"First change: {result['first_change']}\n"
+            if result.get("last_change"):
+                output += f"Last change: {result['last_change']}\n"
+
+            return [TextContent(type="text", text=output)]
+
+        elif name == "get_churn_hotspots":
+            result = await memory_server.get_churn_hotspots(**arguments)
+            hotspots = result.get("hotspots", [])
+
+            if not hotspots:
+                note = result.get("note", "")
+                return [TextContent(type="text", text=f"No churn hotspots found. {note}")]
+
+            output = f"Churn hotspots (last {result['analysis_period_days']} days):\n\n"
+            for i, hotspot in enumerate(hotspots[:20], 1):
+                output += f"{i}. {hotspot['file_path']}\n"
+                output += f"   Score: {hotspot['churn_score']:.2f} ({hotspot['instability_indicator']})\n"
+                output += f"   Changes: {hotspot['total_changes']} total, {hotspot['recent_changes_30d']} in 30d\n"
+                output += f"   Avg change: {hotspot['avg_change_size']:.1f} lines\n"
+                output += f"   Authors: {len(hotspot['authors'])}\n\n"
+
+            return [TextContent(type="text", text=output)]
+
+        elif name == "get_recent_changes":
+            result = await memory_server.get_recent_changes(**arguments)
+            changes = result.get("changes", [])
+
+            if not changes:
+                return [TextContent(type="text", text=f"No recent changes found in last {result['period_days']} days.")]
+
+            output = f"Recent changes (last {result['period_days']} days):\n\n"
+            for i, change in enumerate(changes[:20], 1):
+                output += f"{i}. {change['commit_hash'][:8]} - {change['days_ago']}d ago\n"
+                output += f"   {change['author']}\n"
+                output += f"   {change['message'][:60]}\n"
+                stats = change.get("stats", {})
+                if stats:
+                    output += f"   Files: {stats.get('files_changed', 0)}, "
+                    output += f"+{stats.get('insertions', 0)} -{stats.get('deletions', 0)}\n"
+                output += "\n"
+
+            if result["total_changes"] > 20:
+                output += f"... and {result['total_changes'] - 20} more changes\n"
+
+            return [TextContent(type="text", text=output)]
+
+        elif name == "blame_search":
+            result = await memory_server.blame_search(**arguments)
+            results = result.get("results", [])
+
+            if not results:
+                return [TextContent(type="text", text=f"No matches found for pattern: {result['pattern']}")]
+
+            output = f"Blame search results for '{result['pattern']}':\n\n"
+            for i, match in enumerate(results[:10], 1):
+                output += f"{i}. {match['commit_hash'][:8]} - {match['author']}\n"
+                output += f"   Date: {match['commit_date']}\n"
+                output += f"   Message: {match['commit_message'][:60]}\n"
+                output += f"   Relevance: {match['relevance']}\n\n"
+
+            if result["total_matches"] > 10:
+                output += f"... and {result['total_matches'] - 10} more matches\n"
+
+            return [TextContent(type="text", text=output)]
+
+        elif name == "get_code_authors":
+            result = await memory_server.get_code_authors(**arguments)
+            authors = result.get("authors", [])
+
+            if not authors:
+                return [TextContent(type="text", text=f"No authors found for {result['file_path']}.")]
+
+            output = f"Code authors for {result['file_path']}:\n\n"
+            for i, author in enumerate(authors[:10], 1):
+                output += f"{i}. {author['author_name']} <{author['author_email']}>\n"
+                output += f"   Commits: {author['commit_count']}\n"
+                output += f"   Lines: +{author['lines_added']} -{author['lines_deleted']}\n"
+                if author.get("first_commit"):
+                    output += f"   First: {author['first_commit']}\n"
+                if author.get("last_commit"):
+                    output += f"   Last: {author['last_commit']}\n"
+                output += "\n"
+
+            if len(authors) > 10:
+                output += f"... and {len(authors) - 10} more authors\n"
 
             return [TextContent(type="text", text=output)]
 
