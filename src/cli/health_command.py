@@ -301,7 +301,7 @@ class HealthCommand:
             projects = await store.get_all_projects()
             stale_projects = []
 
-            threshold = datetime.now(UTC) - timedelta(days=90)
+            threshold = datetime.now(UTC) - timedelta(days=30)
 
             for project_name in projects:
                 try:
@@ -331,10 +331,39 @@ class HealthCommand:
             if not stale_projects:
                 return True, "All projects current", []
             else:
-                return False, f"{len(stale_projects)} projects not indexed in 90+ days", stale_projects
+                return False, f"{len(stale_projects)} projects not indexed in 30+ days", stale_projects
 
         except Exception as e:
             return False, f"Could not check: {str(e)[:40]}", []
+
+    async def estimate_token_savings(self) -> Tuple[bool, str, Optional[int]]:
+        """Estimate tokens saved via caching this week."""
+        try:
+            from src.embeddings.cache import EmbeddingCache
+            from src.config import get_config
+
+            config = get_config()
+            cache = EmbeddingCache(config)
+
+            stats = cache.get_stats()
+            hits = stats.get("cache_hits", 0)
+
+            if hits == 0:
+                return True, "No cache hits yet", 0
+
+            # Estimate: average embedding text ~100 tokens
+            # Each cache hit saves ~100 tokens from not re-processing
+            estimated_tokens = hits * 100
+
+            if estimated_tokens >= 1000000:
+                return True, f"~{estimated_tokens/1000000:.1f}M tokens saved ({hits:,} cache hits)", estimated_tokens
+            elif estimated_tokens >= 1000:
+                return True, f"~{estimated_tokens/1000:.1f}K tokens saved ({hits:,} cache hits)", estimated_tokens
+            else:
+                return True, f"~{estimated_tokens} tokens saved ({hits:,} cache hits)", estimated_tokens
+
+        except Exception as e:
+            return False, f"Could not estimate: {str(e)[:40]}", None
 
     async def get_project_stats_summary(self) -> Dict[str, Any]:
         """Get overall project statistics summary."""
@@ -482,6 +511,12 @@ class HealthCommand:
                     "Consider re-indexing projects to improve cache performance"
                 )
 
+        success, msg, tokens = await self.estimate_token_savings()
+        if success:
+            self.print_check("Token savings", True, msg)
+        else:
+            self.print_warning("Token savings", msg)
+
         # Project Health
         self.print_section("Project Health")
 
@@ -491,7 +526,7 @@ class HealthCommand:
         else:
             self.print_warning("Stale projects", msg)
             if stale:
-                self.warnings.append(f"{len(stale)} stale projects (90+ days old)")
+                self.warnings.append(f"{len(stale)} stale projects (30+ days old)")
                 for project in stale[:3]:  # Show up to 3
                     project_name = project['name']
                     days = project['days_old']
