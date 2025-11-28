@@ -282,10 +282,50 @@ async def pre_indexed_server(session_sample_code_project, worker_id):
 
     Tests that store memories, delete data, or need project isolation
     should use the function-scoped `fresh_server` fixture instead.
+
+    NOTE: This fixture manually mocks embeddings because session-scoped
+    fixtures can't use function-scoped monkeypatch. Without this, the
+    real 420MB embedding model would load in every pytest worker.
     """
     import os
+    import hashlib
+    from unittest.mock import patch, AsyncMock
     from qdrant_client import QdrantClient
     from qdrant_client.models import Distance, VectorParams
+    from src.embeddings.generator import EmbeddingGenerator
+
+    # Mock embeddings BEFORE creating server to prevent loading real model
+    # This is necessary because session-scoped fixtures can't use monkeypatch
+    dim = 768  # Match the default embedding model dimension
+
+    async def mock_generate(self, text):
+        """Generate mock embedding based on text hash."""
+        if text is None or not text or not text.strip():
+            return [0.0] * dim
+        hash_val = int(hashlib.md5(text.encode()).hexdigest()[:8], 16)
+        base_value = (hash_val % 100) / 100.0
+        embedding = [(base_value + (i * 0.001)) % 1.0 for i in range(dim)]
+        magnitude = sum(x * x for x in embedding) ** 0.5
+        if magnitude > 0:
+            embedding = [x / magnitude for x in embedding]
+        return embedding
+
+    async def mock_generate_batch(self, texts):
+        """Generate mock embeddings for batch of texts."""
+        return [await mock_generate(self, text) for text in texts]
+
+    async def mock_initialize(self):
+        """Mock initialize - skip loading the real model."""
+        pass  # Don't load the real 420MB model
+
+    # Apply mocks to EmbeddingGenerator
+    original_generate = EmbeddingGenerator.generate
+    original_generate_batch = getattr(EmbeddingGenerator, 'generate_batch', None)
+    original_initialize = EmbeddingGenerator.initialize
+    EmbeddingGenerator.generate = mock_generate
+    EmbeddingGenerator.initialize = mock_initialize
+    if original_generate_batch:
+        EmbeddingGenerator.generate_batch = mock_generate_batch
 
     # Create unique collection name for this session/worker
     collection_name = f"e2e_preindexed_{worker_id}"
@@ -341,6 +381,12 @@ async def pre_indexed_server(session_sample_code_project, worker_id):
         qdrant_client.close()
     except Exception:
         pass
+
+    # Restore original methods
+    EmbeddingGenerator.generate = original_generate
+    EmbeddingGenerator.initialize = original_initialize
+    if original_generate_batch:
+        EmbeddingGenerator.generate_batch = original_generate_batch
 
 
 @pytest_asyncio.fixture
