@@ -5,7 +5,7 @@ This file is updated by `/retro` sessions and should be referenced alongside CLA
 
 **Last updated:** 2025-11-27
 **Total retrospectives:** 2
-**Active principles:** 8
+**Active principles:** 9
 
 ---
 
@@ -59,6 +59,13 @@ This file is updated by `/retro` sessions and should be referenced alongside CLA
 **Rule:** Always create a git worktree for tasks that will involve multiple commits or touch multiple files. Only commit directly to main for single-file hotfixes that are immediately verifiable. Before starting any task with an ID (FEAT-XXX, BUG-XXX, etc.), create a worktree.
 **Rationale:** After CI failures in Nov 2025, agents bypassed worktrees for speed during urgent fixes. This became habit even after the crisis passed—175 commits in one week with only 23% being proper merges. Direct commits to main increase conflict risk and lose the isolation benefits the workflow provides.
 
+### LP-009: Validate Infrastructure with Real Usage, Not Just Test Coverage
+**Source:** Session 2025-11-27 (direct observation + journal META_LEARNING entry)
+**Pattern:** Infrastructure marked "complete" with 97% test coverage failed on first real use
+**Rule:** Before marking infrastructure code (connection pools, caches, stores, etc.) as complete, exercise it in a real scenario that includes failure and recovery. Mock-based unit tests verify code logic; integration tests with real dependencies validate assumptions. "Complete" requires at least one real usage scenario passing, not just unit test coverage.
+**Rationale:** Connection pool was marked COMPLETE with "97% coverage" and "56 tests," but all tests used mocks. First real usage failed immediately due to a bug *documented in the code comments*. Tests verified the code was consistent with assumptions; they didn't verify assumptions were correct. Verification ≠ Validation.
+**Related:** Extends LP-002 (Demonstrate Working Results) to the testing domain. Also: known technical debt in code comments should become TODO.md items—invisible debt is unfixable debt.
+
 ---
 
 ## Retired Principles
@@ -76,7 +83,7 @@ This file is updated by `/retro` sessions and should be referenced alongside CLA
 | Journal entries analyzed | 20+ session summaries |
 | Claude log entries sampled | 3,804 |
 | Patterns identified | 11 |
-| Principles generated | 8 |
+| Principles generated | 9 |
 | Principles retired | 0 |
 
 ---

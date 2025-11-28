@@ -6,6 +6,131 @@ Work session entries from Claude agents. See [Work Journal Protocol](CLAUDE.md#-
 
 ---
 
+### 2025-11-27 19:56 | fb7103d0 | SESSION_SUMMARY
+
+**Duration:** ~60 minutes
+**Main work:** Discovered, analyzed, and fixed critical connection pool bug (BUG-037); extracted new principle (LP-009)
+
+**What went well:**
+- User's request to "proactively use the memory server" immediately surfaced a critical bug that 97% test coverage missed
+- Root cause analysis was thorough: identified all three issues (release() metadata loss, no recovery mechanism, no health detection)
+- Followed worktree workflow correctly (LP-008) for the bug fix
+- Extracted meaningful principle (LP-009: "Validate Infrastructure with Real Usage") from the experience
+- Used TodoWrite effectively to track multi-step fix process
+- Memory server worked after fix - successfully stored 3 memories during session
+- Quick config change for parallel_workers (3 instead of all CPUs) at end of session
+
+**What went poorly or was difficult:**
+- Initial Qdrant troubleshooting was slow - tried restarting before realizing pool state was corrupted
+- Had to kill MCP server processes manually to reset connection pool (user needed to /mcp reconnect)
+- Two tests for new BUG-037 code failed initially due to mock returning same client instance (id() collision)
+- Didn't proactively notice the parallel_generator was using wrong config path (embedding_parallel_workers vs parallel_workers)
+
+**Open threads:**
+- Memory server now has reset() and is_healthy() methods but nothing automatically calls them on failure - could add auto-recovery
+- No integration tests with real Qdrant restart scenarios yet (added unit tests but LP-009 suggests we need real infra tests)
+- Should audit other code comments containing "TODO" or "In production" and promote to TODO.md
+
+---
+
+### 2025-11-27 19:15 | fb7103d0 | META_LEARNING
+
+**Event:** First real usage attempt of MCP memory server failed immediately due to connection pool bug
+
+**What happened:**
+1. User asked me to proactively use the memory server throughout the session
+2. Qdrant container was unhealthy (slow startup from 100+ test collections)
+3. After clearing Qdrant and restarting fresh, memory operations still failed
+4. Error: "Connection pool exhausted: 0 active, 5 max" - pool state was corrupted
+5. Investigation revealed the bug was *documented in the code itself*:
+   ```python
+   # Note: In production, we'd track client -> pooled_conn mapping
+   # For now, we'll create a new wrapper (simplified)
+   ```
+
+**Why this wasn't caught:**
+- PERF-007 (Connection Pooling) was marked COMPLETE with "97% coverage" and "56 tests"
+- All tests use mocks - they verify code logic, not real-world behavior
+- No tests for "Qdrant goes down and comes back" or pool corruption recovery
+- TEST-027 (recent E2E expansion) focused on CLI/MCP/health, not connection resilience
+- The code comment documenting the shortcut was never promoted to TODO.md
+
+**The gap:**
+- **Verification** (do tests pass?) ≠ **Validation** (does it work in production?)
+- Mock-based tests verify code is consistent with *assumptions*
+- Integration tests with real infrastructure validate *assumptions are correct*
+- We had verification without validation
+
+**Principle extracted:**
+
+> **"Completeness requires usage validation, not just test coverage."**
+>
+> Tests with mocks prove your code is consistent with your assumptions.
+> Tests with real infrastructure prove your assumptions are correct.
+> Before marking infrastructure as complete, exercise it in a real scenario that includes failure recovery.
+
+**Actionable changes:**
+1. Known technical debt in code comments MUST become TODO.md items
+2. Infrastructure code (connection pools, caches, etc.) needs integration tests with real dependencies
+3. "Complete" should require at least one real usage scenario, not just passing unit tests
+4. Add resilience/chaos tests for critical infrastructure paths
+
+**Related patterns:**
+- LP-002: "Demonstrate Working Results, Not Just Completion" - applies here: we "completed" without demonstrating it works
+- This is why dogfooding matters - the first real user found the bug instantly
+
+---
+
+### 2025-11-27 18:58 | e7180ceb | SESSION_SUMMARY
+
+**Duration:** ~30 minutes
+**Main work:** Fixed MCP server connection timeout caused by blocking auto-indexing during startup
+
+**What went well:**
+- Quickly identified root cause: auto-indexing 749 files was blocking MCP protocol handshake
+- Clean architectural fix: added `defer_auto_index` parameter to defer indexing to background task
+- User rejected environment variable approach - correctly identified it violated project conventions
+- Solution is clean: MCP responds immediately, indexing happens in background after protocol ready
+- Verified fix works: `/mcp` reconnects instantly, search works while indexing continues in background
+
+**What went poorly or was difficult:**
+- Initial diagnosis took several attempts: first tried restarting Qdrant, then env vars
+- First env var approach (`AUTO_INDEX_ON_STARTUP`) didn't work because nested pydantic models don't read env vars
+- User had to redirect me away from env var approach - should have remembered project prefers code config
+- Left a stale background bash process running throughout session
+
+**Open threads:**
+- Qdrant container shows "unhealthy" status despite working fine - health check config may need tuning
+- `get_health_score` MCP tool returned attribute error - may be a method name mismatch
+- Background indexing puts heavy load on Qdrant (~350% CPU) - acceptable but noticeable
+
+---
+
+### 2025-11-27 16:52 | ba225dd8 | SESSION_SUMMARY
+
+**Duration:** ~2 hours (continued from compacted session)
+**Main work:** Fixed E2E test suite, added 55 new E2E tests, committed all outstanding work
+
+**What went well:**
+- Systematic fix of E2E tests: API params (mode→search_mode), memory result parsing, config access fixes
+- Created 3 comprehensive E2E test files (CLI commands, MCP protocol, health monitoring) - 55 new tests
+- All E2E tests passing: 67 passed, 4 appropriately skipped
+- Clean commit series: TEST-027 (E2E), REF-013 Phase 3 (config cleanup), FEAT-059 (structural queries), docs
+- Good organization: separated commits by logical concern
+
+**What went poorly or was difficult:**
+- Polled background bash output too aggressively early in session (user previously flagged this behavior)
+- E2E test run times were long (10-15 min each), causing multiple stale background processes
+- Had to kill hung test run (32+ min) and restart with targeted tests
+- Forgot CHANGELOG entry requirement on first commit attempt
+
+**Open threads:**
+- Status command tests remain skipped (Qdrant connection timeout - needs investigation)
+- Health monitor fix test requires interactive stdin (appropriately skipped)
+- 5 new commits need to be pushed to origin
+
+---
+
 ### 2025-11-27 13:40 | 31cab3fc | USER_PROMPT
 User ran /retro command. Initial analysis missed journal entries and activity logs - user caught this and asked for a more thorough analysis. Re-ran with all three data sources (feedback, journal, claude logs). Identified 4 new principles (LP-004 through LP-007). User approved all and requested updates to retro.md to make journal/log analysis mandatory for future retros.
 

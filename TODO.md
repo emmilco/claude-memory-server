@@ -412,6 +412,22 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
 
 **These bugs completely break core functionality and must be fixed immediately**
 
+- [x] **BUG-037**: Connection Pool State Corruption After Qdrant Restart ✅ **FIXED** (2025-11-27)
+  - **Error:** `Connection pool exhausted: 0 active, 5 max` when Qdrant is healthy
+  - **Impact:** MCP memory server completely unusable after any Qdrant hiccup/restart
+  - **Root Cause:** Multiple issues in `src/store/connection_pool.py`:
+    1. `release()` creates new `PooledConnection` wrapper instead of tracking original (loses `created_at`, breaks recycling)
+    2. `_created_count` can drift from actual pool contents when connections fail
+    3. No recovery mechanism when pool state becomes corrupted
+  - **Code Comment:** Bug was known - code contains `# Note: In production, we'd track client -> pooled_conn mapping`
+  - **Why Missed:** 97% test coverage with mocks doesn't catch real-world failure modes (LP-009)
+  - **Fix:**
+    - [x] Track `client -> PooledConnection` mapping in `release()`
+    - [x] Add pool state recovery/reset mechanism (`reset()`, `is_healthy()`)
+    - [x] Add 11 new tests for BUG-037 fixes
+  - **Location:** `src/store/connection_pool.py`
+  - **See:** Journal entry 2025-11-27 META_LEARNING, LP-009
+
 - [x] **BUG-012**: MemoryCategory.CODE attribute missing ✅ **FIXED**
   - **Error:** `type object 'MemoryCategory' has no attribute 'CODE'`
   - **Impact:** Code indexing completely broken - 91% of files fail to index (10/11 failures)

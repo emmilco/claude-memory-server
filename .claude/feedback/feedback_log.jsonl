@@ -341,3 +341,21 @@
   "sentiment": "corrective",
   "user_message": "where do we stand with your original task?"
 }
+{
+  "timestamp": "2025-11-27T21:57:18Z",
+  "session_id": "9c34dbb7-6d1b-4217-a3f9-c7943c12978a",
+  "sentiment": "positive",
+  "user_message": "Yes, please do. Good job catching that bug."
+}
+{
+  "timestamp": "2025-11-28T00:00:06Z",
+  "session_id": "fb7103d0-cd84-420c-bdcd-df11f8b9e62c",
+  "sentiment": "positive",
+  "user_message": "For the duration of this session I woudl like you to make liberal and proactive use of the MCP memory server. I want you to keep track of when and whether it was useful and think about how it could be improved. Understood?"
+}
+{
+  "timestamp": "2025-11-28T00:10:16Z",
+  "session_id": "fb7103d0-cd84-420c-bdcd-df11f8b9e62c",
+  "sentiment": "negative",
+  "user_message": "we just finished a massive testing and bughunting effort. how did we miss this? that seems bad."
+}

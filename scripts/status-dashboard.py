@@ -50,7 +50,16 @@ def print_section(text: str):
 
 
 def count_tasks(file_path: Path) -> Tuple[int, List[str]]:
-    """Count tasks in a markdown file and return task IDs."""
+    """Count tasks in a markdown file and return task IDs.
+
+    Supports two formats:
+    - ### [TASK-ID]: Title (used in IN_PROGRESS.md)
+    - - [ ] **TASK-ID**: Title (used in TODO.md)
+
+    Skips template/example sections and placeholder task IDs.
+    """
+    import re
+
     if not file_path.exists():
         return 0, []
 
@@ -59,18 +68,46 @@ def count_tasks(file_path: Path) -> Tuple[int, List[str]]:
 
     count = 0
     task_ids = []
+    in_template_section = False
+
+    # Pattern for task IDs like FEAT-059, TEST-023, BUG-001, etc.
+    task_id_pattern = re.compile(r'([A-Z]+-\d+)')
 
     for line in lines:
-        # Look for task entries like: ### [FEAT-056]: Title
-        if line.strip().startswith('### [') or line.strip().startswith('- [ ] **'):
+        stripped = line.strip().lower()
+
+        # Detect template/example sections to skip
+        if stripped.startswith('## ') and ('template' in stripped or 'example' in stripped):
+            in_template_section = True
+            continue
+
+        # Exit template section when we hit a new ## section
+        if stripped.startswith('## ') and in_template_section:
+            in_template_section = False
+
+        # Skip lines in template sections
+        if in_template_section:
+            continue
+
+        task_id = None
+
+        # Format 1: ### [FEAT-056]: Title
+        if line.strip().startswith('### ['):
+            match = task_id_pattern.search(line)
+            if match:
+                task_id = match.group(1)
+
+        # Format 2: - [ ] **FEAT-059**: Title (unchecked tasks only)
+        elif line.strip().startswith('- [ ] **'):
+            match = task_id_pattern.search(line)
+            if match:
+                task_id = match.group(1)
+
+        # Count if we found a valid, non-placeholder task ID
+        if task_id and not any(p in task_id.upper() for p in ['XXX', 'YYY', 'ZZZ']):
             count += 1
-            # Extract task ID
-            if '[' in line and ']' in line:
-                start = line.index('[') + 1
-                end = line.index(']', start)
-                task_id = line[start:end].split(':')[0].strip()
-                if task_id and task_id not in task_ids:
-                    task_ids.append(task_id)
+            if task_id not in task_ids:
+                task_ids.append(task_id)
 
     return count, task_ids
 
