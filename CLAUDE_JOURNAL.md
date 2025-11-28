@@ -6,6 +6,63 @@ Work session entries from Claude agents. See [Work Journal Protocol](CLAUDE.md#-
 
 ---
 
+### 2025-11-28 08:52 | 831a47b1 | SESSION_SUMMARY
+
+**Duration:** ~2 hours
+**Main work:** Performance optimization and infrastructure improvements - reduced indexing time from 750s to 99s (7.5x speedup)
+
+**What went well:**
+- Diagnosed Qdrant "unhealthy" status: Docker health check using curl which doesn't exist in container - fixed with TCP socket test
+- Reduced pytest parallelism (auto → 4 workers) and collection pool (10 → 4) to reduce resource pressure
+- Added proper session-end cleanup for test collections - found 4,632 leftover points in test_pool_2
+- Fixed HNSW index not building (grey status → green) by lowering indexing_threshold
+- **Major win:** Switched from all-MiniLM-L6-v2 (384 dims) to all-mpnet-base-v2 (768 dims) with MPS GPU acceleration
+  - Discovered MPS is 10x SLOWER for small models but 3x FASTER for larger models with batch_size≥128
+  - Final result: 99s indexing vs 750s (7.5x improvement)
+- Discovered Python parser fallback was silently broken (returned 0 units) - removed it, Rust parser now required
+- Added REF-020 to TODO.md for cleanup of Python parser references
+
+**What went poorly or was difficult:**
+- Initial MPS attempt with small model was counterproductive - had to benchmark to discover GPU overhead exceeds benefit for small models
+- Multiple collection dimension changes required deleting all Qdrant collections and re-indexing
+- Rust vs Python parser benchmark was confusing initially - Python appeared "faster" but was returning 0 units (broken)
+- conftest.py had multiple hardcoded "384" dimensions that needed updating for 768-dim model
+
+**Open threads:**
+- REF-020: Need to clean up remaining Python parser references (tree-sitter deps, config options, docs)
+- Test suite not run after all changes - should verify tests pass with new 768-dim embeddings
+- Embedding cache may have stale 384-dim entries that should be cleared
+- docker-compose.yml changes (health check, CPU limit, image pin) not committed yet
+
+---
+
+### 2025-11-27 20:38 | f0168b16 | SESSION_SUMMARY
+
+**Duration:** ~40 minutes
+**Main work:** Parallel implementation of 4 TODO items using task agents; merged all to main and pushed
+
+**What went well:**
+- Spawned 4 agents in parallel for FEAT-059, FEAT-061, UX-032, DOC-010 - all completed successfully
+- Agent discovered FEAT-059 was already implemented - good validation, avoided duplicate work
+- Sequential merge workflow was clean: FEAT-059 → FEAT-061 → UX-032, no conflicts
+- UX-032 agent staged but didn't commit - caught this during merge and committed before merging
+- Worktree cleanup and push to origin completed smoothly
+- Total new functionality: 11 MCP tools (6 structural + 5 git history), health check enhancements
+
+**What went poorly or was difficult:**
+- DOC-010 was also already complete (merged 2025-11-26) - should have checked before spawning agent
+- UX-032 worktree was at same commit as main (agent created from main, worked there, but didn't switch branches properly)
+- Some background bash processes from agents still running after completion (harmless but noisy)
+- The sed "illegal byte sequence" warning appears on every commit (hook issue, cosmetic)
+
+**Open threads:**
+- TODO.md not updated to reflect these 4 items as complete - should mark FEAT-059, FEAT-061, UX-032, DOC-010 done
+- IN_PROGRESS.md shows 0/6 tasks but we just completed 4 - tracking files not updated
+- FEAT-059 tests: 19 skipped (integration tests pending live MCP environment) - could be enabled
+- FEAT-061 `get_churn_hotspots` has a limitation (needs additional store methods for full implementation)
+
+---
+
 ### 2025-11-27 19:56 | fb7103d0 | SESSION_SUMMARY
 
 **Duration:** ~60 minutes

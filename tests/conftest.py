@@ -17,100 +17,32 @@ except ImportError:
     rust_parse_source_file = None
     mcp_performance_core = None
 
-if RUST_AVAILABLE:
-    from src.memory.python_parser import PythonParser
-
-    original_parse = rust_parse_source_file
-
-    def parse_source_file_with_fallback(file_path: str, source_code: str):
-        """Parse source file with fallback to Python parser for unsupported languages."""
-        try:
-            # Try Rust parser first
-            return original_parse(file_path, source_code)
-        except RuntimeError as e:
-            if "Unsupported file extension" in str(e):
-                # Fall back to Python parser for Kotlin, Swift, etc.
-                from pathlib import Path
-                ext = Path(file_path).suffix.lower()
-
-                # Language map for Python fallback
-                lang_map = {
-                    '.kt': 'kotlin',
-                    '.kts': 'kotlin',
-                    '.swift': 'swift',
-                    '.rb': 'ruby',
-                }
-
-                if ext in lang_map:
-                    try:
-                        parser = PythonParser()
-                        units = parser.parse_file(file_path, lang_map[ext])
-
-                        # Normalize language names to match Rust output (capitalized)
-                        lang_name_capitalized = lang_map[ext].capitalize()
-                        for unit in units:
-                            unit['language'] = lang_name_capitalized
-
-                        # Convert Python parser units (dicts) to objects compatible with Rust output
-                        class SemanticUnitWrapper:
-                            """Wrapper to make dict behave like Rust SemanticUnit."""
-                            def __init__(self, data):
-                                self._data = data
-                                # Expose as attributes
-                                for key, value in data.items():
-                                    setattr(self, key, value)
-                                # Add 'type' alias for 'unit_type' (tests use both)
-                                if 'unit_type' in data:
-                                    setattr(self, 'type', data['unit_type'])
-
-                            def __getitem__(self, key):
-                                # Support dict-style access for tests
-                                if key == 'type' and key not in self._data:
-                                    return self._data.get('unit_type')
-                                return self._data[key]
-
-                            def __repr__(self):
-                                return f"SemanticUnit({self._data})"
-
-                        class PythonParseResult:
-                            """Mimics Rust ParseResult."""
-                            def __init__(self, file_path, language, units, parse_time_ms):
-                                self.file_path = file_path
-                                self.language = language
-                                self.units = [SemanticUnitWrapper(u) for u in units]
-                                self.parse_time_ms = parse_time_ms
-
-                        return PythonParseResult(
-                            file_path=file_path,
-                            language=lang_name_capitalized,
-                            units=units,
-                            parse_time_ms=0.0
-                        )
-                    except Exception:
-                        # If Python parser fails, re-raise original error
-                        raise e
-            # Re-raise if not an unsupported extension error
-            raise
-
-    # Monkey-patch the module
-    mcp_performance_core.parse_source_file = parse_source_file_with_fallback
+# Note: Python parser fallback was removed (it was broken, returned 0 units)
+# Rust parser (mcp_performance_core) is now required for all parsing
 
 
 @pytest.fixture(scope="session")
 def mock_embedding_cache():
     """Pre-computed embeddings for common test phrases."""
-    # Generate deterministic 384-dimensional embeddings for common test phrases
-    base_embedding = [0.0] * 384
+    # Get vector size from config (matches embedding model)
+    from src.config import get_config
+    config = get_config()
+    model_dims = {"all-MiniLM-L6-v2": 384, "all-MiniLM-L12-v2": 384, "all-mpnet-base-v2": 768}
+    dim = model_dims.get(config.embedding_model, 768)
+
+    # Generate deterministic embeddings for common test phrases
+    base_embedding = [0.0] * dim
 
     return {
-        "def authenticate": [0.1, 0.2, 0.3] + base_embedding[:381],
-        "user authentication": [0.2, 0.3, 0.1] + base_embedding[:381],
-        "login function": [0.3, 0.1, 0.2] + base_embedding[:381],
-        "database connection": [0.4, 0.2, 0.1] + base_embedding[:381],
-        "test function": [0.5, 0.3, 0.2] + base_embedding[:381],
-        "api request": [0.6, 0.4, 0.1] + base_embedding[:381],
-        "def test": [0.2, 0.5, 0.3] + base_embedding[:381],
-        "class User": [0.3, 0.2, 0.5] + base_embedding[:381],
+        "def authenticate": [0.1, 0.2, 0.3] + base_embedding[:dim-3],
+        "user authentication": [0.2, 0.3, 0.1] + base_embedding[:dim-3],
+        "login function": [0.3, 0.1, 0.2] + base_embedding[:dim-3],
+        "database connection": [0.4, 0.2, 0.1] + base_embedding[:dim-3],
+        "test function": [0.5, 0.3, 0.2] + base_embedding[:dim-3],
+        "api request": [0.6, 0.4, 0.1] + base_embedding[:dim-3],
+        "def test": [0.2, 0.5, 0.3] + base_embedding[:dim-3],
+        "class User": [0.3, 0.2, 0.5] + base_embedding[:dim-3],
+        "_embedding_dim": dim,  # Store dim for mock_embeddings fixture
     }
 
 
@@ -119,12 +51,13 @@ def mock_embeddings(monkeypatch, mock_embedding_cache):
     """Mock embedding generator for unit tests to avoid slow embedding generation."""
     from src.embeddings.generator import EmbeddingGenerator
 
-    original_generate = EmbeddingGenerator.generate
+    # Get embedding dimension from cache
+    dim = mock_embedding_cache.get("_embedding_dim", 768)
 
     async def mock_generate(self, text):
         """Generate mock embedding based on cached values or hash."""
         # Return cached embedding if available
-        if text in mock_embedding_cache:
+        if text in mock_embedding_cache and not text.startswith("_"):
             return mock_embedding_cache[text]
 
         # For other texts, generate deterministic embedding based on hash
@@ -134,7 +67,7 @@ def mock_embeddings(monkeypatch, mock_embedding_cache):
 
         # Create a simple deterministic pattern
         embedding = []
-        for i in range(384):
+        for i in range(dim):
             val = (base_value + (i * 0.001)) % 1.0
             embedding.append(val)
 
@@ -408,9 +341,9 @@ def code_sample_factory():
 # ============================================================================
 
 # Collection pool: Pre-created collections reused across tests
-# This prevents Qdrant overload from 8 parallel workers creating/deleting collections
-# With 10 collections and 8 workers, each worker gets a dedicated collection
-COLLECTION_POOL = [f"test_pool_{i}" for i in range(10)]
+# This prevents Qdrant overload from parallel workers creating/deleting collections
+# Pool size matches pytest -n 4 default (see pytest.ini)
+COLLECTION_POOL = [f"test_pool_{i}" for i in range(4)]
 _collection_cycle = cycle(COLLECTION_POOL)
 
 # Worker ID to collection mapping (Option E: worker-specific isolation)
@@ -485,13 +418,19 @@ def setup_qdrant_pool(qdrant_client):
         # If we can't get collections, assume none exist
         collection_names = []
 
+    # Get vector size from config (matches embedding model)
+    from src.config import get_config
+    config = get_config()
+    model_dims = {"all-MiniLM-L6-v2": 384, "all-MiniLM-L12-v2": 384, "all-mpnet-base-v2": 768}
+    vector_size = model_dims.get(config.embedding_model, 768)
+
     for name in COLLECTION_POOL:
         try:
             if name not in collection_names:
                 # Create only if doesn't exist
                 qdrant_client.create_collection(
                     collection_name=name,
-                    vectors_config=VectorParams(size=384, distance=Distance.COSINE)
+                    vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE)
                 )
         except Exception:
             # Creation failure is not critical - collection might exist
@@ -499,9 +438,28 @@ def setup_qdrant_pool(qdrant_client):
 
     yield
 
-    # NO cleanup - keep pool collections for next test run
-    # Collection pool is persistent across test runs for maximum performance
-    # Tests clear collection contents before use via unique_qdrant_collection fixture
+    # Clean up all test collections at end of session
+    # This prevents data accumulation across test runs
+    from qdrant_client.models import PointIdsList
+    for name in COLLECTION_POOL:
+        try:
+            # Delete all points (scroll in batches to handle large collections)
+            while True:
+                points, _ = qdrant_client.scroll(
+                    collection_name=name,
+                    limit=1000,
+                    with_payload=False,
+                    with_vectors=False
+                )
+                if not points:
+                    break
+                point_ids = [p.id for p in points]
+                qdrant_client.delete(
+                    collection_name=name,
+                    points_selector=PointIdsList(points=point_ids)
+                )
+        except Exception:
+            pass  # Collection might not exist or be inaccessible
 
 
 @pytest.fixture(scope="session")
@@ -551,15 +509,16 @@ def unique_qdrant_collection(monkeypatch, qdrant_client, setup_qdrant_pool, work
 
     # Clear collection before test (faster than recreate)
     try:
-        # Scroll to get all point IDs (limit 10000 per call)
-        points, _ = qdrant_client.scroll(
-            collection_name=collection_name,
-            limit=10000,
-            with_payload=False,
-            with_vectors=False
-        )
-
-        if points:
+        # Delete all points in batches (handles large collections)
+        while True:
+            points, _ = qdrant_client.scroll(
+                collection_name=collection_name,
+                limit=1000,
+                with_payload=False,
+                with_vectors=False
+            )
+            if not points:
+                break
             point_ids = [p.id for p in points]
             qdrant_client.delete(
                 collection_name=collection_name,
@@ -573,6 +532,47 @@ def unique_qdrant_collection(monkeypatch, qdrant_client, setup_qdrant_pool, work
     yield collection_name
 
     # No cleanup needed - collection stays in pool for next test
+
+
+# ============================================================================
+# Qdrant Throughput Throttling (Reduces load during parallel tests)
+# ============================================================================
+
+import asyncio as _throttle_asyncio
+
+# Semaphore to limit concurrent Qdrant operations across all workers
+_qdrant_semaphore = None
+_QDRANT_MAX_CONCURRENT_OPS = 2  # Max concurrent ops per worker
+
+
+@pytest.fixture
+def throttled_qdrant(qdrant_client):
+    """Throttled Qdrant client that limits concurrent operations.
+
+    Use this fixture instead of qdrant_client for tests that do heavy
+    Qdrant operations to prevent overwhelming the server during parallel runs.
+    """
+    global _qdrant_semaphore
+    if _qdrant_semaphore is None:
+        _qdrant_semaphore = _throttle_asyncio.Semaphore(_QDRANT_MAX_CONCURRENT_OPS)
+
+    class ThrottledClient:
+        def __init__(self, client, semaphore):
+            self._client = client
+            self._semaphore = semaphore
+
+        def __getattr__(self, name):
+            attr = getattr(self._client, name)
+            if callable(attr):
+                def throttled(*args, **kwargs):
+                    # Small delay to stagger operations
+                    import time
+                    time.sleep(0.01)  # 10ms stagger
+                    return attr(*args, **kwargs)
+                return throttled
+            return attr
+
+    yield ThrottledClient(qdrant_client, _qdrant_semaphore)
 
 
 # ============================================================================

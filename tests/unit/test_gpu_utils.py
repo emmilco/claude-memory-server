@@ -90,11 +90,27 @@ class TestGetGpuInfo:
             assert result["cuda_version"] == "11.8"
 
     def test_get_gpu_info_no_cuda(self):
-        """Test getting GPU info when CUDA is not available."""
-        with patch("src.embeddings.gpu_utils.detect_cuda", return_value=False):
+        """Test getting GPU info when CUDA is not available (and no MPS)."""
+        with patch("src.embeddings.gpu_utils.detect_cuda", return_value=False), \
+             patch("src.embeddings.gpu_utils.detect_mps", return_value=False):
             result = get_gpu_info()
 
             assert result is None
+
+    def test_get_gpu_info_mps(self):
+        """Test getting GPU info when MPS (Apple Silicon) is available."""
+        mock_torch = MagicMock()
+        mock_torch.__version__ = "2.0.0"
+
+        with patch("src.embeddings.gpu_utils.detect_cuda", return_value=False), \
+             patch("src.embeddings.gpu_utils.detect_mps", return_value=True), \
+             patch.dict("sys.modules", {"torch": mock_torch}):
+            result = get_gpu_info()
+
+            assert result is not None
+            assert result["device_type"] == "mps"
+            assert result["device_name"] == "Apple Silicon (MPS)"
+            assert result["device_count"] == 1
 
     def test_get_gpu_info_no_devices(self):
         """Test when CUDA is available but no devices found."""
@@ -131,9 +147,18 @@ class TestGetOptimalDevice:
 
             assert result == "cuda"
 
+    def test_get_optimal_device_mps(self):
+        """Test when CUDA is not available but MPS is."""
+        with patch("src.embeddings.gpu_utils.detect_cuda", return_value=False), \
+             patch("src.embeddings.gpu_utils.detect_mps", return_value=True):
+            result = get_optimal_device()
+
+            assert result == "mps"
+
     def test_get_optimal_device_cpu(self):
-        """Test when CUDA is not available."""
-        with patch("src.embeddings.gpu_utils.detect_cuda", return_value=False):
+        """Test when neither CUDA nor MPS is available."""
+        with patch("src.embeddings.gpu_utils.detect_cuda", return_value=False), \
+             patch("src.embeddings.gpu_utils.detect_mps", return_value=False):
             result = get_optimal_device()
 
             assert result == "cpu"

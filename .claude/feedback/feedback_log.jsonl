@@ -359,3 +359,27 @@
   "sentiment": "negative",
   "user_message": "we just finished a massive testing and bughunting effort. how did we miss this? that seems bad."
 }
+{
+  "timestamp": "2025-11-28T02:57:29Z",
+  "session_id": "831a47b1-c524-4a1b-b12b-765ebcb5ff5d",
+  "sentiment": "negative",
+  "user_message": "ok yes, let's pin to 1.15.5.\n\nBut there's a larger problem: lately running the tests or indexing has seemingly been putting qdrant in a bad state. I need to figure out why"
+}
+{
+  "timestamp": "2025-11-28T03:06:09Z",
+  "session_id": "831a47b1-c524-4a1b-b12b-765ebcb5ff5d",
+  "sentiment": "corrective",
+  "user_message": "How can we adjust our testing strategy to reduce throughput during parallel test runs?"
+}
+{
+  "timestamp": "2025-11-28T13:46:09Z",
+  "session_id": "831a47b1-c524-4a1b-b12b-765ebcb5ff5d",
+  "sentiment": "positive",
+  "user_message": "nice work. question: how much of a difference does the rust parser actually make?"
+}
+{
+  "timestamp": "2025-11-28T13:55:33Z",
+  "session_id": "361f79a9-e3d2-4888-a913-51514dc77652",
+  "sentiment": "positive",
+  "user_message": "I did a bunch of work on embeddings and the parser last time. Can you look over the codebase and clean it up? commit any uncommitted work, make sure the todos and changelog and in progress are all up to date?"
+}

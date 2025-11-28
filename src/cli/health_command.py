@@ -112,13 +112,13 @@ class HealthCommand:
             return False, "Not available (using Python fallback)"
 
     async def check_python_parser(self) -> Tuple[bool, str]:
-        """Check if Python parser fallback is available."""
-        try:
-            from src.memory.python_parser import get_parser
-            parser = get_parser()
-            return True, "Available (fallback mode)"
-        except ImportError as e:
-            return False, f"Not available: {e}"
+        """Check if Python parser fallback is available.
+
+        Note: Python parser fallback was removed (it was broken, returned 0 units).
+        Rust parser is now required. This method is kept for backward compatibility.
+        """
+        # Python parser was removed - Rust parser is now required
+        return False, "Removed (Rust parser is now required)"
 
     async def check_storage_backend(self) -> Tuple[bool, str, str]:
         """Check storage backend."""

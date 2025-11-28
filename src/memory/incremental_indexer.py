@@ -7,37 +7,20 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime, UTC
 
+# Rust parser is REQUIRED - no Python fallback (it was broken and returned 0 units)
 try:
     from mcp_performance_core import parse_source_file, batch_parse_files, ParseResult, SemanticUnit
     RUST_AVAILABLE = True
-    PARSER_MODE = "rust"
-    logging.info("Using Rust parser (optimal performance)")
-except ImportError:
+except ImportError as e:
     RUST_AVAILABLE = False
-    PARSER_MODE = "python"
-    logging.warning("Rust parsing module not available. Using Python fallback parser (10-20x slower).")
-    logging.info("For better performance, install Rust and build: cd rust_core && maturin develop")
-
-    # Track degradation
-    from src.core.degradation_warnings import add_degradation_warning
-    add_degradation_warning(
-        component="Rust Parser",
-        message="Rust parser unavailable, using Python fallback",
-        upgrade_path="cd rust_core && maturin develop (see docs/setup.md)",
-        performance_impact="10-20x slower parsing",
+    logging.error(
+        "Rust parser (mcp_performance_core) is required but not installed.\n"
+        "Install with: cd rust_core && maturin build --release && pip install target/wheels/*.whl\n"
+        "Code indexing will not work without it."
     )
 
-    # Import Python fallback parser
-    try:
-        from src.memory.python_parser import parse_code_file as python_parse_file
-        PYTHON_PARSER_AVAILABLE = True
-    except ImportError:
-        PYTHON_PARSER_AVAILABLE = False
-        logging.error("Python fallback parser also not available. Install: pip install tree-sitter tree-sitter-languages")
-
-    # Create ParseResult-like classes for compatibility
+    # Create stub classes so imports don't fail, but parsing will raise clear errors
     from dataclasses import dataclass
-    from typing import List
 
     @dataclass
     class SemanticUnit:
@@ -62,72 +45,17 @@ except ImportError:
         file_path: str
 
     def parse_source_file(file_path: str, source_code: str) -> ParseResult:
-        """Python fallback for parse_source_file."""
-        import time
-        if not PYTHON_PARSER_AVAILABLE:
-            raise ImportError("Neither Rust nor Python parser available")
+        """Stub that raises clear error when Rust parser is missing."""
+        raise ImportError(
+            "Rust parser (mcp_performance_core) is required for code indexing.\n"
+            "Install with: cd rust_core && maturin build --release && pip install target/wheels/*.whl"
+        )
 
-        # Detect language from file extension
-        from pathlib import Path
-        ext = Path(file_path).suffix.lower()
-        language_map = {
-            ".py": "python",
-            ".js": "javascript",
-            ".jsx": "javascript",
-            ".ts": "typescript",
-            ".tsx": "typescript",
-            ".java": "java",
-            ".go": "go",
-            ".rs": "rust",
-            ".rb": "ruby",
-            ".swift": "swift",
-            ".kt": "kotlin",
-            ".kts": "kotlin",
-            ".json": "json",
-            ".yaml": "yaml",
-            ".yml": "yaml",
-            ".toml": "toml",
-            ".c": "c",
-            ".cpp": "cpp",
-            ".cc": "cpp",
-            ".cxx": "cpp",
-            ".hpp": "cpp",
-            ".h": "cpp",
-            ".hxx": "cpp",
-            ".hh": "cpp",
-            ".cs": "csharp",
-            ".sql": "sql",
-            ".php": "php",
-        }
-        language = language_map.get(ext, "unknown")
-
-        # Parse using Python parser
-        start_time = time.time()
-        units_data = python_parse_file(file_path, language)
-        parse_time_ms = (time.time() - start_time) * 1000
-
-        # Convert to SemanticUnit objects
-        units = [
-            SemanticUnit(
-                unit_type=u["unit_type"],
-                name=u["name"],
-                signature=u["signature"],
-                start_line=u["start_line"],
-                end_line=u["end_line"],
-                start_byte=u["start_byte"],
-                end_byte=u["end_byte"],
-                content=u["content"],
-                language=u["language"],
-                file_path=u["file_path"],
-            )
-            for u in units_data
-        ]
-
-        return ParseResult(
-            units=units,
-            parse_time_ms=parse_time_ms,
-            language=language,
-            file_path=file_path,
+    def batch_parse_files(files: List[Tuple[str, str]]) -> List[ParseResult]:
+        """Stub that raises clear error when Rust parser is missing."""
+        raise ImportError(
+            "Rust parser (mcp_performance_core) is required for code indexing.\n"
+            "Install with: cd rust_core && maturin build --release && pip install target/wheels/*.whl"
         )
 
 from src.config import ServerConfig, get_config

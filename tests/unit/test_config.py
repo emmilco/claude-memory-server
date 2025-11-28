@@ -13,7 +13,8 @@ def test_config_defaults():
     assert config.log_level == "INFO"
     assert config.storage_backend == "qdrant"  # REF-010: Qdrant is now required for semantic search
     assert config.qdrant_url == "http://localhost:6333"
-    assert config.embedding_batch_size == 32
+    assert config.embedding_batch_size == 128  # Larger batches for MPS GPU acceleration
+    assert config.embedding_model == "all-mpnet-base-v2"  # 768 dims, better quality
     # REF-017: Check feature group instead of legacy flat field
     assert config.advanced.read_only_mode is False
 

@@ -987,6 +987,21 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Benefits:** Simpler architecture, clear expectations, better error messages, no misleading degraded mode
   - **Implemented:** 2025-11-19
 
+- [x] **REF-020**: Remove Python Parser Fallback References ✅ **COMPLETE** (2025-11-28)
+  - **Rationale:** Python parser fallback was removed (returned 0 units, silently broken). Rust parser is now required. Cleaned up remaining references.
+  - **Done:**
+    - [x] Removed `src/memory/python_parser.py`
+    - [x] Simplified `incremental_indexer.py` to require Rust parser with clear error
+    - [x] Updated `tests/conftest.py` - removed Python parser fallback
+    - [x] Updated `src/cli/health_command.py` - check_python_parser() returns "Removed"
+    - [x] Updated `scripts/validate_installation.py` - now checks Rust parser only
+    - [x] Updated `testing/orchestrator/test_executor.py` - test Rust parser availability
+    - [x] Removed `tests/unit/test_python_parser.py`
+  - **Remaining (low priority, doc updates):**
+    - [ ] Update CLAUDE.md references to Python parser fallback
+    - [ ] Update docs/setup.md - Rust parser is now required, not optional
+  - **Benefits:** Cleaner codebase, no broken fallback path, clear requirements
+
 - [ ] **REF-007**: Consolidate two server implementations
   - Merge old mcp_server.py with new src/core/
   - Unified architecture

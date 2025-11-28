@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   qdrant:
-    image: qdrant/qdrant:latest
+    image: qdrant/qdrant:v1.15.5
     container_name: qdrant-memory
     ports:
       - "6333:6333"  # HTTP API
@@ -12,17 +12,17 @@ services:
     volumes:
       - qdrant_storage:/qdrant/storage
     healthcheck:
-      # BUG-019: Use root endpoint (/) instead of /health (doesn't exist)
-      test: ["CMD", "curl", "-f", "http://localhost:6333/"]
-      interval: 5s
+      # BUG-019: Use TCP socket test (curl not available in Qdrant container)
+      test: ["CMD-SHELL", "timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/6333' || exit 1"]
+      interval: 30s
       timeout: 10s
-      retries: 5
+      retries: 3
       start_period: 10s
     restart: unless-stopped
     deploy:
       resources:
         limits:
-          cpus: '8.0'
+          cpus: '4.0'
           memory: 8G
         reservations:
           cpus: '2.0'

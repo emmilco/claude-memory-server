@@ -118,33 +118,29 @@ class InstallationValidator:
             return False
 
     def check_parser(self) -> bool:
-        """Check parser availability based on preset."""
-        if self.preset == "minimal":
-            # Python parser should work
-            try:
-                from src.memory.python_parser import PythonParser
-                parser = PythonParser()
-                self.add_result("Python Parser", True, "Available")
-                return True
-            except Exception as e:
-                self.add_result("Python Parser", False, str(e))
-                return False
+        """Check parser availability.
 
-        elif self.preset in ["standard", "full"]:
-            # Rust parser should work
-            try:
-                import rust_core
-                from rust_core import parse_python_file
+        Note: Python parser fallback was removed (it was broken).
+        Rust parser (mcp_performance_core) is now required for all presets.
+        """
+        # Rust parser is now required for all presets
+        try:
+            from mcp_performance_core import parse_source_file
 
-                # Test it works
-                test_code = "def test(): pass"
-                result = parse_python_file(test_code, "test.py")
+            # Test it works
+            test_code = "def test(): pass"
+            result = parse_source_file("test.py", test_code)
 
-                self.add_result("Rust Parser", True, "Compiled and working")
-                return True
-            except Exception as e:
-                self.add_result("Rust Parser", False, str(e))
-                return False
+            self.add_result("Rust Parser", True, "Compiled and working")
+            return True
+        except ImportError as e:
+            self.add_result("Rust Parser", False,
+                           f"Not installed: {e}\n"
+                           "Install with: cd rust_core && maturin build --release && pip install target/wheels/*.whl")
+            return False
+        except Exception as e:
+            self.add_result("Rust Parser", False, str(e))
+            return False
 
     def check_storage_backend(self) -> bool:
         """Check storage backend based on preset."""

@@ -455,58 +455,47 @@ class TestExecutor:
             result['notes'] = f'Error reading setup.py: {str(e)}'
 
     def _test_rust_fallback(self, result: Dict):
-        """Test INST-002: Rust fallback behavior"""
-        # Check if Python parser exists as fallback
-        python_parser = self.project_root / "src" / "memory" / "python_parser.py"
-        if not python_parser.exists():
-            result['status'] = 'FAIL'
-            result['notes'] = 'Python parser fallback not found at src/memory/python_parser.py'
-            result['bugs_found'].append({
-                'bug_id': 'BUG-NEW-002',
-                'severity': 'HIGH',
-                'description': 'Python parser fallback missing - system will fail if Rust parser unavailable',
-                'test_id': 'INST-002',
-                'impact': 'Installation fails when Rust/Cargo not available, no graceful degradation'
-            })
-            return
+        """Test INST-002: Rust parser availability (required)
 
-        # Try to import and verify the parser works
+        Note: Python parser fallback was removed (it was broken, returned 0 units).
+        Rust parser (mcp_performance_core) is now required for code indexing.
+        """
+        # Rust parser is now required - no fallback
         try:
             import sys
             sys.path.insert(0, str(self.project_root))
-            from src.memory.python_parser import PythonParser
+            from mcp_performance_core import parse_source_file
 
             # Test basic parsing
             test_code = 'def hello():\n    print("hello")\n'
-            parser = PythonParser()
-            functions = parser.extract_functions(test_code, 'test.py')
+            parse_result = parse_source_file("test.py", test_code)
 
-            if len(functions) > 0 and 'hello' in str(functions):
+            if hasattr(parse_result, 'units') and len(parse_result.units) > 0:
                 result['status'] = 'PASS'
-                result['notes'] = 'Python parser fallback exists and functional - successfully parsed test code'
+                result['notes'] = f'Rust parser (mcp_performance_core) is installed and functional - extracted {len(parse_result.units)} units'
             else:
                 result['status'] = 'FAIL'
-                result['notes'] = 'Python parser exists but failed to parse test code'
+                result['notes'] = 'Rust parser exists but failed to extract semantic units'
                 result['bugs_found'].append({
                     'bug_id': 'BUG-NEW-002B',
                     'severity': 'HIGH',
-                    'description': 'Python parser exists but not functional - failed basic parsing test',
+                    'description': 'Rust parser exists but not functional - failed basic parsing test',
                     'test_id': 'INST-002',
-                    'impact': 'Fallback parser does not work, system will fail without Rust'
+                    'impact': 'Code indexing will not work'
                 })
         except ImportError as e:
             result['status'] = 'FAIL'
-            result['notes'] = f'Python parser import failed: {str(e)}'
+            result['notes'] = f'Rust parser (mcp_performance_core) not installed: {str(e)}'
             result['bugs_found'].append({
-                'bug_id': 'BUG-NEW-002C',
-                'severity': 'HIGH',
-                'description': f'Python parser cannot be imported: {str(e)}',
+                'bug_id': 'BUG-NEW-002',
+                'severity': 'CRITICAL',
+                'description': f'Rust parser not installed: {str(e)}',
                 'test_id': 'INST-002',
-                'impact': 'Parser fallback broken, dependency or import issue'
+                'impact': 'Code indexing will not work. Install with: cd rust_core && maturin build --release && pip install target/wheels/*.whl'
             })
         except Exception as e:
             result['status'] = 'ERROR'
-            result['notes'] = f'Error testing Python parser: {str(e)}'
+            result['notes'] = f'Error testing Rust parser: {str(e)}'
 
     def _test_sqlite_backend(self, result: Dict):
         """Test INST-003: SQLite backend setup (removed in v4.0 - Qdrant-only architecture)"""

@@ -51,6 +51,36 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Added - 2025-11-28
+- **PERF: MPS (Apple Silicon) GPU Acceleration**
+  - Added `detect_mps()` function to detect Apple Silicon GPU availability
+  - Added MPS support to `get_gpu_info()` and `get_optimal_device()`
+  - `ParallelEmbeddingGenerator` now uses MPS for large models (all-mpnet-base-v2)
+  - Small models stay on CPU (lower GPU transfer overhead)
+  - Files: src/embeddings/gpu_utils.py, src/embeddings/generator.py, src/embeddings/parallel_generator.py
+
+### Changed - 2025-11-28
+- **Embedding model upgrade**
+  - Changed default from `all-MiniLM-L6-v2` (384 dims) to `all-mpnet-base-v2` (768 dims)
+  - Better embedding quality, MPS-optimized batch size (128)
+  - Updated vector size references throughout codebase
+  - Files: src/config.py, src/store/qdrant_setup.py, src/store/call_graph_store.py
+
+- **REF-020: Remove Python Parser Fallback**
+  - Removed `src/memory/python_parser.py` (was broken, returned 0 units)
+  - Rust parser (mcp_performance_core) is now required for code indexing
+  - Updated `incremental_indexer.py` with clear error messages
+  - Updated health_command.py, validate_installation.py, test_executor.py
+  - Removed `tests/unit/test_python_parser.py`
+
+- **Test Infrastructure Improvements**
+  - Reduced collection pool to 4 (matches pytest -n 4)
+  - Added proper cleanup of test collections at session end
+  - Added `throttled_qdrant` fixture for heavy operations
+  - Added `qdrant_heavy` pytest marker
+  - Dynamic vector size in conftest.py based on embedding model
+  - Files: tests/conftest.py, pytest.ini, docker-compose.yml
+
 ### Added - 2025-11-27
 - **FEAT-061: Git/Historical Integration**
   - Added 5 new MCP tools for git history analysis and change tracking:

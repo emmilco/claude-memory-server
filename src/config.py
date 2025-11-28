@@ -178,12 +178,12 @@ class ServerConfig(BaseSettings):
     qdrant_health_check_interval: int = 60  # Health check every N seconds
 
     # Performance tuning
-    embedding_batch_size: int = 32
+    embedding_batch_size: int = 128  # Larger batches for MPS GPU acceleration
     max_query_context_tokens: int = 8000
     retrieval_timeout_ms: int = 500
 
     # Embedding settings
-    embedding_model: str = "all-MiniLM-L6-v2"
+    embedding_model: str = "all-mpnet-base-v2"  # 768 dims, better quality, MPS-optimized
     embedding_cache_enabled: bool = True
     embedding_cache_path: str = "~/.claude-rag/embedding_cache.db"
     embedding_cache_ttl_days: int = 30

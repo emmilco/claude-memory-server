@@ -39,7 +39,13 @@ class QdrantSetup:
 
         self.config = config
         self.collection_name = config.qdrant_collection_name
-        self.vector_size = 384  # all-MiniLM-L6-v2 embedding dimension
+        # Vector size based on embedding model
+        model_dims = {
+            "all-MiniLM-L6-v2": 384,
+            "all-MiniLM-L12-v2": 384,
+            "all-mpnet-base-v2": 768,
+        }
+        self.vector_size = model_dims.get(config.embedding_model, 768)
         self.use_pool = use_pool
         self.client: Optional[QdrantClient] = None
         self.pool: Optional[QdrantConnectionPool] = None

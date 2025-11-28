@@ -59,7 +59,13 @@ class QdrantCallGraphStore:
 
         self.config = config
         self.collection_name = "code_call_graph"
-        self.vector_size = 384  # Dummy vector for compatibility
+        # Dummy vector size must match embedding model for collection compatibility
+        model_dims = {
+            "all-MiniLM-L6-v2": 384,
+            "all-MiniLM-L12-v2": 384,
+            "all-mpnet-base-v2": 768,
+        }
+        self.vector_size = model_dims.get(config.embedding_model, 768)
         self.client: Optional[QdrantClient] = None
 
     async def initialize(self) -> None:

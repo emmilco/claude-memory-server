@@ -94,14 +94,17 @@ class EmbeddingGenerator:
         device = get_optimal_device()
 
         # Log GPU info if available
-        if device == "cuda":
+        if device in ("cuda", "mps"):
             gpu_info = get_gpu_info()
             if gpu_info:
-                logger.info(
-                    f"GPU detected: {gpu_info['device_name']} "
-                    f"({gpu_info['total_memory_gb']} GB, "
-                    f"CUDA {gpu_info['cuda_version']})"
-                )
+                if device == "cuda":
+                    logger.info(
+                        f"GPU detected: {gpu_info['device_name']} "
+                        f"({gpu_info['total_memory_gb']} GB, "
+                        f"CUDA {gpu_info['cuda_version']})"
+                    )
+                else:
+                    logger.info(f"GPU detected: {gpu_info['device_name']}")
 
         return device
 

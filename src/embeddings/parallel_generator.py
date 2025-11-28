@@ -206,11 +206,22 @@ class ParallelEmbeddingGenerator:
 
         self.embedding_dim = self.MODELS[self.model_name]
 
-        # Determine worker count from config.performance.parallel_workers (default: 3)
-        if max_workers is None:
-            max_workers = getattr(config.performance, 'parallel_workers', 3)
+        # MPS (Apple Silicon) is faster for larger models with large batch sizes
+        # Small models like all-MiniLM-L6-v2 are faster on CPU due to GPU transfer overhead
+        from src.embeddings.gpu_utils import detect_mps
+        large_model = self.model_name in ("all-mpnet-base-v2",)  # Models that benefit from MPS
+        self._use_mps_fallback = detect_mps() and large_model and not config.performance.force_cpu
+        self._mps_generator = None
 
-        self.max_workers = max_workers
+        if self._use_mps_fallback:
+            logger.info("MPS (Apple Silicon) detected with large model - using GPU acceleration")
+            self.max_workers = 1  # Single-threaded for MPS
+        else:
+            # Determine worker count from config.performance.parallel_workers (default: 3)
+            if max_workers is None:
+                max_workers = getattr(config.performance, 'parallel_workers', 3)
+            self.max_workers = max_workers
+
         self.executor: Optional[ProcessPoolExecutor] = None
 
         # Initialize cache (if enabled)
@@ -228,16 +239,24 @@ class ParallelEmbeddingGenerator:
 
     async def initialize(self) -> None:
         """
-        Initialize the process pool executor.
+        Initialize the process pool executor (or MPS generator).
 
         Should be called during server initialization.
         """
         try:
-            logger.info(f"Initializing process pool with {self.max_workers} workers")
-            self.executor = ProcessPoolExecutor(max_workers=self.max_workers)
-            logger.info("Process pool initialized successfully")
+            if self._use_mps_fallback:
+                # Use single-threaded MPS generator
+                from src.embeddings.generator import EmbeddingGenerator
+                logger.info("Initializing MPS embedding generator")
+                self._mps_generator = EmbeddingGenerator(self.config)
+                await self._mps_generator.initialize()
+                logger.info("MPS embedding generator initialized successfully")
+            else:
+                logger.info(f"Initializing process pool with {self.max_workers} workers")
+                self.executor = ProcessPoolExecutor(max_workers=self.max_workers)
+                logger.info("Process pool initialized successfully")
         except Exception as e:
-            logger.error(f"Failed to initialize process pool: {e}", exc_info=True)
+            logger.error(f"Failed to initialize embedding generator: {e}", exc_info=True)
             raise
 
     async def generate(self, text: str) -> List[float]:
@@ -294,6 +313,12 @@ class ParallelEmbeddingGenerator:
         for i, text in enumerate(texts):
             if not text or not text.strip():
                 raise EmbeddingError(f"Empty text at index {i}")
+
+        # Use MPS generator if available (GPU-accelerated single-threaded)
+        if self._use_mps_fallback and self._mps_generator:
+            if show_progress:
+                logger.info(f"Using MPS (Apple Silicon) for {len(texts)} texts")
+            return await self._mps_generator.batch_generate(texts, batch_size, show_progress)
 
         # Adaptive batch sizing based on text length (PERF-004)
         if batch_size is None:
