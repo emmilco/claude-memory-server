@@ -6,8 +6,7 @@ dry-run previews, batch processing, progress tracking, and safety limits.
 """
 
 import asyncio
-import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Callable, Dict, List, Optional, Protocol
 from pydantic import BaseModel, Field
 
@@ -392,8 +391,6 @@ class BulkDeleteManager:
         )
 
         # Calculate expiry date
-        from datetime import timedelta
-
         expiry = datetime.now() + timedelta(days=self.soft_delete_retention_days)
 
         # Update memory metadata with deletion info
@@ -517,7 +514,8 @@ class BulkDeleteManager:
         Returns:
             RollbackInfo if rollback exists and is valid, None otherwise
         """
-        # Note: This requires the store to support querying by metadata
+        # TODO: Implement once store supports metadata queries
+        # This requires the store to support querying by metadata
         # In a real implementation, we would query for all memories with
         # metadata.deletion_info.rollback_id == rollback_id
         # For now, this is a placeholder that would need store-specific implementation
@@ -542,6 +540,7 @@ class BulkDeleteManager:
         Returns:
             Result with statistics about the rollback operation
         """
+        # TODO: Implement once store supports metadata queries
         start_time = datetime.now()
 
         restored_count = 0
@@ -577,7 +576,8 @@ class BulkDeleteManager:
         Returns:
             List of RollbackInfo for all deletions that can be rolled back
         """
-        # Note: This requires the store to support querying by metadata
+        # TODO: Implement once store supports metadata queries
+        # This requires the store to support querying by metadata
         # In a real implementation, we would query for all unique rollback_ids
         # from memories with metadata.soft_deleted == True
         raise NotImplementedError(
@@ -597,7 +597,8 @@ class BulkDeleteManager:
         Returns:
             Number of memories permanently deleted
         """
-        # Note: This requires the store to support querying by metadata
+        # TODO: Implement once store supports metadata queries
+        # This requires the store to support querying by metadata
         # In a real implementation, we would:
         # 1. Query for memories where metadata.soft_deleted == True
         #    AND metadata.rollback_expiry < now()
