@@ -51,6 +51,13 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Changed - 2025-11-29
+- **REF-011: Integrate ProjectArchivalManager with metrics**
+  - Added `archival_manager` parameter to `MetricsCollector.__init__()`
+  - Connected metrics_collector to ProjectArchivalManager for accurate active vs archived project counts
+  - Updated `collect_metrics()` to use archival manager when available, fallback to counting all as active
+  - File: src/monitoring/metrics_collector.py
+
 ### Added - 2025-11-29
 - **Service Layer Code Audit: 17 NEW bugs discovered (BUG-055 to BUG-063, REF-038 to REF-044)**
   - Comprehensive 3-agent parallel review of service layer (extracted in REF-013)
