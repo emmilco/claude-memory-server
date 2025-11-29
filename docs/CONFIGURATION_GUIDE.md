@@ -1165,7 +1165,7 @@ docker-compose restart
 | `auto_index_on_startup` | `indexing.auto_index_on_startup` |
 | `enable_git_indexing` | `indexing.git_indexing` |
 | `enable_multi_repository` | `advanced.multi_repository` |
-| `allow_rust_fallback` | `advanced.rust_fallback` |
+| `allow_rust_fallback` | (Deprecated - Rust parser is now required) |
 | `enable_input_validation` | `advanced.input_validation` |
 | `read_only_mode` | `advanced.read_only_mode` |
 

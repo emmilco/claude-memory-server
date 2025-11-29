@@ -63,7 +63,7 @@ claude-memory-server/
 │   │   ├── auto_indexing_service.py     # Foreground/background orchestration
 │   │   ├── background_indexer.py        # Async background service
 │   │   ├── file_watcher.py              # Real-time file watching
-│   │   ├── python_parser.py             # Pure Python fallback
+│   │   ├── (python_parser.py removed)   # Rust parser now required
 │   │   ├── classifier.py                # Context stratification
 │   │   ├── lifecycle_manager.py         # 4-tier lifecycle (ACTIVE/RECENT/ARCHIVED/STALE)
 │   │   ├── storage_optimizer.py         # Storage optimization analysis

@@ -121,11 +121,7 @@ The Claude Memory RAG Server is a Model Context Protocol (MCP) server that provi
 - Debounces rapid changes (1000ms default)
 - Async operation in background
 
-**python_parser.py** (11KB)
-- Pure Python fallback parser using tree-sitter Python bindings
-- No Rust dependency required
-- Supports all 14 programming languages (10-20x slower than Rust but fully functional)
-- Automatic graceful degradation when Rust parser unavailable
+**Note:** The Python fallback parser has been removed. Code parsing now requires the Rust parser module (mcp_performance_core).
 
 **Memory Classification & Lifecycle**
 
@@ -692,9 +688,8 @@ import mcp_performance_core
 
 **Performance:**
 ```
-Python parser:  50-100ms per file
 Rust parser:    1-6ms per file
-Speedup:        8-100x faster
+(Python parser has been removed - Rust parser is now required)
 ```
 
 ---
