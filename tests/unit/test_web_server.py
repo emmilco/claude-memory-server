@@ -718,10 +718,9 @@ class TestErrorHandling:
 
         # Verify 500 response was sent
         mock_handler.send_response.assert_called_with(500)
-        # The error response should have been written
-        wfile_content = mock_handler.wfile.getvalue().decode()
-        # Content may be empty depending on mock behavior, so just verify error response was attempted
-        assert mock_handler.send_response.called
+        # Verify error response was written to wfile
+        response_data = json.loads(mock_handler.wfile.getvalue().decode())
+        assert "error" in response_data
 
     def test_asyncio_timeout_handling(self, mock_handler):
         """Test timeout errors handled with 500 response."""
@@ -780,8 +779,11 @@ class TestLogging:
         with patch("src.dashboard.web_server.logger") as mock_logger:
             mock_handler.log_message("GET %s %s", "/api/stats", "200")
 
-            # Verify logger was called, not stderr
-            assert mock_logger.info.called
+            # Verify logger.info was called with the formatted message
+            mock_logger.info.assert_called_once()
+            call_args = mock_logger.info.call_args[0][0]
+            assert "/api/stats" in call_args
+            assert "200" in call_args
 
 
 class TestStaticFileServing:
