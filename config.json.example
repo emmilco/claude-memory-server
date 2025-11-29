@@ -46,7 +46,7 @@
   "allow_qdrant_fallback": true,
   "_qdrant_fallback_comment": "Fall back to SQLite if Qdrant unavailable",
   "allow_rust_fallback": true,
-  "_rust_fallback_comment": "Fall back to Python parser if Rust unavailable",
+  "_rust_fallback_comment": "(Deprecated) Rust parser is now required for code indexing",
   "warn_on_degradation": true,
 
   "_section_retrieval": "=== ADAPTIVE RETRIEVAL ===",
@@ -128,7 +128,7 @@
   "_proactive_threshold_comment": "Range: 0.0-1.0, higher = fewer but more confident suggestions",
 
   "_section_examples": "=== COMMON CONFIGURATION PRESETS ===",
-  "_example_minimal": "Minimal (No Docker): storage_backend='sqlite', enable_parallel_embeddings=false, allow_rust_fallback=true",
+  "_example_minimal": "Minimal (No Docker): storage_backend='sqlite', enable_parallel_embeddings=false (Rust parser still required)",
   "_example_standard": "Standard (Docker): storage_backend='qdrant', enable_parallel_embeddings=true",
   "_example_performance": "High-Performance: storage_backend='qdrant', enable_parallel_embeddings=true, embedding_parallel_workers=8, embedding_batch_size=64, enable_hybrid_search=true",
   "_example_dev": "Development: log_level='DEBUG', storage_backend='sqlite', enable_file_watcher=false, enable_auto_pruning=false"

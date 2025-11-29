@@ -439,11 +439,7 @@ cd ..
 python -c "import rust_core; print('Rust parser available')"
 ```
 
-**Skip Rust (use Python fallback):**
-- Simply don't build the Rust module
-- The system automatically detects and uses Python parser
-- Performance: ~10-20x slower, but fully functional
-- Check status: `python -m src.cli status` (shows parser mode)
+**Note:** The Rust parser is required for code indexing functionality. Without it, you can still use memory storage and retrieval features, but code indexing will not be available.
 
 ---
 

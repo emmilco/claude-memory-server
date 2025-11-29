@@ -129,9 +129,9 @@ python3.13 --version
 # Expected output: Python 3.13.x
 ```
 
-### Step 3: Install Rust (Optional but Recommended)
+### Step 3: Install Rust (Required)
 
-Rust provides 50-100x faster code parsing. Highly recommended!
+Rust is required for code parsing. The system uses a high-performance Rust parser for all code indexing operations.
 
 ```bash
 # Install Rust
@@ -203,7 +203,7 @@ The wizard will guide you through:
 ✓ Docker detected
 
 Choose installation mode:
-1. minimal   - SQLite + Python parser (no dependencies, ~3 min)
+1. minimal   - SQLite storage (requires Rust parser, ~3 min)
 2. standard  - SQLite + Rust parser (faster, ~5 min)
 3. full      - Qdrant + Rust parser (production, ~10 min)
 
@@ -1424,7 +1424,7 @@ cd ..
 python -c "import mcp_performance_core; print('OK')"
 ```
 
-**Fallback:** The server works with pure Python parser if Rust isn't available (just slower)
+**Note:** The Rust parser is required for code indexing functionality. Memory storage and retrieval operations work without it.
 
 ### Python Import Errors
 

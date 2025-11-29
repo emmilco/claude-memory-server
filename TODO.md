@@ -1027,8 +1027,14 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
     - [x] Updated `testing/orchestrator/test_executor.py` - test Rust parser availability
     - [x] Removed `tests/unit/test_python_parser.py`
   - **Remaining (low priority, doc updates):**
-    - [ ] Update CLAUDE.md references to Python parser fallback
-    - [ ] Update docs/setup.md - Rust parser is now required, not optional
+    - [x] Update CLAUDE.md references to Python parser fallback
+    - [x] Update docs/setup.md - Rust parser is now required, not optional
+    - [x] Update DEBUGGING.md - removed Python fallback references
+    - [x] Update TUTORIAL.md - Rust is required, not optional
+    - [x] Update README.md - removed Python fallback references
+    - [x] Update docs/TROUBLESHOOTING.md - removed Python fallback section
+    - [x] Update docs/ERROR_HANDLING.md - removed fallback parser references
+    - [x] Update config.json.example - marked allow_rust_fallback as deprecated
   - **Benefits:** Cleaner codebase, no broken fallback path, clear requirements
 
 - [ ] **REF-007**: Consolidate two server implementations
