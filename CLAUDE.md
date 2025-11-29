@@ -553,16 +553,16 @@ These entries enable periodic retrospectives to identify:
 
 ---
 
-## 🔄 Behavioral Reinforcement System
+## 🔄 Values System
 
-A feedback loop for iterative behavioral improvement. User reactions (praise, criticism, corrections) are captured automatically and analyzed periodically to extract actionable principles.
+A feedback loop for iterative behavioral improvement. User reactions (praise, criticism, corrections) are captured automatically and analyzed periodically to refine values.
 
 ### How It Works
 
 1. **Automatic Capture:** Sentiment keywords in user messages trigger logging to `.claude/feedback/feedback_log.jsonl`
 2. **Periodic Analysis:** Run `/retro` to analyze feedback, filter false positives, identify patterns
-3. **Principle Extraction:** Recurring patterns become candidate principles for user approval
-4. **Guidance Update:** Approved principles are added to `LEARNED_PRINCIPLES.md`
+3. **Value Refinement:** Patterns become calibrations on existing values (or rarely, new values)
+4. **Guidance Update:** Approved changes are added to `VALUES.md`
 
 ### Commands
 
@@ -575,10 +575,9 @@ A feedback loop for iterative behavioral improvement. User reactions (praise, cr
 
 | File | Purpose |
 |------|---------|
-| `LEARNED_PRINCIPLES.md` | Extracted behavioral rules (consult alongside this file) |
+| `VALUES.md` | Working orientations and calibrations (consult alongside this file) |
 | `.claude/feedback/feedback_log.jsonl` | Raw feedback entries |
 | `.claude/feedback/retro_history.md` | Audit trail of retrospectives |
-| `.claude/feedback/reports/` | Detailed retro reports (one per session) |
 | `.claude/logs/CLAUDE_LOGS.jsonl` | Activity log (tool uses, tasks) for context correlation |
 
 ### Sentiment Detection
@@ -595,7 +594,7 @@ Detection is intentionally over-sensitive; false positives are filtered during `
 Work normally. When you've accumulated feedback (after several sessions), run `/retro` to:
 1. Review genuine feedback vs false positives
 2. Identify behavioral patterns
-3. Generate candidate principles
+3. Map patterns to values as calibrations
 4. Approve or reject proposed changes
 
 **Full documentation:** `planning_docs/FEAT-050_behavioral_reinforcement_system.md`

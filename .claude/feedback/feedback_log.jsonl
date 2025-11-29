@@ -521,3 +521,27 @@
   "sentiment": "negative",
   "user_message": "The current project is in rough shape. I've surfaced a ton of tech debt and broken features in the past few days. I would like you to do an extremely thorough review of the codebase, file by file, looking for tech debt and bugs. You are not allowed to make any writes or run any tests. This is a read-only exercise. When you're done please check your findings against the TODO file and let me know what you've discovered that's new."
 }
+{
+  "timestamp": "2025-11-29T17:49:25Z",
+  "session_id": "b5fae9d9-3b4a-4863-baaa-e3053ec40444",
+  "sentiment": "negative",
+  "user_message": "I have a strategic problem that I'd like to talk through with you. If you look in the TODO file you'll find a very large backlog of bugs. My machine can handle running up to 6 agents in parallel, but my test infrastructure only supports one agent running tests at a time. What I'd like is to create a workflow that kept six agents running constantly. Some of them would be doing actual coding work, some would be reviewers. The reviewers would be responsible for assessing completed but unmerged tasks for task completion and code correctness, merging main into the worktree's feature branch, resolving any conflicts, and then running the full test suite before merging. There needs to be zero tolerance for failing tests. Again only one agent can run tests at a time. How could I support this workflow so that claude orchestrates it for me? (I'm asking strategically, I don't want you to launch the workflow yet.)"
+}
+{
+  "timestamp": "2025-11-29T17:57:05Z",
+  "session_id": "856cca22-b2a9-4c58-9687-dbbc741e2b62",
+  "sentiment": "positive",
+  "user_message": "I'd like you to make a journal entry recording how this multi-agent setup works, the rules roles and responsibilities."
+}
+{
+  "timestamp": "2025-11-29T18:52:12Z",
+  "session_id": "b5fae9d9-3b4a-4863-baaa-e3053ec40444",
+  "sentiment": "positive",
+  "user_message": "/right good job. thoroughness in checking for consistency after making a change is really important."
+}
+{
+  "timestamp": "2025-11-29T18:54:13Z",
+  "session_id": "b5fae9d9-3b4a-4863-baaa-e3053ec40444",
+  "sentiment": "corrective",
+  "user_message": "the questionnaire was supposed to ask me to rate how well the session went on a 1-5 scale and offer any concrete feedback"
+}

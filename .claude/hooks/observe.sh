@@ -154,10 +154,10 @@ if [[ "$EVENT_TYPE" == "user_prompt" ]]; then
 fi
 
 # ─────────────────────────────────────────────────────────────
-# LEARNED PRINCIPLES INJECTION (new sessions only)
+# VALUES INJECTION (new sessions only)
 # ─────────────────────────────────────────────────────────────
 
-PRINCIPLES_OUTPUT=""
+VALUES_OUTPUT=""
 SEEN_SESSIONS_FILE="${LOGS_DIR}/.seen_sessions"
 touch "$SEEN_SESSIONS_FILE" 2>/dev/null || true
 
@@ -171,19 +171,19 @@ if [[ "$EVENT_TYPE" == "user_prompt" ]]; then
     tail -n 100 "$SEEN_SESSIONS_FILE" > "${SEEN_SESSIONS_FILE}.tmp" 2>/dev/null && \
       mv "${SEEN_SESSIONS_FILE}.tmp" "$SEEN_SESSIONS_FILE" 2>/dev/null || true
 
-    # Read principles file
+    # Read values file
     SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-    PRINCIPLES_FILE="${SCRIPT_DIR}/../../LEARNED_PRINCIPLES.md"
+    VALUES_FILE="${SCRIPT_DIR}/../../VALUES.md"
 
-    if [[ -f "$PRINCIPLES_FILE" ]]; then
-      # Extract Active Principles section (between "## Active Principles" and "## Retired")
+    if [[ -f "$VALUES_FILE" ]]; then
+      # Extract Active Values and Calibrations sections (between "## Active Values" and "## Value History")
       # Note: Use sed '$d' twice instead of head -n -2 (macOS head doesn't support negative counts)
-      PRINCIPLES=$(sed -n '/^## Active Principles/,/^## Retired/p' "$PRINCIPLES_FILE" 2>/dev/null | sed '$d' | sed '$d')
+      VALUES=$(sed -n '/^## Active Values/,/^## Value History/p' "$VALUES_FILE" 2>/dev/null | sed '$d' | sed '$d')
 
-      # Only output if there are actual principles (not the placeholder text)
-      if [[ -n "$PRINCIPLES" ]] && [[ "$PRINCIPLES" != *"No principles yet"* ]]; then
-        PRINCIPLES_OUTPUT="[LEARNED PRINCIPLES - Behavioral guidelines from user feedback analysis:]
-$PRINCIPLES"
+      # Only output if there are actual values
+      if [[ -n "$VALUES" ]]; then
+        VALUES_OUTPUT="[VALUES - Working orientations from user feedback analysis:]
+$VALUES"
       fi
     fi
   fi
@@ -236,9 +236,9 @@ fi
 # OUTPUT - Return context to Claude if needed
 # ─────────────────────────────────────────────────────────────
 
-# Output principles first (if new session), then journal prompt
-if [[ -n "$PRINCIPLES_OUTPUT" ]]; then
-  echo "$PRINCIPLES_OUTPUT"
+# Output values first (if new session), then journal prompt
+if [[ -n "$VALUES_OUTPUT" ]]; then
+  echo "$VALUES_OUTPUT"
   echo ""
 fi
 

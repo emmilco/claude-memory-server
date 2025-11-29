@@ -6,6 +6,123 @@ Work session entries from Claude agents. See [Work Journal Protocol](CLAUDE.md#-
 
 ---
 
+### 2025-11-29 13:52 | b5fae9d9 | SESSION_SUMMARY
+
+**Duration:** ~65 minutes
+**Main work:** Strategic discussion on parallel bug-fix workflow, ran /retro, then migrated from LEARNED_PRINCIPLES.md to VALUES.md system
+
+**What went well:**
+- Good collaborative design discussion on autonomous multi-agent workflow (4+1+1 split: coders, reviewer/tester, watchdog)
+- Identified key design principle: "parked" queue for uncertain situations enables safe walk-away operation
+- Thorough consistency check after VALUES.md migration - caught stale file references in /right and /wrong commands
+- User praised thoroughness in checking for consistency
+
+**What went poorly or was difficult:**
+- Ran /retro using old LEARNED_PRINCIPLES.md system without first checking if it had been replaced - user had to point out VALUES.md already existed
+- This wasted time generating LP-010 and LP-011 that then needed to be migrated immediately after
+
+**Open threads:**
+- Parallel bug-fix workflow design discussion incomplete - user asked strategic questions about:
+  - How long coders should spend before parking (suggested 2 hours)
+  - Level of code review desired (minimal/light/thorough)
+  - Notification preferences when away
+  - Whether coders should write their own tests
+- No implementation of the workflow yet - user explicitly said "I don't want you to launch the workflow yet"
+
+---
+
+### 2025-11-29 12:57 | 856cca22 | PROCESS_DOCUMENTATION
+
+**Topic:** Multi-Agent Tech Debt Orchestration Workflow
+
+**Context:**
+User requested orchestrated tech debt paydown with multiple parallel agents. Through iteration, we established a 4-stage pipeline with clear role separation.
+
+## Workflow Overview
+
+```
+TODO.md → TASK AGENTS → REVIEW.md → REVIEWERS → TESTERS → CHANGELOG.md
+            (implement)              (code review)  (test & merge)
+```
+
+## Roles & Responsibilities
+
+### 1. Orchestrator (Me)
+- **Count:** 1
+- **Responsibilities:**
+  - Pick tasks from TODO.md based on priority
+  - Spawn Task Agents (up to 4 parallel)
+  - Update tracking files (IN_PROGRESS.md, REVIEW.md)
+  - Spawn Reviewers and Testers
+  - Monitor progress and report status
+  - Spawn new Task Agents when capacity opens
+
+### 2. Task Agents
+- **Count:** Up to 4 in parallel
+- **Responsibilities:**
+  - Create git worktree for assigned task
+  - Implement the code/tests
+  - Update CHANGELOG.md
+  - Commit changes to worktree
+  - Report completion (files changed, worktree path)
+- **DO NOT:** Run tests (that's the Tester's job)
+
+### 3. Reviewers
+- **Count:** Multiple in parallel (one per task)
+- **Responsibilities:**
+  - Code review in the worktree
+  - Check code quality, patterns, anti-patterns
+  - Fix any issues found
+  - Commit review fixes
+  - Evaluate task completion (did they do what was asked?)
+  - Mark task "Ready for Testing"
+- **DO NOT:** Run full test suite (that's the Tester's job)
+
+### 4. Tester
+- **Count:** 1 at a time (serialized)
+- **Responsibilities:**
+  - Run full test suite on the worktree
+  - Fix any test failures
+  - Merge to main (`git merge --no-ff`)
+  - Cleanup worktree and branch
+  - Update CHANGELOG.md
+- **WHY serialized:** Tests must run against consistent state; parallel merges cause conflicts
+
+## Pipeline Stages
+
+| Stage | Tracking File | Parallel? | Who Moves It |
+|-------|--------------|-----------|--------------|
+| Backlog | TODO.md | - | Orchestrator |
+| Implementation | IN_PROGRESS.md | Yes (4) | Task Agent |
+| Code Review | REVIEW.md | Yes | Reviewer |
+| Testing | REVIEW.md (marked) | No (1) | Tester |
+| Complete | CHANGELOG.md | - | Tester |
+
+## Key Rules
+
+1. **Task Agents don't run tests** - Reduces context, speeds up implementation
+2. **Reviewers don't run full suite** - Focus on code quality, not CI
+3. **Only one Tester at a time** - Prevents merge conflicts
+4. **Worktrees for everything** - Isolation, parallel work, clean rollback
+5. **Tracking files are source of truth** - Always update before spawning
+
+## Bottleneck Mitigation
+
+Original design had Reviewer doing everything (review + test + merge), which was slow.
+
+New design separates concerns:
+- Reviewers can work in parallel (code review is fast)
+- Tester is serialized but focused (just test + merge)
+- This maximizes throughput while ensuring test consistency
+
+## Current Session State
+
+**Completed (merged):** TEST-007-A, TEST-007-B, REF-020
+**In Review:** REF-008, TEST-007-C, TEST-007-D, TEST-007-E
+**Capacity:** 0/4 Task Agents active, 4 reviews pending
+
+---
+
 ### 2025-11-29 11:04 | f3ec3a9e | SESSION_SUMMARY
 
 **Duration:** ~1 hour
