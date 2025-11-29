@@ -509,3 +509,9 @@
   "sentiment": "positive",
   "user_message": "Excellent work. I'd like you to add TODOs for all the issues you identified and move them to the top of the TODO file. I would also like you to delete any TODOs that are fully complete."
 }
+{
+  "timestamp": "2025-11-29T17:21:27Z",
+  "session_id": "3d858ff4-546d-4794-950a-81a3be03f02b",
+  "sentiment": "negative",
+  "user_message": "The current project is in rough shape. I've surfaced a ton of tech debt and broken features in the past few days. I would like you to do an extremely thorough review of the codebase, looking for tech debt and bugs. You are not allowed to make any writes or run any tests. This is a read-only exercise. When you're done please check your findings against the TODO file and let me know what you've discovered that's new."
+}
