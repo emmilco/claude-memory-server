@@ -61,21 +61,32 @@ class TestDashboardServerStart:
         with patch('src.dashboard.web_server.MemoryRAGServer') as MockRAGServer:
             with patch('src.dashboard.web_server.HTTPServer') as MockHTTPServer:
                 with patch('src.dashboard.web_server.threading.Thread') as MockThread:
-                    # Setup mocks
-                    mock_rag = AsyncMock()
-                    mock_rag.initialize = AsyncMock()
-                    MockRAGServer.return_value = mock_rag
+                    with patch('asyncio.run_coroutine_threadsafe') as mock_run_coroutine:
+                        with patch('asyncio.new_event_loop') as mock_new_loop:
+                            # Setup mocks
+                            mock_rag = AsyncMock()
+                            mock_rag.initialize = AsyncMock()
+                            MockRAGServer.return_value = mock_rag
 
-                    # Start server
-                    await server.start(host="localhost", port=8080)
+                            # Mock event loop
+                            mock_loop = MagicMock()
+                            mock_new_loop.return_value = mock_loop
 
-                    # Verify components were initialized
-                    assert server.is_running is True
-                    assert server.event_loop is not None
-                    assert server.loop_thread is not None
-                    assert server.rag_server is not None
-                    MockRAGServer.assert_called_once()
-                    MockHTTPServer.assert_called_once()
+                            # Mock future result for initialize()
+                            mock_future = MagicMock()
+                            mock_future.result = MagicMock(return_value=None)
+                            mock_run_coroutine.return_value = mock_future
+
+                            # Start server
+                            await server.start(host="localhost", port=8080)
+
+                            # Verify components were initialized
+                            assert server.is_running is True
+                            assert server.event_loop is not None
+                            assert server.loop_thread is not None
+                            assert server.rag_server is not None
+                            MockRAGServer.assert_called_once()
+                            MockHTTPServer.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_start_with_custom_host_port(self):
@@ -85,16 +96,27 @@ class TestDashboardServerStart:
         with patch('src.dashboard.web_server.MemoryRAGServer') as MockRAGServer:
             with patch('src.dashboard.web_server.HTTPServer') as MockHTTPServer:
                 with patch('src.dashboard.web_server.threading.Thread'):
-                    mock_rag = AsyncMock()
-                    mock_rag.initialize = AsyncMock()
-                    MockRAGServer.return_value = mock_rag
+                    with patch('asyncio.run_coroutine_threadsafe') as mock_run_coroutine:
+                        with patch('asyncio.new_event_loop') as mock_new_loop:
+                            mock_rag = AsyncMock()
+                            mock_rag.initialize = AsyncMock()
+                            MockRAGServer.return_value = mock_rag
 
-                    await server.start(host="0.0.0.0", port=9000)
+                            # Mock event loop
+                            mock_loop = MagicMock()
+                            mock_new_loop.return_value = mock_loop
 
-                    # Verify HTTPServer was called with correct args
-                    MockHTTPServer.assert_called_once()
-                    call_args = MockHTTPServer.call_args
-                    assert call_args[0][0] == ("0.0.0.0", 9000)
+                            # Mock future result for initialize()
+                            mock_future = MagicMock()
+                            mock_future.result = MagicMock(return_value=None)
+                            mock_run_coroutine.return_value = mock_future
+
+                            await server.start(host="0.0.0.0", port=9000)
+
+                            # Verify HTTPServer was called with correct args
+                            MockHTTPServer.assert_called_once()
+                            call_args = MockHTTPServer.call_args
+                            assert call_args[0][0] == ("0.0.0.0", 9000)
 
     @pytest.mark.asyncio
     async def test_start_raises_if_already_running(self):
@@ -125,10 +147,24 @@ class TestDashboardServerStop:
 
         # Mock the components as if server was started
         server.is_running = True
-        server.server = MagicMock()
-        server.rag_server = MagicMock()
-        server.event_loop = MagicMock()
-        server.loop_thread = MagicMock()
+
+        # Create proper mocks with the methods the code expects
+        mock_http_server = MagicMock()
+        mock_http_server.shutdown = MagicMock()
+        server.server = mock_http_server
+
+        mock_rag_server = MagicMock()
+        mock_rag_server.close = AsyncMock()
+        server.rag_server = mock_rag_server
+
+        mock_event_loop = MagicMock()
+        mock_event_loop.call_soon_threadsafe = MagicMock()
+        mock_event_loop.stop = MagicMock()
+        server.event_loop = mock_event_loop
+
+        mock_thread = MagicMock()
+        mock_thread.join = MagicMock()
+        server.loop_thread = mock_thread
 
         with patch('asyncio.run_coroutine_threadsafe') as mock_run:
             mock_future = MagicMock()
@@ -138,7 +174,7 @@ class TestDashboardServerStop:
             await server.stop()
 
             # Verify cleanup
-            server.server.shutdown.assert_called_once()
+            mock_http_server.shutdown.assert_called_once()
             assert server.is_running is False
 
 

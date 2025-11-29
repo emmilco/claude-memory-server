@@ -6,6 +6,78 @@ Work session entries from Claude agents. See [Work Journal Protocol](CLAUDE.md#-
 
 ---
 
+### 2025-11-29 11:04 | f3ec3a9e | SESSION_SUMMARY
+
+**Duration:** ~1 hour
+**Main work:** Orchestrated 4 parallel agents to fix failing tests, then diagnosed and fixed parallel test flakiness with `--dist loadscope`
+
+**What went well:**
+- Successfully identified root cause of parallel test failures (Qdrant connection pool exhaustion)
+- Fixed flakiness by adding `--dist loadscope` to pytest.ini (keeps tests in same file on same worker)
+- Final result: 3319 passed, 114 skipped, 0 failures in 3:13
+- Good introspection on orchestration mistakes (documented in META_LEARNING entry)
+
+**What went poorly:**
+- Unbalanced agent workload - Agent 3 took 10x longer than Agents 1 & 2
+- Ran batch tests repeatedly instead of using `pytest --lf` from the start
+- User had to point out both inefficiencies
+- Spent time polling background tasks instead of analyzing available data
+
+**Open threads:**
+- TEST-029 worktree has uncommitted changes ready for commit
+- The `xdist_group` markers added to files are redundant with `--dist loadscope` but harmless
+
+---
+
+### 2025-11-29 10:17 | f3ec3a9e | META_LEARNING
+
+**Topic:** Multi-agent orchestration - workload balancing and efficient test discovery
+
+**Context:**
+Orchestrated 4 parallel agents to fix failing tests across 11 test files. The goal was to divide work, maintain file checkout locks, and ensure only one agent ran tests at a time.
+
+**What went wrong:**
+
+1. **Unbalanced workload distribution**
+   - Assigned files by count (4, 3, 4 files) instead of by complexity
+   - Agent 3 took 10x longer than Agents 1 and 2 because it had:
+     - Embedding dimension fixes (384→768) across 10+ occurrences
+     - Connection timeout tuning requiring investigation
+     - A flaky test that needed multiple verification runs
+   - Agents 1 and 2 finished quickly and sat idle
+
+2. **Inefficient test discovery**
+   - Ran sequential batch tests repeatedly instead of using `pytest --lf` (last failed)
+   - Didn't leverage knowledge from previous runs - kept rediscovering the same failures
+   - User had to point out: "use what you know from previous runs"
+
+3. **No dynamic rebalancing**
+   - When Agents 1 and 2 finished early, I spawned Agent 4 but could have reassigned earlier
+   - Should have monitored progress and shifted work mid-flight
+
+**What I should have done:**
+
+1. **Estimate complexity before assigning:**
+   - Run quick `--tb=short` on each failing file to see error types
+   - Dimension mismatches = many edits = high complexity
+   - Mock issues = localized = lower complexity
+   - Qdrant connection issues = environment, not code = skip or deprioritize
+
+2. **Use `pytest --lf` from the start:**
+   - After initial discovery, only test what failed
+   - Build a "known failures" list and target those specifically
+   - Don't re-run passing tests repeatedly
+
+3. **Build in rebalancing checkpoints:**
+   - Check agent status at regular intervals
+   - If one agent finishes and another has 5+ remaining tasks, split the work
+   - Track "files completed / files assigned" ratio per agent
+
+**Principle:**
+When parallelizing work across agents, balance by estimated complexity (not file count), use `--lf` to avoid redundant test runs, and monitor progress to dynamically reassign work when capacity imbalances emerge.
+
+---
+
 ### 2025-11-28 21:05 | 76885070 | SESSION_SUMMARY
 
 **Duration:** ~65 minutes
@@ -785,3 +857,34 @@ Memory leak fix confirmed: test_server.py 9 passed at 500MB stable. Running full
 2. Stay skeptical - assume the fix is wrong until proven otherwise
 3. Don't claim "done" until verified with actual test execution
 4. For debugging: minimize cycle time (seconds not minutes)
+
+---
+
+### 2025-11-29 00:45 | e2a876dc | SESSION_SUMMARY
+
+**Duration:** ~35 minutes
+**Main work:** Continued TEST-029 - added 10s pytest timeout and fixed hanging tests
+
+**What went well:**
+- Used stack trace analysis (pytest-timeout thread method) to identify exact hang location
+- Found root cause of test_cross_project.py hang: auto-indexing running during server.initialize()
+- Diagnosed mock issue: MagicMock creates truthy attributes, so `mock_handler.rag_server` wasn't None
+- Fixed test_web_server.py by explicitly setting mock's rag_server/event_loop to None
+- Test suite now runs ~53s instead of hanging indefinitely
+- Applied user's feedback about 30s max process time - killed hung tests quickly
+
+**What went poorly or was difficult:**
+- User had to remind me twice: "never let a process run longer than 30 seconds", "don't game the system, isolate the slowness and fix it"
+- Initially used background processes with long waits instead of failing fast
+- Started down the path of patching IndexingFeatures defaults in conftest (overly complex) before the simpler per-test fix
+
+**Key fixes made:**
+1. pytest.ini: Added `--timeout=10` to fail slow tests
+2. tests/unit/test_cross_project.py: Added `indexing={"auto_index_enabled": False}` to ServerConfig
+3. tests/conftest.py: Added IndexingFeatures default patches (defense in depth)
+4. tests/unit/test_web_server.py: Fixed mock handler by setting rag_server/event_loop to None on instance
+
+**Open threads:**
+- 2 failed + 4 errors remain in full suite (down from "hanging forever")
+- TEST-029 still not merged to main
+- Full verification of test suite not completed (committed based on ~53s run showing 3090 passed)

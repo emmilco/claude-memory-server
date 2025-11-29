@@ -51,6 +51,15 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Fixed - 2025-11-29
+- **TEST-029: Fix parallel test execution flakiness**
+  - Added `--dist loadscope` to pytest.ini to distribute tests by module (all tests in same file run sequentially on same worker)
+  - Fixed Qdrant connection pool exhaustion under parallel execution (`-n 4`)
+  - Added `xdist_group("qdrant_sequential")` markers to flaky test files: `test_list_memories.py`, `test_backup_export.py`, `test_backup_import.py`, `test_readonly_mode.py`
+  - Increased connection health checker timeouts in `src/store/qdrant_store.py` (50ms→500ms, 100ms→1s, 200ms→2s)
+  - Fixed mock setup in `tests/unit/test_dashboard_server.py` for threading/event loop tests
+  - Result: 3319 passed, 114 skipped, 0 failures in 3:13 with `-n 4`
+
 ### Added - 2025-11-29
 - **BUG-039: Implement DashboardServer class**
   - Created `DashboardServer` class in `src/dashboard/web_server.py`

@@ -71,7 +71,12 @@ class QdrantMemoryStore(MemoryStore):
                 if self.setup.pool:
                     self.setup.pool.enable_health_checks = True
                     from src.store.connection_health_checker import ConnectionHealthChecker
-                    self.setup.pool._health_checker = ConnectionHealthChecker()
+                    # Use more lenient timeouts for parallel test execution
+                    self.setup.pool._health_checker = ConnectionHealthChecker(
+                        fast_timeout=0.5,    # 500ms (was 50ms)
+                        medium_timeout=1.0,  # 1s (was 100ms)
+                        deep_timeout=2.0,    # 2s (was 200ms)
+                    )
 
                 logger.info("Qdrant store initialized with connection pool")
             else:

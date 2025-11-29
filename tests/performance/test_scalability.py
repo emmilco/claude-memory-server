@@ -6,8 +6,8 @@ import asyncio
 
 
 @pytest.mark.performance
-@pytest.mark.slow
 @pytest.mark.asyncio
+@pytest.mark.slow
 async def test_search_scales_with_index_size(tmp_path, fresh_server):
     """Search latency should scale sub-linearly with index size.
 

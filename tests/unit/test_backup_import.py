@@ -10,6 +10,9 @@ These tests use the real QdrantMemoryStore with pooled connections.
 """
 
 import pytest
+
+# Run sequentially on single worker - Qdrant connection sensitive under parallel execution
+pytestmark = pytest.mark.xdist_group("qdrant_sequential")
 import pytest_asyncio
 import uuid
 from pathlib import Path
