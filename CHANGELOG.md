@@ -51,6 +51,14 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Added - 2025-11-29
+- **Service Layer Code Audit: 17 NEW bugs discovered (BUG-055 to BUG-063, REF-038 to REF-044)**
+  - Comprehensive 3-agent parallel review of service layer (extracted in REF-013)
+  - High priority: Stats race conditions, SQLite leak in feedback DB, path traversal in export
+  - Medium priority: P95 calculation bug, session memory leak, pagination bug
+  - Full report: `~/.claude/plans/typed-cuddling-owl.md`
+  - Updated TODO.md with all new issues
+
 ### Fixed - 2025-11-29
 - **TEST-029: Fix parallel test execution flakiness**
   - Added `--dist loadscope` to pytest.ini to distribute tests by module (all tests in same file run sequentially on same worker)

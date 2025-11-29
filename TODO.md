@@ -3,7 +3,9 @@
 ## 🚨 CRITICAL BUGS - Code Audit 2025-11-29
 
 **Source:** Comprehensive 3-agent parallel code review analyzing core server, storage, memory/indexing, and embeddings/CLI.
-**Audit Report:** `~/.claude/plans/ancient-sleeping-gehret.md`
+**Audit Reports:**
+- `~/.claude/plans/ancient-sleeping-gehret.md` (initial audit)
+- `~/.claude/plans/typed-cuddling-owl.md` (service layer audit - 18 NEW issues)
 
 ### 🔴 Critical - Will Crash in Production
 
@@ -131,6 +133,78 @@
   - **Fix:** Use `lstat()` or filter symlinks
   - **Effort:** 15 minutes
 
+- [ ] **BUG-055**: Race Condition in Stats Counters (All Services)
+  - **Files:** `src/core/server.py`, `src/services/memory_service.py`, all service files
+  - **Issue:** Stats dicts (`self.stats["memories_stored"] += 1`) incremented without thread safety in async contexts
+  - **Impact:** Inaccurate statistics under concurrent load; lost counter updates
+  - **Fix:** Use `asyncio.Lock` or thread-safe `Counter` for stats
+  - **Effort:** 1 hour
+  - **Source:** Service layer audit 2025-11-29
+
+- [ ] **BUG-056**: SQLite Connection Leak in Feedback DB
+  - **File:** `src/store/qdrant_store.py:2370-2398`
+  - **Issue:** Connection opened but only closed if no exception; missing try/finally
+  - **Impact:** File descriptor exhaustion, database locks
+  - **Fix:** Wrap in try/finally or use context manager
+  - **Effort:** 10 minutes
+  - **Source:** Service layer audit 2025-11-29
+
+- [ ] **BUG-057**: P95 Percentile Calculation Off-by-One
+  - **File:** `src/store/connection_pool.py:579-580`
+  - **Issue:** `p95_idx = int(len(sorted_times) * 0.95)` can index beyond bounds for small lists
+  - **Impact:** Incorrect P95 stats, potential IndexError with <20 items
+  - **Fix:** Use `min(p95_idx, len(sorted_times) - 1)` or proper percentile calculation
+  - **Effort:** 10 minutes
+  - **Source:** Service layer audit 2025-11-29
+
+- [ ] **BUG-058**: Session Tracker Memory Leak
+  - **File:** `src/services/memory_service.py:417-424`
+  - **Issue:** `conversation_tracker.get_shown_memory_ids(session_id)` stores indefinitely; no TTL cleanup
+  - **Impact:** Unbounded memory growth in long-running servers
+  - **Fix:** Implement TTL-based cleanup or LRU eviction for session data
+  - **Effort:** 1-2 hours
+  - **Source:** Service layer audit 2025-11-29
+
+- [ ] **BUG-059**: Pagination Bug in Deduplication
+  - **File:** `src/services/memory_service.py:434-439`
+  - **Issue:** After filtering shown memories, slicing to `request.limit` may return fewer results than requested
+  - **Impact:** Users see fewer results than requested when deduplication active
+  - **Fix:** Fetch more results iteratively until limit reached or exhausted
+  - **Effort:** 30 minutes
+  - **Source:** Service layer audit 2025-11-29
+
+- [ ] **BUG-060**: Path Traversal Vulnerability in Export
+  - **File:** `src/services/memory_service.py:1095-1097`
+  - **Issue:** `Path(output_path).expanduser()` + `mkdir(parents=True)` allows writing anywhere
+  - **Impact:** Security vulnerability - can write to arbitrary filesystem locations
+  - **Fix:** Validate path doesn't escape allowed base directory
+  - **Effort:** 30 minutes
+  - **Source:** Service layer audit 2025-11-29
+
+- [ ] **BUG-061**: Silent Failure in Connection Pool Release
+  - **File:** `src/store/connection_pool.py:371-373`
+  - **Issue:** Exceptions during `release()` logged but not re-raised; connection lost
+  - **Impact:** Pool corruption over time; clients stuck with released connections
+  - **Fix:** Re-raise after logging or implement recovery logic
+  - **Effort:** 20 minutes
+  - **Source:** Service layer audit 2025-11-29
+
+- [ ] **BUG-062**: Empty Embedding Hack for "Get All" Queries
+  - **File:** `src/core/server.py:3513-3521`
+  - **Issue:** Uses `[0.0] * 768` to retrieve "all" code units - semantically incorrect, truncates at 10000
+  - **Impact:** May not retrieve all units; fails silently with large codebases
+  - **Fix:** Implement proper `scroll_all()` or `retrieve_all()` method
+  - **Effort:** 1 hour
+  - **Source:** Service layer audit 2025-11-29
+
+- [ ] **BUG-063**: Config Validator May Not Work for Nested Models
+  - **File:** `src/config.py:49-55`
+  - **Issue:** `force_cpu` validator checks `info.data.get('gpu_enabled')` but nested model may not populate correctly in Pydantic v2
+  - **Impact:** Validation check may silently fail to enforce mutual exclusivity
+  - **Fix:** Validate at parent level or use model_validator
+  - **Effort:** 30 minutes
+  - **Source:** Service layer audit 2025-11-29
+
 ---
 
 ## 🟡 Medium Severity - Tech Debt & Performance
@@ -211,6 +285,14 @@
   - **Fix:** Use parameterized chunking
   - **Effort:** 1 hour
 
+- [ ] **REF-038**: Inconsistent Exception Types Across Services
+  - **Files:** All service files in `src/services/`
+  - **Issue:** Different services raise `StorageError`, `RetrievalError`, `ValidationError` inconsistently for similar failures
+  - **Impact:** Clients can't reliably handle errors; type checking breaks
+  - **Fix:** Standardize exception types per operation category
+  - **Effort:** 2-3 hours
+  - **Source:** Service layer audit 2025-11-29
+
 ---
 
 ## 🟢 Low Severity - Minor Issues
@@ -252,6 +334,42 @@
   - **File:** `src/embeddings/generator.py:63`
   - **Issue:** `ThreadPoolExecutor(max_workers=2)` - why 2?
   - **Fix:** Add comment explaining or make configurable
+
+- [ ] **REF-039**: Date Parsing Silent Fallback
+  - **Files:** `src/core/server.py:4534`, `src/services/memory_service.py:220`
+  - **Issue:** `pass` statement silently swallows ValueError, then tries alternative parsing
+  - **Impact:** Invalid dates accepted or fail with confusing messages
+  - **Source:** Service layer audit 2025-11-29
+
+- [ ] **REF-040**: Unsafe `__del__` Implementations
+  - **Files:** `src/embeddings/generator.py:420-426`, `src/embeddings/parallel_generator.py:518-521`
+  - **Issue:** Both rely on `__del__()` for cleanup; Python doesn't guarantee it's called
+  - **Impact:** Resource cleanup not guaranteed
+  - **Source:** Service layer audit 2025-11-29
+
+- [ ] **REF-041**: Null Check Missing in Health Score Calculation
+  - **File:** `src/services/health_service.py:70-92`
+  - **Issue:** `metrics` parameter used without null check
+  - **Impact:** TypeError if metrics=None
+  - **Source:** Service layer audit 2025-11-29
+
+- [ ] **REF-042**: Redundant Import Inside Loop
+  - **File:** `src/store/qdrant_store.py:915`
+  - **Issue:** `import fnmatch` inside loop body instead of module level
+  - **Impact:** Minor performance degradation
+  - **Source:** Service layer audit 2025-11-29
+
+- [ ] **REF-043**: Redundant PointStruct Import in Method
+  - **File:** `src/store/qdrant_store.py:474`
+  - **Issue:** `from qdrant_client.models import PointStruct` inside method; already imported at top
+  - **Impact:** Code clarity
+  - **Source:** Service layer audit 2025-11-29
+
+- [ ] **REF-044**: Overly Broad Exception Handlers
+  - **Files:** All service files (60+ occurrences)
+  - **Issue:** `except Exception as e:` masks unexpected exceptions
+  - **Impact:** Harder debugging; unexpected bugs hidden
+  - **Source:** Service layer audit 2025-11-29
 
 - [ ] **REF-036**: Double Logging on Error
   - **File:** `src/embeddings/parallel_generator.py:105-107`
