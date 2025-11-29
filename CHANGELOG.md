@@ -51,6 +51,15 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Added - 2025-11-29
+- **BUG-039: Implement DashboardServer class**
+  - Created `DashboardServer` class in `src/dashboard/web_server.py`
+  - Added async `start()` and `stop()` methods for lifecycle management
+  - Accepts health monitoring components: metrics_collector, alert_engine, health_reporter, store, config
+  - Exports `DashboardServer` from `src/dashboard/__init__.py`
+  - Created comprehensive test suite: `tests/unit/test_dashboard_server.py`
+  - Fixes NameError in `HealthService.start_dashboard()` method
+
 ### Added - 2025-11-28
 - **PERF: MPS (Apple Silicon) GPU Acceleration**
   - Added `detect_mps()` function to detect Apple Silicon GPU availability

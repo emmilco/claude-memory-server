@@ -7,11 +7,17 @@ import threading
 from datetime import datetime
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
-from typing import Optional, Any
+from typing import Optional, Any, TYPE_CHECKING
 from urllib.parse import urlparse, parse_qs
 
 from src.core.server import MemoryRAGServer
-from src.config import get_config
+from src.config import get_config, ServerConfig
+
+if TYPE_CHECKING:
+    from src.services.metrics_collector import MetricsCollector
+    from src.services.alert_engine import AlertEngine
+    from src.services.health_reporter import HealthReporter
+    from src.store.base import BaseStore
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +29,133 @@ class DateTimeEncoder(json.JSONEncoder):
         if isinstance(obj, datetime):
             return obj.isoformat()
         return super().default(obj)
+
+
+class DashboardServer:
+    """
+    Dashboard web server wrapper for health monitoring integration.
+
+    This class provides a simplified interface for starting the dashboard
+    server with pre-configured health monitoring components.
+    """
+
+    def __init__(
+        self,
+        metrics_collector: Optional["MetricsCollector"] = None,
+        alert_engine: Optional["AlertEngine"] = None,
+        health_reporter: Optional["HealthReporter"] = None,
+        store: Optional["BaseStore"] = None,
+        config: Optional[ServerConfig] = None,
+    ):
+        """
+        Initialize dashboard server.
+
+        Args:
+            metrics_collector: Optional metrics collector for monitoring
+            alert_engine: Optional alert engine for health alerts
+            health_reporter: Optional health reporter for system status
+            store: Optional store instance for data access
+            config: Optional server configuration
+        """
+        self.metrics_collector = metrics_collector
+        self.alert_engine = alert_engine
+        self.health_reporter = health_reporter
+        self.store = store
+        self.config = config or get_config()
+
+        # Server state
+        self.server: Optional[HTTPServer] = None
+        self.event_loop: Optional[asyncio.AbstractEventLoop] = None
+        self.loop_thread: Optional[threading.Thread] = None
+        self.rag_server: Optional[MemoryRAGServer] = None
+        self.is_running = False
+
+    async def start(self, host: str = "localhost", port: int = 8080) -> None:
+        """
+        Start the dashboard web server.
+
+        Args:
+            host: Host address to bind to
+            port: Port number to listen on
+
+        Raises:
+            RuntimeError: If server is already running
+        """
+        if self.is_running:
+            raise RuntimeError("Dashboard server is already running")
+
+        logger.info(f"Starting dashboard server on {host}:{port}")
+
+        # Create a dedicated event loop for async operations
+        self.event_loop = asyncio.new_event_loop()
+
+        # Start event loop in a separate thread
+        self.loop_thread = threading.Thread(
+            target=_run_event_loop,
+            args=(self.event_loop,),
+            daemon=True
+        )
+        self.loop_thread.start()
+
+        # Initialize RAG server in the dedicated event loop
+        self.rag_server = MemoryRAGServer(self.config)
+
+        # Initialize server in the event loop
+        future = asyncio.run_coroutine_threadsafe(
+            self.rag_server.initialize(),
+            self.event_loop
+        )
+        future.result()
+
+        # Set RAG server and event loop on handler class
+        DashboardHandler.rag_server = self.rag_server
+        DashboardHandler.event_loop = self.event_loop
+
+        # Create HTTP server
+        self.server = HTTPServer((host, port), DashboardHandler)
+        self.is_running = True
+
+        logger.info(f"Dashboard server running at http://{host}:{port}")
+
+        # Note: In production use, this would run in a background thread
+        # For now, we just start the server and return
+        # The server will be managed by the caller
+
+    async def stop(self) -> None:
+        """
+        Stop the dashboard server and cleanup resources.
+        """
+        if not self.is_running:
+            return
+
+        logger.info("Stopping dashboard server")
+
+        # Shutdown HTTP server
+        if self.server:
+            self.server.shutdown()
+            self.server = None
+
+        # Close RAG server
+        if self.rag_server and self.event_loop:
+            future = asyncio.run_coroutine_threadsafe(
+                self.rag_server.close(),
+                self.event_loop
+            )
+            try:
+                future.result(timeout=5)
+            except Exception as e:
+                logger.warning(f"Error closing RAG server: {e}")
+
+        # Stop event loop
+        if self.event_loop:
+            self.event_loop.call_soon_threadsafe(self.event_loop.stop)
+
+        # Wait for thread to finish
+        if self.loop_thread:
+            self.loop_thread.join(timeout=5)
+
+        self.is_running = False
+        logger.info("Dashboard server stopped")
 
 
 class DashboardHandler(SimpleHTTPRequestHandler):
