@@ -53,6 +53,7 @@ from src.monitoring.metrics_collector import MetricsCollector
 from src.monitoring.alert_engine import AlertEngine
 from src.monitoring.health_reporter import HealthReporter
 from src.monitoring.capacity_planner import CapacityPlanner
+from src.memory.project_archival import ProjectArchivalManager
 from src.core.tracing import new_operation, get_operation_id, get_logger
 
 # Service layer imports (REF-016: Split MemoryRAGServer God Class)
@@ -112,6 +113,7 @@ class MemoryRAGServer(StructuralQueryMixin):
         self.pattern_tracker: Optional[UsagePatternTracker] = None  # Usage pattern analytics
         self.scheduler = None  # APScheduler instance
         self.auto_indexing_service: Optional = None  # Auto-indexing service (FEAT-016)
+        self.archival_manager: Optional[ProjectArchivalManager] = None  # Project archival tracking
 
         # Quality analysis (FEAT-060)
         self.complexity_analyzer: Optional[ComplexityAnalyzer] = None
@@ -206,14 +208,22 @@ class MemoryRAGServer(StructuralQueryMixin):
             # Initialize pruner
             self.pruner = MemoryPruner(self.config, self.store)
 
+            # Initialize project archival manager (REF-011)
+            config_dir = os.path.dirname(os.path.expanduser(self.config.embedding_cache_path))
+            archival_file = os.path.join(config_dir, "project_states.json")
+            self.archival_manager = ProjectArchivalManager(
+                state_file_path=archival_file,
+                inactivity_threshold_days=self.config.memory.archival_threshold_days
+            )
+
             # Initialize performance monitoring (FEAT-022) - Must be before scheduler
             # Determine monitoring database path (in the standard config directory)
-            config_dir = os.path.dirname(os.path.expanduser(self.config.embedding_cache_path))
             monitoring_db_path = os.path.join(config_dir, "monitoring.db")
 
             self.metrics_collector = MetricsCollector(
                 db_path=monitoring_db_path,
-                store=self.store
+                store=self.store,
+                archival_manager=self.archival_manager
             )
             self.alert_engine = AlertEngine(db_path=monitoring_db_path)
             self.health_reporter = HealthReporter()
