@@ -51,6 +51,19 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Added - 2025-11-29
+- **Service Layer Code Audit: 17 NEW bugs discovered (BUG-055 to BUG-063, REF-038 to REF-044)**
+  - Comprehensive 3-agent parallel review of service layer (extracted in REF-013)
+  - High priority: Stats race conditions, SQLite leak in feedback DB, path traversal in export
+  - Medium priority: P95 calculation bug, session memory leak, pagination bug
+  - Full report: `~/.claude/plans/typed-cuddling-owl.md`
+  - Updated TODO.md with all new issues
+
+- **TEST-007-B: Add test coverage for health_scheduler.py**
+  - Created comprehensive test suite with 52 tests
+  - Achieved 98.26% coverage (172/175 lines covered)
+  - Tests cover: HealthScheduleConfig dataclass, scheduler lifecycle, job scheduling, job execution, error handling, notifications, manual triggers, status reporting, configuration management, job history
+  - File: tests/unit/test_health_scheduler.py
 ### Fixed - 2025-11-29
 - **TEST-029: Fix parallel test execution flakiness**
   - Added `--dist loadscope` to pytest.ini to distribute tests by module (all tests in same file run sequentially on same worker)
@@ -61,6 +74,11 @@ Organize entries under these headers in chronological order (newest first):
   - Result: 3319 passed, 114 skipped, 0 failures in 3:13 with `-n 4`
 
 ### Added - 2025-11-29
+- **TEST-007-A: Add security_logger test coverage (0% → 99%)**
+  - Created comprehensive test suite for `src/core/security_logger.py` (32 tests)
+  - Tests cover initialization, all event logging methods, truncation, retrieval, statistics, and global logger
+  - File: `tests/unit/test_security_logger.py`
+
 - **BUG-039: Implement DashboardServer class**
   - Created `DashboardServer` class in `src/dashboard/web_server.py`
   - Added async `start()` and `stop()` methods for lifecycle management
