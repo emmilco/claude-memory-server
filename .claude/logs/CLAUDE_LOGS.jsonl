@@ -6260,3 +6260,6 @@
 {"ts":"2025-11-29T16:12:48Z","event":"TOOL_USE","session":"f3ec3a9e-e50e-463c-ab0a-575a30ba5a91","tool":"Bash","preview":"git status "}
 {"ts":"2025-11-29T16:12:56Z","event":"TOOL_USE","session":"f3ec3a9e-e50e-463c-ab0a-575a30ba5a91","tool":"Bash","preview":"git add .claude/feedback/feedback_log.jsonl .claude/logs/.last_interval_prompt ."}
 {"ts":"2025-11-29T16:13:01Z","event":"TOOL_USE","session":"f3ec3a9e-e50e-463c-ab0a-575a30ba5a91","tool":"Bash","preview":"git add -f .claude/feedback/feedback_log.jsonl .claude/logs/.last_interval_promp"}
+{"ts":"2025-11-29T16:16:17Z","event":"TOOL_USE","session":"f3ec3a9e-e50e-463c-ab0a-575a30ba5a91","tool":"Bash","preview":"git stash list "}
+{"ts":"2025-11-29T16:16:21Z","event":"TOOL_USE","session":"f3ec3a9e-e50e-463c-ab0a-575a30ba5a91","tool":"Bash","preview":"git stash pop stash@{0} && git stash pop stash@{0} "}
+{"ts":"2025-11-29T16:16:29Z","event":"TOOL_USE","session":"f3ec3a9e-e50e-463c-ab0a-575a30ba5a91","tool":"Bash","preview":"git add -f .claude/logs/CLAUDE_LOGS.jsonl .claude/commands/right.md .claude/comm"}
