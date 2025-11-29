@@ -2,10 +2,13 @@
 
 ## 🚨 CRITICAL BUGS - Code Audit 2025-11-29
 
-**Source:** Comprehensive 3-agent parallel code review analyzing core server, storage, memory/indexing, and embeddings/CLI.
+**Source:** Comprehensive 6-agent parallel code review analyzing entire codebase.
 **Audit Reports:**
 - `~/.claude/plans/ancient-sleeping-gehret.md` (initial audit)
-- `~/.claude/plans/typed-cuddling-owl.md` (service layer audit - 18 NEW issues)
+- `~/.claude/plans/typed-cuddling-owl.md` (service layer audit - 18 issues)
+- `~/.claude/plans/splendid-kindling-sky.md` (full codebase audit - 51 NEW issues)
+
+**Coverage:** Core layer, storage layer, memory/indexing, embeddings, services, CLI/dashboard, misc modules
 
 ### 🔴 Critical - Will Crash in Production
 
@@ -51,6 +54,46 @@
   - **Impact:** Runtime type errors when callers iterate expecting list
   - **Fix:** Return `[]` instead of `{}`
   - **Effort:** 5 minutes
+
+- [ ] **BUG-064**: Missing Import `PointIdsList` in qdrant_store.py
+  - **File:** `src/store/qdrant_store.py:2331`
+  - **Issue:** `PointIdsList` used but never imported from `qdrant_client.models`
+  - **Impact:** `merge_memories()` crashes with `NameError: name 'PointIdsList' is not defined`
+  - **Fix:** Add `PointIdsList` to imports at line 10-17
+  - **Effort:** 2 minutes
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **BUG-065**: Second Unreachable Code Block After `raise`
+  - **File:** `src/store/qdrant_store.py:2337-2340`
+  - **Issue:** Same pattern as BUG-040 - `logger.error()` and second `raise` unreachable in `merge_memories()`
+  - **Impact:** Error logging skipped during merge failures
+  - **Fix:** Move logger.error before raise, or remove dead code
+  - **Effort:** 5 minutes
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **BUG-066**: Undefined Method `_format_relative_time()` Called
+  - **File:** `src/cli/status_command.py:409`
+  - **Issue:** Calls `self._format_relative_time()` but only `_format_time_ago()` is defined (line 38)
+  - **Impact:** Status command crashes when displaying active project with last_activity
+  - **Fix:** Change call to `self._format_time_ago(last_activity)`
+  - **Effort:** 2 minutes
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **BUG-067**: Inverted Deduplication Comparison Logic
+  - **File:** `src/core/server.py:724`
+  - **Issue:** Comparison `filtered_results != results[:len(filtered_results)]` is inverted; logs negative numbers
+  - **Impact:** Debug logs show incorrect/negative filtering counts
+  - **Fix:** Fix comparison logic and calculation
+  - **Effort:** 10 minutes
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **BUG-068**: KeyError on Missing `content` Field in Import
+  - **File:** `src/core/server.py:1709`
+  - **Issue:** Uses `mem_data["content"]` without `.get()` check
+  - **Impact:** Import crashes with KeyError on malformed JSON missing content field
+  - **Fix:** Use `mem_data.get("content")` with validation
+  - **Effort:** 10 minutes
+  - **Source:** 6-agent code audit 2025-11-29
 
 ---
 
@@ -205,6 +248,110 @@
   - **Effort:** 30 minutes
   - **Source:** Service layer audit 2025-11-29
 
+- [ ] **BUG-069**: Resource Leak in StatusCommand.get_storage_stats()
+  - **File:** `src/cli/status_command.py:57-94`
+  - **Issue:** Memory store created but never closed - no `finally: await store.close()`
+  - **Impact:** Connection pool exhaustion after repeated status command calls
+  - **Fix:** Add `finally` block with `await store.close()`
+  - **Effort:** 10 minutes
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **BUG-070**: Resource Leak in StatusCommand.get_indexed_projects()
+  - **File:** `src/cli/status_command.py:130-165`
+  - **Issue:** Same pattern - store created but never closed
+  - **Impact:** Connection pool exhaustion
+  - **Fix:** Add `finally` block with `await store.close()`
+  - **Effort:** 10 minutes
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **BUG-071**: Thread-Unsafe Class Variables in DashboardHandler
+  - **File:** `src/dashboard/web_server.py:164-166`
+  - **Issue:** `rag_server` and `event_loop` are class variables modified from multiple handler instances
+  - **Impact:** Race conditions in concurrent dashboard requests
+  - **Fix:** Use thread-safe singleton or pass via request context
+  - **Effort:** 1 hour
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **BUG-072**: Dashboard Server Never Starts Serving
+  - **File:** `src/dashboard/web_server.py:114-118`
+  - **Issue:** HTTPServer created but `serve_forever()` never called
+  - **Impact:** Dashboard server won't accept connections
+  - **Fix:** Start server in background thread or document caller responsibility
+  - **Effort:** 30 minutes
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **BUG-073**: Event Loop Thread Cleanup Incomplete
+  - **File:** `src/dashboard/web_server.py:93-98, 150-156`
+  - **Issue:** Daemon thread killed on exit; join result not checked
+  - **Impact:** Unclean shutdown, pending async tasks aborted
+  - **Fix:** Check join result, handle timeout, ensure cleanup via context manager
+  - **Effort:** 30 minutes
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **BUG-074**: Race Condition in Connection Pool _created_count
+  - **File:** `src/store/connection_pool.py:229-523`
+  - **Issue:** `_created_count` checked without lock, then incremented with lock
+  - **Impact:** Can exceed max_size under concurrent load
+  - **Fix:** Use double-checked locking pattern
+  - **Effort:** 30 minutes
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **BUG-075**: FileWatcher Stats Modified Without Lock
+  - **File:** `src/memory/file_watcher.py:169-230`
+  - **Issue:** Stats (`events_received`, `events_processed`) modified from observer thread without synchronization
+  - **Impact:** Corrupted statistics under high file change frequency
+  - **Fix:** Add threading.Lock for stats updates
+  - **Effort:** 20 minutes
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **BUG-076**: Memory Export OOM Risk
+  - **File:** `src/services/memory_service.py:1029-1043`
+  - **Issue:** Export fetches up to 999,999 memories into RAM at once
+  - **Impact:** Out-of-memory crash on large exports
+  - **Fix:** Use pagination or streaming
+  - **Effort:** 1-2 hours
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **BUG-077**: Timezone-Naive datetime.now() in Exports
+  - **File:** `src/services/memory_service.py:1050, 1069`
+  - **Issue:** Uses `datetime.now()` without timezone while rest of codebase uses UTC
+  - **Impact:** Timestamp ambiguity when re-imported
+  - **Fix:** Use `datetime.now(UTC)` consistently
+  - **Effort:** 10 minutes
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **BUG-078**: Zero-Vector Embedding Hack for Dependencies
+  - **File:** `src/services/code_indexing_service.py:811-816`
+  - **Issue:** Uses `[0.0] * 768` embedding to query "all" dependencies
+  - **Impact:** Semantically incorrect, may return wrong results
+  - **Fix:** Implement proper scroll/retrieve_all method
+  - **Effort:** 1 hour
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **BUG-079**: Indexer Created Without Context Manager
+  - **File:** `src/services/code_indexing_service.py:547-595`
+  - **Issue:** IncrementalIndexer created but no try/finally for cleanup
+  - **Impact:** Resource leak if exception occurs after initialize()
+  - **Fix:** Use `async with` or add try/finally
+  - **Effort:** 20 minutes
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **BUG-080**: Second SQLite Connection Leak Pattern
+  - **File:** `src/store/qdrant_store.py:2369-2400`
+  - **Issue:** Same pattern as BUG-056 in `get_recent_activity()` - connection not closed on exception
+  - **Impact:** File descriptor exhaustion
+  - **Fix:** Use context manager or try/finally
+  - **Effort:** 10 minutes
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **BUG-081**: Dead Code in MultiRepositoryIndexer
+  - **File:** `src/memory/multi_repository_indexer.py:289`
+  - **Issue:** Condition `indexer not in self._indexer_cache.values()` is always False
+  - **Impact:** Confusing/misleading code, indexer never re-initialized
+  - **Fix:** Remove dead code or fix logic
+  - **Effort:** 10 minutes
+  - **Source:** 6-agent code audit 2025-11-29
+
 ---
 
 ## 🟡 Medium Severity - Tech Debt & Performance
@@ -293,6 +440,150 @@
   - **Effort:** 2-3 hours
   - **Source:** Service layer audit 2025-11-29
 
+- [ ] **BUG-082**: Unsafe Local Variable Reference in Error Handler
+  - **File:** `src/core/server.py:1795`
+  - **Issue:** Uses `mem_id if 'mem_id' in locals()` which is fragile
+  - **Impact:** May reference wrong memory ID in error messages
+  - **Fix:** Initialize `mem_id = None` before loop
+  - **Effort:** 5 minutes
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **BUG-083**: Enum Construction Without Try-Except
+  - **File:** `src/core/server.py:517, 656-659`
+  - **Issue:** Direct enum construction without catching ValueError
+  - **Impact:** ValueError propagates unexpectedly to callers
+  - **Fix:** Add try-except or validate before construction
+  - **Effort:** 15 minutes
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **BUG-084**: Inconsistent Timezone Handling in Payload Conversion
+  - **File:** `src/store/qdrant_store.py:1294-1318`
+  - **Issue:** Assumes UTC for naive datetimes, original timezone context lost
+  - **Impact:** Silent data loss for non-UTC timestamps
+  - **Fix:** Document assumption or preserve original timezone
+  - **Effort:** 30 minutes
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **BUG-085**: Payload Flattening Can Overwrite Standard Fields
+  - **File:** `src/store/qdrant_store.py:1054, 1364`
+  - **Issue:** User metadata flattened into root payload can overwrite `id`, `content`, etc.
+  - **Impact:** Data corruption risk if user metadata has conflicting keys
+  - **Fix:** Namespace user metadata or validate keys
+  - **Effort:** 1 hour
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **BUG-086**: Weak Pool Corruption Detection
+  - **File:** `src/store/connection_pool.py:460-465`
+  - **Issue:** Only detects one corruption pattern, misses `active_count > max_size`
+  - **Impact:** Undetected pool corruption states
+  - **Fix:** Add more comprehensive state validation
+  - **Effort:** 30 minutes
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **BUG-087**: Uneven Chunk Distribution in Parallel Generation
+  - **File:** `src/embeddings/parallel_generator.py:450-452`
+  - **Issue:** Chunk size calculation creates unbalanced workloads
+  - **Impact:** Minor performance inefficiency
+  - **Fix:** Use `math.ceil()` or better distribution
+  - **Effort:** 15 minutes
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **BUG-088**: Scroll Loop Has No Iteration Limit
+  - **File:** `src/memory/incremental_indexer.py:768-783`
+  - **Issue:** `while True` loop with no max iteration guard
+  - **Impact:** Potential infinite loop if API misbehaves
+  - **Fix:** Add iteration limit with warning
+  - **Effort:** 10 minutes
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **BUG-089**: No Length Check on Expanded Query
+  - **File:** `src/services/memory_service.py:390-397`
+  - **Issue:** Query expansion can grow query indefinitely
+  - **Impact:** Token budget exhaustion, slow embeddings
+  - **Fix:** Truncate or validate expanded query length
+  - **Effort:** 15 minutes
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **BUG-090**: Unsafe datetime.fromisoformat() Parsing
+  - **File:** `src/services/memory_service.py:454-456`
+  - **Issue:** fromisoformat() raises ValueError on malformed dates
+  - **Impact:** Retrieval failures for memories with bad timestamps
+  - **Fix:** Add try-except or use dateutil.parser
+  - **Effort:** 15 minutes
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **BUG-091**: Off-by-One in Pagination has_more
+  - **File:** `src/services/memory_service.py:801-802`
+  - **Issue:** `has_more` calculation edge case
+  - **Impact:** UI might show wrong "more" state at boundaries
+  - **Fix:** Verify and fix boundary condition
+  - **Effort:** 10 minutes
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **BUG-092**: Inconsistent Error Handling in QueryService
+  - **File:** `src/services/query_service.py:98-103, 136-141`
+  - **Issue:** Some methods return dict with error, others raise exceptions
+  - **Impact:** API contract confusion for callers
+  - **Fix:** Standardize to either pattern
+  - **Effort:** 30 minutes
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **BUG-093**: Return Type Mismatch in _get_all_projects()
+  - **File:** `src/cli/status_command.py:387`
+  - **Issue:** Signature says `List[Dict]` but may return `List[str]`
+  - **Impact:** Type checking failures, runtime errors
+  - **Fix:** Verify and fix return type
+  - **Effort:** 15 minutes
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **BUG-094**: Hardcoded Embedding Dimensions in Status
+  - **File:** `src/cli/status_command.py:222`
+  - **Issue:** Hardcoded `384` dimensions doesn't match actual model (768)
+  - **Impact:** Misleading status output
+  - **Fix:** Get dimensions from config or model
+  - **Effort:** 10 minutes
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **BUG-095**: P95 Percentile Loses Precision on Small Samples
+  - **File:** `src/monitoring/metrics_collector.py:346`
+  - **Issue:** Integer index calculation wrong for small arrays
+  - **Impact:** Inaccurate P95 metrics
+  - **Fix:** Use proper percentile calculation with interpolation
+  - **Effort:** 15 minutes
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **BUG-096**: Missing Null Check for rag_server in Dashboard
+  - **File:** `src/dashboard/web_server.py:530-532`
+  - **Issue:** Checks `self.rag_server.metrics_collector` without checking `self.rag_server` first
+  - **Impact:** AttributeError if handler used before initialization
+  - **Fix:** Add null check for `self.rag_server`
+  - **Effort:** 5 minutes
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **BUG-097**: Query Parameters Not Validated in Dashboard
+  - **File:** `src/dashboard/web_server.py:248, 437-440`
+  - **Issue:** `limit`, `period`, `metric` params used without validation
+  - **Impact:** DoS via huge queries, invalid period values
+  - **Fix:** Add bounds checking and validation
+  - **Effort:** 30 minutes
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **BUG-098**: Missing Exception Handling in Health Config Load
+  - **File:** `src/memory/health_scheduler.py:326`
+  - **Issue:** No try-except for JSONDecodeError or PermissionError
+  - **Impact:** Unhandled exceptions crash scheduler
+  - **Fix:** Add exception handling with fallback to defaults
+  - **Effort:** 15 minutes
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **BUG-099**: No Validation of MPS/Executor Initialization Success
+  - **File:** `src/embeddings/parallel_generator.py:245-260`
+  - **Issue:** No check that MPS generator or executor actually initialized
+  - **Impact:** Silent failure, later crashes in batch_generate
+  - **Fix:** Add validation after initialization
+  - **Effort:** 15 minutes
+  - **Source:** 6-agent code audit 2025-11-29
+
 ---
 
 ## 🟢 Low Severity - Minor Issues
@@ -379,6 +670,125 @@
   - **File:** `src/embeddings/parallel_generator.py:505-521`
   - **Issue:** Calling close() twice will error
   - **Fix:** Make close() idempotent with guard
+
+- [ ] **REF-045**: Module Imports Inside Functions
+  - **Files:** `src/core/server.py:643, 4498`
+  - **Issue:** `time` and `re` modules imported inside function bodies instead of top-level
+  - **Impact:** Style violation, micro-performance cost
+  - **Fix:** Move imports to module level
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **REF-046**: Redundant hasattr Checks for Enum .value
+  - **File:** `src/core/server.py:872-882`
+  - **Issue:** Uses `hasattr(memory.category, 'value')` unnecessarily
+  - **Impact:** Indicates type inconsistency elsewhere in codebase
+  - **Fix:** Remove defensive checks, ensure consistent types
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **REF-047**: SQL Injection Detection Patterns Too Simplistic
+  - **File:** `src/core/models.py:162-166`
+  - **Issue:** Simple string matching for DROP TABLE, etc. - false sense of security
+  - **Impact:** May reject legitimate content; doesn't prevent real attacks
+  - **Fix:** Document limitations, use parameterized queries at storage layer
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **REF-048**: Security Log Includes Content Preview
+  - **File:** `src/core/security_logger.py:149, 207`
+  - **Issue:** Logs up to 200 chars of suspicious content
+  - **Impact:** Potential information disclosure in logs
+  - **Fix:** Log only hash/size, not content preview
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **REF-049**: Inefficient List Slicing for Acquire Times
+  - **File:** `src/store/connection_pool.py:585-587`
+  - **Issue:** Creates new list during slice for metrics
+  - **Impact:** Minor memory churn
+  - **Fix:** Use collections.deque with maxlen
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **REF-050**: Hard-Coded Feedback DB Path
+  - **File:** `src/store/qdrant_store.py:2365`
+  - **Issue:** `Path.home() / ".claude-rag" / "feedback.db"` hardcoded
+  - **Impact:** Can't configure feedback DB location
+  - **Fix:** Move to config
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **REF-051**: Overly Broad Exception Catching in get_recent_activity()
+  - **File:** `src/store/qdrant_store.py:2399-2400`
+  - **Issue:** `except Exception` masks specific errors
+  - **Impact:** Harder debugging - can't distinguish "DB missing" vs "query error"
+  - **Fix:** Catch specific exceptions
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **REF-052**: mtime Comparison May Miss Rapid Saves
+  - **File:** `src/memory/file_watcher.py:142-144`
+  - **Issue:** mtime granularity on NTFS is 1-2 seconds
+  - **Impact:** Rapid saves may show same mtime (mitigated by hash check)
+  - **Fix:** Document limitation, rely on hash check
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **REF-053**: Sync Callback Blocks Event Loop
+  - **File:** `src/memory/file_watcher.py:297-300`
+  - **Issue:** Non-async callbacks called directly, blocking event loop
+  - **Impact:** Performance issues with heavy sync callbacks
+  - **Fix:** Wrap sync callbacks in run_in_executor
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **REF-054**: Unused max_distance Parameter
+  - **File:** `src/memory/spelling_suggester.py:74`
+  - **Issue:** Parameter defined but never used
+  - **Impact:** Dead parameter, misleading API
+  - **Fix:** Remove or implement
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **REF-055**: Nesting Depth Calculation Approximate
+  - **File:** `src/analysis/complexity_analyzer.py:190-194`
+  - **Issue:** Brace counting on same line shows depth 0
+  - **Impact:** Complexity scores slightly underestimated
+  - **Fix:** Document as heuristic
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **REF-056**: No Embedding Dimensionality Validation
+  - **File:** `src/analysis/code_duplicate_detector.py:159`
+  - **Issue:** No check that all embeddings have same dimensions
+  - **Impact:** Silent wrong results with jagged arrays
+  - **Fix:** Add validation
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **REF-057**: No Max Size Check for O(N²) Similarity Matrix
+  - **File:** `src/analysis/code_duplicate_detector.py:19`
+  - **Issue:** Can allocate massive matrix (50k units = 360GB)
+  - **Impact:** OOM risk on large codebases
+  - **Fix:** Add max_units safety check
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **REF-058**: Java Export Detection Pattern Fragile
+  - **File:** `src/analysis/usage_analyzer.py:273`
+  - **Issue:** Pattern doesn't match generics, annotations, unusual spacing
+  - **Impact:** Some Java methods may be mis-classified
+  - **Fix:** Document limitations
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **DOC-013**: Error Message Truncated to 50 Chars
+  - **File:** `src/cli/health_command.py:171`
+  - **Issue:** `str(e)[:50]` loses important error context
+  - **Impact:** Harder debugging
+  - **Fix:** Keep full error or log details separately
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **DOC-014**: Magic Numbers Without Constants
+  - **Files:** Multiple (status_command.py, web_server.py, metrics_collector.py)
+  - **Issue:** Hardcoded values like 80, 50, 1000 scattered throughout
+  - **Impact:** Hard to maintain, inconsistent thresholds
+  - **Fix:** Create THRESHOLDS or CONFIG constants
+  - **Source:** 6-agent code audit 2025-11-29
+
+- [ ] **DOC-015**: Inconsistent Logging Levels for Similar Errors
+  - **Files:** `src/cli/health_command.py`, others
+  - **Issue:** Same error types logged at DEBUG vs ERROR inconsistently
+  - **Impact:** Inconsistent monitoring visibility
+  - **Fix:** Standardize logging levels
+  - **Source:** 6-agent code audit 2025-11-29
 
 ---
 
