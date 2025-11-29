@@ -59,6 +59,11 @@ Organize entries under these headers in chronological order (newest first):
   - Full report: `~/.claude/plans/typed-cuddling-owl.md`
   - Updated TODO.md with all new issues
 
+- **TEST-007-B: Add test coverage for health_scheduler.py**
+  - Created comprehensive test suite with 52 tests
+  - Achieved 98.26% coverage (172/175 lines covered)
+  - Tests cover: HealthScheduleConfig dataclass, scheduler lifecycle, job scheduling, job execution, error handling, notifications, manual triggers, status reporting, configuration management, job history
+  - File: tests/unit/test_health_scheduler.py
 ### Fixed - 2025-11-29
 - **TEST-029: Fix parallel test execution flakiness**
   - Added `--dist loadscope` to pytest.ini to distribute tests by module (all tests in same file run sequentially on same worker)
