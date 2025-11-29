@@ -23,6 +23,7 @@ def config(tmp_path):
             "cross_project_default_mode": "current",
         },
         cross_project_opt_in_file=str(consent_file),
+        indexing={"auto_index_enabled": False, "auto_index_on_startup": False},
     )
 
 
