@@ -52,6 +52,19 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Added - 2025-11-29
+- **REF-012: Implement rollback support for bulk operations**
+  - Added soft delete capability for bulk operations via `enable_rollback` parameter
+  - Soft-deleted memories retain all data with deletion metadata stored in `metadata.deletion_info`
+  - Added `DeletionMetadata` model to track rollback ID, deletion timestamp, and original state
+  - Added `RollbackInfo` model to query rollback operation status
+  - Added `BulkDeleteManager._soft_delete_memory()` for soft delete implementation
+  - Added retention period configuration (default 30 days) via `soft_delete_retention_days`
+  - Added rollback methods: `rollback_deletion()`, `get_rollback_info()`, `list_pending_rollbacks()`
+  - Added cleanup method: `cleanup_expired_rollbacks()` for permanent deletion after expiry
+  - Updated `MemoryStore` protocol to include `update()` and `get_by_id()` methods
+  - File: `src/memory/bulk_operations.py`
+
+### Added - 2025-11-29
 - **Service Layer Code Audit: 17 NEW bugs discovered (BUG-055 to BUG-063, REF-038 to REF-044)**
   - Comprehensive 3-agent parallel review of service layer (extracted in REF-013)
   - High priority: Stats race conditions, SQLite leak in feedback DB, path traversal in export
