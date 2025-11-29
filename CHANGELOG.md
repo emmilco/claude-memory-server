@@ -61,6 +61,11 @@ Organize entries under these headers in chronological order (newest first):
   - Result: 3319 passed, 114 skipped, 0 failures in 3:13 with `-n 4`
 
 ### Added - 2025-11-29
+- **TEST-007-A: Add security_logger test coverage (0% → 99%)**
+  - Created comprehensive test suite for `src/core/security_logger.py` (32 tests)
+  - Tests cover initialization, all event logging methods, truncation, retrieval, statistics, and global logger
+  - File: `tests/unit/test_security_logger.py`
+
 - **BUG-039: Implement DashboardServer class**
   - Created `DashboardServer` class in `src/dashboard/web_server.py`
   - Added async `start()` and `stop()` methods for lifecycle management
