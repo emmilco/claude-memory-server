@@ -51,6 +51,11 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Changed - 2025-11-29
+- **REF-008: Update deprecated Qdrant API usage**
+  - Replaced deprecated `client.search()` with modern `client.query_points()` API in `search_git_commits()` method
+  - Updated `src/store/qdrant_store.py` to use current Qdrant client 1.12.1 patterns
+
 ### Fixed - 2025-11-29
 - **TEST-029: Fix parallel test execution flakiness**
   - Added `--dist loadscope` to pytest.ini to distribute tests by module (all tests in same file run sequentially on same worker)
