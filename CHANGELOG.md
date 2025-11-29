@@ -52,6 +52,11 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Added - 2025-11-29
+- **TEST-007-G: Add test coverage for alert_engine.py**
+  - Created comprehensive test suite with 30+ tests for alert threshold evaluation, alert generation, storage, retrieval, snoozing, resolution, and cleanup
+  - Tests cover: AlertThreshold dataclass, Alert conversion methods, threshold operators, metric evaluation, severity levels, alert lifecycle, and recommendations
+  - File: tests/unit/monitoring/test_alert_engine.py
+
 - **Service Layer Code Audit: 17 NEW bugs discovered (BUG-055 to BUG-063, REF-038 to REF-044)**
   - Comprehensive 3-agent parallel review of service layer (extracted in REF-013)
   - High priority: Stats race conditions, SQLite leak in feedback DB, path traversal in export
