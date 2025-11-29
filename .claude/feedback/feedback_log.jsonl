@@ -485,3 +485,27 @@
   "sentiment": "negative",
   "user_message": "i want you to merge your work back to main, ensuring all log files are merged in so no data is lost"
 }
+{
+  "timestamp": "2025-11-29T16:19:42Z",
+  "session_id": "f3ec3a9e-e50e-463c-ab0a-575a30ba5a91",
+  "sentiment": "corrective",
+  "user_message": "ok next I need you to re-run the full test suite on main and ensure everything is still passing."
+}
+{
+  "timestamp": "2025-11-29T16:30:13Z",
+  "session_id": "856cca22-b2a9-4c58-9687-dbbc741e2b62",
+  "sentiment": "positive",
+  "user_message": "I'd like you to function as an orchestrator for the duration of this session. You are managing this software project and we are currently on a largescale tech debt paydown initiative. here's what I want you to do:\n- use the TODO file to keep track of all the outstanding tech debt tasks. if you encounter untracked tech debt, create a new task for it and put it in the TODO file, appropriately prioritized.\n- avoid doing any work directly yourself: farm everything out to task agents, as much as possible.\n- follow the prescribed workflow protocol for this project, including using worktrees.\n- after each agent is done with a task, I want you to mark that task for review. there can only be one reviewer agent at a time, and that reviewer agent's job is to run the full test suite against the worktree with the work being reviewed, fix any bugs, identify any code quality issues, and and then merge to main once all the tests are passing.\n- you can spin up up 4 task agents at a time. \n\nCRITICAL: This is a tech debt and bug hunting initiative. No failing tests, no tech debt left behind. Be thorough and perfectionistic. If you can't fix a problem immediately, document it."
+}
+{
+  "timestamp": "2025-11-29T16:46:22Z",
+  "session_id": "d7874be2-a5ef-47f0-8a67-c44a66cf91a4",
+  "sentiment": "negative",
+  "user_message": "The current project is in rough shape. I've surfaced a ton of tech debt and broken features in the past few days. I would like you to do an extremely thorough review of the codebase, looking for tech debt and bugs. You are not allowed to make any writes or run any tests. This is a read-only exercise. When you're done please check your findings against the TODO file and let me know what you've discovered that's new."
+}
+{
+  "timestamp": "2025-11-29T16:52:51Z",
+  "session_id": "d7874be2-a5ef-47f0-8a67-c44a66cf91a4",
+  "sentiment": "positive",
+  "user_message": "Excellent work. I'd like you to add TODOs for all the issues you identified and move them to the top of the TODO file. I would also like you to delete any TODOs that are fully complete."
+}
