@@ -16,6 +16,7 @@ from src.core.models import (
 )
 from src.store.base import MemoryStore
 from src.core.exceptions import StorageError
+from src.config import DEFAULT_EMBEDDING_DIM
 
 logger = logging.getLogger(__name__)
 
@@ -388,7 +389,7 @@ class DataImporter:
             Tuple of (MemoryUnit object, embedding vector)
         """
         # Extract embedding separately (not part of MemoryUnit model)
-        embedding = data.get("embedding", [0.0] * 384)
+        embedding = data.get("embedding", [0.0] * DEFAULT_EMBEDDING_DIM)
 
         # Parse provenance if available
         provenance = None

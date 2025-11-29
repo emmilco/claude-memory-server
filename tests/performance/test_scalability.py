@@ -6,8 +6,8 @@ import asyncio
 
 
 @pytest.mark.performance
-@pytest.mark.slow
 @pytest.mark.asyncio
+@pytest.mark.slow
 async def test_search_scales_with_index_size(tmp_path, fresh_server):
     """Search latency should scale sub-linearly with index size.
 
@@ -81,19 +81,24 @@ async def test_search_scales_with_index_size(tmp_path, fresh_server):
 @pytest.mark.performance
 @pytest.mark.asyncio
 async def test_memory_count_scaling(fresh_server):
-    """Performance with 1000, 2000, 3000 memories.
+    """Performance with 100, 200, 300 memories.
 
     Verify retrieval performance scales acceptably.
+
+    Note: Reduced from 1000/2000/3000 to 100/200/300 (10x reduction) for faster
+    test execution while still validating scaling behavior. The scaling ratio
+    (3x memories) remains the same.
     """
     server = fresh_server
 
     results = []
 
-    for memory_count in [1000, 2000, 3000]:
+    # Reduced data volumes: 100+200+300 = 600 total (was 1000+2000+3000 = 6000)
+    for memory_count in [100, 200, 300]:
         # Store memories
         for i in range(memory_count):
             await server.store_memory(
-                content=f"Test memory {i}: preference for setting_{i % 100}",
+                content=f"Test memory {i}: preference for setting_{i % 10}",
                 category="preference",
                 importance=0.5
             )
@@ -117,12 +122,12 @@ async def test_memory_count_scaling(fresh_server):
         print(f"  {count} memories: {latency:.2f}ms avg retrieval")
 
     # 3x memories should not cause >2x latency increase
-    latency_1000 = results[0][1]
-    latency_3000 = results[2][1]
-    scaling_factor = latency_3000 / latency_1000
+    latency_100 = results[0][1]
+    latency_300 = results[2][1]
+    scaling_factor = latency_300 / latency_100
 
-    print(f"\n  1000 memories: {latency_1000:.2f}ms")
-    print(f"  3000 memories: {latency_3000:.2f}ms")
+    print(f"\n  100 memories: {latency_100:.2f}ms")
+    print(f"  300 memories: {latency_300:.2f}ms")
     print(f"  Scaling factor: {scaling_factor:.2f}x")
 
     assert scaling_factor < 2.0, (

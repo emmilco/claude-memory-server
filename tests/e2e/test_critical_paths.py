@@ -596,3 +596,15 @@ async def test_cross_project_data_isolation(fresh_server, test_project_factory):
     paths1 = {r["file_path"] for r in results1}
     paths2 = {r["file_path"] for r in results2}
     assert len(paths1.intersection(paths2)) == 0, "Projects should have no overlapping results"
+
+
+# ============================================================================
+# NOTE: Session-scoped E2E tests were removed (TEST-029)
+# The session-scoped pre_indexed_server fixture caused memory issues
+# because pytest's function-scoped monkeypatch for mocking embeddings
+# doesn't apply to session-scoped fixtures, causing the real 420MB
+# embedding model to load in each worker.
+#
+# The other TEST-029 optimizations (performance test reduction,
+# parameterization, fixture scope fixes) remain in place.
+# ============================================================================

@@ -180,8 +180,11 @@ class TestDashboardHandlerGetEndpoints:
 
     def test_api_stats_server_not_initialized(self, mock_handler):
         """Test /api/stats returns 500 when RAG server not initialized."""
+        # Must set on both class AND instance mock (mock's instance attrs are separate)
         DashboardHandler.rag_server = None
         DashboardHandler.event_loop = None
+        mock_handler.rag_server = None
+        mock_handler.event_loop = None
         mock_handler.path = "/api/stats"
 
         mock_handler._handle_api_stats()
@@ -409,8 +412,13 @@ class TestInsightsGeneration:
             assert insights[i]["priority"] <= insights[i + 1]["priority"]
 
 
+@pytest.mark.slow
 class TestTrendsGeneration:
-    """Tests for time-series trends generation."""
+    """Tests for time-series trends generation.
+
+    Marked slow because importing the web_server module triggers loading of
+    the MemoryRAGServer which has heavy dependencies (embedding model, etc.).
+    """
 
     @pytest.fixture
     def mock_handler(self):

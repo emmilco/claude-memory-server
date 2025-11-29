@@ -51,6 +51,24 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Fixed - 2025-11-29
+- **TEST-029: Fix parallel test execution flakiness**
+  - Added `--dist loadscope` to pytest.ini to distribute tests by module (all tests in same file run sequentially on same worker)
+  - Fixed Qdrant connection pool exhaustion under parallel execution (`-n 4`)
+  - Added `xdist_group("qdrant_sequential")` markers to flaky test files: `test_list_memories.py`, `test_backup_export.py`, `test_backup_import.py`, `test_readonly_mode.py`
+  - Increased connection health checker timeouts in `src/store/qdrant_store.py` (50ms→500ms, 100ms→1s, 200ms→2s)
+  - Fixed mock setup in `tests/unit/test_dashboard_server.py` for threading/event loop tests
+  - Result: 3319 passed, 114 skipped, 0 failures in 3:13 with `-n 4`
+
+### Added - 2025-11-29
+- **BUG-039: Implement DashboardServer class**
+  - Created `DashboardServer` class in `src/dashboard/web_server.py`
+  - Added async `start()` and `stop()` methods for lifecycle management
+  - Accepts health monitoring components: metrics_collector, alert_engine, health_reporter, store, config
+  - Exports `DashboardServer` from `src/dashboard/__init__.py`
+  - Created comprehensive test suite: `tests/unit/test_dashboard_server.py`
+  - Fixes NameError in `HealthService.start_dashboard()` method
+
 ### Added - 2025-11-28
 - **PERF: MPS (Apple Silicon) GPU Acceleration**
   - Added `detect_mps()` function to detect Apple Silicon GPU availability
@@ -67,6 +85,13 @@ Organize entries under these headers in chronological order (newest first):
   - Added `disable_auto_indexing_and_force_cpu` autouse fixture to prevent GPU/MPS loading
   - Updated `test_embedding_generator.py` to use 768-dim (new default model)
   - Files: tests/conftest.py, pytest.ini, tests/unit/test_embedding_generator.py
+
+- **BUG: Server tests hanging during initialization (TEST-029)**
+  - Root cause: ServerConfig fixtures used wrong config path for auto-indexing
+  - Fix: Added `indexing={"auto_index_enabled": False, "auto_index_on_startup": False}`
+  - Added `mock_embeddings_globally` fixture dependency to server fixtures
+  - Removed redundant `mock_embeddings` parameter from individual tests
+  - Files: tests/unit/test_server.py, tests/unit/test_server_extended.py
 
 ### Changed - 2025-11-28
 - **Embedding model upgrade**
@@ -89,6 +114,18 @@ Organize entries under these headers in chronological order (newest first):
   - Added `qdrant_heavy` pytest marker
   - Dynamic vector size in conftest.py based on embedding model
   - Files: tests/conftest.py, pytest.ini, docker-compose.yml
+
+- **TEST-029: Test Suite Optimization**
+  - Reduced performance test data volumes by 10x (6000→600 memories) in test_scalability.py
+  - Reduced cache test file counts by 2-5x in test_cache.py
+  - Added session-scoped `pre_indexed_server` fixture for read-only E2E tests
+  - Converted loop-based tests to `@pytest.mark.parametrize` for better isolation
+  - Created `test_language_parsing_parameterized.py` consolidating Ruby/Python/JS tests
+  - Fixed fixture scopes: `sample_memories` now module-scoped in test_hybrid_search.py
+  - Added `tests/unit/conftest.py` with shared module-scoped fixtures
+  - Removed validation theater (`assert True`) from test_file_watcher_indexing.py
+  - Skipped unsupported Kotlin/Swift tests with clear documentation
+  - Expected 30-50% reduction in test execution time
 
 ### Added - 2025-11-27
 - **FEAT-061: Git/Historical Integration**

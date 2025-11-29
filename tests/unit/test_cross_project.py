@@ -23,6 +23,7 @@ def config(tmp_path):
             "cross_project_default_mode": "current",
         },
         cross_project_opt_in_file=str(consent_file),
+        indexing={"auto_index_enabled": False, "auto_index_on_startup": False},
     )
 
 
@@ -130,6 +131,7 @@ class TestSearchAllProjects:
             await srv.search_all_projects(query="test")
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_search_all_projects_no_opted_in(self, server):
         """Test search with no opted-in projects."""
         # Don't opt in any projects
@@ -142,6 +144,7 @@ class TestSearchAllProjects:
         assert isinstance(result["projects_searched"], list)
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_search_all_projects_with_indexing(self, server, small_test_project):
         """Test cross-project search with actual indexed code."""
         # Get the current project name (auto-detected from git)
@@ -173,6 +176,7 @@ class TestSearchAllProjects:
         assert "query_time_ms" in result
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_search_all_projects_result_format(self, server, small_test_project):
         """Test that cross-project results have correct format."""
         await server.index_codebase(

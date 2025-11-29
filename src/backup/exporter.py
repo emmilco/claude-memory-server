@@ -322,36 +322,92 @@ class DataExporter:
         Returns:
             List of tuples (MemoryUnit, embedding vector)
         """
-        # Get all memories (store-specific implementation)
-        # For now, use search with empty query to get all
-        from src.core.models import SearchFilters
+        from src.store.qdrant_store import QdrantMemoryStore
+        from qdrant_client.models import Filter, FieldCondition, MatchValue
 
-        filters = SearchFilters(
-            category=category,
-            context_level=context_level,
-            project_name=project_name,
-        )
-
-        # Retrieve all memories via search (with high limit)
-        results = await self.store.search_with_filters(
-            query_embedding=[0.0] * 384,  # Dummy vector
-            limit=100000,  # High limit to get all
-            filters=filters
-        )
-
-        # Extract memories from results (Tuple[MemoryUnit, float])
-        # We need to retrieve embeddings separately
         memory_embeddings = []
-        for memory, score in results:
-            # Apply date filters
-            if since_date and memory.created_at < since_date:
-                continue
-            if until_date and memory.created_at > until_date:
-                continue
 
-            # Retrieve embedding for this memory
-            embedding = await self._get_embedding(memory.id)
-            memory_embeddings.append((memory, embedding))
+        if isinstance(self.store, QdrantMemoryStore):
+            # Use scroll to get all memories (more reliable than search with dummy vector)
+            client = await self.store._get_client()
+            try:
+                offset = None
+                while True:
+                    # Build filter conditions
+                    filter_conditions = []
+                    if project_name:
+                        filter_conditions.append(
+                            FieldCondition(key="project_name", match=MatchValue(value=project_name))
+                        )
+                    if category:
+                        filter_conditions.append(
+                            FieldCondition(key="category", match=MatchValue(value=category.value))
+                        )
+                    if context_level:
+                        filter_conditions.append(
+                            FieldCondition(key="context_level", match=MatchValue(value=context_level.value))
+                        )
+
+                    scroll_filter = Filter(must=filter_conditions) if filter_conditions else None
+
+                    results, offset = client.scroll(
+                        collection_name=self.store.collection_name,
+                        limit=100,
+                        offset=offset,
+                        scroll_filter=scroll_filter,
+                        with_payload=True,
+                        with_vectors=True,  # Get embeddings directly
+                    )
+
+                    if not results:
+                        break
+
+                    for point in results:
+                        try:
+                            memory = self.store._payload_to_memory_unit(point.payload)
+
+                            # Apply date filters
+                            if since_date and memory.created_at < since_date:
+                                continue
+                            if until_date and memory.created_at > until_date:
+                                continue
+
+                            embedding = point.vector if point.vector else []
+                            memory_embeddings.append((memory, embedding))
+                        except (ValueError, KeyError) as e:
+                            logger.warning(f"Failed to parse memory from scroll result: {e}")
+                            continue
+
+                    if offset is None:
+                        break
+            finally:
+                # Release client back to pool
+                if self.store.use_pool and self.store.setup.pool:
+                    await self.store.setup.pool.release(client)
+        else:
+            # Fallback for other store types - use search with filters
+            from src.core.models import SearchFilters
+
+            filters = SearchFilters(
+                category=category,
+                context_level=context_level,
+                project_name=project_name,
+            )
+
+            results = await self.store.search_with_filters(
+                query_embedding=[0.0] * 768,
+                limit=100000,
+                filters=filters
+            )
+
+            for memory, score in results:
+                if since_date and memory.created_at < since_date:
+                    continue
+                if until_date and memory.created_at > until_date:
+                    continue
+
+                embedding = await self._get_embedding(memory.id)
+                memory_embeddings.append((memory, embedding))
 
         return memory_embeddings
 

@@ -15,7 +15,7 @@ import time
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 
-from src.config import ServerConfig
+from src.config import ServerConfig, DEFAULT_EMBEDDING_DIM
 from src.store import MemoryStore
 from src.embeddings.generator import EmbeddingGenerator
 from src.embeddings.cache import EmbeddingCache
@@ -808,7 +808,7 @@ class CodeIndexingService:
             tags=["code"],
         )
 
-        empty_embedding = [0.0] * 384
+        empty_embedding = [0.0] * DEFAULT_EMBEDDING_DIM
         results = await self.store.retrieve(
             query_embedding=empty_embedding,
             filters=filters,

@@ -9,6 +9,9 @@ These tests use the real QdrantMemoryStore with pooled connections.
 """
 
 import pytest
+
+# Run sequentially on single worker - Qdrant connection sensitive under parallel execution
+pytestmark = pytest.mark.xdist_group("qdrant_sequential")
 import pytest_asyncio
 from pathlib import Path
 import json
@@ -71,7 +74,7 @@ async def temp_store(qdrant_client, unique_qdrant_collection):
     ]
 
     # Embeddings stored separately
-    embeddings = [[0.1] * 384, [0.2] * 384]
+    embeddings = [[0.1] * 768, [0.2] * 768]
 
     for memory, embedding in zip(memories, embeddings):
         await store.store(

@@ -9,8 +9,8 @@ from src.config import ServerConfig
 from src.core.server import MemoryRAGServer
 from src.core.models import MemoryCategory, ContextLevel, MemoryScope
 
-# Skip entire module in CI - Qdrant timing sensitive under parallel execution
-pytestmark = pytest.mark.skip_ci(reason="Flaky under parallel execution - Qdrant timing sensitive")
+# Run sequentially on single worker - Qdrant connection sensitive under parallel execution
+pytestmark = pytest.mark.xdist_group("qdrant_sequential")
 
 
 @pytest.fixture

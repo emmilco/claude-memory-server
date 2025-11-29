@@ -7,9 +7,17 @@ from src.core.models import MemoryUnit, MemoryScope, MemoryCategory, ContextLeve
 
 
 # Test fixtures
-@pytest.fixture
+@pytest.fixture(scope="module")
 def sample_memories():
-    """Create sample memory units for testing."""
+    """Module-scoped sample memories for read-only hybrid search tests.
+
+    These MemoryUnit objects are immutable and used as read-only test data
+    for hybrid search operations. Each test creates its own HybridSearcher
+    instance, so there is no cross-test contamination from the shared fixtures.
+
+    Module scope reduces fixture setup overhead from ~40 instantiations
+    to 1 per test module.
+    """
     memories = [
         MemoryUnit(
             id="mem1",
@@ -47,9 +55,13 @@ def sample_memories():
     return memories
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def sample_vector_results(sample_memories):
-    """Create sample vector search results."""
+    """Module-scoped vector search results for read-only tests.
+
+    Creates tuples of (MemoryUnit, score) simulating vector search output.
+    These are immutable and safe to share across tests in the module.
+    """
     # Simulate vector search results (sorted by semantic similarity)
     return [
         (sample_memories[0], 0.95),  # authentication user login

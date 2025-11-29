@@ -58,7 +58,7 @@ except ImportError as e:
             "Install with: cd rust_core && maturin build --release && pip install target/wheels/*.whl"
         )
 
-from src.config import ServerConfig, get_config
+from src.config import ServerConfig, get_config, DEFAULT_EMBEDDING_DIM
 from src.embeddings.generator import EmbeddingGenerator
 from src.embeddings.parallel_generator import ParallelEmbeddingGenerator
 from src.store.qdrant_store import QdrantMemoryStore
@@ -651,7 +651,7 @@ class IncrementalIndexer(BaseCodeIndexer):
                 )
 
                 # Retrieve all memories with dummy embedding (not used for filtering)
-                dummy_embedding = [0.0] * 384
+                dummy_embedding = [0.0] * DEFAULT_EMBEDDING_DIM
                 results = await self.store.retrieve(
                     query_embedding=dummy_embedding,
                     filters=filters,
@@ -795,7 +795,7 @@ class IncrementalIndexer(BaseCodeIndexer):
                 )
 
                 # Retrieve all memories with dummy embedding
-                dummy_embedding = [0.0] * 384
+                dummy_embedding = [0.0] * DEFAULT_EMBEDDING_DIM
                 results = await self.store.retrieve(
                     query_embedding=dummy_embedding,
                     filters=filters,

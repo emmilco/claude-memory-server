@@ -10,6 +10,9 @@ These tests use the real QdrantMemoryStore with pooled connections.
 """
 
 import pytest
+
+# Run sequentially on single worker - Qdrant connection sensitive under parallel execution
+pytestmark = pytest.mark.xdist_group("qdrant_sequential")
 import pytest_asyncio
 import uuid
 from pathlib import Path
@@ -70,7 +73,7 @@ async def test_import_from_json(temp_store):
                 "project_name": "import-project",
                 "importance": 0.7,
                 "embedding_model": "test-model",
-                "embedding": [0.3] * 384,
+                "embedding": [0.3] * 768,
                 "created_at": datetime.now(UTC).isoformat(),
                 "updated_at": datetime.now(UTC).isoformat(),
                 "last_accessed": datetime.now(UTC).isoformat(),
@@ -113,7 +116,7 @@ async def test_import_conflict_keep_newer(temp_store):
     old_time = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
     await temp_store.store(
         content="Old content",
-        embedding=[0.1] * 384,
+        embedding=[0.1] * 768,
         metadata={
             "id": test_id,
             "category": MemoryCategory.PREFERENCE.value,
@@ -148,7 +151,7 @@ async def test_import_conflict_keep_newer(temp_store):
                 "project_name": "test",
                 "importance": 0.8,
                 "embedding_model": "test-model",
-                "embedding": [0.2] * 384,
+                "embedding": [0.2] * 768,
                 "created_at": new_time.isoformat(),
                 "updated_at": new_time.isoformat(),
                 "last_accessed": new_time.isoformat(),
@@ -200,7 +203,7 @@ async def test_import_dry_run(temp_store):
                 "project_name": "test",
                 "importance": 0.7,
                 "embedding_model": "test-model",
-                "embedding": [0.3] * 384,
+                "embedding": [0.3] * 768,
                 "created_at": datetime.now(UTC).isoformat(),
                 "updated_at": datetime.now(UTC).isoformat(),
                 "last_accessed": datetime.now(UTC).isoformat(),
@@ -239,7 +242,7 @@ async def test_import_from_archive(temp_store):
     now = datetime.now(UTC)
     await temp_store.store(
         content="Archive memory",
-        embedding=[0.4] * 384,
+        embedding=[0.4] * 768,
         metadata={
             "id": test_id,
             "category": MemoryCategory.PREFERENCE.value,

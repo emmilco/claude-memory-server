@@ -1,4 +1,7 @@
-"""Unit tests for indexed content visibility (FEAT-046)."""
+"""Unit tests for indexed content visibility (FEAT-046).
+
+These tests require real embedding model loading to verify actual indexing behavior.
+"""
 
 import pytest
 import pytest_asyncio
@@ -12,8 +15,11 @@ from src.config import ServerConfig
 from src.core.server import MemoryRAGServer
 from src.memory.incremental_indexer import IncrementalIndexer
 
-# Skip entire module in CI - Qdrant timing sensitive under parallel execution
-pytestmark = pytest.mark.skip_ci(reason="Flaky under parallel execution - Qdrant timing sensitive")
+# Skip entire module in CI and mark as requiring real embeddings for indexing
+pytestmark = [
+    pytest.mark.skip_ci(reason="Flaky under parallel execution - Qdrant timing sensitive"),
+    pytest.mark.real_embeddings,
+]
 
 
 @pytest.fixture

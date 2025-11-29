@@ -240,6 +240,7 @@ def test_class_alias():
 
 
 @pytest.mark.asyncio
+@pytest.mark.slow
 async def test_opt_in_cross_project_tool(server):
     """Test opt_in_cross_project MCP tool."""
     result = await server.opt_in_cross_project("my-project")
@@ -249,6 +250,7 @@ async def test_opt_in_cross_project_tool(server):
 
 
 @pytest.mark.asyncio
+@pytest.mark.slow
 async def test_opt_out_cross_project_tool(server):
     """Test opt_out_cross_project MCP tool."""
     # First opt-in
@@ -262,6 +264,7 @@ async def test_opt_out_cross_project_tool(server):
 
 
 @pytest.mark.asyncio
+@pytest.mark.slow
 async def test_list_opted_in_projects_tool(server):
     """Test list_opted_in_projects MCP tool."""
     # Set up some projects
@@ -282,6 +285,7 @@ async def test_list_opted_in_projects_tool(server):
 
 
 @pytest.mark.asyncio
+@pytest.mark.slow
 async def test_tools_with_cross_project_disabled():
     """Test that consent tools raise error when cross-project search is disabled."""
     config = ServerConfig(

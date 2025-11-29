@@ -1,4 +1,20 @@
-"""Tests for Ruby language parsing support (FEAT-007)."""
+"""Tests for Ruby language parsing support (FEAT-007).
+
+NOTE (TEST-029): Common test patterns have been consolidated into
+test_language_parsing_parameterized.py which now tests Ruby alongside
+Python and JavaScript in parameterized form.
+
+This file retains Ruby-specific tests that validate unique Ruby constructs:
+- Module extraction (Ruby modules != classes in other languages)
+- Nested module/class extraction within modules
+- Case sensitivity behavior
+- Syntax error graceful handling
+- Language field detection
+
+For common patterns (file recognition, class/function extraction, metadata,
+edge cases), see test_language_parsing_parameterized.py which reduces
+duplication across supported languages.
+"""
 
 import pytest
 from pathlib import Path

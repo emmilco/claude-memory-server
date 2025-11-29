@@ -7,6 +7,65 @@ from typing import Dict, List, Any, Callable
 import asyncio
 from itertools import cycle
 
+
+# =============================================================================
+# CRITICAL: Apply embedding mocks at module import time
+# =============================================================================
+# This ensures mocks are in place BEFORE any fixtures run, preventing the
+# 420MB embedding model from being loaded during server.initialize() calls.
+# The autouse fixture below provides the actual mock implementations per-test,
+# but this early patching prevents any imports from loading the real model.
+
+
+def _apply_early_patches():
+    """Apply critical patches at import time."""
+    import os
+
+    # CRITICAL: Disable auto-indexing BEFORE any imports that might trigger it
+    os.environ["CLAUDE_RAG_AUTO_INDEX_ENABLED"] = "false"
+    os.environ["CLAUDE_RAG_AUTO_INDEX_ON_STARTUP"] = "false"
+
+    # Patch IndexingFeatures defaults to disable auto-indexing in tests
+    # This is necessary because ServerConfig may be instantiated before env vars are read
+    from src.config import IndexingFeatures
+    IndexingFeatures.model_fields['auto_index_enabled'].default = False
+    IndexingFeatures.model_fields['auto_index_on_startup'].default = False
+
+    # Apply embedding patches to prevent model loading
+    from src.embeddings.generator import EmbeddingGenerator
+    from src.embeddings import parallel_generator
+    from src.embeddings.parallel_generator import ParallelEmbeddingGenerator
+
+    # Store originals for tests that need them
+    EmbeddingGenerator._original_initialize = EmbeddingGenerator.initialize
+    ParallelEmbeddingGenerator._original_initialize = ParallelEmbeddingGenerator.initialize
+
+    async def noop_initialize(self):
+        """No-op initialize that will be replaced by fixture mock."""
+        self.model = "early_patch_placeholder"
+        self._initialized = True
+        self.embedding_dim = 768
+
+    async def noop_parallel_initialize(self):
+        """No-op initialize that will be replaced by fixture mock."""
+        self._initialized = True
+        self.use_mps = False
+        self.executor = None
+
+    # CRITICAL: Patch the module-level worker function to prevent model loading
+    # in ProcessPoolExecutor workers (which are separate processes)
+    def noop_load_model_in_worker(model_name):
+        """No-op model loader for worker processes."""
+        return None
+
+    EmbeddingGenerator.initialize = noop_initialize
+    ParallelEmbeddingGenerator.initialize = noop_parallel_initialize
+    parallel_generator._load_model_in_worker = noop_load_model_in_worker
+
+
+# Apply patches immediately when conftest is imported
+_apply_early_patches()
+
 # Monkeypatch parse_source_file to support Kotlin/Swift via Python fallback
 try:
     from mcp_performance_core import parse_source_file as rust_parse_source_file
@@ -62,6 +121,7 @@ def mock_embeddings_globally(request, monkeypatch, mock_embedding_cache):
         return  # Let real embedding generator be used
 
     from src.embeddings.generator import EmbeddingGenerator
+    from src.embeddings.parallel_generator import ParallelEmbeddingGenerator
     from src.core.exceptions import EmbeddingError
 
     # Get embedding dimension from cache
@@ -98,6 +158,17 @@ def mock_embeddings_globally(request, monkeypatch, mock_embedding_cache):
 
     monkeypatch.setattr(EmbeddingGenerator, "generate", mock_generate)
 
+    # Mock initialize() to prevent loading the real 420MB model
+    async def mock_initialize(self):
+        """Mock initialize - set up fake model state without loading real model."""
+        self.model = "mocked"  # Set to truthy value so model_loaded checks pass
+        self._initialized = True
+        # Set embedding_dim based on model name
+        model_dims = {"all-MiniLM-L6-v2": 384, "all-mpnet-base-v2": 768}
+        self.embedding_dim = model_dims.get(self.model_name, 768)
+
+    monkeypatch.setattr(EmbeddingGenerator, "initialize", mock_initialize)
+
     # Also mock batch generation if it exists
     try:
         async def mock_generate_batch(self, texts):
@@ -107,6 +178,25 @@ def mock_embeddings_globally(request, monkeypatch, mock_embedding_cache):
         monkeypatch.setattr(EmbeddingGenerator, "generate_batch", mock_generate_batch)
     except AttributeError:
         pass  # generate_batch might not exist
+
+    # Mock ParallelEmbeddingGenerator to prevent spawning worker processes that load the model
+    async def mock_parallel_initialize(self):
+        """Mock initialize - skip process pool creation."""
+        self._initialized = True
+        self.use_mps = False
+        self.executor = None  # No real executor needed
+
+    async def mock_parallel_generate(self, text):
+        """Generate mock embedding for parallel generator."""
+        return await mock_generate(self, text)
+
+    async def mock_parallel_batch_generate(self, texts, **kwargs):
+        """Generate mock embeddings for batch in parallel generator."""
+        return [await mock_generate(self, text) for text in texts]
+
+    monkeypatch.setattr(ParallelEmbeddingGenerator, "initialize", mock_parallel_initialize)
+    monkeypatch.setattr(ParallelEmbeddingGenerator, "generate", mock_parallel_generate)
+    monkeypatch.setattr(ParallelEmbeddingGenerator, "batch_generate", mock_parallel_batch_generate)
 
 
 @pytest.fixture(autouse=True)
@@ -128,6 +218,9 @@ def disable_auto_indexing_and_force_cpu(monkeypatch):
     # Use double underscore for nested pydantic config: performance.force_cpu
     monkeypatch.setenv("CLAUDE_RAG_PERFORMANCE__FORCE_CPU", "true")
     monkeypatch.setenv("CLAUDE_RAG_PERFORMANCE__GPU_ENABLED", "false")
+    # Disable parallel embeddings to prevent spawning worker processes that
+    # each load the 420MB model (causing 15GB+ memory usage)
+    monkeypatch.setenv("CLAUDE_RAG_PERFORMANCE__PARALLEL_EMBEDDINGS", "false")
 
 
 @pytest.fixture
@@ -136,6 +229,18 @@ def small_test_project(tmp_path):
 
     This fixture creates a minimal test project that indexes quickly,
     reducing test time from 60-80s to 10-15s for tests that need indexed code.
+
+    Scope: function (cannot be session-scoped)
+
+    Why function-scoped:
+    1. Depends on tmp_path which is function-scoped (pytest constraint)
+    2. Tests using this fixture typically index into the database with
+       the same project_name, causing cross-test contamination if shared
+    3. Each test expects a fresh indexing operation
+
+    To create a session-scoped version, use tmp_path_factory and ensure
+    tests use unique project names. See test_project_factory for a
+    reusable alternative.
     """
     project = tmp_path / "test_project"
     project.mkdir()

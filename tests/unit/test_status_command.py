@@ -265,26 +265,24 @@ class TestParserInfo:
         """Test getting parser info when Rust is available."""
         cmd = StatusCommand()
 
-        with patch('src.memory.incremental_indexer.PARSER_MODE', "rust"):
-            with patch('src.memory.incremental_indexer.RUST_AVAILABLE', True):
-                info = await cmd.get_parser_info()
+        with patch('src.memory.incremental_indexer.RUST_AVAILABLE', True):
+            info = await cmd.get_parser_info()
 
-                assert info["mode"] == "rust"
-                assert info["rust_available"] is True
-                assert "optimal" in info["description"].lower()
+            assert info["mode"] == "rust"
+            assert info["rust_available"] is True
+            assert "optimal" in info["description"].lower()
 
     @pytest.mark.asyncio
-    async def test_get_parser_info_python(self):
-        """Test getting parser info when using Python fallback."""
+    async def test_get_parser_info_unavailable(self):
+        """Test getting parser info when Rust is not available."""
         cmd = StatusCommand()
 
-        with patch('src.memory.incremental_indexer.PARSER_MODE', "python"):
-            with patch('src.memory.incremental_indexer.RUST_AVAILABLE', False):
-                info = await cmd.get_parser_info()
+        with patch('src.memory.incremental_indexer.RUST_AVAILABLE', False):
+            info = await cmd.get_parser_info()
 
-                assert info["mode"] == "python"
-                assert info["rust_available"] is False
-                assert "fallback" in info["description"].lower() or "slower" in info["description"].lower()
+            assert info["mode"] == "unavailable"
+            assert info["rust_available"] is False
+            assert "required" in info["description"].lower()
 
 
 class TestEmbeddingInfo:
@@ -582,20 +580,35 @@ class TestRunCommand:
             "dimensions": 384,
             "batch_size": 32
         }
+        file_watcher_info = {
+            "enabled": True,
+            "debounce_ms": 1000,
+            "supported_extensions": [".py", ".js"],
+            "description": "Auto-reindex files on change"
+        }
+        active_project = {
+            "name": "test-project",
+            "path": "/tmp/test-project"
+        }
         projects = []
 
         cmd.get_storage_stats = AsyncMock(return_value=storage_stats)
         cmd.get_cache_stats = AsyncMock(return_value=cache_stats)
         cmd.get_parser_info = AsyncMock(return_value=parser_info)
         cmd.get_embedding_model_info = AsyncMock(return_value=embedding_info)
+        cmd.get_file_watcher_info = AsyncMock(return_value=file_watcher_info)
+        cmd.get_active_project = AsyncMock(return_value=active_project)
         cmd.get_indexed_projects = AsyncMock(return_value=projects)
 
         # Mock print methods
         cmd.print_header = Mock()
+        cmd.print_degradation_warnings = Mock()
         cmd.print_storage_stats = Mock()
         cmd.print_cache_stats = Mock()
         cmd.print_parser_info = Mock()
         cmd.print_embedding_info = Mock()
+        cmd.print_file_watcher_info = Mock()
+        cmd.print_active_project = Mock()
         cmd.print_projects_table = Mock()
         cmd.print_quick_commands = Mock()
 
@@ -607,14 +620,19 @@ class TestRunCommand:
         cmd.get_cache_stats.assert_called_once()
         cmd.get_parser_info.assert_called_once()
         cmd.get_embedding_model_info.assert_called_once()
+        cmd.get_file_watcher_info.assert_called_once()
+        cmd.get_active_project.assert_called_once()
         cmd.get_indexed_projects.assert_called_once()
 
         # Verify print methods were called with correct data
         cmd.print_header.assert_called_once()
+        cmd.print_degradation_warnings.assert_called_once()
         cmd.print_storage_stats.assert_called_once_with(storage_stats)
         cmd.print_cache_stats.assert_called_once_with(cache_stats)
         cmd.print_parser_info.assert_called_once_with(parser_info)
         cmd.print_embedding_info.assert_called_once_with(embedding_info)
+        cmd.print_file_watcher_info.assert_called_once_with(file_watcher_info)
+        cmd.print_active_project.assert_called_once_with(active_project)
         cmd.print_projects_table.assert_called_once_with(projects)
         cmd.print_quick_commands.assert_called_once()
 
@@ -728,17 +746,20 @@ class TestFileWatcherInfo:
         }
 
         cmd.print_header = Mock()
+        cmd.print_degradation_warnings = Mock()
         cmd.get_storage_stats = AsyncMock(return_value={"backend": "sqlite", "connected": True})
         cmd.get_cache_stats = AsyncMock(return_value={"exists": False})
         cmd.get_parser_info = AsyncMock(return_value={"mode": "rust"})
         cmd.get_embedding_model_info = AsyncMock(return_value={"model": "all-MiniLM-L6-v2"})
         cmd.get_file_watcher_info = AsyncMock(return_value=file_watcher_info)
+        cmd.get_active_project = AsyncMock(return_value=None)
         cmd.get_indexed_projects = AsyncMock(return_value=[])
         cmd.print_storage_stats = Mock()
         cmd.print_cache_stats = Mock()
         cmd.print_parser_info = Mock()
         cmd.print_embedding_info = Mock()
         cmd.print_file_watcher_info = Mock()
+        cmd.print_active_project = Mock()
         cmd.print_projects_table = Mock()
         cmd.print_quick_commands = Mock()
 

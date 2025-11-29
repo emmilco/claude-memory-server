@@ -202,12 +202,13 @@ class StatusCommand:
 
     async def get_parser_info(self) -> Dict[str, Any]:
         """Get parser information."""
-        from src.memory.incremental_indexer import PARSER_MODE, RUST_AVAILABLE
+        from src.memory.incremental_indexer import RUST_AVAILABLE
 
+        # Rust parser is now required - no Python fallback
         return {
-            "mode": PARSER_MODE,
+            "mode": "rust" if RUST_AVAILABLE else "unavailable",
             "rust_available": RUST_AVAILABLE,
-            "description": "Optimal performance" if RUST_AVAILABLE else "Fallback mode (10-20x slower)",
+            "description": "Optimal performance" if RUST_AVAILABLE else "Rust parser required but not installed",
         }
 
     async def get_embedding_model_info(self) -> Dict[str, Any]:

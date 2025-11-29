@@ -289,51 +289,55 @@ class TestHybridSearchIntegration:
         assert "DatabasePool" in class_names or any("DatabasePool" in r["code"] for r in results)
 
     @pytest.mark.asyncio
-    async def test_different_fusion_methods(self):
-        """Test different fusion methods produce results."""
-        for fusion_method in ["weighted", "rrf", "cascade"]:
-            temp_dir = tempfile.mkdtemp()
+    @pytest.mark.parametrize("fusion_method", ["weighted", "rrf", "cascade"])
+    async def test_fusion_method(self, fusion_method):
+        """Test that fusion method '{fusion_method}' produces results.
 
+        Each fusion method is tested in isolation for better failure reporting
+        and parallel execution capability.
+        """
+        temp_dir = tempfile.mkdtemp()
+
+        try:
+            config = ServerConfig(
+                storage_backend="qdrant",
+                qdrant_url="http://localhost:6333",
+                qdrant_collection_name=f"test_fusion_{fusion_method}_{uuid.uuid4().hex[:8]}",
+                search={"hybrid_search": True},
+                advanced={"read_only_mode": False},
+                hybrid_fusion_method=fusion_method,
+            )
+
+            server = MemoryRAGServer(config=config)
+            await server.initialize()
+
+            # Create and index sample code
+            code_dir = tempfile.mkdtemp()
             try:
-                config = ServerConfig(
-                    storage_backend="qdrant",
-                    qdrant_url="http://localhost:6333",
-                    qdrant_collection_name=f"test_fusion_{fusion_method}",
-                    search={"hybrid_search": True},
-                    advanced={"read_only_mode": False},
-                    hybrid_fusion_method=fusion_method,
+                test_file = Path(code_dir) / "test.py"
+                test_file.write_text("def authenticate_user(username, password):\n    pass")
+
+                await server.index_codebase(
+                    directory_path=code_dir,
+                    project_name=f"test-{fusion_method}",
                 )
 
-                server = MemoryRAGServer(config=config)
-                await server.initialize()
+                result = await server.search_code(
+                    query="authentication",
+                    project_name=f"test-{fusion_method}",
+                    search_mode="hybrid",
+                )
 
-                # Create and index sample code
-                code_dir = tempfile.mkdtemp()
-                try:
-                    test_file = Path(code_dir) / "test.py"
-                    test_file.write_text("def authenticate_user(username, password):\n    pass")
-
-                    await server.index_codebase(
-                        directory_path=code_dir,
-                        project_name=f"test-{fusion_method}",
-                    )
-
-                    result = await server.search_code(
-                        query="authentication",
-                        project_name=f"test-{fusion_method}",
-                        search_mode="hybrid",
-                    )
-
-                    assert result["status"] == "success"
-                    assert result["search_mode"] == "hybrid"
-
-                finally:
-                    shutil.rmtree(code_dir, ignore_errors=True)
-
-                await server.close()
+                assert result["status"] == "success", f"Fusion method {fusion_method} failed with status {result.get('status')}"
+                assert result["search_mode"] == "hybrid", f"Expected hybrid mode but got {result.get('search_mode')}"
 
             finally:
-                shutil.rmtree(temp_dir, ignore_errors=True)
+                shutil.rmtree(code_dir, ignore_errors=True)
+
+            await server.close()
+
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 class TestHybridSearchPerformance:
@@ -514,55 +518,64 @@ class TestHybridSearchConfiguration:
     """Test hybrid search configuration options."""
 
     @pytest.mark.asyncio
-    async def test_different_alpha_values(self):
-        """Test hybrid search with different alpha values."""
-        for alpha in [0.0, 0.3, 0.5, 0.7, 1.0]:
-            temp_dir = tempfile.mkdtemp()
+    @pytest.mark.parametrize("alpha", [0.0, 0.3, 0.5, 0.7, 1.0])
+    async def test_alpha_value(self, alpha):
+        """Test hybrid search with alpha value {alpha}.
 
-            try:
-                config = ServerConfig(
-                    storage_backend="qdrant",
-                    qdrant_url="http://localhost:6333",
-                    qdrant_collection_name=f"test_alpha_{int(alpha*100)}",
-                    search={"hybrid_search": True},
-                    advanced={"read_only_mode": False},
-                    hybrid_search_alpha=alpha,
-                )
+        Alpha controls the balance between semantic (1.0) and keyword (0.0) search.
+        Each value is tested in isolation for better failure reporting.
+        """
+        temp_dir = tempfile.mkdtemp()
 
-                server = MemoryRAGServer(config=config)
-                await server.initialize()
+        try:
+            config = ServerConfig(
+                storage_backend="qdrant",
+                qdrant_url="http://localhost:6333",
+                qdrant_collection_name=f"test_alpha_{int(alpha*100)}_{uuid.uuid4().hex[:8]}",
+                search={"hybrid_search": True},
+                advanced={"read_only_mode": False},
+                hybrid_search_alpha=alpha,
+            )
 
-                assert server.hybrid_searcher.alpha == alpha
+            server = MemoryRAGServer(config=config)
+            await server.initialize()
 
-                await server.close()
+            assert server.hybrid_searcher.alpha == alpha, f"Expected alpha {alpha} but got {server.hybrid_searcher.alpha}"
 
-            finally:
-                shutil.rmtree(temp_dir, ignore_errors=True)
+            await server.close()
+
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
 
     @pytest.mark.asyncio
-    async def test_different_bm25_parameters(self):
-        """Test hybrid search with different BM25 parameters."""
-        for k1, b in [(1.2, 0.75), (1.5, 0.75), (2.0, 0.5)]:
-            temp_dir = tempfile.mkdtemp()
+    @pytest.mark.parametrize("k1,b", [(1.2, 0.75), (1.5, 0.75), (2.0, 0.5)])
+    async def test_bm25_parameters(self, k1, b):
+        """Test hybrid search with BM25 parameters k1={k1}, b={b}.
 
-            try:
-                config = ServerConfig(
-                    storage_backend="qdrant",
-                    qdrant_url="http://localhost:6333",
-                    qdrant_collection_name=f"test_bm25_k{int(k1*10)}_b{int(b*100)}",
-                    search={"hybrid_search": True},
-                    advanced={"read_only_mode": False},
-                    bm25_k1=k1,
-                    bm25_b=b,
-                )
+        BM25 parameters control term frequency saturation (k1) and
+        document length normalization (b). Each combination is tested
+        in isolation for better failure reporting.
+        """
+        temp_dir = tempfile.mkdtemp()
 
-                server = MemoryRAGServer(config=config)
-                await server.initialize()
+        try:
+            config = ServerConfig(
+                storage_backend="qdrant",
+                qdrant_url="http://localhost:6333",
+                qdrant_collection_name=f"test_bm25_k{int(k1*10)}_b{int(b*100)}_{uuid.uuid4().hex[:8]}",
+                search={"hybrid_search": True},
+                advanced={"read_only_mode": False},
+                bm25_k1=k1,
+                bm25_b=b,
+            )
 
-                assert server.hybrid_searcher.bm25.k1 == k1
-                assert server.hybrid_searcher.bm25.b == b
+            server = MemoryRAGServer(config=config)
+            await server.initialize()
 
-                await server.close()
+            assert server.hybrid_searcher.bm25.k1 == k1, f"Expected k1={k1} but got {server.hybrid_searcher.bm25.k1}"
+            assert server.hybrid_searcher.bm25.b == b, f"Expected b={b} but got {server.hybrid_searcher.bm25.b}"
 
-            finally:
-                shutil.rmtree(temp_dir, ignore_errors=True)
+            await server.close()
+
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
