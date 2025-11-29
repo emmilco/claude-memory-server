@@ -20,7 +20,7 @@ from src.store.base import MemoryStore
 from src.store.qdrant_setup import QdrantSetup
 from src.core.models import MemoryUnit, SearchFilters, MemoryCategory, ContextLevel, MemoryScope
 from src.core.exceptions import StorageError, RetrievalError, MemoryNotFoundError, ValidationError
-from src.config import ServerConfig
+from src.config import ServerConfig, DEFAULT_EMBEDDING_DIM
 
 logger = logging.getLogger(__name__)
 
@@ -2619,7 +2619,7 @@ class QdrantMemoryStore(MemoryStore):
                 diff_embedding = change_data.get("diff_embedding")
                 if not diff_embedding:
                     # Create zero vector for file changes without diffs
-                    diff_embedding = [0.0] * 384
+                    diff_embedding = [0.0] * DEFAULT_EMBEDDING_DIM
 
                 # Build payload for file change
                 payload = {

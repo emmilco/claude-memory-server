@@ -7,6 +7,7 @@ from typing import Dict, Any, Optional
 from src.core.models import MemoryProvenance, ProvenanceSource, MemoryUnit
 from src.store.base import MemoryStore
 from src.core.exceptions import ValidationError
+from src.config import DEFAULT_EMBEDDING_DIM
 
 logger = logging.getLogger(__name__)
 
@@ -318,7 +319,7 @@ class ProvenanceTracker:
             # Get all memories (this is simplified - in production, we'd want better filtering)
             from src.core.models import SearchFilters
             all_memories = await self.store.retrieve(
-                query_embedding=[0.0] * 384,  # Dummy embedding
+                query_embedding=[0.0] * DEFAULT_EMBEDDING_DIM,
                 filters=None,
                 limit=1000
             )
@@ -357,7 +358,7 @@ class ProvenanceTracker:
         try:
             # Get all memories
             all_memories = await self.store.retrieve(
-                query_embedding=[0.0] * 384,
+                query_embedding=[0.0] * DEFAULT_EMBEDDING_DIM,
                 filters=None,
                 limit=1000
             )

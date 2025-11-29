@@ -1,4 +1,8 @@
-"""Tests for parallel embedding generation."""
+"""Tests for parallel embedding generation.
+
+These tests require real embedding model loading to verify actual parallel
+embedding behavior, ProcessPoolExecutor creation, and worker distribution.
+"""
 
 import pytest
 import pytest_asyncio
@@ -6,6 +10,9 @@ import asyncio
 from typing import List
 from unittest.mock import Mock, patch
 import os
+
+# Mark all tests in this module as requiring real embeddings
+pytestmark = pytest.mark.real_embeddings
 
 from src.embeddings.parallel_generator import ParallelEmbeddingGenerator
 from src.config import ServerConfig

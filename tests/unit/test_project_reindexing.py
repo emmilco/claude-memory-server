@@ -1,6 +1,12 @@
-"""Tests for project reindexing control (FEAT-045)."""
+"""Tests for project reindexing control (FEAT-045).
+
+These tests require real embedding model loading to verify actual reindexing behavior.
+"""
 
 import pytest
+
+# Mark all tests in this module as requiring real embeddings
+pytestmark = pytest.mark.real_embeddings
 import pytest_asyncio
 import tempfile
 import shutil

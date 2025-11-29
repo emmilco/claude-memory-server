@@ -35,7 +35,7 @@ class QdrantCallGraphStore:
 
     Collection Schema:
     - id: Function qualified name (e.g., "MyClass.method")
-    - vector: Dummy vector [0.0] * 384 (not used for semantic search)
+    - vector: Dummy vector [0.0] * 768 (not used for semantic search)
     - payload:
         - function_node: FunctionNode attributes
         - calls_to: List of callee function names (forward index)
@@ -46,19 +46,20 @@ class QdrantCallGraphStore:
         - indexed_at: Timestamp
     """
 
-    def __init__(self, config: Optional[ServerConfig] = None):
+    def __init__(self, config: Optional[ServerConfig] = None, collection_name: Optional[str] = None):
         """
         Initialize call graph store.
 
         Args:
             config: Server configuration. If None, uses global config.
+            collection_name: Optional collection name override (for testing).
         """
         if config is None:
             from src.config import get_config
             config = get_config()
 
         self.config = config
-        self.collection_name = "code_call_graph"
+        self.collection_name = collection_name or "code_call_graph"
         # Dummy vector size must match embedding model for collection compatibility
         model_dims = {
             "all-MiniLM-L6-v2": 384,

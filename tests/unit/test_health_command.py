@@ -315,8 +315,13 @@ class TestEmbeddingChecks:
                 assert "Not yet created" in message
 
 
+@pytest.mark.slow
 class TestRunChecks:
-    """Test the full check run."""
+    """Test the full check run.
+
+    Marked slow because run_checks performs comprehensive system checks
+    that take 5-7 seconds each due to the mocking overhead.
+    """
 
     @pytest.mark.asyncio
     async def test_run_checks_all_pass(self):
@@ -908,8 +913,12 @@ class TestQdrantLatencyChecks:
             assert latency is None
 
 
+@pytest.mark.slow
 class TestEnhancedRunChecks:
-    """Test enhanced run_checks with new features."""
+    """Test enhanced run_checks with new features.
+
+    Marked slow because run_checks performs comprehensive system checks.
+    """
 
     @pytest.mark.asyncio
     async def test_run_checks_includes_token_savings(self):

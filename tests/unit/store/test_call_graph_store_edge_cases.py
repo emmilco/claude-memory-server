@@ -31,9 +31,11 @@ def config():
 
 
 @pytest_asyncio.fixture
-async def store(config):
-    """Create and initialize test store."""
-    store = QdrantCallGraphStore(config)
+async def store(config, worker_id):
+    """Create and initialize test store with unique collection per worker."""
+    # Use unique collection name per test worker to avoid parallel test interference
+    collection_name = f"test_call_graph_edge_{worker_id}"
+    store = QdrantCallGraphStore(config, collection_name=collection_name)
     await store.initialize()
 
     # Clean up test data
@@ -45,10 +47,12 @@ async def store(config):
 
     yield store
 
-    # Clean up after tests
+    # Clean up after tests - delete the collection entirely
     try:
         await store.delete_project_call_graph("test_project")
         await store.delete_project_call_graph("edge_case_project")
+        if store.client:
+            store.client.delete_collection(collection_name)
     except:
         pass
 

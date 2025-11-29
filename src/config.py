@@ -11,6 +11,17 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Embedding model dimension mapping
+# Maps model names to their output embedding dimensions
+EMBEDDING_MODEL_DIMENSIONS = {
+    "all-MiniLM-L6-v2": 384,
+    "all-MiniLM-L12-v2": 384,
+    "all-mpnet-base-v2": 768,  # Current default model
+}
+
+# Default embedding dimension (768 for all-mpnet-base-v2)
+DEFAULT_EMBEDDING_DIM = 768
+
 
 class FeatureLevel(str, Enum):
     """Feature maturity levels for easy configuration presets."""
@@ -187,6 +198,12 @@ class ServerConfig(BaseSettings):
     embedding_cache_enabled: bool = True
     embedding_cache_path: str = "~/.claude-rag/embedding_cache.db"
     embedding_cache_ttl_days: int = 30
+
+    @computed_field
+    @property
+    def embedding_dimensions(self) -> int:
+        """Get the embedding dimension for the configured model."""
+        return EMBEDDING_MODEL_DIMENSIONS.get(self.embedding_model, DEFAULT_EMBEDDING_DIM)
 
     # SQLite for metadata tracking (not for vector storage - Qdrant only)
     sqlite_path: str = "~/.claude-rag/metadata.db"  # For ProjectIndexTracker metadata

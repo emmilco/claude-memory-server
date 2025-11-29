@@ -9,7 +9,7 @@ from datetime import datetime, UTC
 from pathlib import Path
 import subprocess
 
-from src.config import ServerConfig, get_config
+from src.config import ServerConfig, get_config, DEFAULT_EMBEDDING_DIM
 from src.store import create_memory_store, MemoryStore
 from src.embeddings.generator import EmbeddingGenerator
 from src.embeddings.cache import EmbeddingCache
@@ -3513,7 +3513,7 @@ class MemoryRAGServer(StructuralQueryMixin):
         # Get all code units (use empty embedding to get all)
         # This is a bit of a hack - we need all units, not just similar ones
         # We'll retrieve a large number to get most/all units
-        empty_embedding = [0.0] * 384  # Match embedding dimension
+        empty_embedding = [0.0] * DEFAULT_EMBEDDING_DIM
         results = await self.store.retrieve(
             query_embedding=empty_embedding,
             filters=filters,

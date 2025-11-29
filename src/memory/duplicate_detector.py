@@ -10,6 +10,7 @@ from src.core.models import MemoryUnit, MemoryCategory
 from src.store.base import MemoryStore
 from src.embeddings.generator import EmbeddingGenerator
 from src.core.exceptions import ValidationError
+from src.config import DEFAULT_EMBEDDING_DIM
 
 logger = logging.getLogger(__name__)
 
@@ -175,7 +176,7 @@ class DuplicateDetector:
             from src.core.models import SearchFilters
             filters = SearchFilters(category=category) if category else None
             all_memories_results = await self.store.retrieve(
-                query_embedding=[0.0] * 384,  # Dummy embedding to get all results
+                query_embedding=[0.0] * DEFAULT_EMBEDDING_DIM,
                 filters=filters,
                 limit=10000
             )
@@ -355,7 +356,7 @@ class DuplicateDetector:
             )
 
             all_code_results = await self.store.retrieve(
-                query_embedding=[0.0] * 384,  # Dummy embedding to get all
+                query_embedding=[0.0] * DEFAULT_EMBEDDING_DIM,
                 filters=filters,
                 limit=10000,
             )

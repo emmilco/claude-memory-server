@@ -14,19 +14,27 @@ from src.embeddings.parallel_generator import ParallelEmbeddingGenerator
 
 @pytest.fixture
 def config():
-    """Create test configuration with parallel embeddings enabled."""
+    """Create test configuration.
+
+    Note: Parallel embeddings are disabled by conftest autouse fixture to prevent
+    spawning worker processes that load the 420MB model. Tests that specifically
+    need parallel embeddings should use @pytest.mark.real_embeddings.
+    """
     return ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
         qdrant_collection_name="test_index_init",
-        enable_parallel_embeddings=True,  # This is the critical setting
-        embedding_parallel_workers=2,
+        enable_parallel_embeddings=False,  # Use mocked embeddings
+        embedding_parallel_workers=0,  # Disable workers
     )
 
 
 @pytest_asyncio.fixture
-async def server(config):
-    """Create initialized server."""
+async def server(config, mock_embeddings_globally):
+    """Create initialized server.
+
+    Depends on mock_embeddings_globally to ensure embedding mocks are applied.
+    """
     server = MemoryRAGServer(config=config)
     await server.initialize()
     yield server
@@ -69,8 +77,14 @@ class Calculator {
         yield tmpdir
 
 
+@pytest.mark.slow
 class TestIndexCodebaseInitialization:
-    """Test that index_codebase properly initializes the indexer."""
+    """Test that index_codebase properly initializes the indexer.
+
+    These tests require full server initialization with Qdrant, which takes
+    several seconds. They are marked as 'slow' to allow skipping in quick
+    test runs.
+    """
 
     @pytest.mark.asyncio
     async def test_indexer_is_initialized_before_indexing(self, server, temp_codebase):
@@ -108,12 +122,15 @@ class TestIndexCodebaseInitialization:
                 assert result["status"] == "success"
 
     @pytest.mark.asyncio
+    @pytest.mark.real_embeddings
     async def test_parallel_embedding_generator_executor_is_initialized(self, config, temp_codebase):
         """
         Test that ParallelEmbeddingGenerator.executor is not None after initialization.
 
         This directly tests the symptom of the bug: when initialize() is skipped,
         the ProcessPoolExecutor remains None, causing performance issues.
+
+        Requires real_embeddings marker since it tests actual ProcessPoolExecutor creation.
         """
         from src.store import create_memory_store
 
@@ -145,11 +162,12 @@ class TestIndexCodebaseInitialization:
         await store.close()
 
     @pytest.mark.asyncio
-    async def test_indexing_performance_with_initialization(self, server, temp_codebase, mock_embeddings):
+    async def test_indexing_performance_with_initialization(self, server, temp_codebase):
         """
         Test that indexing completes in reasonable time when properly initialized.
 
         This is a regression test to ensure the performance issue is fixed.
+        Server fixture already depends on mock_embeddings_globally.
         """
         import time
         import uuid

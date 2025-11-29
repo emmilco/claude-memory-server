@@ -71,7 +71,7 @@ async def temp_store(qdrant_client, unique_qdrant_collection):
     ]
 
     # Embeddings stored separately
-    embeddings = [[0.1] * 384, [0.2] * 384]
+    embeddings = [[0.1] * 768, [0.2] * 768]
 
     for memory, embedding in zip(memories, embeddings):
         await store.store(

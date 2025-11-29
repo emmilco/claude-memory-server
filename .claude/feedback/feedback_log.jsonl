@@ -395,3 +395,63 @@
   "sentiment": "corrective",
   "user_message": "happened again"
 }
+{
+  "timestamp": "2025-11-28T20:30:45Z",
+  "session_id": "76885070-c23d-462a-926d-3e1d9ff32ae5",
+  "sentiment": "corrective",
+  "user_message": "happened again"
+}
+{
+  "timestamp": "2025-11-28T20:33:26Z",
+  "session_id": "76885070-c23d-462a-926d-3e1d9ff32ae5",
+  "sentiment": "positive",
+  "user_message": "I'd like to make a general note: when you're debugging something and you believe you've identified the root cause, I would like you to always explain how you know that this is indeed the root cause and not something else. I'd like you to make a journal entry about this so we can use it in the next retro."
+}
+{
+  "timestamp": "2025-11-28T20:33:59Z",
+  "session_id": "76885070-c23d-462a-926d-3e1d9ff32ae5",
+  "sentiment": "corrective",
+  "user_message": "the test run was steady around 10gb of memory for a couple of minutes and then spiked to 15+ again."
+}
+{
+  "timestamp": "2025-11-28T21:44:13Z",
+  "session_id": "76885070-c23d-462a-926d-3e1d9ff32ae5",
+  "sentiment": "corrective",
+  "user_message": "hang on. I think just loading that parallel embeddings file may have caused a memory spike"
+}
+{
+  "timestamp": "2025-11-29T00:36:10Z",
+  "session_id": "76885070-c23d-462a-926d-3e1d9ff32ae5",
+  "sentiment": "positive",
+  "user_message": "One thing I notice you're bad at is failing fast during debugging sessions. You tend to get overconfident every time you think you've found the cause of an issue and then immediately shift to \"done\" mode, running the full test suite, merging your work, etc. But often you're wrong about the root cause and you're wrong about having fixed the issue and because you jumped to \"done\" so fast you often waste a huge amount of time running the entire test suite instead of doing quick, targeted test cycles. You ought to validate your work in as time-efficient a way as possible to reduce the cycle time between hypothesis and test result. "
+}
+{
+  "timestamp": "2025-11-29T00:40:14Z",
+  "session_id": "76885070-c23d-462a-926d-3e1d9ff32ae5",
+  "sentiment": "negative",
+  "user_message": "let's continue debugging but remember to try to fail fast, ok?"
+}
+{
+  "timestamp": "2025-11-29T02:55:00Z",
+  "session_id": "76885070-c23d-462a-926d-3e1d9ff32ae5",
+  "sentiment": "negative",
+  "user_message": "how is this failing fast, again? you keep getting this wrong."
+}
+{
+  "timestamp": "2025-11-29T03:08:38Z",
+  "session_id": "76885070-c23d-462a-926d-3e1d9ff32ae5",
+  "sentiment": "negative",
+  "user_message": "3 minutes is too long a loop. fail faster"
+}
+{
+  "timestamp": "2025-11-29T03:16:17Z",
+  "session_id": "76885070-c23d-462a-926d-3e1d9ff32ae5",
+  "sentiment": "negative",
+  "user_message": "continue. remember to fail fast. never allow any task to run more than 45 seconds."
+}
+{
+  "timestamp": "2025-11-29T04:34:27Z",
+  "session_id": "6c16b7f6-d7a8-4a78-9a96-7baeddfefa45",
+  "sentiment": "negative",
+  "user_message": "I want you to actually execute all 133 files individually. If you want you can do them in batches of 5-10. As soon as you find a test that fails, hangs, or is too slow (more than 15 seconds is too long), flag it, quit the test run, fix that specific test, and then rerun the file."
+}

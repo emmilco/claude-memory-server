@@ -1,6 +1,13 @@
-"""Comprehensive tests for EmbeddingGenerator."""
+"""Comprehensive tests for EmbeddingGenerator.
+
+These tests require real embedding model loading to verify actual embedding
+generation behavior, batch processing, normalization, and error handling.
+"""
 
 import pytest
+
+# Mark all tests in this module as requiring real embeddings
+pytestmark = pytest.mark.real_embeddings
 import pytest_asyncio
 import asyncio
 from unittest.mock import Mock, patch, AsyncMock

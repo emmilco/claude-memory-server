@@ -334,7 +334,7 @@ class DataExporter:
 
         # Retrieve all memories via search (with high limit)
         results = await self.store.search_with_filters(
-            query_embedding=[0.0] * 384,  # Dummy vector
+            query_embedding=[0.0] * 768,  # Dummy vector for all-mpnet-base-v2
             limit=100000,  # High limit to get all
             filters=filters
         )
