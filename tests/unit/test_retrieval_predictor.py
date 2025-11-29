@@ -519,13 +519,16 @@ class TestGetExplanation:
     def test_medium_utility_explanation(self, predictor):
         """Test explanation for medium utility queries."""
         # Craft a query that should be in the middle range
-        query = "update settings"  # Not clearly retrieval, not small talk
+        # "update settings" should produce ~0.3-0.5 utility
+        # (not clearly retrieval, not small talk, short and generic)
+        query = "update settings"
         utility = predictor.predict_utility(query)
 
-        # If utility is between 0.3 and 0.7, should get uncertain message
-        if 0.3 <= utility <= 0.7:
-            explanation = predictor.get_explanation(query, utility)
-            assert "uncertain" in explanation.lower()
+        # Verify utility is actually in medium range before testing explanation
+        assert 0.3 <= utility <= 0.7, f"Query should produce medium utility, got {utility}"
+
+        explanation = predictor.get_explanation(query, utility)
+        assert "uncertain" in explanation.lower()
 
     def test_explanation_includes_reasons(self, predictor):
         """Test that high utility explanations include reasons."""
