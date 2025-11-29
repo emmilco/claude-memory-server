@@ -113,9 +113,9 @@ async def test_vector_search(store):
     """Test vector similarity search."""
     # Store multiple memories with different embeddings
     memories = [
-        ("Python is great for data science", [0.1, 0.2] + [0.0] * 382),
-        ("JavaScript is used for web development", [0.8, 0.1] + [0.0] * 382),
-        ("Python is also good for web development", [0.15, 0.25] + [0.0] * 382),
+        ("Python is great for data science", [0.1, 0.2] + [0.0] * 766),
+        ("JavaScript is used for web development", [0.8, 0.1] + [0.0] * 766),
+        ("Python is also good for web development", [0.15, 0.25] + [0.0] * 766),
     ]
 
     for content, embedding in memories:
@@ -130,7 +130,7 @@ async def test_vector_search(store):
         )
 
     # Search with similar embedding
-    query_embedding = [0.12, 0.22] + [0.0] * 382
+    query_embedding = [0.12, 0.22] + [0.0] * 766
     results = await store.retrieve(query_embedding, limit=2)
 
     assert len(results) > 0
