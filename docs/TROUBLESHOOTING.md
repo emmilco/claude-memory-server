@@ -1224,8 +1224,9 @@ try:
     print("✓ Rust module available (fast parsing)")
     print(f"Functions: {dir(mcp_performance_core)}")
 except ImportError as e:
-    print(f"⚠ Using Python parser fallback (slower but works)")
+    print(f"⚠ Rust parser not available - code indexing will not work")
     print(f"Error: {e}")
+    print(f"Build with: cd rust_core && maturin develop && cd ..")
 ```
 
 ### Test Embedding Generation

@@ -143,7 +143,7 @@ python -m src.cli index ./path --project-name myproject
 - Status: **WORKING**
 - Indexing: 100% success rate
 - Progress indicators: Working
-- Error handling: Graceful fallback to Python parser if Rust unavailable
+- Error handling: Clear error messages if Rust parser unavailable
 
 ### ✅ Health Command
 ```bash
