@@ -1131,7 +1131,7 @@ class TestGetDailyMetrics:
         handler = MagicMock(spec=DashboardHandler)
 
         # Mock RAG server with metrics collector
-        mock_rag_server = AsyncMock()
+        mock_rag_server = MagicMock()
         mock_collector = MagicMock()
         mock_collector.get_daily_aggregate = AsyncMock(return_value=[
             MagicMock(timestamp=datetime.now(), total_memories=100, queries_per_day=50, avg_search_latency_ms=15.5)
@@ -1145,7 +1145,8 @@ class TestGetDailyMetrics:
         result = await handler._get_daily_metrics(7)
 
         assert len(result) == 1
-        mock_collector.get_daily_aggregate.assert_called_once_with(days=7)
+        # Assert the awaited call
+        mock_collector.get_daily_aggregate.assert_awaited_once_with(days=7)
 
     @pytest.mark.asyncio
     async def test_get_daily_metrics_without_collector(self):
@@ -1180,10 +1181,11 @@ class TestGenerateTrendsEdgeCases:
         DashboardHandler.rag_server = None
         DashboardHandler.event_loop = None
 
-        trends = mock_handler._generate_trends({}, "unknown", "memories")
+        with patch("src.dashboard.web_server.asyncio.run_coroutine_threadsafe"):
+            trends = mock_handler._generate_trends({}, "unknown", "memories")
 
-        assert trends["period"] == "30d"
-        assert len(trends["dates"]) == 30
+            assert trends["period"] == "30d"
+            assert len(trends["dates"]) == 30
 
     def test_generate_trends_with_historical_data(self, mock_handler):
         """Test _generate_trends with actual historical metrics."""
@@ -1450,6 +1452,7 @@ class TestMainFunction:
     def test_main_default_arguments(self):
         """Test main() uses default arguments."""
         from src.dashboard.web_server import main
+        import argparse
 
         with patch("src.dashboard.web_server.argparse.ArgumentParser") as mock_parser_class, \
              patch("src.dashboard.web_server.logging.basicConfig") as mock_logging, \
@@ -1583,8 +1586,9 @@ class TestTrendsPeriodParsing:
         DashboardHandler.rag_server = None
         DashboardHandler.event_loop = None
 
-        trends = mock_handler._generate_trends({}, "7d", "memories")
-        assert len(trends["dates"]) == 7
+        with patch("src.dashboard.web_server.asyncio.run_coroutine_threadsafe"):
+            trends = mock_handler._generate_trends({}, "7d", "memories")
+            assert len(trends["dates"]) == 7
 
     def test_generate_trends_period_30d(self, mock_handler):
         """Test period '30d' parses to 30 days."""
