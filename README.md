@@ -173,7 +173,7 @@ Claude automatically remembers:
 - **Required:**
   - Python 3.8+ (Python 3.13+ recommended for best performance)
   - Docker (for Qdrant vector database - **required for semantic code search**)
-- **Optional:** Rust (for faster code parsing, falls back to Python if unavailable)
+- **Rust** - Required for code parsing (mcp_performance_core module)
 - ~1GB disk space (10GB recommended for large codebases)
 
 ### Installation (One Command!)
@@ -256,7 +256,7 @@ If you prefer manual control:
 # 1. Install dependencies
 pip install -r requirements.txt
 
-# 2. (Optional) Build Rust module
+# 2. Build Rust module (required for code indexing)
 cd rust_core && maturin develop && cd ..
 
 # 3. (Optional) Start Qdrant
@@ -430,9 +430,9 @@ Claude has access to these tools:
 
 ### Core
 - **Python 3.8+** - Main application (3.13+ recommended)
-- **Rust 1.91** - Fast code parsing (tree-sitter, optional)
+- **Rust 1.91** - Code parsing (tree-sitter, required for indexing)
 - **Qdrant** - Vector database (optional, SQLite fallback available)
-- **PyO3** - Python-Rust bridge (optional)
+- **PyO3** - Python-Rust bridge (required for code parsing)
 
 ### AI/ML
 - **sentence-transformers** - Embedding generation

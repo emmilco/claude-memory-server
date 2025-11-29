@@ -605,8 +605,8 @@ except ParsingError as e:
 1. Check file has valid syntax
 2. Verify file type is supported
 3. Check file encoding (should be UTF-8)
-4. Skip file if parsing not critical
-5. Use Rust parser fallback to Python parser
+4. Verify Rust parser is installed (mcp_performance_core)
+5. Skip file if parsing not critical
 
 **Transient?** No - file must be fixed or skipped
 
@@ -861,19 +861,17 @@ try:
 except ImportError as e:
     raise RustBuildError(str(e))
 
-# Alternative: graceful fallback
+# Rust parser is required for code indexing
 try:
-    from rust_core import parse_code
-    use_rust = True
+    from mcp_performance_core import parse_code
 except ImportError:
-    logger.warning("Rust parser not available, using Python parser (slower)")
-    from src.parsing import parse_code
-    use_rust = False
+    logger.error("Rust parser not available - required for code indexing")
+    raise RustBuildError("Code indexing requires Rust parser module")
 ```
 
 **Recovery strategy:**
 
-**Option 1: Install Rust**
+**Install Rust and build parser:**
 ```bash
 # Install Rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
@@ -884,17 +882,12 @@ cd rust_core
 maturin develop
 ```
 
-**Option 2: Use Python parser (slower but no build required)**
-```python
-# System automatically falls back to Python parser
-# Performance: ~10-20x slower than Rust parser
-```
+**Transient?** No - requires Rust installation
 
-**Transient?** No - requires Rust installation or use Python fallback
-
-**Performance impact:**
+**Performance:**
 - **Rust parser**: ~1000 files/sec
-- **Python parser**: ~50 files/sec
+- Code indexing features require the Rust parser
+- Memory storage/retrieval works without Rust parser
 
 **See also:**
 - Troubleshooting: [docs/TROUBLESHOOTING.md](TROUBLESHOOTING.md#rust-parser-issues)

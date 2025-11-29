@@ -160,11 +160,14 @@ python -m src.cli index /path/to/single/file.py --project test -v
 
 **A. Parser initialization failed:**
 ```python
-# Check if optional tree-sitter languages are installed
-pip install tree-sitter-python tree-sitter-javascript tree-sitter-typescript
+# Rust parser is required for code indexing
+# Verify Rust parser is installed:
+python -c "import mcp_performance_core; print('Rust parser OK')"
 
-# Or use Python fallback parser (slower but always works)
-# Already automatically falls back if tree-sitter unavailable
+# If not installed, build it:
+cd rust_core
+maturin develop
+cd ..
 ```
 
 **B. Unsupported file types:**

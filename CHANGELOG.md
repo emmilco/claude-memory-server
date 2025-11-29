@@ -124,6 +124,9 @@ Organize entries under these headers in chronological order (newest first):
   - Updated `incremental_indexer.py` with clear error messages
   - Updated health_command.py, validate_installation.py, test_executor.py
   - Removed `tests/unit/test_python_parser.py`
+  - Updated documentation: DEBUGGING.md, TUTORIAL.md, README.md, docs/SETUP.md, docs/TROUBLESHOOTING.md, docs/ERROR_HANDLING.md, docs/E2E_TEST_REPORT.md
+  - Updated architecture docs: docs/ARCHITECTURE.md, docs/DEVELOPMENT.md, docs/CONFIGURATION_GUIDE.md
+  - Marked `allow_rust_fallback` config option as deprecated in config.json.example
 
 - **Test Infrastructure Improvements**
   - Reduced collection pool to 4 (matches pytest -n 4)
