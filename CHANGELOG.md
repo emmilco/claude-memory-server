@@ -52,6 +52,11 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Added - 2025-11-29
+- **TEST-007-D: Add test coverage for duplicate_detector.py (0% → 80%+)**
+  - Created comprehensive test suite with 77 tests
+  - Tests cover: DuplicateMember/DuplicateCluster dataclasses, initialization with threshold validation, similarity classification, cosine similarity calculations, find_duplicates with filters/thresholds, find_all_duplicates with clustering, auto-merge candidates, user review candidates, duplication scoring, union-find clustering algorithm, canonical selection logic
+  - File: tests/unit/test_duplicate_detector.py
+
 - **Service Layer Code Audit: 17 NEW bugs discovered (BUG-055 to BUG-063, REF-038 to REF-044)**
   - Comprehensive 3-agent parallel review of service layer (extracted in REF-013)
   - High priority: Stats race conditions, SQLite leak in feedback DB, path traversal in export
