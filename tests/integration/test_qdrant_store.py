@@ -81,8 +81,8 @@ async def test_store_initialization(store):
 @pytest.mark.asyncio
 async def test_store_and_retrieve_memory(store):
     """Test storing and retrieving a memory."""
-    # Create test embedding (384 dimensions for MiniLM-L6)
-    test_embedding = [0.1] * 384
+    # Create test embedding (768 dimensions for all-mpnet-base-v2)
+    test_embedding = [0.1] * 768
 
     # Store a memory
     memory_id = await store.store(
@@ -148,7 +148,7 @@ async def test_filtered_search(store):
     # Store memories with different categories and scopes
     await store.store(
         content="User prefers FastAPI",
-        embedding=[0.1] * 384,
+        embedding=[0.1] * 768,
         metadata={
             "category": MemoryCategory.PREFERENCE.value,
             "context_level": ContextLevel.USER_PREFERENCE.value,
@@ -159,7 +159,7 @@ async def test_filtered_search(store):
 
     await store.store(
         content="Project uses Django framework",
-        embedding=[0.2] * 384,
+        embedding=[0.2] * 768,
         metadata={
             "category": MemoryCategory.FACT.value,
             "context_level": ContextLevel.PROJECT_CONTEXT.value,
@@ -175,7 +175,7 @@ async def test_filtered_search(store):
     )
 
     results = await store.retrieve(
-        query_embedding=[0.15] * 384,
+        query_embedding=[0.15] * 768,
         filters=filters,
         limit=10,
     )
@@ -191,7 +191,7 @@ async def test_batch_store(store):
     items = [
         (
             f"Test memory {i}",
-            [i * 0.1] * 384,
+            [i * 0.1] * 768,
             {
                 "category": MemoryCategory.CONTEXT.value,
                 "context_level": ContextLevel.SESSION_STATE.value,
@@ -217,7 +217,7 @@ async def test_delete_memory(store):
     # Store a memory
     memory_id = await store.store(
         content="Temporary memory",
-        embedding=[0.5] * 384,
+        embedding=[0.5] * 768,
         metadata={
             "category": MemoryCategory.EVENT.value,
             "context_level": ContextLevel.SESSION_STATE.value,
@@ -244,7 +244,7 @@ async def test_update_memory(store):
     # Store a memory
     memory_id = await store.store(
         content="Original content",
-        embedding=[0.3] * 384,
+        embedding=[0.3] * 768,
         metadata={
             "category": MemoryCategory.FACT.value,
             "context_level": ContextLevel.PROJECT_CONTEXT.value,
@@ -268,7 +268,7 @@ async def test_importance_filter(store):
     # Store memories with different importance
     await store.store(
         content="Low importance",
-        embedding=[0.1] * 384,
+        embedding=[0.1] * 768,
         metadata={
             "category": MemoryCategory.FACT.value,
             "context_level": ContextLevel.PROJECT_CONTEXT.value,
@@ -279,7 +279,7 @@ async def test_importance_filter(store):
 
     await store.store(
         content="High importance",
-        embedding=[0.2] * 384,
+        embedding=[0.2] * 768,
         metadata={
             "category": MemoryCategory.FACT.value,
             "context_level": ContextLevel.PROJECT_CONTEXT.value,
@@ -291,7 +291,7 @@ async def test_importance_filter(store):
     # Search with minimum importance filter
     filters = SearchFilters(min_importance=0.7)
     results = await store.retrieve(
-        query_embedding=[0.15] * 384,
+        query_embedding=[0.15] * 768,
         filters=filters,
         limit=10,
     )
@@ -307,7 +307,7 @@ async def test_search_with_multiple_filters(store):
     # Store diverse memories
     await store.store(
         content="Python backend preference",
-        embedding=[0.1] * 384,
+        embedding=[0.1] * 768,
         metadata={
             "category": MemoryCategory.PREFERENCE.value,
             "context_level": ContextLevel.USER_PREFERENCE.value,
@@ -320,7 +320,7 @@ async def test_search_with_multiple_filters(store):
 
     await store.store(
         content="Frontend JavaScript fact",
-        embedding=[0.2] * 384,
+        embedding=[0.2] * 768,
         metadata={
             "category": MemoryCategory.FACT.value,
             "context_level": ContextLevel.PROJECT_CONTEXT.value,
@@ -338,7 +338,7 @@ async def test_search_with_multiple_filters(store):
     )
 
     results = await store.search_with_filters(
-        query_embedding=[0.15] * 384,
+        query_embedding=[0.15] * 768,
         filters=filters,
         limit=10,
     )
@@ -358,7 +358,7 @@ async def test_count_with_filters(store):
     for i in range(5):
         await store.store(
             content=f"Preference {i}",
-            embedding=[i * 0.1] * 384,
+            embedding=[i * 0.1] * 768,
             metadata={
                 "category": MemoryCategory.PREFERENCE.value,
                 "context_level": ContextLevel.USER_PREFERENCE.value,
@@ -369,7 +369,7 @@ async def test_count_with_filters(store):
     for i in range(3):
         await store.store(
             content=f"Fact {i}",
-            embedding=[i * 0.2] * 384,
+            embedding=[i * 0.2] * 768,
             metadata={
                 "category": MemoryCategory.FACT.value,
                 "context_level": ContextLevel.PROJECT_CONTEXT.value,
@@ -394,7 +394,7 @@ async def test_retrieve_with_limit(store):
     for i in range(20):
         await store.store(
             content=f"Memory {i}",
-            embedding=[i * 0.05] * 384,
+            embedding=[i * 0.05] * 768,
             metadata={
                 "category": MemoryCategory.CONTEXT.value,
                 "context_level": ContextLevel.SESSION_STATE.value,
@@ -403,7 +403,7 @@ async def test_retrieve_with_limit(store):
         )
 
     # Retrieve with limit
-    results = await store.retrieve([0.5] * 384, limit=5)
+    results = await store.retrieve([0.5] * 768, limit=5)
 
     # Should not exceed limit
     assert len(results) <= 5
@@ -420,7 +420,7 @@ async def test_retrieve_with_large_limit(store, test_project_name):
     for i in range(150):
         await store.store(
             content=f"Memory {i}",
-            embedding=[i * 0.001] * 384,  # Small increments to have variation
+            embedding=[i * 0.001] * 768,  # Small increments to have variation
             metadata={
                 "category": MemoryCategory.FACT.value,
                 "context_level": ContextLevel.PROJECT_CONTEXT.value,
@@ -431,7 +431,7 @@ async def test_retrieve_with_large_limit(store, test_project_name):
 
     # Request excessive limit, filtered by project name
     results = await store.retrieve(
-        [0.5] * 384,
+        [0.5] * 768,
         limit=1000,
         filters=SearchFilters(project_name=test_project_name, scope=MemoryScope.PROJECT)
     )
@@ -479,7 +479,7 @@ async def test_search_with_empty_results(store):
 
     # Search for category that doesn't exist in store
     results = await store.retrieve(
-        query_embedding=[0.99] * 384,
+        query_embedding=[0.99] * 768,
         filters=filters,
         limit=10,
     )
@@ -495,7 +495,7 @@ async def test_store_with_tags(store):
 
     memory_id = await store.store(
         content="FastAPI for async Python backend",
-        embedding=[0.5] * 384,
+        embedding=[0.5] * 768,
         metadata={
             "category": MemoryCategory.FACT.value,
             "context_level": ContextLevel.PROJECT_CONTEXT.value,
@@ -521,7 +521,7 @@ async def test_store_with_custom_metadata(store):
 
     memory_id = await store.store(
         content="Custom metadata test",
-        embedding=[0.4] * 384,
+        embedding=[0.4] * 768,
         metadata={
             "category": MemoryCategory.FACT.value,
             "context_level": ContextLevel.PROJECT_CONTEXT.value,
@@ -539,7 +539,7 @@ async def test_store_with_custom_metadata(store):
 async def test_retrieve_empty_store(store):
     """Test retrieving from empty store."""
     # Store should be empty or nearly empty from fixture
-    results = await store.retrieve([0.5] * 384, limit=10)
+    results = await store.retrieve([0.5] * 768, limit=10)
 
     # Should not error, just return empty or minimal results
     assert isinstance(results, list)
