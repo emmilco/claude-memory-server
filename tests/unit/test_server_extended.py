@@ -22,6 +22,7 @@ def config(unique_qdrant_collection):
         qdrant_collection_name=unique_qdrant_collection,
         advanced={"read_only_mode": False},
         search={"retrieval_gate_enabled": False},  # Disable gate for predictable test results
+        indexing={"auto_index_enabled": False, "auto_index_on_startup": False},  # Disable auto-indexing
     )
 
 
@@ -38,12 +39,17 @@ def readonly_config(unique_qdrant_collection):
         qdrant_collection_name=unique_qdrant_collection,
         advanced={"read_only_mode": True},
         search={"retrieval_gate_enabled": False},  # Disable gate for predictable test results
+        indexing={"auto_index_enabled": False, "auto_index_on_startup": False},  # Disable auto-indexing
     )
 
 
 @pytest_asyncio.fixture
-async def server(config):
-    """Create server instance with unique collection."""
+async def server(config, mock_embeddings_globally):
+    """Create server instance with unique collection.
+
+    Depends on mock_embeddings_globally to ensure embedding mocks are applied
+    before server.initialize() loads the embedding generator.
+    """
     srv = MemoryRAGServer(config)
     await srv.initialize()
     yield srv
@@ -54,8 +60,12 @@ async def server(config):
 
 
 @pytest_asyncio.fixture
-async def readonly_server(readonly_config):
-    """Create read-only server instance with pooled collection."""
+async def readonly_server(readonly_config, mock_embeddings_globally):
+    """Create read-only server instance with pooled collection.
+
+    Depends on mock_embeddings_globally to ensure embedding mocks are applied
+    before server.initialize() loads the embedding generator.
+    """
     srv = MemoryRAGServer(readonly_config)
     await srv.initialize()
     yield srv
@@ -69,7 +79,7 @@ class TestCodeSearch:
     """Test code search functionality."""
 
     @pytest.mark.asyncio
-    async def test_search_code_basic(self, server, small_test_project, mock_embeddings):
+    async def test_search_code_basic(self, server, small_test_project):
         """Test basic code search."""
         # Index small test project for fast testing
         result = await server.index_codebase(
@@ -96,7 +106,7 @@ class TestCodeSearch:
         assert isinstance(search_results["results"], list)
 
     @pytest.mark.asyncio
-    async def test_search_code_with_filters(self, server, small_test_project, mock_embeddings):
+    async def test_search_code_with_filters(self, server, small_test_project):
         """Test code search with language filter."""
         index_result = await server.index_codebase(
             directory_path=str(small_test_project),
@@ -122,7 +132,7 @@ class TestCodeSearch:
             assert result["language"].lower() == "python", f"Expected Python but got {result['language']}"
 
     @pytest.mark.asyncio
-    async def test_search_code_no_results(self, server, mock_embeddings):
+    async def test_search_code_no_results(self, server):
         """Test search with query that has no results."""
         # Search without indexing anything or with very specific query
         results = await server.search_code(
@@ -150,7 +160,7 @@ class TestMemoryOperations:
     """Test memory CRUD operations."""
 
     @pytest.mark.asyncio
-    async def test_store_memory_with_tags(self, server, mock_embeddings):
+    async def test_store_memory_with_tags(self, server):
         """Test storing memory with tags."""
         result = await server.store_memory(
             content="Testing with tags",
@@ -163,7 +173,7 @@ class TestMemoryOperations:
         assert result.get("status") in ["stored", "success"]
 
     @pytest.mark.asyncio
-    async def test_store_memory_with_metadata(self, server, mock_embeddings):
+    async def test_store_memory_with_metadata(self, server):
         """Test storing memory with metadata."""
         result = await server.store_memory(
             content="Testing with metadata",
@@ -176,7 +186,7 @@ class TestMemoryOperations:
         assert result.get("status") in ["stored", "success"]
 
     @pytest.mark.asyncio
-    async def test_store_memory_with_importance(self, server, mock_embeddings):
+    async def test_store_memory_with_importance(self, server):
         """Test storing memory with custom importance."""
         result = await server.store_memory(
             content="High importance memory",
@@ -188,7 +198,7 @@ class TestMemoryOperations:
         assert "memory_id" in result
 
     @pytest.mark.asyncio
-    async def test_retrieve_with_min_importance(self, server, mock_embeddings):
+    async def test_retrieve_with_min_importance(self, server):
         """Test retrieval with minimum importance filter."""
         # Store memories with different importance
         await server.store_memory(
@@ -217,7 +227,7 @@ class TestMemoryOperations:
             assert result["memory"]["importance"] >= 0.7
 
     @pytest.mark.asyncio
-    async def test_retrieve_with_category_filter(self, server, mock_embeddings):
+    async def test_retrieve_with_category_filter(self, server):
         """Test retrieval with category filter."""
         await server.store_memory(
             content="Preference memory",
@@ -243,7 +253,7 @@ class TestMemoryOperations:
             assert result["memory"]["category"] == "preference"
 
     @pytest.mark.asyncio
-    async def test_delete_nonexistent_memory(self, server, mock_embeddings):
+    async def test_delete_nonexistent_memory(self, server):
         """Test deleting a memory that doesn't exist."""
         result = await server.delete_memory("00000000-0000-0000-0000-000000000000")
 
@@ -257,7 +267,7 @@ class TestReadOnlyMode:
     """Test read-only mode enforcement."""
 
     @pytest.mark.asyncio
-    async def test_readonly_blocks_store(self, readonly_server, mock_embeddings):
+    async def test_readonly_blocks_store(self, readonly_server):
         """Test that read-only mode blocks store operations."""
         with pytest.raises(ReadOnlyError):
             await readonly_server.store_memory(
@@ -273,7 +283,7 @@ class TestReadOnlyMode:
             await readonly_server.delete_memory("some-id")
 
     @pytest.mark.asyncio
-    async def test_readonly_allows_retrieve(self, readonly_server, mock_embeddings):
+    async def test_readonly_allows_retrieve(self, readonly_server):
         """Test that read-only mode allows retrieval."""
         # This should work even in read-only mode
         results = await readonly_server.retrieve_memories(
@@ -296,7 +306,7 @@ class TestSpecializedRetrieval:
     """Test specialized retrieval methods."""
 
     @pytest.mark.asyncio
-    async def test_retrieve_preferences_filters_correctly(self, server, mock_embeddings):
+    async def test_retrieve_preferences_filters_correctly(self, server):
         """Test that retrieve_preferences only gets preferences."""
         # Store different types
         await server.store_memory(
@@ -322,7 +332,7 @@ class TestSpecializedRetrieval:
             assert result["memory"]["context_level"] == "USER_PREFERENCE"
 
     @pytest.mark.asyncio
-    async def test_retrieve_project_context_with_project_name(self, server, mock_embeddings):
+    async def test_retrieve_project_context_with_project_name(self, server):
         """Test project context retrieval with project filter."""
         await server.store_memory(
             content="Project A uses FastAPI",
@@ -358,7 +368,7 @@ class TestErrorHandling:
     """Test error handling and edge cases."""
 
     @pytest.mark.asyncio
-    async def test_store_minimal_content(self, server, mock_embeddings):
+    async def test_store_minimal_content(self, server):
         """Test storing memory with minimal content."""
         # Very short content should work
         result = await server.store_memory(
@@ -382,7 +392,7 @@ class TestErrorHandling:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("limit", [1, 5, 10, 50, 100])
-    async def test_retrieve_with_limit(self, server, mock_embeddings, limit):
+    async def test_retrieve_with_limit(self, server, limit):
         """Test retrieval with limit={limit}.
 
         Each limit value is tested in isolation for better failure reporting.
@@ -411,15 +421,16 @@ class TestEmbeddingCaching:
     """Test embedding generation and caching."""
 
     @pytest.mark.asyncio
-    async def test_embedding_generation(self, server, mock_embeddings):
+    async def test_embedding_generation(self, server):
         """Test that embeddings are generated correctly."""
         embedding = await server._get_embedding("test text")
         
         assert isinstance(embedding, list)
-        assert len(embedding) == 384  # all-MiniLM-L6-v2 dimensions
+        assert len(embedding) == 768  # all-mpnet-base-v2 dimensions
         assert all(isinstance(x, float) for x in embedding)
 
     @pytest.mark.asyncio
+    @pytest.mark.real_embeddings
     @pytest.mark.skip_ci(reason="Embedding model produces slightly different outputs in CI environment")
     async def test_same_text_uses_cache(self, server):
         """Test that repeated text uses cached embeddings.
@@ -443,7 +454,7 @@ class TestFindSimilarCode:
     """Test find_similar_code functionality."""
 
     @pytest.mark.asyncio
-    async def test_find_similar_code_basic(self, server, small_test_project, mock_embeddings):
+    async def test_find_similar_code_basic(self, server, small_test_project):
         """Test basic find similar code."""
         # Index small test project
         result = await server.index_codebase(
@@ -491,7 +502,7 @@ def test_example():
             )
 
     @pytest.mark.asyncio
-    async def test_find_similar_code_with_language_filter(self, server, small_test_project, mock_embeddings):
+    async def test_find_similar_code_with_language_filter(self, server, small_test_project):
         """Test find similar code with language filter."""
         await server.index_codebase(
             directory_path=str(small_test_project),
@@ -515,7 +526,7 @@ def test_example():
             assert result["language"].lower() == "python", f"Expected Python but got {result['language']}"
 
     @pytest.mark.asyncio
-    async def test_find_similar_code_no_results(self, server, mock_embeddings):
+    async def test_find_similar_code_no_results(self, server):
         """Test find similar with query that has no results."""
         # Search without indexing anything
         code_snippet = "function unique_xyz_123() {}"
@@ -533,7 +544,7 @@ def test_example():
         assert "suggestions" in results
 
     @pytest.mark.asyncio
-    async def test_find_similar_code_result_format(self, server, small_test_project, mock_embeddings):
+    async def test_find_similar_code_result_format(self, server, small_test_project):
         """Test that results have correct format."""
         await server.index_codebase(
             directory_path=str(small_test_project),
@@ -566,7 +577,7 @@ def test_example():
             assert 0.0 <= result["similarity_score"] <= 1.0
 
     @pytest.mark.asyncio
-    async def test_find_similar_code_high_similarity_interpretation(self, server, small_test_project, mock_embeddings):
+    async def test_find_similar_code_high_similarity_interpretation(self, server, small_test_project):
         """Test interpretation for high similarity results."""
         await server.index_codebase(
             directory_path=str(small_test_project),
@@ -592,7 +603,7 @@ def test_something():
         assert isinstance(results["interpretation"], str)
 
     @pytest.mark.asyncio
-    async def test_find_similar_code_with_file_pattern(self, server, small_test_project, mock_embeddings):
+    async def test_find_similar_code_with_file_pattern(self, server, small_test_project):
         """Test find similar code with file pattern filter."""
         await server.index_codebase(
             directory_path=str(small_test_project),

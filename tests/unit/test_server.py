@@ -9,30 +9,44 @@ from src.core.exceptions import ReadOnlyError
 
 
 @pytest.fixture
-def config():
-    """Create test configuration."""
+def config(unique_qdrant_collection):
+    """Create test configuration with pooled collection.
+
+    Uses unique_qdrant_collection for collection pooling and faster cleanup.
+    """
     return ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
+        qdrant_collection_name=unique_qdrant_collection,
         advanced={"read_only_mode": False},
         search={"retrieval_gate_enabled": False},  # Disable gate for predictable test results
+        indexing={"auto_index_enabled": False, "auto_index_on_startup": False},  # Disable auto-indexing
     )
 
 
 @pytest.fixture
-def readonly_config():
-    """Create read-only test configuration."""
+def readonly_config(unique_qdrant_collection):
+    """Create read-only test configuration with pooled collection.
+
+    Uses unique_qdrant_collection for collection pooling and faster cleanup.
+    """
     return ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
+        qdrant_collection_name=unique_qdrant_collection,
         advanced={"read_only_mode": True},
         search={"retrieval_gate_enabled": False},  # Disable gate for predictable test results
+        indexing={"auto_index_enabled": False, "auto_index_on_startup": False},  # Disable auto-indexing
     )
 
 
 @pytest_asyncio.fixture
-async def server(config):
-    """Create server instance."""
+async def server(config, mock_embeddings_globally):
+    """Create server instance.
+
+    Depends on mock_embeddings_globally to ensure embedding mocks are applied
+    before server.initialize() loads the embedding generator.
+    """
     srv = MemoryRAGServer(config)
     await srv.initialize()
     yield srv
@@ -40,8 +54,12 @@ async def server(config):
 
 
 @pytest_asyncio.fixture
-async def readonly_server(readonly_config):
-    """Create read-only server instance."""
+async def readonly_server(readonly_config, mock_embeddings_globally):
+    """Create read-only server instance.
+
+    Depends on mock_embeddings_globally to ensure embedding mocks are applied
+    before server.initialize() loads the embedding generator.
+    """
     srv = MemoryRAGServer(readonly_config)
     await srv.initialize()
     yield srv

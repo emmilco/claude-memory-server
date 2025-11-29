@@ -68,6 +68,13 @@ Organize entries under these headers in chronological order (newest first):
   - Updated `test_embedding_generator.py` to use 768-dim (new default model)
   - Files: tests/conftest.py, pytest.ini, tests/unit/test_embedding_generator.py
 
+- **BUG: Server tests hanging during initialization (TEST-029)**
+  - Root cause: ServerConfig fixtures used wrong config path for auto-indexing
+  - Fix: Added `indexing={"auto_index_enabled": False, "auto_index_on_startup": False}`
+  - Added `mock_embeddings_globally` fixture dependency to server fixtures
+  - Removed redundant `mock_embeddings` parameter from individual tests
+  - Files: tests/unit/test_server.py, tests/unit/test_server_extended.py
+
 ### Changed - 2025-11-28
 - **Embedding model upgrade**
   - Changed default from `all-MiniLM-L6-v2` (384 dims) to `all-mpnet-base-v2` (768 dims)
