@@ -635,19 +635,20 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
   - **Tests:** 20-25 tests for metrics, hotspots, duplication
   - **See:** planning_docs/FEAT-060_quality_metrics_plan.md
 
-- [ ] **FEAT-061**: Git/Historical Integration (~1 week) 🔥
+- [x] **FEAT-061**: Git/Historical Integration (~1 week) 🔥 ✅ **COMPLETED** (2025-11-27)
   - **Current Gap:** No git history, change frequency, or churn analysis
   - **Problem:** Architecture discovery couldn't identify "frequently changed files" or "recent refactorings"
   - **Proposed Solution:**
-    - [ ] Add `search_git_history(query, since, until)` - Semantic search over commit messages and diffs
-    - [ ] Add `get_change_frequency(file_or_function)` - How often does this change? (commits/month)
-    - [ ] Add `get_churn_hotspots(project)` - Files with highest change frequency
-    - [ ] Add `get_recent_changes(project, days=30)` - Recent modifications with semantic context
-    - [ ] Add `blame_search(pattern)` - Who wrote code matching this pattern?
+    - [x] Add `search_git_history(query, since, until)` - Semantic search over commit messages and diffs (exists as `search_git_commits`)
+    - [x] Add `get_change_frequency(file_or_function)` - How often does this change? (commits/month)
+    - [x] Add `get_churn_hotspots(project)` - Files with highest change frequency
+    - [x] Add `get_recent_changes(project, days=30)` - Recent modifications with semantic context
+    - [x] Add `blame_search(pattern)` - Who wrote code matching this pattern?
   - **Impact:** Understand evolution, identify unstable code, find domain experts
   - **Use case:** "Show files changed most frequently in auth code" or "Who worked on the API layer recently?"
   - **Tests:** 15-20 tests for git integration, change analysis
   - **See:** planning_docs/FEAT-061_git_integration_plan.md
+  - **Implementation:** All 5 tools implemented in src/core/server.py and exposed via MCP in src/mcp_server.py
 
 **Phase 3: Visualization (4-6 weeks)**
 
