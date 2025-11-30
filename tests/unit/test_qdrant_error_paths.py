@@ -9,6 +9,7 @@ from src.config import ServerConfig
 from src.store.qdrant_store import QdrantMemoryStore
 from src.core.models import MemoryCategory, MemoryScope, ContextLevel
 from src.core.exceptions import StorageError, ValidationError, RetrievalError
+from conftest import mock_embedding
 
 
 class TestQdrantStoreErrorPaths:
@@ -59,7 +60,7 @@ class TestQdrantStoreErrorPaths:
 
             await store.store(
                 content="test",
-                embedding=[0.1] * 384,
+                embedding=mock_embedding(value=0.1),
                 metadata={
                     "category": MemoryCategory.FACT.value,
                     "context_level": ContextLevel.PROJECT_CONTEXT.value,
@@ -85,7 +86,7 @@ class TestQdrantStoreErrorPaths:
             with pytest.raises(ValidationError) as exc_info:
                 await store.store(
                     content="test",
-                    embedding=[0.1] * 384,
+                    embedding=mock_embedding(value=0.1),
                     metadata={}
                 )
 
@@ -102,7 +103,7 @@ class TestQdrantStoreErrorPaths:
         with pytest.raises(StorageError) as exc_info:
             await store.store(
                 content="test",
-                embedding=[0.1] * 384,
+                embedding=mock_embedding(value=0.1),
                 metadata={
                     "category": MemoryCategory.FACT.value,
                     "context_level": ContextLevel.PROJECT_CONTEXT.value,
@@ -123,7 +124,7 @@ class TestQdrantStoreErrorPaths:
         with pytest.raises(StorageError) as exc_info:
             await store.store(
                 content="test",
-                embedding=[0.1] * 384,
+                embedding=mock_embedding(value=0.1),
                 metadata={
                     "category": MemoryCategory.FACT.value,
                     "context_level": ContextLevel.PROJECT_CONTEXT.value,
@@ -151,7 +152,7 @@ class TestQdrantStoreErrorPaths:
         store.client.query_points = MagicMock(return_value=mock_response)
 
         # Should handle ValueError and skip the bad result
-        results = await store.retrieve([0.1] * 384)
+        results = await store.retrieve(mock_embedding(value=0.1))
 
         # Should return empty list since the only result was invalid
         assert results == []
@@ -165,7 +166,7 @@ class TestQdrantStoreErrorPaths:
         store.client.query_points = MagicMock(side_effect=ConnectionError("Connection lost"))
 
         with pytest.raises(RetrievalError) as exc_info:
-            await store.retrieve([0.1] * 384)
+            await store.retrieve(mock_embedding(value=0.1))
 
         assert "Failed to connect to Qdrant" in str(exc_info.value)
 
@@ -183,7 +184,7 @@ class TestQdrantStoreErrorPaths:
             with pytest.raises(RetrievalError) as exc_info:
                 # Pass filters to trigger _build_filter call
                 filters = SearchFilters(category=MemoryCategory.FACT)
-                await store.retrieve([0.1] * 384, filters=filters)
+                await store.retrieve(mock_embedding(value=0.1), filters=filters)
 
             assert "Invalid search parameters" in str(exc_info.value)
 
@@ -196,7 +197,7 @@ class TestQdrantStoreErrorPaths:
         store.client.query_points = MagicMock(side_effect=RuntimeError("Unknown error"))
 
         with pytest.raises(RetrievalError) as exc_info:
-            await store.retrieve([0.1] * 384)
+            await store.retrieve(mock_embedding(value=0.1))
 
         assert "Failed to retrieve memories" in str(exc_info.value)
 
@@ -267,7 +268,7 @@ class TestQdrantStoreEdgeCases:
             items = [
                 (
                     "test",
-                    [0.1] * 384,
+                    mock_embedding(value=0.1),
                     {
                         "category": MemoryCategory.FACT.value,
                         "context_level": ContextLevel.PROJECT_CONTEXT.value,

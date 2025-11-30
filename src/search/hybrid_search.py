@@ -362,8 +362,12 @@ class HybridSearcher:
         min_score = min(scores)
         max_score = max(scores)
 
+        if max_score == 0.0:
+            # All scores are zero (no relevance)
+            return [0.0] * len(scores)
+
         if max_score == min_score:
-            # All scores are the same
+            # All scores are the same (non-zero)
             return [1.0] * len(scores)
 
         # Min-max normalization

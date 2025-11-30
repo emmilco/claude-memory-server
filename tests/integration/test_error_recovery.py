@@ -22,6 +22,7 @@ from src.core.server import MemoryRAGServer
 from src.core.exceptions import EmbeddingError, ReadOnlyError, SecurityError
 from src.store.qdrant_store import QdrantMemoryStore
 from src.embeddings.generator import EmbeddingGenerator
+from conftest import mock_embedding
 
 
 
@@ -151,7 +152,7 @@ class TestEmbeddingFailureRecovery:
         async def timeout_generate(text):
             import asyncio
             await asyncio.sleep(100)  # Simulate timeout
-            return [0.1] * 384
+            return mock_embedding(value=0.1)
 
         original_generate = server.embedding_generator.generate
         server.embedding_generator.generate = timeout_generate

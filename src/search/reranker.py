@@ -260,9 +260,12 @@ class ResultReranker:
         if not keywords:
             return 0.0
 
-        # Count exact matches in content
+        # Count exact matches in content using word boundaries
         content_lower = memory.content.lower()
-        matches = sum(1 for kw in keywords if kw in content_lower)
+        matches = sum(
+            1 for kw in keywords
+            if re.search(rf'\b{re.escape(kw)}\b', content_lower)
+        )
 
         # Boost based on match percentage
         match_ratio = matches / len(keywords)

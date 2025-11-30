@@ -107,7 +107,7 @@ async def test_embedding_model_loadable():
     embedding = await generator.generate("test text for embedding")
 
     # Verify embedding has correct dimensions
-    assert len(embedding) == 384  # all-MiniLM-L6-v2 produces 384-dimensional embeddings
+    assert len(embedding) == 768  # all-mpnet-base-v2 produces 768-dimensional embeddings
     assert all(isinstance(x, (int, float)) for x in embedding)
 
 

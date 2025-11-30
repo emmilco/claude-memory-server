@@ -5,6 +5,7 @@ import pytest_asyncio
 from unittest.mock import AsyncMock, MagicMock
 from src.core.tools import SpecializedRetrievalTools
 from src.core.models import (
+from conftest import mock_embedding
     ContextLevel,
     MemoryScope,
     MemoryCategory,
@@ -24,7 +25,7 @@ def mock_store():
 def mock_embedding_generator():
     """Create a mock embedding generator."""
     generator = AsyncMock()
-    generator.generate.return_value = [0.1] * 384  # Mock 384-dim embedding
+    generator.generate.return_value = mock_embedding(value=0.1)  # Mock embedding (768-dim)
     return generator
 
 
