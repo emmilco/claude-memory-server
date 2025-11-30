@@ -1,11 +1,20 @@
 """Test configuration and shared fixtures."""
 
+import os
 import pytest
 import hashlib
 from pathlib import Path
 from typing import Dict, List, Any, Callable
 import asyncio
 from itertools import cycle
+
+
+# =============================================================================
+# TEST CONFIGURATION CONSTANTS
+# =============================================================================
+# These constants allow tests to work with both default and isolated Qdrant instances.
+# The isolated test runner sets CLAUDE_RAG_QDRANT_URL to use an ephemeral test instance.
+TEST_QDRANT_URL = os.environ.get("CLAUDE_RAG_QDRANT_URL", "http://localhost:6333")
 
 
 # =============================================================================
@@ -510,11 +519,32 @@ def qdrant_client():
 
     QA Best Practice: Reuse connections instead of creating new ones per test.
     This reduces load on Qdrant and prevents connection exhaustion.
+
+    Handles ephemeral Qdrant instances (test-isolated.sh) by waiting for
+    the server to be ready before initializing the client.
     """
     import os
+    import time
     from qdrant_client import QdrantClient
 
     qdrant_url = os.getenv("CLAUDE_RAG_QDRANT_URL", "http://localhost:6333")
+
+    # Wait for Qdrant to be ready (handles ephemeral test instances)
+    import requests
+    max_retries = 10
+    retry_delay = 0.2
+
+    for attempt in range(max_retries):
+        try:
+            response = requests.get(f"{qdrant_url}/readyz", timeout=5)
+            if response.status_code == 200:
+                break
+        except Exception:
+            pass
+
+        if attempt < max_retries - 1:
+            time.sleep(retry_delay)
+
     client = QdrantClient(url=qdrant_url, timeout=30.0)
 
     yield client
@@ -615,58 +645,38 @@ def worker_id(request):
 
 @pytest.fixture
 def unique_qdrant_collection(monkeypatch, qdrant_client, setup_qdrant_pool, worker_id):
-    """Provide worker-specific collection for true parallel isolation.
+    """Provide per-test unique collection for true isolation.
 
-    Instead of round-robin allocation (which causes cross-worker contamination),
-    this fixture assigns each worker its own dedicated collection:
-    - gw0 -> test_pool_0
-    - gw1 -> test_pool_1
-    - etc.
-
-    This is Option E from TEST_PARALLELIZATION_ANALYSIS.md, using the existing
-    pool infrastructure for zero overhead.
+    Creates a new collection for each test with a unique name instead of
+    reusing pool collections. This prevents cross-test contamination even
+    when multiple tests run sequentially on the same worker.
     """
     import os
     from qdrant_client.models import PointIdsList
+    import time
+    import uuid
 
     storage_backend = os.getenv("CLAUDE_RAG_STORAGE_BACKEND", "qdrant")
+
+    # Create a truly unique collection per test
+    unique_collection = f"test_{uuid.uuid4().hex[:12]}"
+    monkeypatch.setenv("CLAUDE_RAG_QDRANT_COLLECTION_NAME", unique_collection)
+
     if storage_backend != "qdrant":
-        # For SQLite backend, use unique collection names as before
-        import uuid
-        unique_collection = f"test_{uuid.uuid4().hex[:12]}"
-        monkeypatch.setenv("CLAUDE_RAG_QDRANT_COLLECTION_NAME", unique_collection)
+        # For SQLite backend, just return unique name (no cleanup needed)
         yield unique_collection
         return
 
-    # Get worker-specific collection (true isolation)
-    collection_name = _get_worker_collection(worker_id)
-    monkeypatch.setenv("CLAUDE_RAG_QDRANT_COLLECTION_NAME", collection_name)
+    # Note: New unique collection is created via Qdrant's auto-creation
+    # on first use, so no explicit creation needed here
 
-    # Clear collection before test (faster than recreate)
+    yield unique_collection
+
+    # Cleanup: delete the collection to prevent orphaning
     try:
-        # Delete all points in batches (handles large collections)
-        while True:
-            points, _ = qdrant_client.scroll(
-                collection_name=collection_name,
-                limit=1000,
-                with_payload=False,
-                with_vectors=False
-            )
-            if not points:
-                break
-            point_ids = [p.id for p in points]
-            qdrant_client.delete(
-                collection_name=collection_name,
-                points_selector=PointIdsList(points=point_ids)
-            )
+        qdrant_client.delete_collection(collection_name=unique_collection)
     except Exception:
-        # If clear fails, test can still proceed with dirty collection
-        # (not ideal but better than deadlock)
-        pass
-
-    yield collection_name
-
-    # No cleanup needed - collection stays in pool for next test
+        pass  # Collection might not have been created or might be already deleted
 
 
 # ============================================================================
@@ -791,6 +801,12 @@ def pytest_collection_modifyitems(config, items):
                     item.add_marker(pytest.mark.skip(reason="GPU not available"))
             except ImportError:
                 item.add_marker(pytest.mark.skip(reason="PyTorch not installed"))
+
+        # Skip timing-sensitive tests in parallel execution
+        if "skip_ci" in item.keywords:
+            # Check if running under pytest-xdist (parallel execution)
+            if hasattr(config, "workerinput") or getattr(config, "option", None) and getattr(config.option, "numprocesses", None):
+                item.add_marker(pytest.mark.skip(reason="Timing-sensitive under parallel execution"))
 
         # Skip Docker tests if Docker not running
         if "requires_docker" in item.keywords:

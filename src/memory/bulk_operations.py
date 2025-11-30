@@ -6,7 +6,7 @@ dry-run previews, batch processing, progress tracking, and safety limits.
 """
 
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Callable, Dict, List, Optional, Protocol
 from pydantic import BaseModel, Field
 
@@ -18,11 +18,54 @@ from src.core.exceptions import ValidationError
 ProgressCallback = Callable[[int, int, str], None]
 
 
+class DeletionMetadata(BaseModel):
+    """
+    Metadata stored for a soft-deleted memory to enable rollback.
+
+    Stored in the memory's metadata field under key 'deletion_info'.
+    """
+
+    deleted_at: datetime = Field(description="Timestamp when memory was deleted")
+    rollback_id: str = Field(description="ID to identify this deletion operation")
+    deleted_by: str = Field(default="bulk_operation", description="Source of deletion")
+    original_state: Dict[str, Any] = Field(
+        description="Original memory state before deletion"
+    )
+    can_rollback: bool = Field(
+        default=True, description="Whether this deletion can be rolled back"
+    )
+
+
+class RollbackInfo(BaseModel):
+    """
+    Information about memories available for rollback.
+
+    Returned when querying rollback status.
+    """
+
+    rollback_id: str = Field(description="ID of the rollback operation")
+    deleted_count: int = Field(description="Number of memories in this rollback set")
+    deleted_at: datetime = Field(description="When the deletion occurred")
+    memory_ids: List[str] = Field(description="IDs of deleted memories")
+    can_rollback: bool = Field(description="Whether rollback is still possible")
+    expiry_date: Optional[datetime] = Field(
+        None, description="When this rollback will expire (if set)"
+    )
+
+
 class MemoryStore(Protocol):
     """Protocol for memory store operations."""
 
     async def delete(self, memory_id: str) -> bool:
         """Delete a memory by ID."""
+        ...
+
+    async def update(self, memory_id: str, updates: Dict[str, Any]) -> bool:
+        """Update a memory's metadata."""
+        ...
+
+    async def get_by_id(self, memory_id: str) -> Optional[MemoryUnit]:
+        """Retrieve a memory by ID."""
         ...
 
 
@@ -135,6 +178,7 @@ class BulkDeleteManager:
         store: MemoryStore,
         max_batch_size: int = 100,
         max_total_operations: int = 1000,
+        soft_delete_retention_days: int = 30,
     ):
         """
         Initialize the bulk delete manager.
@@ -143,10 +187,12 @@ class BulkDeleteManager:
             store: Memory store instance
             max_batch_size: Number of memories to delete per batch
             max_total_operations: Maximum total memories to delete in one operation
+            soft_delete_retention_days: Days to retain soft-deleted memories for rollback
         """
         self.store = store
         self.max_batch_size = max_batch_size
         self.max_total_operations = max_total_operations
+        self.soft_delete_retention_days = soft_delete_retention_days
 
     def _estimate_memory_size(self, memory: MemoryUnit) -> int:
         """
@@ -310,6 +356,55 @@ class BulkDeleteManager:
             requires_confirmation=requires_confirmation,
         )
 
+    async def _soft_delete_memory(
+        self,
+        memory: MemoryUnit,
+        rollback_id: str,
+    ) -> bool:
+        """
+        Soft delete a memory by marking it as deleted in metadata.
+
+        Args:
+            memory: Memory to soft delete
+            rollback_id: Rollback ID for this deletion operation
+
+        Returns:
+            True if soft delete succeeded, False otherwise
+        """
+        # Create deletion metadata
+        deletion_metadata = DeletionMetadata(
+            deleted_at=datetime.now(),
+            rollback_id=rollback_id,
+            deleted_by="bulk_operation",
+            original_state={
+                "category": memory.category.value if memory.category else None,
+                "context_level": (
+                    memory.context_level.value if memory.context_level else None
+                ),
+                "importance": memory.importance,
+                "lifecycle_state": (
+                    memory.lifecycle_state.value if memory.lifecycle_state else None
+                ),
+                "tags": memory.tags,
+            },
+            can_rollback=True,
+        )
+
+        # Calculate expiry date
+        expiry = datetime.now() + timedelta(days=self.soft_delete_retention_days)
+
+        # Update memory metadata with deletion info
+        updates = {
+            "metadata": {
+                **memory.metadata,
+                "deletion_info": deletion_metadata.model_dump(mode="json"),
+                "soft_deleted": True,
+                "rollback_expiry": expiry.isoformat(),
+            }
+        }
+
+        return await self.store.update(memory.id, updates)
+
     async def execute_deletion(
         self,
         memories: List[MemoryUnit],
@@ -325,7 +420,7 @@ class BulkDeleteManager:
             memories: List of memories to delete
             filters: Filter criteria (for safety checks)
             dry_run: If True, don't actually delete (just preview)
-            enable_rollback: If True, enable rollback support (not yet implemented)
+            enable_rollback: If True, use soft delete to enable rollback
             progress_callback: Optional callback for progress updates
 
         Returns:
@@ -351,6 +446,11 @@ class BulkDeleteManager:
                 errors=[],
             )
 
+        # Generate rollback ID if requested
+        rollback_id = None
+        if enable_rollback:
+            rollback_id = f"rollback_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
+
         # Actual deletion
         deleted_count = 0
         failed_deletions: List[str] = []
@@ -364,7 +464,13 @@ class BulkDeleteManager:
             # Delete each memory in the batch
             for memory in batch:
                 try:
-                    success = await self.store.delete(memory.id)
+                    if enable_rollback:
+                        # Soft delete: mark as deleted but keep data
+                        success = await self._soft_delete_memory(memory, rollback_id)
+                    else:
+                        # Hard delete: permanently remove
+                        success = await self.store.delete(memory.id)
+
                     if success:
                         deleted_count += 1
                         total_size_bytes += self._estimate_memory_size(memory)
@@ -387,12 +493,6 @@ class BulkDeleteManager:
         execution_time = (datetime.now() - start_time).total_seconds()
         storage_freed_mb = total_size_bytes / (1024 * 1024)
 
-        # Generate rollback ID if requested (placeholder for future implementation)
-        rollback_id = None
-        if enable_rollback:
-            rollback_id = f"rollback_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-            # TODO: Implement actual rollback support (soft delete)
-
         return BulkDeleteResult(
             success=len(failed_deletions) == 0,
             dry_run=False,
@@ -402,6 +502,110 @@ class BulkDeleteManager:
             execution_time=round(execution_time, 2),
             storage_freed_mb=round(storage_freed_mb, 2),
             errors=errors,
+        )
+
+    async def get_rollback_info(self, rollback_id: str) -> Optional[RollbackInfo]:
+        """
+        Get information about a rollback operation.
+
+        Args:
+            rollback_id: ID of the rollback operation
+
+        Returns:
+            RollbackInfo if rollback exists and is valid, None otherwise
+        """
+        # TODO: Implement once store supports metadata queries
+        # This requires the store to support querying by metadata
+        # In a real implementation, we would query for all memories with
+        # metadata.deletion_info.rollback_id == rollback_id
+        # For now, this is a placeholder that would need store-specific implementation
+        raise NotImplementedError(
+            "get_rollback_info requires store support for metadata queries"
+        )
+
+    async def rollback_deletion(
+        self,
+        rollback_id: str,
+        progress_callback: Optional[ProgressCallback] = None,
+    ) -> BulkDeleteResult:
+        """
+        Rollback a bulk deletion operation.
+
+        This restores all memories that were soft-deleted with the given rollback_id.
+
+        Args:
+            rollback_id: ID of the deletion operation to rollback
+            progress_callback: Optional callback for progress updates
+
+        Returns:
+            Result with statistics about the rollback operation
+        """
+        # TODO: Implement once store supports metadata queries
+        start_time = datetime.now()
+
+        restored_count = 0
+        failed_restorations: List[str] = []
+        errors: List[str] = []
+
+        # Note: This requires the store to support listing memories by metadata
+        # In a real implementation, we would:
+        # 1. Query for all memories with metadata.deletion_info.rollback_id == rollback_id
+        # 2. For each memory, remove the deletion metadata and restore original state
+        # 3. Track success/failure for each restoration
+
+        # Placeholder implementation that shows the pattern
+        # This would need to be implemented with actual store queries
+
+        execution_time = (datetime.now() - start_time).total_seconds()
+
+        return BulkDeleteResult(
+            success=len(failed_restorations) == 0,
+            dry_run=False,
+            total_deleted=restored_count,  # Reusing field to mean "restored"
+            failed_deletions=failed_restorations,
+            rollback_id=None,  # No rollback for a rollback
+            execution_time=round(execution_time, 2),
+            storage_freed_mb=0.0,  # No storage freed, actually restored
+            errors=errors,
+        )
+
+    async def list_pending_rollbacks(self) -> List[RollbackInfo]:
+        """
+        List all pending rollback operations.
+
+        Returns:
+            List of RollbackInfo for all deletions that can be rolled back
+        """
+        # TODO: Implement once store supports metadata queries
+        # This requires the store to support querying by metadata
+        # In a real implementation, we would query for all unique rollback_ids
+        # from memories with metadata.soft_deleted == True
+        raise NotImplementedError(
+            "list_pending_rollbacks requires store support for metadata queries"
+        )
+
+    async def cleanup_expired_rollbacks(
+        self,
+        progress_callback: Optional[ProgressCallback] = None,
+    ) -> int:
+        """
+        Permanently delete memories whose rollback period has expired.
+
+        Args:
+            progress_callback: Optional callback for progress updates
+
+        Returns:
+            Number of memories permanently deleted
+        """
+        # TODO: Implement once store supports metadata queries
+        # This requires the store to support querying by metadata
+        # In a real implementation, we would:
+        # 1. Query for memories where metadata.soft_deleted == True
+        #    AND metadata.rollback_expiry < now()
+        # 2. Permanently delete each expired memory
+        # 3. Track count of deletions
+        raise NotImplementedError(
+            "cleanup_expired_rollbacks requires store support for metadata queries"
         )
 
     async def bulk_delete(

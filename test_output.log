@@ -1,0 +1,230 @@
+=== Isolated Test Runner ===
+Worktree: TEST-029
+Starting ephemeral Qdrant on port 6351 (attempt 1/5)...
+Waiting for Qdrant.................................Pre-warming collection pool...
+Qdrant URL: http://localhost:6351
+
+Running: pytest tests/unit/ --tb=short -q
+==========================================
+============================= test session starts ==============================
+platform darwin -- Python 3.13.6, pytest-8.4.2, pluggy-1.6.0
+rootdir: /Users/elliotmilco/Documents/GitHub/claude-memory-server/.worktrees/TEST-029
+configfile: pytest.ini
+plugins: asyncio-1.2.0, xdist-3.8.0, timeout-2.4.0, anyio-4.10.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+timeout: 10.0s
+timeout method: signal
+timeout func_only: False
+created: 4/4 workers
+4 workers [3551 items]
+
+........................................................................ [  2%]
+........................................................................ [  4%]
+........................................................................ [  6%]
+........................................................................ [  8%]
+........................................................................ [ 10%]
+........................................................................ [ 12%]
+........................................................................ [ 14%]
+........................................................................ [ 16%]
+........................................................................ [ 18%]
+........................................................................ [ 20%]
+........................................................................ [ 22%]
+........................................................................ [ 24%]
+........................................................................ [ 26%]
+........................................................................ [ 28%]
+........................................................................ [ 30%]
+........................................................................ [ 32%]
+...........s.......................................ssssssss............. [ 34%]
+........................................................................ [ 36%]
+................................ssssssss................................ [ 38%]
+........................................................................ [ 40%]
+........................................................................ [ 42%]
+........................................................................ [ 44%]
+........................................................................ [ 46%]
+......ssssss............................................................ [ 48%]
+................................F.......ssssss.......................... [ 50%]
+........................................................................ [ 52%]
+........................................................................ [ 54%]
+........................................ss.........s...s................ [ 56%]
+........F............................................................... [ 58%]
+........................................................................ [ 60%]
+.................................s.ssss................................. [ 62%]
+........................................................................ [ 64%]
+........................................................................ [ 66%]
+..s.............................s....................................... [ 68%]
+......F.F....................F.......................................sss [ 70%]
+sssss.....sssssss.s..................................................... [ 72%]
+...............................F........................................ [ 75%]
+..........F.......................s.s.s................................. [ 77%]
+........................................................................ [ 79%]
+..................ssssss...........s.....s..................s.s.s....... [ 81%]
+.................sss...........................................ssssss... [ 83%]
+................................................ss.s.................... [ 85%]
+........................................................................ [ 87%]
+...............................................sss...................... [ 89%]
+........................................................................ [ 91%]
+.................ss...........ss.....s.s................................ [ 93%]
+...s..s............ss................................ss.........s.s.ss.. [ 95%]
+...........................................s............................ [ 97%]
+.........ssss...................................sss...s................s [ 99%]
+s.....ss............./Users/elliotmilco/.pyenv/versions/3.13.6/lib/python3.13/site-packages/_pytest/unraisableexception.py:33: RuntimeWarning: coroutine 'AsyncMockMixin._execute_mock_call' was never awaited
+  gc.collect()
+RuntimeWarning: Enable tracemalloc to get the object allocation traceback
+..                                                  [100%]
+=================================== FAILURES ===================================
+___________________ TestHealthCheckStatistics.test_get_stats ___________________
+[gw1] darwin -- Python 3.13.6 /Users/elliotmilco/.pyenv/versions/3.13.6/bin/python3.13
+tests/unit/test_connection_health_checker.py:336: in test_get_stats
+    assert stats["total_failures"] == 1
+E   assert 2 == 1
+_________________ TestFastHealthCheck.test_fast_check_healthy __________________
+[gw3] darwin -- Python 3.13.6 /Users/elliotmilco/.pyenv/versions/3.13.6/bin/python3.13
+tests/unit/test_connection_health_checker.py:89: in test_fast_check_healthy
+    assert result.healthy is True
+E   assert False is True
+E    +  where False = HealthCheckResult(unhealthy, fast, 2.08ms).healthy
+_____________________________ test_export_to_json ______________________________
+[gw0] darwin -- Python 3.13.6 /Users/elliotmilco/.pyenv/versions/3.13.6/bin/python3.13
+tests/unit/test_backup_export.py:117: in test_export_to_json
+    assert stats["memory_count"] == 2
+E   assert 97 == 2
+_______________________ test_export_with_project_filter ________________________
+[gw0] darwin -- Python 3.13.6 /Users/elliotmilco/.pyenv/versions/3.13.6/bin/python3.13
+tests/unit/test_backup_export.py:139: in test_export_with_project_filter
+    assert stats["memory_count"] == 2
+E   assert 4 == 2
+___________________________ test_import_from_archive ___________________________
+[gw1] darwin -- Python 3.13.6 /Users/elliotmilco/.pyenv/versions/3.13.6/bin/python3.13
+tests/unit/test_backup_import.py:276: in test_import_from_archive
+    assert stats["imported"] == 1
+E   assert 10 == 1
+_________________________ test_create_portable_archive _________________________
+[gw0] darwin -- Python 3.13.6 /Users/elliotmilco/.pyenv/versions/3.13.6/bin/python3.13
+tests/unit/test_backup_export.py:155: in test_create_portable_archive
+    assert stats["memory_count"] == 2
+E   assert 101 == 2
+___________________________ test_export_to_markdown ____________________________
+[gw0] darwin -- Python 3.13.6 /Users/elliotmilco/.pyenv/versions/3.13.6/bin/python3.13
+tests/unit/test_backup_export.py:181: in test_export_to_markdown
+    assert stats["memory_count"] == 2
+E   assert 103 == 2
+=============================== warnings summary ===============================
+tests/unit/test_archive_compressor.py::TestArchiveCompressor::test_decompress_project_index
+tests/unit/test_archive_compressor.py::TestArchiveCompressor::test_roundtrip_integrity
+  /Users/elliotmilco/Documents/GitHub/claude-memory-server/.worktrees/TEST-029/src/memory/archive_compressor.py:245: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+    tar.extractall(restore_path)
+
+tests/unit/test_archive_export_import.py: 12 warnings
+  /Users/elliotmilco/Documents/GitHub/claude-memory-server/.worktrees/TEST-029/src/memory/archive_importer.py:74: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+    tar.extractall(temp_path)
+
+tests/unit/test_archive_export_import.py::TestArchiveImporter::test_validate_archive_file
+  /Users/elliotmilco/Documents/GitHub/claude-memory-server/.worktrees/TEST-029/src/memory/archive_importer.py:274: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+    tar.extractall(temp_path)
+
+tests/unit/test_web_server.py: 8 warnings
+tests/unit/test_dashboard_server.py: 1 warning
+tests/unit/test_health_command.py: 1 warning
+tests/unit/test_auto_indexing_service.py: 1 warning
+  /Users/elliotmilco/.pyenv/versions/3.13.6/lib/python3.13/unittest/mock.py:2247: RuntimeWarning: coroutine 'AsyncMockMixin._execute_mock_call' was never awaited
+    def __init__(self, name, parent):
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/unit/test_workspace_manager.py::TestWorkspaceManagerBasics::test_create_workspace_invalid_repo_fails
+  /Users/elliotmilco/.pyenv/versions/3.13.6/lib/python3.13/unittest/mock.py:428: RuntimeWarning: coroutine 'AsyncMockMixin._execute_mock_call' was never awaited
+    def __init__(self, /, *args, **kwargs):
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/unit/test_web_server.py::TestDashboardHandlerPostEndpoints::test_trigger_index_missing_fields
+  /Users/elliotmilco/.pyenv/versions/3.13.6/lib/python3.13/unittest/mock.py:687: RuntimeWarning: coroutine 'AsyncMockMixin._execute_mock_call' was never awaited
+    raise AttributeError(name)
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/unit/test_actionable_errors.py::TestActionableErrors::test_embedding_error_has_checklist
+  /Users/elliotmilco/.pyenv/versions/3.13.6/lib/python3.13/site-packages/pluggy/_result.py:31: RuntimeWarning: coroutine 'AsyncMockMixin._execute_mock_call' was never awaited
+    def __init__(
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/unit/test_server_extended.py::TestMemoryOperations::test_retrieve_with_category_filter
+  /Users/elliotmilco/.pyenv/versions/3.13.6/lib/python3.13/site-packages/h11/_util.py:87: RuntimeWarning: coroutine 'AsyncMockMixin._execute_mock_call' was never awaited
+    match = regex.fullmatch(data)
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/unit/test_confidence_scores.py::TestSearchCodeConfidenceDisplay::test_search_code_includes_confidence_fields
+tests/unit/test_confidence_scores.py::TestSearchCodeConfidenceDisplay::test_search_code_good_confidence
+tests/unit/test_confidence_scores.py::TestSearchCodeConfidenceDisplay::test_search_code_weak_confidence
+tests/unit/test_confidence_scores.py::TestSearchCodeConfidenceDisplay::test_search_code_multiple_results_different_confidences
+  /Users/elliotmilco/Documents/GitHub/claude-memory-server/.worktrees/TEST-029/src/core/server.py:2624: RuntimeWarning: coroutine 'AsyncMockMixin._execute_mock_call' was never awaited
+    self.metrics_collector.log_query(
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/unit/test_backup_import.py::test_import_from_archive
+  /Users/elliotmilco/Documents/GitHub/claude-memory-server/.worktrees/TEST-029/src/backup/importer.py:144: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+    tar.extractall(temp_path)
+
+tests/unit/test_connection_health_checker.py::TestDeepHealthCheck::test_deep_check_timeout
+  /Users/elliotmilco/.pyenv/versions/3.13.6/lib/python3.13/asyncio/base_events.py:2051: RuntimeWarning: coroutine 'TestDeepHealthCheck.test_deep_check_timeout.<locals>.hang' was never awaited
+    handle = None  # Needed to break cycles when an exception occurs.
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/unit/test_web_server.py::TestMainFunction::test_main_configures_logging
+  /Users/elliotmilco/.pyenv/versions/3.13.6/lib/python3.13/unittest/mock.py:2247: RuntimeWarning: coroutine 'start_dashboard_server' was never awaited
+    def __init__(self, name, parent):
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/unit/monitoring/test_performance_tracker.py::TestRecommendationGeneration::test_generates_recommendations_for_latency_regression
+  /Users/elliotmilco/.pyenv/versions/3.13.6/lib/python3.13/json/encoder.py:252: RuntimeWarning: coroutine 'start_dashboard_server' was never awaited
+    _iterencode = c_make_encoder(
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/unit/monitoring/test_performance_tracker.py::TestRecommendationGeneration::test_generates_recommendations_for_latency_regression
+  /Users/elliotmilco/.pyenv/versions/3.13.6/lib/python3.13/json/encoder.py:252: RuntimeWarning: coroutine 'AsyncMockMixin._execute_mock_call' was never awaited
+    _iterencode = c_make_encoder(
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/unit/test_confidence_scores.py::TestFindSimilarCodeConfidenceDisplay::test_find_similar_code_includes_confidence_fields
+tests/unit/test_confidence_scores.py::TestFindSimilarCodeConfidenceDisplay::test_find_similar_code_boundary_scores
+  /Users/elliotmilco/Documents/GitHub/claude-memory-server/.worktrees/TEST-029/src/core/server.py:2783: RuntimeWarning: coroutine 'AsyncMockMixin._execute_mock_call' was never awaited
+    self.metrics_collector.log_query(
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/unit/test_services/test_health_service.py::TestIntegrationScenarios::test_health_monitoring_over_time
+  /Users/elliotmilco/.pyenv/versions/3.13.6/lib/python3.13/unittest/mock.py:2247: RuntimeWarning: coroutine 'IndexingService.close' was never awaited
+    def __init__(self, name, parent):
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/unit/test_auto_indexing_service.py::TestManualReindex::test_trigger_reindex
+  <frozen posixpath>:82: RuntimeWarning: coroutine 'start_dashboard_server' was never awaited
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/unit/test_repository_registry.py::TestStatistics::test_get_statistics
+  /Users/elliotmilco/.pyenv/versions/3.13.6/lib/python3.13/copy.py:253: RuntimeWarning: coroutine 'AsyncMockMixin._execute_mock_call' was never awaited
+    args = (deepcopy(arg, memo) for arg in args)
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/unit/test_connection_health_checker.py::TestHealthCheckStatistics::test_get_stats
+FAILED tests/unit/test_connection_health_checker.py::TestFastHealthCheck::test_fast_check_healthy
+FAILED tests/unit/test_backup_export.py::test_export_to_json - assert 97 == 2
+FAILED tests/unit/test_backup_export.py::test_export_with_project_filter - as...
+FAILED tests/unit/test_backup_import.py::test_import_from_archive - assert 10...
+FAILED tests/unit/test_backup_export.py::test_create_portable_archive - asser...
+FAILED tests/unit/test_backup_export.py::test_export_to_markdown - assert 103...
+========== 7 failed, 3430 passed, 114 skipped, 44 warnings in 25.42s ===========
+
+Stopping test Qdrant instance...

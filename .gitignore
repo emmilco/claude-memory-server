@@ -44,3 +44,4 @@ archived_docs/
 .worktrees/
 # Rust build artifacts
 rust_core/target/
+.claude/logs/
