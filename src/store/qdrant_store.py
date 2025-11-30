@@ -32,8 +32,10 @@ logger = logging.getLogger(__name__)
 # Maximum iterations for scroll loops to prevent infinite loops with malformed offsets
 MAX_SCROLL_ITERATIONS = 1000
 
-# Maximum Unix timestamp value (32-bit signed integer limit for Qdrant compatibility)
-# This represents 2^31 - 1 (2147483647), which is ~2038-01-19 03:14:07 UTC
+# Unix timestamp range limits (32-bit signed integer for Qdrant compatibility)
+# MIN: -2^31 (-2147483648) represents ~1901-12-13 20:45:52 UTC
+# MAX: 2^31 - 1 (2147483647) represents ~2038-01-19 03:14:07 UTC
+MIN_UNIX_TIMESTAMP = -(2**31)
 MAX_UNIX_TIMESTAMP = 2**31 - 1
 
 
@@ -42,15 +44,21 @@ def _validate_timestamp(timestamp: float, field_name: str = "timestamp") -> None
     Validate that a Unix timestamp is within Qdrant's supported range.
 
     Qdrant uses 32-bit signed integers for numeric range filters,
-    so timestamps must not exceed 2^31 - 1.
+    so timestamps must be within [-2^31, 2^31 - 1].
 
     Args:
         timestamp: Unix timestamp value (seconds since epoch)
         field_name: Name of the field being validated (for error message)
 
     Raises:
-        ValidationError: If timestamp exceeds maximum supported value
+        ValidationError: If timestamp is outside the supported range
     """
+    if timestamp < MIN_UNIX_TIMESTAMP:
+        raise ValidationError(
+            f"Date in field '{field_name}' is too far in past. "
+            f"Timestamp {timestamp} is below minimum supported value {MIN_UNIX_TIMESTAMP} "
+            f"(~1901-12-13). Please use a later date."
+        )
     if timestamp > MAX_UNIX_TIMESTAMP:
         raise ValidationError(
             f"Date in field '{field_name}' is too far in future. "

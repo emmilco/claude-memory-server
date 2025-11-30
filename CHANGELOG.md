@@ -53,11 +53,11 @@ Organize entries under these headers in chronological order (newest first):
 
 ### Fixed - 2025-11-30
 - **BUG-064: Integer Overflow in Unix Timestamp Conversion**
-  - Added validation for Unix timestamps to prevent overflow in far-future dates
-  - Added `_validate_timestamp()` helper function to check timestamps against 32-bit signed integer limit (2^31-1)
-  - Added `MAX_UNIX_TIMESTAMP` constant documenting Qdrant's numeric range constraint (~2038-01-19)
+  - Added validation for Unix timestamps to prevent overflow/underflow in extreme dates
+  - Added `_validate_timestamp()` helper function to check timestamps against 32-bit signed integer range [-2^31, 2^31-1]
+  - Added `MIN_UNIX_TIMESTAMP` and `MAX_UNIX_TIMESTAMP` constants documenting Qdrant's numeric range constraints (~1901-12-13 to ~2038-01-19)
   - Applied validation at 4 locations in `src/store/qdrant_store.py` where timestamps are converted for Qdrant range filters
-  - Timestamps exceeding the limit now raise `ValidationError` with clear user-facing message
+  - Timestamps outside the valid range now raise `ValidationError` with clear user-facing messages indicating whether date is too far in past or future
 
 ### Changed - 2025-11-30
 - **TODO.md Rebuild: Deduplicate, Prioritize, and Add ID Registry**
