@@ -210,6 +210,26 @@ class HybridSearcher:
 
         return combined_results[:limit]
 
+    def _find_memory_in_results(
+        self,
+        memory_id: str,
+        results: List[Tuple[MemoryUnit, float]],
+    ) -> Tuple[Optional[MemoryUnit], float]:
+        """
+        Find memory unit and its score in result list.
+
+        Args:
+            memory_id: ID of memory to find
+            results: List of (memory, score) tuples
+
+        Returns:
+            Tuple of (memory_unit, score) or (None, 0.0) if not found
+        """
+        for memory, score in results:
+            if memory.id == memory_id:
+                return memory, score
+        return None, 0.0
+
     def _rrf_fusion(
         self,
         vector_results: List[Tuple[MemoryUnit, float]],
@@ -240,29 +260,16 @@ class HybridSearcher:
             if memory_id in bm25_ranks:
                 rrf_score += 1.0 / (self.rrf_k + bm25_ranks[memory_id] + 1)
 
-            # Find memory unit and raw scores
-            memory = None
-            vec_score = 0.0
-            bm25_score = 0.0
+            # Get memory unit and scores from both result sets
+            vector_memory, vec_score = self._find_memory_in_results(
+                memory_id, vector_results
+            )
+            bm25_memory, bm25_score = self._find_memory_in_results(
+                memory_id, bm25_results
+            )
 
-            for m, s in vector_results:
-                if m.id == memory_id:
-                    memory = m
-                    vec_score = s
-                    break
-
-            if not memory:
-                for m, s in bm25_results:
-                    if m.id == memory_id:
-                        memory = m
-                        bm25_score = s
-                        break
-            else:
-                # Also get BM25 score
-                for m, s in bm25_results:
-                    if m.id == memory_id:
-                        bm25_score = s
-                        break
+            # Use whichever memory unit we found (both should be the same if in both lists)
+            memory = vector_memory or bm25_memory
 
             if memory:
                 combined_results.append(HybridSearchResult(
