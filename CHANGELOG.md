@@ -51,6 +51,12 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Fixed - 2025-11-30
+- **BUG-039: Add Missing PointIdsList Import**
+  - Added missing `PointIdsList` import from `qdrant_client.models` in `src/store/qdrant_store.py`
+  - Fixed `NameError` in `merge_memories()` method at line 2331
+  - Files: src/store/qdrant_store.py
+
 ### Fixed - 2025-11-29
 - **BUG-042: Fix incorrect method name in StatusCommand.print_active_project()**
   - Changed `_format_relative_time()` to `_format_time_ago()` in `src/cli/status_command.py`
