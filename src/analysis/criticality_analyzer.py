@@ -226,6 +226,9 @@ class CriticalityAnalyzer:
         """
         score = 0.0
 
+        # Convert PathLike objects to Path at the start to avoid attribute errors
+        file_path = Path(file_path) if not isinstance(file_path, Path) else file_path
+
         # Validate file_path type early
         if not isinstance(file_path, Path):
             logger.warning(
