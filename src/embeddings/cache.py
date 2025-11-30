@@ -69,29 +69,43 @@ class EmbeddingCache:
                 timeout=5.0,  # Add timeout for concurrent access
             )
 
-            self.conn.execute("""
-                CREATE TABLE IF NOT EXISTS embeddings (
-                    cache_key TEXT PRIMARY KEY,
-                    text_hash TEXT NOT NULL,
-                    model_name TEXT NOT NULL,
-                    embedding TEXT NOT NULL,
-                    created_at TIMESTAMP NOT NULL,
-                    accessed_at TIMESTAMP NOT NULL,
-                    access_count INTEGER DEFAULT 1
-                )
-            """)
+            try:
+                self.conn.execute("""
+                    CREATE TABLE IF NOT EXISTS embeddings (
+                        cache_key TEXT PRIMARY KEY,
+                        text_hash TEXT NOT NULL,
+                        model_name TEXT NOT NULL,
+                        embedding TEXT NOT NULL,
+                        created_at TIMESTAMP NOT NULL,
+                        accessed_at TIMESTAMP NOT NULL,
+                        access_count INTEGER DEFAULT 1
+                    )
+                """)
 
-            # Create index for faster lookups
-            self.conn.execute("""
-                CREATE INDEX IF NOT EXISTS idx_text_model
-                ON embeddings(text_hash, model_name)
-            """)
+                # Create index for faster lookups
+                self.conn.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_text_model
+                    ON embeddings(text_hash, model_name)
+                """)
 
-            self.conn.commit()
-            logger.debug("Embedding cache database initialized")
+                self.conn.commit()
+                logger.debug("Embedding cache database initialized")
+
+            except Exception as e:
+                # Ensure connection is closed on initialization error
+                if self.conn:
+                    try:
+                        self.conn.close()
+                    except Exception as close_err:
+                        logger.debug(f"Error closing connection during cleanup: {close_err}")
+                    finally:
+                        self.conn = None
+
+                logger.error(f"Failed to initialize cache database: {e}")
+                self.enabled = False
 
         except Exception as e:
-            logger.error(f"Failed to initialize cache database: {e}")
+            logger.error(f"Failed to create cache database connection: {e}")
             self.enabled = False
 
     def _compute_key(self, text: str, model_name: str) -> tuple[str, str]:
