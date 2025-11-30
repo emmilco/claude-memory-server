@@ -68,6 +68,12 @@ Organize entries under these headers in chronological order (newest first):
   - Tests: tests/unit/test_query_based_deletion.py (20 tests including enum validation)
 
 ### Fixed - 2025-11-30
+- **FEAT-051: Fix test-isolated.sh for macOS Docker Desktop compatibility**
+  - Simplified test-isolated.sh to detect and reuse existing Qdrant at port 6333 when available
+  - Automatically falls back to creating isolated container on Linux
+  - Fixes backup export/import test failures when running in macOS worktree (Docker Desktop limitation)
+  - Files: scripts/test-isolated.sh
+
 - **BUG-039: Add Missing PointIdsList Import**
   - Added missing `PointIdsList` import from `qdrant_client.models` in `src/store/qdrant_store.py`
   - Fixed `NameError` in `merge_memories()` method at line 2331
