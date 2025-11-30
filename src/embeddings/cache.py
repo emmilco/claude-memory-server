@@ -178,17 +178,13 @@ class EmbeddingCache:
                 )
                 self.conn.commit()
 
-                # Deserialize embedding
+                # Deserialize embedding (already normalized at storage time)
                 embedding = json.loads(embedding_json)
-
-                # Normalize cached embedding to match fresh embeddings
-                # Fresh embeddings from generator are normalized via Rust bridge
-                normalized = RustBridge.batch_normalize([embedding])[0]
 
                 with self._counter_lock:  # REF-030: Atomic counter increment
                     self.hits += 1
                 logger.debug(f"Cache hit for key: {cache_key[:16]}...")
-                return normalized
+                return embedding
 
         except Exception as e:
             logger.error(f"Cache get error: {e}")
@@ -219,7 +215,12 @@ class EmbeddingCache:
         """Synchronous implementation of set() for thread pool execution."""
         try:
             cache_key, text_hash = self._compute_key(text, model_name)
-            embedding_json = json.dumps(embedding)
+
+            # Normalize embedding before storage to ensure consistency
+            # Fresh embeddings from generator are already normalized, but we normalize
+            # here to guarantee the cache always stores normalized vectors
+            normalized = RustBridge.batch_normalize([embedding])[0]
+            embedding_json = json.dumps(normalized)
             now = datetime.now(UTC).isoformat()
 
             # Insert or replace with lock for thread safety
@@ -322,18 +323,17 @@ class EmbeddingCache:
                 # Process results
                 for row in rows:
                     cache_key, embedding_json, created_at_str, access_count = row
-                    
+
                     # Check expiration
                     created_at = datetime.fromisoformat(created_at_str)
                     if datetime.now(UTC) - created_at > timedelta(days=self.ttl_days):
                         expired_keys.append(cache_key)
                         continue
 
-                    # Deserialize and normalize
+                    # Deserialize embedding (already normalized at storage time)
                     embedding = json.loads(embedding_json)
-                    normalized = RustBridge.batch_normalize([embedding])[0]
-                    embeddings_by_key[cache_key] = normalized
-                    
+                    embeddings_by_key[cache_key] = embedding
+
                     # Update access statistics
                     self.conn.execute(
                         """

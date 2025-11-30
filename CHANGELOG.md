@@ -76,6 +76,13 @@ Organize entries under these headers in chronological order (newest first):
   - Backward-compatible: hardcoded defaults are used if not overridden in config
 
 ### Fixed - 2025-11-30
+- **BUG-162: Embedding Cache Normalization Asymmetry**
+  - Fixed inconsistent vector normalization causing search result discrepancies between cache hits and misses
+  - Moved normalization to storage time (_set_sync) instead of retrieval time (_get_sync, _batch_get_sync)
+  - Cache now stores normalized vectors, eliminating double-normalization on cache hits
+  - Same text now returns identical vectors regardless of cache state
+  - Files: src/embeddings/cache.py
+
 - **BUG-066: Integration Test Suite Hangs**
   - Fixed integration tests hanging indefinitely (16+ minutes) in pytest-asyncio contexts
   - Wrapped synchronous QdrantClient.get_collections() in run_in_executor() to prevent event loop blocking
