@@ -219,7 +219,7 @@ save_to_db(username)''',
         description="Catching all exceptions with bare 'except:' hides bugs and makes debugging hard",
         example_code='''try:
     risky_operation()
-except:
+except Exception:
     pass
 
 try:

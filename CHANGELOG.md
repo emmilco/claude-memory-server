@@ -52,6 +52,12 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **BUG-054: Replace bare except:pass with specific exception handling**
+  - Replaced bare `except:` clause with `except Exception:` in code smell pattern example
+  - Bare except catches all exceptions including SystemExit and KeyboardInterrupt, preventing debugging
+  - Example code in patterns.py now demonstrates proper exception handling
+  - Files: src/review/patterns.py
+
 - **BUG-052: Fix incorrect median calculation in ImportanceScorer**
   - Fixed `get_summary_statistics()` method to properly calculate median for even-length lists
   - Now averages the two middle elements for even-length sorted lists, consistent with statistical definition
