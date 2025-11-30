@@ -52,6 +52,11 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-29
+- **BUG-038: Fix Undefined PYTHON_PARSER_AVAILABLE Variable**
+  - Removed reference to undefined `PYTHON_PARSER_AVAILABLE` variable in IncrementalIndexer.__init__()
+  - Python parser was removed in REF-020; now only Rust parser is supported
+  - Updated error message to reflect Rust-only requirement with installation instructions
+  - Files: src/memory/incremental_indexer.py
 - **PERF-009: Fix Virtual Memory Leak (Address Space Fragmentation)**
   - Set bounded default executor (max 8 workers) for `asyncio.to_thread()` calls in mcp_server.py
   - Added proper cleanup for ProcessPoolExecutor with `cancel_futures=True` in parallel_generator.py
