@@ -389,9 +389,12 @@ class AutoIndexingService:
         try:
             # Create indexing service if not exists
             if not self.indexing_service:
+                # PERF-009: Pass existing indexer to avoid creating duplicate
+                # ProcessPoolExecutor instances, which causes memory bloat
                 self.indexing_service = IndexingService(
                     watch_path=self.project_path,
                     project_name=self.project_name,
+                    indexer=self.indexer,  # Reuse our indexer
                 )
                 await self.indexing_service.initialize()
 
