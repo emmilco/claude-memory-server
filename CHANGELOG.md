@@ -74,6 +74,13 @@ Organize entries under these headers in chronological order (newest first):
   - Ensures variables are always defined even when both ISO format and %Y-%m-%d parsing fail
   - Files: src/cli/git_search_command.py
 
+- **BUG-043: Remove Missing CLI Commands (verify and consolidate)**
+  - Removed `verify` and `consolidate` command definitions from argparser (lines 412-472)
+  - Removed corresponding command handlers from `main_async()` (lines 474-492)
+  - Root cause: These commands were intentionally removed in commit 8c598c8 as part of relationship feature removal
+  - Impact: CLI no longer crashes when attempting to use `verify` or `consolidate` subcommands
+  - Files: src/cli/__init__.py
+
 - **REF-012: Fix environment variable handling in Qdrant test fixtures**
   - Updated `test_backup_export.py` temp_store fixture to respect `CLAUDE_RAG_QDRANT_URL` environment variable
   - Updated `test_backup_import.py` temp_store fixture to respect `CLAUDE_RAG_QDRANT_URL` environment variable
