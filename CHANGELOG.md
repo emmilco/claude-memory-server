@@ -52,6 +52,12 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **BUG-063: Missing Client Release on Early Return in get_by_id**
+  - Refactored control flow in `get_by_id()` to avoid early return pattern
+  - Changed from early `return None` to assigning `memory = None` then returning at end of try block
+  - Ensures consistent control flow where finally block releases client properly
+  - File: src/store/qdrant_store.py
+
 - **BUG-064: Integer Overflow in Unix Timestamp Conversion**
   - Added validation for Unix timestamps to prevent overflow/underflow in extreme dates
   - Added `_validate_timestamp()` helper function to check timestamps against 32-bit signed integer range [-2^31, 2^31-1]
