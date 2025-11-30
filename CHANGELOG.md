@@ -68,6 +68,13 @@ Organize entries under these headers in chronological order (newest first):
   - Tests: tests/unit/test_query_based_deletion.py (20 tests including enum validation)
 
 ### Fixed - 2025-11-30
+- **BUG-048: Fix Cascade Fusion Silently Dropping Valid BM25 Results**
+  - Removed `if score > 0` filter that was silently dropping BM25 results with zero or negative scores
+  - Cascade fusion now includes all BM25 results, respecting the ranked order from BM25
+  - Added debug logging to track BM25 results included and vector backfilling
+  - Fix aligns cascade strategy with its intent: use all BM25 results first, then backfill with vector results only if needed
+  - Files: src/search/hybrid_search.py
+
 - **BUG-044: Fix undefined since_dt and until_dt variables on date parsing error**
   - Added explicit `since_dt = None` after failed date parsing in lines 62-71
   - Added explicit `until_dt = None` after failed date parsing in lines 80-89
