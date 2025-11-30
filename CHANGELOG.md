@@ -85,6 +85,12 @@ Organize entries under these headers in chronological order (newest first):
   - Backward-compatible: hardcoded defaults are used if not overridden in config
 
 ### Fixed - 2025-11-30
+- **BUG-060: Cache Statistics Reset Without Holding Counter Lock**
+  - Fixed race condition in `clear()` method that reset hit/miss counters without acquiring `_counter_lock`
+  - Added lock acquisition around counter reset in `_clear_sync()` to ensure atomic operations
+  - Prevents concurrent cache statistics corruption when clear() runs alongside cache get/set operations
+  - Files: src/embeddings/cache.py
+
 - **BUG-061: Scroll Loop Infinite Loop Risk**
   - Added iteration counter with MAX_SCROLL_ITERATIONS (1000) limit to prevent infinite loops from malformed offset values
   - Protected 17 scroll loops across qdrant_store.py with iteration limit and warning logging

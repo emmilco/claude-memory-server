@@ -485,9 +485,10 @@ class EmbeddingCache:
             deleted = cursor.rowcount
             self.conn.commit()
 
-            # Reset stats
-            self.hits = 0
-            self.misses = 0
+            # Reset stats with counter lock to prevent race condition
+            with self._counter_lock:  # REF-030: Atomic counter operations
+                self.hits = 0
+                self.misses = 0
 
             logger.info(f"Cleared {deleted} cache entries")
             return deleted
