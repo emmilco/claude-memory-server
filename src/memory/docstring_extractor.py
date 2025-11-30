@@ -6,7 +6,7 @@ various programming languages and link them to their corresponding code units.
 
 import logging
 import re
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 from enum import Enum
 
@@ -341,7 +341,7 @@ class DocstringExtractor:
         docstrings = self.extract_from_code(source_code, language, file_path)
         return self.link_docstrings_to_units(docstrings, units)
 
-    def get_stats(self) -> Dict[str, any]:
+    def get_stats(self) -> Dict[str, Any]:
         """Get extraction statistics."""
         return {
             "docstrings_extracted": self.stats["docstrings_extracted"],

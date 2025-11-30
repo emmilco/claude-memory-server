@@ -3,7 +3,7 @@
 import math
 import re
 from collections import defaultdict, Counter
-from typing import List, Dict, Tuple, Set
+from typing import List, Dict, Tuple, Set, Any
 import logging
 
 logger = logging.getLogger(__name__)
@@ -219,7 +219,7 @@ class BM25:
         results = self.search(query, top_k)
         return [(documents[doc_id], score) for doc_id, score in results]
 
-    def get_term_stats(self) -> Dict[str, any]:
+    def get_term_stats(self) -> Dict[str, Any]:
         """
         Get statistics about indexed terms.
 

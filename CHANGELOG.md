@@ -52,6 +52,11 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **BUG-057: Fix lowercase `any` type annotations replaced with `Any`**
+  - Replaced 5 instances of lowercase `any` with uppercase `Any` in type hints
+  - Added `Any` to typing imports in affected files
+  - Files: src/memory/change_detector.py, src/search/bm25.py, src/memory/project_archival.py, src/memory/docstring_extractor.py
+
 - **BUG-052: Fix incorrect median calculation in ImportanceScorer**
   - Fixed `get_summary_statistics()` method to properly calculate median for even-length lists
   - Now averages the two middle elements for even-length sorted lists, consistent with statistical definition
