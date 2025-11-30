@@ -52,6 +52,13 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **BUG-056: Track and handle MCP server initialization task properly**
+  - Fixed fire-and-forget task issue: background initialization task reference is now stored
+  - Added error callback to `_init_task` to properly log exceptions from background initialization
+  - Added cleanup logic in shutdown to cancel pending tasks and prevent resource leaks
+  - Improved error visibility: exceptions now logged with `exc_info=True` for full traceback
+  - Files: src/mcp_server.py
+
 - **BUG-053: Accept ISO 8601 date formats in query DSL parser**
   - Enhanced `_validate_date()` method to accept ISO 8601 formats beyond strict YYYY-MM-DD
   - Now supports formats: YYYY-MM-DDTHH:MM:SS, YYYY-MM-DDTHH:MM:SSZ, YYYY-MM-DDTHH:MM:SS+HH:MM

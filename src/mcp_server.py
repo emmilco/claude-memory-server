@@ -44,6 +44,7 @@ from src.config import get_config
 # Initialize MCP server
 app = Server("claude-memory-rag")
 memory_server: MemoryRAGServer = None
+_init_task: asyncio.Task = None  # Track background initialization task for proper cleanup
 
 
 @app.list_tools()
@@ -1666,14 +1667,40 @@ async def main():
                     logger.error(f"Background initialization error: {e}")
 
             # Start background initialization (don't await - let it run in parallel)
-            asyncio.create_task(complete_initialization())
+            # Store the task reference for proper error handling and cleanup (BUG-056)
+            global _init_task
+            _init_task = asyncio.create_task(complete_initialization())
+
+            # Add error callback to log exceptions from the background task
+            def _on_init_task_done(task: asyncio.Task) -> None:
+                """Log any exceptions that occur in the background initialization task."""
+                if task.cancelled():
+                    logger.info("Background initialization task was cancelled")
+                    return
+
+                try:
+                    task.result()
+                except Exception as e:
+                    logger.error(f"Background initialization task failed with exception: {e}", exc_info=True)
+
+            _init_task.add_done_callback(_on_init_task_done)
 
             # Start serving MCP requests immediately
             await app.run(
                 read_stream, write_stream, app.create_initialization_options()
             )
     finally:
-        # Cleanup
+        # Cleanup background initialization task (BUG-056)
+        global _init_task
+        if _init_task and not _init_task.done():
+            logger.info("Cancelling background initialization task...")
+            _init_task.cancel()
+            try:
+                await _init_task
+            except asyncio.CancelledError:
+                logger.info("Background initialization task cancelled successfully")
+
+        # Cleanup server
         await memory_server.close()
         # PERF-009: Shutdown the bounded default executor to release threads
         default_executor.shutdown(wait=False)
