@@ -95,6 +95,13 @@ Organize entries under these headers in chronological order (newest first):
   - Backward-compatible: hardcoded defaults are used if not overridden in config
 
 ### Fixed - 2025-11-30
+- **BUG-155: Qdrant Connection Errors Retry Without Backoff**
+  - Added exponential backoff retry logic (3 attempts, 1s/2s/4s delays) to `_create_connection()` method in connection pool
+  - Distinguishes between ConnectionError (retryable) and other errors (fail immediately)
+  - Prevents immediate propagation of transient connection failures to user
+  - Allows time for Qdrant to become available after startup or brief downtime
+  - Files: src/store/connection_pool.py
+
 - **BUG-150: Generic Exception Catch Loses Error Context at MCP Layer**
   - Replaced single catch-all `except Exception as e` handler with specific handlers for ValidationError, StorageError, RetrievalError, EmbeddingError, and MemoryRAGError
   - Now preserves error_code, solution, and docs_url fields from custom exceptions in MCP responses
