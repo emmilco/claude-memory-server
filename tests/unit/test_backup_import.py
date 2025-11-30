@@ -35,9 +35,11 @@ async def temp_store(qdrant_client, unique_qdrant_collection):
     fixtures from conftest.py to leverage collection pooling and prevent
     Qdrant deadlocks during parallel test execution.
     """
+    import os
+    qdrant_url = os.getenv("CLAUDE_RAG_QDRANT_URL", "http://localhost:6333")
     config = ServerConfig(
         storage_backend="qdrant",
-        qdrant_url="http://localhost:6333",
+        qdrant_url=qdrant_url,
         qdrant_collection_name=unique_qdrant_collection,
     )
     store = QdrantMemoryStore(config)
