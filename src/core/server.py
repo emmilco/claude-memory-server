@@ -4845,6 +4845,9 @@ class MemoryRAGServer(StructuralQueryMixin):
                 logger.info("Metrics collection scheduler added (hourly)")
 
             self.scheduler.start()
+            # BUG-066: Yield control to event loop after scheduler.start()
+            # APScheduler's start() can block the event loop in pytest-asyncio contexts
+            await asyncio.sleep(0)
             logger.info("Pruning scheduler started")
 
         except Exception as e:

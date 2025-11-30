@@ -76,6 +76,14 @@ Organize entries under these headers in chronological order (newest first):
   - Backward-compatible: hardcoded defaults are used if not overridden in config
 
 ### Fixed - 2025-11-30
+- **BUG-066: Integration Test Suite Hangs**
+  - Fixed integration tests hanging indefinitely (16+ minutes) in pytest-asyncio contexts
+  - Wrapped synchronous QdrantClient.get_collections() in run_in_executor() to prevent event loop blocking
+  - Added await asyncio.sleep(0) after APScheduler.start() to yield control to event loop
+  - Disabled connection pooling and background tasks in test fixtures to prevent event loop contention
+  - Test now completes in ~5s instead of hanging
+  - Files: src/store/connection_pool.py, src/core/server.py, tests/integration/test_memory_update_integration.py
+
 - **REF-026: Fix Memory Leak Risks in Large Dataset Operations**
   - Added configurable memory limits to prevent unbounded allocation in large dataset operations
   - **health_scorer.py**: Added pagination support with MAX_MEMORIES_PER_OPERATION (50,000) and PAGINATION_PAGE_SIZE (5,000)
