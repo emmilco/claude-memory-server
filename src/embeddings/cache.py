@@ -97,11 +97,11 @@ class EmbeddingCache:
                     try:
                         self.conn.close()
                     except Exception as close_err:
-                        logger.debug(f"Error closing connection during cleanup: {close_err}")
+                        logger.warning(f"Error closing connection during cleanup: {close_err}")
                     finally:
                         self.conn = None
 
-                logger.error(f"Failed to initialize cache database: {e}")
+                logger.warning(f"Cache operation failed: {e}")
                 self.enabled = False
 
         except Exception as e:
@@ -201,7 +201,7 @@ class EmbeddingCache:
                 return embedding
 
         except Exception as e:
-            logger.error(f"Cache get error: {e}")
+            logger.warning(f"Cache operation failed: {e}")
             with self._counter_lock:  # REF-030: Atomic counter increment
                 self.misses += 1
             return None
@@ -252,7 +252,7 @@ class EmbeddingCache:
                 logger.debug(f"Cached embedding for key: {cache_key[:16]}...")
 
         except Exception as e:
-            logger.error(f"Cache set error: {e}")
+            logger.warning(f"Cache operation failed: {e}")
 
     async def get_or_generate(
         self,
@@ -384,7 +384,7 @@ class EmbeddingCache:
                 return results
 
         except Exception as e:
-            logger.error(f"Batch cache get error: {e}")
+            logger.warning(f"Cache operation failed: {e}")
             return [None] * len(texts)
 
     async def clean_old(self, days: Optional[int] = None) -> int:
@@ -430,7 +430,7 @@ class EmbeddingCache:
             return deleted
 
         except Exception as e:
-            logger.error(f"Cache clean error: {e}")
+            logger.warning(f"Cache operation failed: {e}")
             return 0
 
     def get_stats(self) -> dict:
@@ -468,7 +468,7 @@ class EmbeddingCache:
             }
 
         except Exception as e:
-            logger.error(f"Failed to get cache stats: {e}")
+            logger.warning(f"Cache operation failed: {e}")
             return {"enabled": True, "error": str(e)}
 
     async def clear(self) -> int:
@@ -508,7 +508,7 @@ class EmbeddingCache:
             return deleted
 
         except Exception as e:
-            logger.error(f"Cache clear error: {e}")
+            logger.warning(f"Cache operation failed: {e}")
             return 0
 
     def close(self) -> None:
