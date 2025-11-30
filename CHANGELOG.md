@@ -51,6 +51,17 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Added - 2025-11-30
+- **REF-025: Complete Stub Implementations**
+  - Implemented JavaScript/TypeScript call extraction using tree-sitter parser
+  - Extracts function calls, method calls, and constructor calls from JS/TS code
+  - Extracts class implementations and inheritance relationships (ES6 extends)
+  - Handles function context tracking and call type classification
+  - Files: src/analysis/call_extractors.py (JavaScriptCallExtractor class)
+  - Marked as unsupported (with clear documentation): health score database persistence and contradiction rate semantic analysis
+  - Health score persistence deferred pending database schema design
+  - Contradiction rate detection deferred (requires expensive semantic similarity analysis at scale)
+
 ### Fixed - 2025-11-30
 - **REF-028-C: Add Exception Chain Preservation (from e)**
   - Added `from e` to 41 raise statements lacking exception chain preservation

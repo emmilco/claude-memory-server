@@ -374,10 +374,17 @@ class HealthMaintenanceJobs:
 
         Args:
             health_score: Health score to store
+
+        Raises:
+            NotImplementedError: Health metrics persistence requires database schema
+                initialization which is handled separately in CLI setup.
         """
-        # This would store in a health_metrics table
-        # For now, it's a no-op (table creation happens in CLI)
-        pass
+        raise NotImplementedError(
+            "Health score persistence to database not yet implemented. "
+            "This requires health_metrics table creation in the database schema. "
+            "Currently, health reports are logged to stdout only. "
+            "Track the health report output for monitoring."
+        )
 
     def get_job_history(self, limit: int = 10) -> List[Dict]:
         """
