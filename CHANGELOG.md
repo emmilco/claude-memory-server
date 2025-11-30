@@ -52,6 +52,11 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-29
+- **BUG-042: Fix incorrect method name in StatusCommand.print_active_project()**
+  - Changed `_format_relative_time()` to `_format_time_ago()` at line 409 in `src/cli/status_command.py`
+  - Fixes AttributeError when displaying last activity time for active projects
+  - All 44 tests in test_status_command.py passing
+
 - **PERF-009: Fix Virtual Memory Leak (Address Space Fragmentation)**
   - Set bounded default executor (max 8 workers) for `asyncio.to_thread()` calls in mcp_server.py
   - Added proper cleanup for ProcessPoolExecutor with `cancel_futures=True` in parallel_generator.py
