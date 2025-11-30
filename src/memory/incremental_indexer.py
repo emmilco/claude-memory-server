@@ -4,7 +4,7 @@ import asyncio
 import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional, Tuple, Callable
 from datetime import datetime, UTC
 
 # Rust parser is REQUIRED - no Python fallback (it was broken and returned 0 units)
@@ -109,7 +109,7 @@ class BaseCodeIndexer(ABC):
         recursive: bool = True,
         show_progress: bool = True,
         max_concurrent: int = 4,
-        progress_callback: Optional[callable] = None,
+        progress_callback: Optional[Callable[..., Any]] = None,
     ) -> Dict[str, Any]:
         """
         Index all supported files in a directory.
@@ -391,7 +391,7 @@ class IncrementalIndexer(BaseCodeIndexer):
         recursive: bool = True,
         show_progress: bool = True,
         max_concurrent: int = 4,
-        progress_callback: Optional[callable] = None,
+        progress_callback: Optional[Callable[..., Any]] = None,
     ) -> Dict[str, Any]:
         """
         Index all supported files in a directory with concurrent processing.

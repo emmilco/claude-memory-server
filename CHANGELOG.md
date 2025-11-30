@@ -51,6 +51,12 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Fixed - 2025-11-30
+- **BUG-058: Fix lowercase `callable` type annotations**
+  - Changed `Optional[callable]` to `Optional[Callable[..., Any]]` in 4 locations
+  - Added `Callable` import to `src/services/code_indexing_service.py`, `src/memory/incremental_indexer.py`, `src/core/server.py`
+  - Fixes type checker warnings: `callable` is a builtin function, not a proper type annotation
+
 ### Changed - 2025-11-30
 - **DOC: Optimize CLAUDE.md for AI agent context efficiency**
   - Reduced CLAUDE.md from 617 lines to 92 lines (85% reduction)
