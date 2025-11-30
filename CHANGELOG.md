@@ -68,6 +68,13 @@ Organize entries under these headers in chronological order (newest first):
   - Tests: tests/unit/test_query_based_deletion.py (20 tests including enum validation)
 
 ### Fixed - 2025-11-29
+- **FEAT-051: Fix port hardcoding in tests**
+  - Fixed `test_config_defaults` to clear `QDRANT_URL` env var before testing true defaults
+  - Added `mock_call_graph_store` fixture to avoid unwanted Qdrant connections in indexing tests
+  - Updated backup export/import tests to use `QDRANT_URL`/`CLAUDE_RAG_QDRANT_URL` env vars instead of hardcoded port 6333
+  - Enables tests to work with both default Qdrant (6333) and isolated test runner (dynamic port)
+  - Files: tests/unit/test_config.py, tests/unit/test_indexing_progress.py, tests/unit/test_backup_export.py, tests/unit/test_backup_import.py
+
 - **PERF-009: Fix Virtual Memory Leak (Address Space Fragmentation)**
   - Set bounded default executor (max 8 workers) for `asyncio.to_thread()` calls in mcp_server.py
   - Added proper cleanup for ProcessPoolExecutor with `cancel_futures=True` in parallel_generator.py
