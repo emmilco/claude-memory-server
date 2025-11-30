@@ -10,6 +10,7 @@ Responsibilities:
 - Track indexed files and units
 """
 
+import asyncio
 import logging
 import time
 from pathlib import Path
@@ -258,11 +259,16 @@ class CodeIndexingService:
             # Perform search based on mode
             if search_mode == "hybrid" and self.hybrid_searcher:
                 retrieval_limit = max(limit * 3, 50)
-                vector_results = await self.store.retrieve(
-                    query_embedding=query_embedding,
-                    filters=filters,
-                    limit=retrieval_limit,
-                )
+                try:
+                    async with asyncio.timeout(30.0):
+                        vector_results = await self.store.retrieve(
+                            query_embedding=query_embedding,
+                            filters=filters,
+                            limit=retrieval_limit,
+                        )
+                except TimeoutError:
+                    logger.error("Hybrid search retrieve operation timed out after 30s")
+                    raise RetrievalError("Code search retrieval operation timed out")
 
                 documents = [memory.content for memory, _ in vector_results]
                 memory_units = [memory for memory, _ in vector_results]
@@ -278,11 +284,16 @@ class CodeIndexingService:
                 if search_mode == "hybrid":
                     logger.warning("Hybrid search not available, using semantic")
 
-                results = await self.store.retrieve(
-                    query_embedding=query_embedding,
-                    filters=filters,
-                    limit=limit,
-                )
+                try:
+                    async with asyncio.timeout(30.0):
+                        results = await self.store.retrieve(
+                            query_embedding=query_embedding,
+                            filters=filters,
+                            limit=limit,
+                        )
+                except TimeoutError:
+                    logger.error("Code search retrieve operation timed out after 30s")
+                    raise RetrievalError("Code search retrieval operation timed out")
 
             # Format results
             code_results = []
@@ -456,11 +467,16 @@ class CodeIndexingService:
                 tags=["code"],
             )
 
-            results = await self.store.retrieve(
-                query_embedding=code_embedding,
-                filters=filters,
-                limit=limit,
-            )
+            try:
+                async with asyncio.timeout(30.0):
+                    results = await self.store.retrieve(
+                        query_embedding=code_embedding,
+                        filters=filters,
+                        limit=limit,
+                    )
+            except TimeoutError:
+                logger.error("Find similar code retrieve operation timed out after 30s")
+                raise RetrievalError("Find similar code retrieval operation timed out")
 
             code_results = []
             seen_units = set()
@@ -660,7 +676,12 @@ class CodeIndexingService:
             if clear_existing:
                 logger.info(f"Clearing existing index for project: {project_name}")
                 if hasattr(self.store, 'delete_code_units_by_project'):
-                    units_deleted = await self.store.delete_code_units_by_project(project_name)
+                    try:
+                        async with asyncio.timeout(30.0):
+                            units_deleted = await self.store.delete_code_units_by_project(project_name)
+                    except TimeoutError:
+                        logger.error("Delete code units operation timed out after 30s")
+                        raise StorageError("Delete code units operation timed out")
                     logger.info(f"Deleted {units_deleted} existing code units")
 
             if bypass_cache and self.embedding_cache:
@@ -727,11 +748,16 @@ class CodeIndexingService:
             Dict with files list, total, and pagination info
         """
         try:
-            result = await self.store.get_indexed_files(
-                project_name=project_name,
-                limit=limit,
-                offset=offset
-            )
+            try:
+                async with asyncio.timeout(30.0):
+                    result = await self.store.get_indexed_files(
+                        project_name=project_name,
+                        limit=limit,
+                        offset=offset
+                    )
+            except TimeoutError:
+                logger.error("Get indexed files operation timed out after 30s")
+                raise StorageError("Get indexed files operation timed out")
 
             result["has_more"] = (result["offset"] + len(result["files"])) < result["total"]
 
@@ -770,14 +796,19 @@ class CodeIndexingService:
             Dict with units list, total, and pagination info
         """
         try:
-            result = await self.store.list_indexed_units(
-                project_name=project_name,
-                language=language,
-                file_pattern=file_pattern,
-                unit_type=unit_type,
-                limit=limit,
-                offset=offset
-            )
+            try:
+                async with asyncio.timeout(30.0):
+                    result = await self.store.list_indexed_units(
+                        project_name=project_name,
+                        language=language,
+                        file_pattern=file_pattern,
+                        unit_type=unit_type,
+                        limit=limit,
+                        offset=offset
+                    )
+            except TimeoutError:
+                logger.error("List indexed units operation timed out after 30s")
+                raise StorageError("List indexed units operation timed out")
 
             result["has_more"] = (result["offset"] + len(result["units"])) < result["total"]
 
@@ -809,11 +840,16 @@ class CodeIndexingService:
         )
 
         empty_embedding = [0.0] * DEFAULT_EMBEDDING_DIM
-        results = await self.store.retrieve(
-            query_embedding=empty_embedding,
-            filters=filters,
-            limit=10000,
-        )
+        try:
+            async with asyncio.timeout(30.0):
+                results = await self.store.retrieve(
+                    query_embedding=empty_embedding,
+                    filters=filters,
+                    limit=10000,
+                )
+        except TimeoutError:
+            logger.error("Build dependency graph retrieve operation timed out after 30s")
+            raise RetrievalError("Build dependency graph retrieval operation timed out")
 
         file_imports: Dict[str, List[Dict[str, Any]]] = {}
         for memory, _ in results:

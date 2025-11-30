@@ -10,6 +10,7 @@ Responsibilities:
 - Memory listing and filtering
 """
 
+import asyncio
 import json
 import logging
 import re
@@ -294,22 +295,27 @@ class MemoryService:
             )
 
             # Store in database
-            memory_id = await self.store.store(
-                content=memory_unit.content,
-                embedding=embedding,
-                metadata={
-                    "id": memory_unit.id,
-                    "category": memory_unit.category.value,
-                    "context_level": memory_unit.context_level.value,
-                    "scope": memory_unit.scope.value,
-                    "project_name": memory_unit.project_name,
-                    "importance": memory_unit.importance,
-                    "embedding_model": memory_unit.embedding_model,
-                    "created_at": memory_unit.created_at,
-                    "tags": memory_unit.tags,
-                    "metadata": memory_unit.metadata,
-                },
-            )
+            try:
+                async with asyncio.timeout(30.0):
+                    memory_id = await self.store.store(
+                        content=memory_unit.content,
+                        embedding=embedding,
+                        metadata={
+                            "id": memory_unit.id,
+                            "category": memory_unit.category.value,
+                            "context_level": memory_unit.context_level.value,
+                            "scope": memory_unit.scope.value,
+                            "project_name": memory_unit.project_name,
+                            "importance": memory_unit.importance,
+                            "embedding_model": memory_unit.embedding_model,
+                            "created_at": memory_unit.created_at,
+                            "tags": memory_unit.tags,
+                            "metadata": memory_unit.metadata,
+                        },
+                    )
+            except TimeoutError:
+                logger.error("Store operation timed out after 30s")
+                raise StorageError("Memory store operation timed out")
 
             self.stats["memories_stored"] += 1
             logger.info(f"Stored memory: {memory_id}")
@@ -424,11 +430,16 @@ class MemoryService:
                 )
 
             # Retrieve from store
-            results = await self.store.retrieve(
-                query_embedding=query_embedding,
-                filters=filters if any(filters.to_dict().values()) else None,
-                limit=fetch_limit,
-            )
+            try:
+                async with asyncio.timeout(30.0):
+                    results = await self.store.retrieve(
+                        query_embedding=query_embedding,
+                        filters=filters if any(filters.to_dict().values()) else None,
+                        limit=fetch_limit,
+                    )
+            except TimeoutError:
+                logger.error("Retrieve operation timed out after 30s")
+                raise RetrievalError("Memory retrieval operation timed out")
 
             # Apply deduplication if session provided
             if session_id and shown_memory_ids:
@@ -533,7 +544,12 @@ class MemoryService:
 
         try:
             request = DeleteMemoryRequest(memory_id=memory_id)
-            success = await self.store.delete(request.memory_id)
+            try:
+                async with asyncio.timeout(30.0):
+                    success = await self.store.delete(request.memory_id)
+            except TimeoutError:
+                logger.error("Delete operation timed out after 30s")
+                raise StorageError("Memory delete operation timed out")
 
             if success:
                 self.stats["memories_deleted"] += 1
@@ -557,7 +573,12 @@ class MemoryService:
             Dict with status and memory data
         """
         try:
-            memory = await self.store.get_by_id(memory_id)
+            try:
+                async with asyncio.timeout(30.0):
+                    memory = await self.store.get_by_id(memory_id)
+            except TimeoutError:
+                logger.error("Get by ID operation timed out after 30s")
+                raise StorageError("Memory retrieval by ID timed out")
 
             if memory:
                 return {
@@ -669,11 +690,16 @@ class MemoryService:
                 new_embedding = await self.embedding_generator.generate(updates["content"])
 
             # Perform update
-            success = await self.store.update(
-                memory_id=memory_id,
-                updates=updates,
-                new_embedding=new_embedding
-            )
+            try:
+                async with asyncio.timeout(30.0):
+                    success = await self.store.update(
+                        memory_id=memory_id,
+                        updates=updates,
+                        new_embedding=new_embedding
+                    )
+            except TimeoutError:
+                logger.error("Update operation timed out after 30s")
+                raise StorageError("Memory update operation timed out")
 
             if success:
                 self.stats["memories_updated"] = self.stats.get("memories_updated", 0) + 1
@@ -766,13 +792,18 @@ class MemoryService:
             if date_to:
                 filters["date_to"] = datetime.fromisoformat(date_to)
 
-            memories, total_count = await self.store.list_memories(
-                filters=filters,
-                sort_by=sort_by,
-                sort_order=sort_order,
-                limit=limit,
-                offset=offset
-            )
+            try:
+                async with asyncio.timeout(30.0):
+                    memories, total_count = await self.store.list_memories(
+                        filters=filters,
+                        sort_by=sort_by,
+                        sort_order=sort_order,
+                        limit=limit,
+                        offset=offset
+                    )
+            except TimeoutError:
+                logger.error("List memories operation timed out after 30s")
+                raise StorageError("List memories operation timed out")
 
             memory_dicts = [
                 {
@@ -827,7 +858,12 @@ class MemoryService:
             raise ReadOnlyError("Cannot migrate memory in read-only mode")
 
         try:
-            success = await self.store.migrate_memory_scope(memory_id, new_project_name)
+            try:
+                async with asyncio.timeout(30.0):
+                    success = await self.store.migrate_memory_scope(memory_id, new_project_name)
+            except TimeoutError:
+                logger.error("Migrate memory scope operation timed out after 30s")
+                raise StorageError("Migrate memory scope operation timed out")
 
             if success:
                 scope = new_project_name if new_project_name else "global"
@@ -868,12 +904,17 @@ class MemoryService:
             raise ReadOnlyError("Cannot reclassify memories in read-only mode")
 
         try:
-            count = await self.store.bulk_update_context_level(
-                new_context_level=new_context_level,
-                project_name=project_name,
-                current_context_level=current_context_level,
-                category=category,
-            )
+            try:
+                async with asyncio.timeout(30.0):
+                    count = await self.store.bulk_update_context_level(
+                        new_context_level=new_context_level,
+                        project_name=project_name,
+                        current_context_level=current_context_level,
+                        category=category,
+                    )
+            except TimeoutError:
+                logger.error("Bulk update context level operation timed out after 30s")
+                raise StorageError("Bulk update context level operation timed out")
 
             logger.info(
                 f"Bulk reclassified {count} memories to context level: {new_context_level}"
@@ -909,10 +950,15 @@ class MemoryService:
             Dict with duplicate groups
         """
         try:
-            duplicate_groups = await self.store.find_duplicate_memories(
-                project_name=project_name,
-                similarity_threshold=similarity_threshold,
-            )
+            try:
+                async with asyncio.timeout(30.0):
+                    duplicate_groups = await self.store.find_duplicate_memories(
+                        project_name=project_name,
+                        similarity_threshold=similarity_threshold,
+                    )
+            except TimeoutError:
+                logger.error("Find duplicate memories operation timed out after 30s")
+                raise StorageError("Find duplicate memories operation timed out")
 
             logger.info(f"Found {len(duplicate_groups)} potential duplicate groups")
             return {
@@ -949,10 +995,15 @@ class MemoryService:
             raise ValidationError("Need at least 2 memories to merge")
 
         try:
-            merged_id = await self.store.merge_memories(
-                memory_ids=memory_ids,
-                keep_id=keep_id,
-            )
+            try:
+                async with asyncio.timeout(30.0):
+                    merged_id = await self.store.merge_memories(
+                        memory_ids=memory_ids,
+                        keep_id=keep_id,
+                    )
+            except TimeoutError:
+                logger.error("Merge memories operation timed out after 30s")
+                raise StorageError("Merge memories operation timed out")
 
             logger.info(f"Merged {len(memory_ids)} memories into {merged_id}")
             return {
@@ -1018,11 +1069,16 @@ class MemoryService:
             if project_name:
                 filters_dict['project_name'] = project_name
 
-            memories_list, total_count = await self.store.list_memories(
-                filters=filters_dict,
-                limit=999999,
-                offset=0
-            )
+            try:
+                async with asyncio.timeout(30.0):
+                    memories_list, total_count = await self.store.list_memories(
+                        filters=filters_dict,
+                        limit=999999,
+                        offset=0
+                    )
+            except TimeoutError:
+                logger.error("List memories for export operation timed out after 30s")
+                raise StorageError("List memories for export operation timed out")
 
             memories = []
             for mem in memories_list:
@@ -1191,7 +1247,13 @@ class MemoryService:
                         errors.append(f"Memory at index {idx}: Missing memory_id/id")
                         continue
 
-                    existing = await self.store.get_by_id(mem_id)
+                    try:
+                        async with asyncio.timeout(30.0):
+                            existing = await self.store.get_by_id(mem_id)
+                    except TimeoutError:
+                        logger.error(f"Get by ID for import timed out after 30s (ID: {mem_id})")
+                        errors.append(f"Memory {mem_id}: Timeout during retrieval")
+                        continue
 
                     if existing:
                         if conflict_mode == "skip":
@@ -1211,7 +1273,13 @@ class MemoryService:
                             if "metadata" in mem_data:
                                 updates["metadata"] = mem_data["metadata"]
 
-                            success = await self.store.update(mem_id, updates, embedding)
+                            try:
+                                async with asyncio.timeout(30.0):
+                                    success = await self.store.update(mem_id, updates, embedding)
+                            except TimeoutError:
+                                logger.error(f"Update for import timed out after 30s (ID: {mem_id})")
+                                errors.append(f"Memory {mem_id}: Timeout during update")
+                                continue
 
                             if success:
                                 updated_count += 1
@@ -1234,7 +1302,14 @@ class MemoryService:
                                 updates["metadata"] = mem_data["metadata"]
 
                             if updates:
-                                success = await self.store.update(mem_id, updates, embedding)
+                                try:
+                                    async with asyncio.timeout(30.0):
+                                        success = await self.store.update(mem_id, updates, embedding)
+                                except TimeoutError:
+                                    logger.error(f"Update for merge import timed out after 30s (ID: {mem_id})")
+                                    errors.append(f"Memory {mem_id}: Timeout during merge update")
+                                    continue
+
                                 if success:
                                     updated_count += 1
                                 else:
@@ -1266,11 +1341,17 @@ class MemoryService:
                             "project_name": request.project_name,
                         }
 
-                        new_id = await self.store.store(
-                            content=request.content,
-                            embedding=embedding,
-                            metadata=store_metadata,
-                        )
+                        try:
+                            async with asyncio.timeout(30.0):
+                                new_id = await self.store.store(
+                                    content=request.content,
+                                    embedding=embedding,
+                                    metadata=store_metadata,
+                                )
+                        except TimeoutError:
+                            logger.error(f"Store for import timed out after 30s (ID: {mem_id})")
+                            errors.append(f"Memory {mem_id}: Timeout during store")
+                            continue
 
                         created_count += 1
 
@@ -1377,8 +1458,13 @@ class MemoryService:
             Dict with dashboard statistics
         """
         try:
-            total_memories = await self.store.count()
-            projects = await self.store.get_all_projects()
+            try:
+                async with asyncio.timeout(30.0):
+                    total_memories = await self.store.count()
+                    projects = await self.store.get_all_projects()
+            except TimeoutError:
+                logger.error("Count/get_all_projects operation timed out after 30s")
+                raise StorageError("Dashboard stats retrieval timed out")
 
             project_stats = []
             all_categories: Dict[str, int] = {}
@@ -1386,7 +1472,13 @@ class MemoryService:
 
             for project in projects:
                 try:
-                    stats = await self.store.get_project_stats(project)
+                    try:
+                        async with asyncio.timeout(30.0):
+                            stats = await self.store.get_project_stats(project)
+                    except TimeoutError:
+                        logger.warning(f"Get project stats timed out for {project}")
+                        continue
+
                     project_stats.append(stats)
 
                     for category, count in stats.get("categories", {}).items():
@@ -1409,7 +1501,12 @@ class MemoryService:
 
                 # Create a filter for global-scoped memories only
                 global_filters = SearchFilters(scope=MemoryScope.GLOBAL)
-                global_count = await self.store.count(filters=global_filters)
+                try:
+                    async with asyncio.timeout(30.0):
+                        global_count = await self.store.count(filters=global_filters)
+                except TimeoutError:
+                    logger.warning("Count global memories timed out after 30s")
+                    global_count = 0
             except Exception as e:
                 logger.debug(f"Could not count global memories: {e}")
                 global_count = 0
@@ -1449,10 +1546,15 @@ class MemoryService:
             Dict with recent activity data
         """
         try:
-            activity = await self.store.get_recent_activity(
-                limit=limit,
-                project_name=project_name,
-            )
+            try:
+                async with asyncio.timeout(30.0):
+                    activity = await self.store.get_recent_activity(
+                        limit=limit,
+                        project_name=project_name,
+                    )
+            except TimeoutError:
+                logger.error("Get recent activity operation timed out after 30s")
+                raise StorageError("Get recent activity operation timed out")
 
             logger.info(
                 f"Retrieved recent activity: {len(activity.get('recent_searches', []))} searches, "
