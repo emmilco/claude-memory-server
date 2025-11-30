@@ -2530,13 +2530,19 @@ class QdrantMemoryStore(MemoryStore):
                 )
                 total_points = collection_info.points_count
 
-                if total_points > MAX_DUPLICATE_SCAN_POINTS:
+                # If no filter is applied, check against total collection size
+                # If filter is applied (project_name), the scroll operation will only load filtered results
+                if not project_name and total_points > MAX_DUPLICATE_SCAN_POINTS:
                     raise ValidationError(
                         f"Collection has {total_points} points, exceeds maximum for duplicate scan "
                         f"({MAX_DUPLICATE_SCAN_POINTS}). Loading all vectors would exhaust memory. "
                         f"Consider filtering by project_name to reduce scope."
                     )
-                logger.info(f"Duplicate scan: {total_points} points in collection (within limit of {MAX_DUPLICATE_SCAN_POINTS})")
+
+                if project_name:
+                    logger.info(f"Duplicate scan: filtering by project_name='{project_name}' (collection total: {total_points} points)")
+                else:
+                    logger.info(f"Duplicate scan: {total_points} points in collection (within limit of {MAX_DUPLICATE_SCAN_POINTS})")
             except ValidationError:
                 raise
             except Exception as e:

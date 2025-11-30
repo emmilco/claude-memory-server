@@ -98,9 +98,10 @@ Organize entries under these headers in chronological order (newest first):
 - **BUG-065: Memory Leak in find_duplicate_memories with Large Collections**
   - Added `MAX_DUPLICATE_SCAN_POINTS` constant (10000) to prevent loading excessive vectors into memory
   - Added upfront validation that checks collection total_points before scanning, raising ValidationError if exceeds limit
+  - Validation respects project_name filter: only enforces limit when scanning entire collection, allows filtered scans even on large collections
   - Prevents memory exhaustion when scanning collections with 100K+ points (768-dim vectors consume ~3KB each)
   - Error message guides users to filter by project_name to reduce scope for large collections
-  - Includes informational log when duplicate scan proceeds within safe limits
+  - Includes informational logging showing collection size and filter status
   - Files: src/store/qdrant_store.py
 
 - **BUG-150: Generic Exception Catch Loses Error Context at MCP Layer**
