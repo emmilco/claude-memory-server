@@ -190,6 +190,57 @@ class IndexingFeatures(BaseModel):
         return v
 
 
+class QualityThresholds(BaseModel):
+    """Quality analysis and duplicate detection thresholds (REF-021)."""
+
+    # Duplicate detection similarity thresholds
+    duplicate_high_threshold: float = 0.95  # High-confidence duplicates (auto-merge)
+    duplicate_medium_threshold: float = 0.85  # Medium-confidence duplicates (prompt user)
+    duplicate_low_threshold: float = 0.75  # Low-confidence duplicates (flag as related)
+
+    # Indexing limits
+    incremental_indexer_limit: int = 10000  # Max units per file/query
+
+    # Health job thresholds
+    stale_memory_usage_threshold: int = 5  # Skip memories with use_count > N
+
+    # Reranker content length bounds
+    reranker_min_content_length: int = 100  # Minimum content length (no penalty)
+    reranker_max_content_length: int = 500  # Maximum content length (no penalty)
+    reranker_length_penalty_max: float = 1000.0  # Denominator for long content penalty
+
+    # Complexity thresholds for quality analysis
+    complexity_high: int = 10  # High complexity warning
+    complexity_critical: int = 20  # Critical complexity alert
+    long_function_lines: int = 100  # Long function threshold
+    deep_nesting: int = 4  # Deep nesting threshold
+    many_parameters: int = 5  # Parameter count threshold
+
+    # Maintainability index thresholds
+    maintainability_excellent: int = 85  # Excellent code quality
+    maintainability_good: int = 65  # Good code quality
+    maintainability_poor: int = 50  # Poor code quality
+
+    @field_validator('duplicate_high_threshold', 'duplicate_medium_threshold', 'duplicate_low_threshold')
+    @classmethod
+    def validate_duplicate_thresholds(cls, v: float) -> float:
+        """Ensure duplicate thresholds are between 0.0 and 1.0."""
+        if not 0.0 <= v <= 1.0:
+            raise ValueError(
+                f"Duplicate threshold must be between 0.0 and 1.0 "
+                f"(got {v}). This represents a similarity threshold."
+            )
+        return v
+
+    @field_validator('reranker_min_content_length', 'reranker_max_content_length', 'reranker_length_penalty_max')
+    @classmethod
+    def validate_content_lengths(cls, v: int) -> int:
+        """Ensure content length thresholds are positive."""
+        if v < 1:
+            raise ValueError(f"Content length threshold must be >= 1 (got {v})")
+        return v
+
+
 class AdvancedFeatures(BaseModel):
     """Advanced/experimental features."""
 
@@ -279,6 +330,7 @@ class ServerConfig(BaseSettings):
     analytics: AnalyticsFeatures = AnalyticsFeatures()
     memory: MemoryFeatures = MemoryFeatures()
     indexing: IndexingFeatures = IndexingFeatures()
+    quality: QualityThresholds = QualityThresholds()  # REF-021: Quality and duplicate detection thresholds
     advanced: AdvancedFeatures = AdvancedFeatures()
 
     # Feature level presets (NEW!)
