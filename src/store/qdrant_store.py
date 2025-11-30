@@ -664,26 +664,26 @@ class QdrantMemoryStore(MemoryStore):
                 base_payload = {
                     "id": memory_id,
                     "content": updates.get("content", existing.content),
-                    "category": updates.get("category", existing.category.value if hasattr(existing.category, 'value') else existing.category),
-                    "context_level": updates.get("context_level", existing.context_level.value if hasattr(existing.context_level, 'value') else existing.context_level),
-                    "scope": updates.get("scope", existing.scope.value if hasattr(existing.scope, 'value') else existing.scope),
+                    "category": updates.get("category", existing.category.value),
+                    "context_level": updates.get("context_level", existing.context_level.value),
+                    "scope": updates.get("scope", existing.scope.value),
                     "project_name": updates.get("project_name", existing.project_name),
                     "importance": updates.get("importance", existing.importance),
                     "tags": updates.get("tags", existing.tags),
                     "created_at": existing.created_at.isoformat(),
                     "updated_at": updates["updated_at"],
                     "last_accessed": existing.last_accessed.isoformat() if existing.last_accessed else None,
-                    "lifecycle_state": updates.get("lifecycle_state", existing.lifecycle_state.value if hasattr(existing.lifecycle_state, 'value') else existing.lifecycle_state),
+                    "lifecycle_state": updates.get("lifecycle_state", existing.lifecycle_state.value),
                 }
 
                 # Flatten metadata into payload (matches _build_payload behavior)
                 merged_payload = {**base_payload, **merged_metadata}
 
                 # Handle provenance
-                if hasattr(existing, 'provenance') and existing.provenance:
+                if existing.provenance:
                     prov = existing.provenance
                     merged_payload["provenance"] = {
-                        "source": prov.source.value if hasattr(prov.source, 'value') else prov.source,
+                        "source": prov.source.value,
                         "created_by": prov.created_by,
                         "confidence": prov.confidence,
                         "verified": prov.verified,
@@ -769,7 +769,7 @@ class QdrantMemoryStore(MemoryStore):
                 must_conditions.append(
                     FieldCondition(
                         key="category",
-                        match=MatchValue(value=category.value if hasattr(category, 'value') else category)
+                        match=MatchValue(value=category.value)
                     )
                 )
 
@@ -778,7 +778,7 @@ class QdrantMemoryStore(MemoryStore):
                 must_conditions.append(
                     FieldCondition(
                         key="context_level",
-                        match=MatchValue(value=context_level.value if hasattr(context_level, 'value') else context_level)
+                        match=MatchValue(value=context_level.value)
                     )
                 )
 
@@ -787,7 +787,7 @@ class QdrantMemoryStore(MemoryStore):
                 must_conditions.append(
                     FieldCondition(
                         key="scope",
-                        match=MatchValue(value=scope.value if hasattr(scope, 'value') else scope)
+                        match=MatchValue(value=scope.value)
                     )
                 )
 
@@ -1402,7 +1402,7 @@ class QdrantMemoryStore(MemoryStore):
                     lifecycle_conditions.append(
                         FieldCondition(
                             key="lifecycle_state",
-                            match=MatchValue(value=state.value if hasattr(state, 'value') else state)
+                            match=MatchValue(value=state.value)
                         )
                     )
                 if lifecycle_conditions:
@@ -1415,7 +1415,7 @@ class QdrantMemoryStore(MemoryStore):
                     exclude_cat_conditions.append(
                         FieldCondition(
                             key="category",
-                            match=MatchValue(value=cat.value if hasattr(cat, 'value') else cat)
+                            match=MatchValue(value=cat.value)
                         )
                     )
                 if exclude_cat_conditions:
@@ -1445,7 +1445,7 @@ class QdrantMemoryStore(MemoryStore):
                 conditions.append(
                     FieldCondition(
                         key="provenance.source",
-                        match=MatchValue(value=adv.source.value if hasattr(adv.source, 'value') else adv.source)
+                        match=MatchValue(value=adv.source.value)
                     )
                 )
 

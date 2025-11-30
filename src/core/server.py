@@ -992,9 +992,9 @@ class MemoryRAGServer(StructuralQueryMixin):
                 lifecycle_breakdown = {}
 
                 for memory in memories:
-                    cat = memory.category.value if hasattr(memory.category, 'value') else memory.category
+                    cat = memory.category.value
                     proj = memory.project_name or "unassigned"
-                    life = memory.lifecycle_state.value if hasattr(memory.lifecycle_state, 'value') else (memory.lifecycle_state or "active")
+                    life = memory.lifecycle_state.value
 
                     category_breakdown[cat] = category_breakdown.get(cat, 0) + 1
                     project_breakdown[proj] = project_breakdown.get(proj, 0) + 1
@@ -1085,16 +1085,16 @@ class MemoryRAGServer(StructuralQueryMixin):
                         "id": memory.id,
                         "memory_id": memory.id,
                         "content": memory.content,
-                        "category": memory.category.value if hasattr(memory.category, 'value') else memory.category,
-                        "context_level": memory.context_level.value if hasattr(memory.context_level, 'value') else memory.context_level,
+                        "category": memory.category.value,
+                        "context_level": memory.context_level.value,
                         "importance": memory.importance,
                         "tags": memory.tags or [],
                         "metadata": memory.metadata or {},
-                        "scope": memory.scope.value if hasattr(memory.scope, 'value') else memory.scope,
+                        "scope": memory.scope.value,
                         "project_name": memory.project_name,
-                        "created_at": memory.created_at.isoformat() if hasattr(memory.created_at, 'isoformat') else memory.created_at,
-                        "updated_at": memory.updated_at.isoformat() if hasattr(memory.updated_at, 'isoformat') else memory.updated_at,
-                        "last_accessed": memory.last_accessed.isoformat() if memory.last_accessed and hasattr(memory.last_accessed, 'isoformat') else memory.last_accessed,
+                        "created_at": memory.created_at.isoformat(),
+                        "updated_at": memory.updated_at.isoformat(),
+                        "last_accessed": memory.last_accessed.isoformat() if memory.last_accessed else memory.last_accessed,
                     }
                 }
             else:
@@ -1731,16 +1731,16 @@ class MemoryRAGServer(StructuralQueryMixin):
                     "id": mem.id,
                     "memory_id": mem.id,
                     "content": mem.content,
-                    "category": mem.category.value if hasattr(mem.category, 'value') else mem.category,
-                    "context_level": mem.context_level.value if hasattr(mem.context_level, 'value') else mem.context_level,
+                    "category": mem.category.value,
+                    "context_level": mem.context_level.value,
                     "importance": mem.importance,
                     "tags": mem.tags or [],
                     "metadata": mem.metadata or {},
-                    "scope": mem.scope.value if hasattr(mem.scope, 'value') else mem.scope,
+                    "scope": mem.scope.value,
                     "project_name": mem.project_name,
-                    "created_at": mem.created_at.isoformat() if hasattr(mem.created_at, 'isoformat') else mem.created_at,
-                    "updated_at": mem.updated_at.isoformat() if hasattr(mem.updated_at, 'isoformat') else mem.updated_at,
-                    "last_accessed": mem.last_accessed.isoformat() if mem.last_accessed and hasattr(mem.last_accessed, 'isoformat') else mem.last_accessed,
+                    "created_at": mem.created_at.isoformat(),
+                    "updated_at": mem.updated_at.isoformat(),
+                    "last_accessed": mem.last_accessed.isoformat() if mem.last_accessed else mem.last_accessed,
                 })
 
             total_count = len(memories)
@@ -1990,9 +1990,9 @@ class MemoryRAGServer(StructuralQueryMixin):
                         # Store new memory - build metadata dict for store
                         store_metadata = {
                             "id": mem_id,  # Preserve original ID from export
-                            "category": request.category.value if hasattr(request.category, 'value') else request.category,
-                            "context_level": request.context_level.value if hasattr(request.context_level, 'value') else request.context_level,
-                            "scope": request.scope.value if hasattr(request.scope, 'value') else request.scope,
+                            "category": request.category.value,
+                            "context_level": request.context_level.value,
+                            "scope": request.scope.value,
                             "importance": request.importance,
                             "tags": request.tags,
                             "metadata": request.metadata,

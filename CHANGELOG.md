@@ -52,6 +52,15 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **REF-032: Fix Inconsistent Enum/String Handling**
+  - Removed 35 defensive `hasattr()` checks for enum fields by normalizing on retrieval
+  - All memory objects from store now have proper enum objects for category, context_level, scope, and lifecycle_state
+  - Enum-to-string conversion only happens when serializing to JSON responses
+  - Files modified: src/services/memory_service.py (6 instances), src/store/qdrant_store.py (5 instances), src/core/server.py (7 instances), src/cli/memory_browser.py (3 instances)
+  - Root cause: `_payload_to_memory_unit()` already converts Qdrant string fields to enums, making defensive checks redundant
+  - Approach: Normalize on retrieval layer - strings from Qdrant are converted to enum objects by the store layer before returning to services
+
+### Fixed - 2025-11-30
 - **REF-028-C: Add Exception Chain Preservation (from e)**
   - Added `from e` to 41 raise statements lacking exception chain preservation
   - Ensures original exception tracebacks are preserved for debugging
