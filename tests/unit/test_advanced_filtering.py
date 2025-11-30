@@ -18,7 +18,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 from src.core.server import MemoryRAGServer
 from src.core.models import MemoryCategory, MemoryScope, ContextLevel
-from conftest import mock_embedding
+from tests.conftest import mock_embedding
 
 
 @pytest.fixture

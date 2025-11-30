@@ -5,7 +5,7 @@ import pytest_asyncio
 from unittest.mock import AsyncMock, MagicMock
 from src.core.tools import SpecializedRetrievalTools
 from src.core.models import (
-from conftest import mock_embedding
+from tests.conftest import mock_embedding
     ContextLevel,
     MemoryScope,
     MemoryCategory,

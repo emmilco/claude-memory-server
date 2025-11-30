@@ -19,7 +19,7 @@ from typing import List
 from src.config import ServerConfig
 from src.store.qdrant_store import QdrantMemoryStore
 from src.core.models import MemoryCategory, ContextLevel, MemoryScope
-from conftest import mock_embedding
+from tests.conftest import mock_embedding
 
 # Skip in parallel test runs - flaky due to Qdrant resource contention
 pytestmark = pytest.mark.skip(reason="Flaky in parallel execution - pass when run in isolation")

@@ -10,7 +10,7 @@ from src.core.server import MemoryRAGServer
 from src.config import ServerConfig
 from src.memory.incremental_indexer import IncrementalIndexer
 from src.embeddings.parallel_generator import ParallelEmbeddingGenerator
-from conftest import mock_embedding
+from tests.conftest import mock_embedding
 
 
 @pytest.fixture

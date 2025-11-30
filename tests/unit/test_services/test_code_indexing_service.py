@@ -24,7 +24,7 @@ from src.core.models import (
     MemoryScope,
 )
 from src.core.exceptions import (
-from conftest import mock_embedding
+from tests.conftest import mock_embedding
     StorageError,
     ValidationError,
     ReadOnlyError,

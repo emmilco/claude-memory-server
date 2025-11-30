@@ -4,7 +4,7 @@ import pytest
 from pathlib import Path
 from unittest.mock import Mock, AsyncMock, MagicMock, patch
 from src.memory.incremental_indexer import IncrementalIndexer
-from conftest import mock_embedding
+from tests.conftest import mock_embedding
 
 
 @pytest.fixture

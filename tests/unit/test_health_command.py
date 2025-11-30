@@ -7,7 +7,7 @@ import shutil
 from pathlib import Path
 from unittest.mock import Mock, patch, AsyncMock, MagicMock
 from src.cli.health_command import HealthCommand
-from conftest import mock_embedding
+from tests.conftest import mock_embedding
 
 
 class TestHealthCommandInitialization:

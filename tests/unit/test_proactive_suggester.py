@@ -8,7 +8,7 @@ from src.memory.proactive_suggester import ProactiveSuggester
 from src.memory.intent_detector import IntentDetector, DetectedIntent
 from src.memory.conversation_tracker import ConversationTracker, QueryRecord
 from src.core.models import (
-from conftest import mock_embedding
+from tests.conftest import mock_embedding
     MemoryResult,
     MemoryUnit,
     MemoryProvenance,

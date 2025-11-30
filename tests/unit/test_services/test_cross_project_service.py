@@ -14,7 +14,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from src.services.cross_project_service import CrossProjectService
 from src.config import ServerConfig
 from src.core.exceptions import RetrievalError
-from conftest import mock_embedding
+from tests.conftest import mock_embedding
 
 
 class TestCrossProjectServiceInit:

@@ -5,7 +5,7 @@ from unittest.mock import Mock, AsyncMock
 
 from src.review.pattern_matcher import PatternMatcher, PatternMatch
 from src.review.patterns import CodeSmellPattern
-from conftest import mock_embedding
+from tests.conftest import mock_embedding
 
 
 @pytest.fixture

@@ -19,7 +19,7 @@ from src.memory.repository_registry import (
 )
 from src.memory.workspace_manager import Workspace, WorkspaceManager
 from src.memory.incremental_indexer import IncrementalIndexer
-from conftest import mock_embedding
+from tests.conftest import mock_embedding
 
 
 # ============================================================================

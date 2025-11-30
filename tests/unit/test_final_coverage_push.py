@@ -10,7 +10,7 @@ from src.memory.incremental_indexer import IncrementalIndexer
 from src.embeddings.generator import EmbeddingGenerator
 from src.embeddings.cache import EmbeddingCache
 from src.config import ServerConfig, get_config
-from conftest import mock_embedding
+from tests.conftest import mock_embedding
 
 
 class TestIncrementalIndexerAdditional:
