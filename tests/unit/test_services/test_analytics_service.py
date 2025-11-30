@@ -88,17 +88,15 @@ class TestGetUsageStatistics:
 
     @pytest.mark.asyncio
     async def test_stats_without_tracker_returns_disabled(self):
-        """Test statistics without tracker returns disabled."""
+        """Test statistics without tracker raises StorageError."""
         service = AnalyticsService(
             store=MagicMock(),
             config=ServerConfig(),
             pattern_tracker=None,
         )
 
-        result = await service.get_usage_statistics()
-
-        assert result["status"] == "disabled"
-        assert "message" in result
+        with pytest.raises(StorageError):
+            await service.get_usage_statistics()
 
     @pytest.mark.asyncio
     async def test_stats_success(self, service):
@@ -155,16 +153,15 @@ class TestGetTopQueries:
 
     @pytest.mark.asyncio
     async def test_queries_without_tracker_returns_disabled(self):
-        """Test queries without tracker returns disabled."""
+        """Test queries without tracker raises StorageError."""
         service = AnalyticsService(
             store=MagicMock(),
             config=ServerConfig(),
             pattern_tracker=None,
         )
 
-        result = await service.get_top_queries()
-
-        assert result["status"] == "disabled"
+        with pytest.raises(StorageError):
+            await service.get_top_queries()
 
     @pytest.mark.asyncio
     async def test_queries_success(self, service):
@@ -225,16 +222,15 @@ class TestGetFrequentlyAccessedCode:
 
     @pytest.mark.asyncio
     async def test_code_without_tracker_returns_disabled(self):
-        """Test code access without tracker returns disabled."""
+        """Test code access without tracker raises StorageError."""
         service = AnalyticsService(
             store=MagicMock(),
             config=ServerConfig(),
             pattern_tracker=None,
         )
 
-        result = await service.get_frequently_accessed_code()
-
-        assert result["status"] == "disabled"
+        with pytest.raises(StorageError):
+            await service.get_frequently_accessed_code()
 
     @pytest.mark.asyncio
     async def test_code_success(self, service):
@@ -296,16 +292,15 @@ class TestGetTokenAnalytics:
 
     @pytest.mark.asyncio
     async def test_token_analytics_without_tracker_returns_disabled(self):
-        """Test token analytics without tracker returns disabled."""
+        """Test token analytics without tracker raises StorageError."""
         service = AnalyticsService(
             store=MagicMock(),
             config=ServerConfig(),
             usage_tracker=None,
         )
 
-        result = await service.get_token_analytics()
-
-        assert result["status"] == "disabled"
+        with pytest.raises(StorageError):
+            await service.get_token_analytics()
 
     @pytest.mark.asyncio
     async def test_token_analytics_success(self, service):

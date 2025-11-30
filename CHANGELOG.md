@@ -99,6 +99,17 @@ Organize entries under these headers in chronological order (newest first):
   - Simplified filter building by relying on `SearchFilters.to_dict()` which guarantees string values
   - Replaced `hasattr()` checks with clean `isinstance(val, Enum)` pattern for advanced filter enums
   - Files: src/store/qdrant_store.py (payload normalization, filter simplification), src/services/memory_service.py (removed defensive checks in response building)
+
+- **REF-022: Fix Inconsistent Error Handling Patterns Across Services**
+  - Standardized error handling to use exceptions consistently across service layer
+  - QueryService: Changed 8 methods to raise `StorageError` instead of returning error dicts
+  - AnalyticsService: Changed 4 methods from returning disabled dicts to raising `StorageError`
+  - CrossProjectService: Fixed exception swallowing in project search loop; now logs errors with `exc_info=True` and returns failed_projects list
+  - All disabled service checks now raise exceptions instead of returning error dicts with status="disabled"
+  - Ensures consistent error handling pattern: early validation checks raise exceptions, operational failures raise exceptions
+  - Methods standardized: start_conversation_session, end_conversation_session, list_conversation_sessions, analyze_conversation, get_suggestion_stats, provide_suggestion_feedback, set_suggestion_mode, expand_query, get_usage_statistics, get_top_queries, get_frequently_accessed_code, get_token_analytics
+  - Files: src/services/query_service.py, src/services/analytics_service.py, src/services/cross_project_service.py
+  - Updated 88 test cases in test_query_service.py and test_analytics_service.py to expect `StorageError` exceptions instead of error dicts
 - **REF-028-C: Add Exception Chain Preservation (from e)**
   - Added `from e` to 41 raise statements lacking exception chain preservation
   - Ensures original exception tracebacks are preserved for debugging

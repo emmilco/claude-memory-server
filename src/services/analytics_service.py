@@ -73,17 +73,17 @@ class AnalyticsService:
 
         Returns:
             Dict with usage statistics
+
+        Raises:
+            StorageError: If pattern tracker is not configured or retrieval fails
         """
+        with self._stats_lock:
+            self.stats["analytics_queries"] += 1
+
+        if not self.pattern_tracker:
+            raise StorageError("Usage pattern tracking is not configured")
+
         try:
-            with self._stats_lock:
-                self.stats["analytics_queries"] += 1
-
-            if not self.pattern_tracker:
-                return {
-                    "status": "disabled",
-                    "message": "Usage pattern tracking not configured"
-                }
-
             stats = self.pattern_tracker.get_usage_statistics(days=days)
 
             return {
@@ -110,17 +110,17 @@ class AnalyticsService:
 
         Returns:
             Dict with top queries
+
+        Raises:
+            StorageError: If pattern tracker is not configured or retrieval fails
         """
+        with self._stats_lock:
+            self.stats["analytics_queries"] += 1
+
+        if not self.pattern_tracker:
+            raise StorageError("Usage pattern tracking is not configured")
+
         try:
-            with self._stats_lock:
-                self.stats["analytics_queries"] += 1
-
-            if not self.pattern_tracker:
-                return {
-                    "status": "disabled",
-                    "message": "Usage pattern tracking not configured"
-                }
-
             queries = self.pattern_tracker.get_top_queries(
                 limit=limit,
                 days=days
@@ -151,17 +151,17 @@ class AnalyticsService:
 
         Returns:
             Dict with frequently accessed code
+
+        Raises:
+            StorageError: If pattern tracker is not configured or retrieval fails
         """
+        with self._stats_lock:
+            self.stats["analytics_queries"] += 1
+
+        if not self.pattern_tracker:
+            raise StorageError("Usage pattern tracking is not configured")
+
         try:
-            with self._stats_lock:
-                self.stats["analytics_queries"] += 1
-
-            if not self.pattern_tracker:
-                return {
-                    "status": "disabled",
-                    "message": "Usage pattern tracking not configured"
-                }
-
             code = self.pattern_tracker.get_frequently_accessed_code(
                 limit=limit,
                 days=days
@@ -194,17 +194,17 @@ class AnalyticsService:
 
         Returns:
             Dict with token analytics
+
+        Raises:
+            StorageError: If usage tracker is not configured or retrieval fails
         """
+        with self._stats_lock:
+            self.stats["analytics_queries"] += 1
+
+        if not self.usage_tracker:
+            raise StorageError("Usage tracking is not configured")
+
         try:
-            with self._stats_lock:
-                self.stats["analytics_queries"] += 1
-
-            if not self.usage_tracker:
-                return {
-                    "status": "disabled",
-                    "message": "Usage tracking not configured"
-                }
-
             analytics = await self.usage_tracker.get_token_analytics(
                 period_days=period_days,
                 session_id=session_id,
