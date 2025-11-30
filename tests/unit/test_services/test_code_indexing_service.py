@@ -24,12 +24,12 @@ from src.core.models import (
     MemoryScope,
 )
 from src.core.exceptions import (
-from tests.conftest import mock_embedding
     StorageError,
     ValidationError,
     ReadOnlyError,
     RetrievalError,
 )
+from tests.conftest import mock_embedding
 
 
 class TestCodeIndexingServiceInit:
