@@ -17,12 +17,14 @@ from src.core.exceptions import ReadOnlyError
 
 
 @pytest_asyncio.fixture
-async def test_server(tmp_path, qdrant_client, unique_qdrant_collection):
+async def test_server(tmp_path, unique_qdrant_collection, monkeypatch):
     """Create a test server with pooled collection.
 
-    Uses the session-scoped qdrant_client and unique_qdrant_collection
-    fixtures from conftest.py to leverage collection pooling and prevent
-    Qdrant deadlocks during parallel test execution.
+    Uses the unique_qdrant_collection fixture from conftest.py to ensure
+    test isolation and prevent data contamination.
+
+    BUG-066 FIX: Disabled connection pooling and background tasks to prevent
+    event loop hangs in pytest-asyncio contexts.
     """
     config = ServerConfig(
         storage_backend="qdrant",
@@ -30,7 +32,37 @@ async def test_server(tmp_path, qdrant_client, unique_qdrant_collection):
         qdrant_collection_name=unique_qdrant_collection,
         advanced={"read_only_mode": False},
         embedding_model="all-MiniLM-L6-v2",
+        # BUG-066: Disable all optional features to prevent event loop hangs
+        memory={
+            "auto_pruning": False,
+            "conversation_tracking": False,
+            "proactive_suggestions": False,
+        },
+        analytics={
+            "usage_tracking": False,
+            "usage_pattern_analytics": False,
+        },
+        search={
+            "hybrid_search": False,
+            "cross_project_enabled": False,
+        },
+        indexing={
+            "auto_index_enabled": False,
+            "auto_index_on_startup": False,
+        },
     )
+
+    # BUG-066: Monkeypatch QdrantMemoryStore to disable connection pooling
+    # Pooling causes event loop hangs in pytest-asyncio due to blocking Qdrant client calls
+    from src.store import qdrant_store
+    original_init = qdrant_store.QdrantMemoryStore.__init__
+
+    def patched_init(self, config=None, use_pool=True):
+        # Force use_pool=False for tests
+        original_init(self, config, use_pool=False)
+
+    monkeypatch.setattr(qdrant_store.QdrantMemoryStore, "__init__", patched_init)
+
     server = MemoryRAGServer(config)
     await server.initialize()
     yield server

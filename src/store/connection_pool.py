@@ -510,8 +510,10 @@ class QdrantConnectionPool:
                 prefer_grpc=getattr(self.config, 'qdrant_prefer_grpc', False),
             )
 
-            # Test connection
-            client.get_collections()
+            # BUG-066: Run blocking get_collections() in executor to prevent event loop blocking
+            # QdrantClient methods are synchronous and can hang async code in pytest-asyncio
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, client.get_collections)
 
             # Wrap in pooled connection
             pooled_conn = PooledConnection(
