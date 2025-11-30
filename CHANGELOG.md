@@ -62,6 +62,11 @@ Organize entries under these headers in chronological order (newest first):
   - Files: CLAUDE.md, scripts/journal.sh, .claude/hooks/observe.sh
 
 ### Fixed - 2025-11-30
+- **BUG-057: Fix lowercase `any` type annotations replaced with `Any`**
+  - Replaced 5 instances of lowercase `any` with uppercase `Any` in type hints
+  - Added `Any` to typing imports in affected files
+  - Files: src/memory/change_detector.py, src/search/bm25.py, src/memory/project_archival.py, src/memory/docstring_extractor.py
+
 - **BUG-056: Track and handle MCP server initialization task properly**
   - Fixed fire-and-forget task issue: background initialization task reference is now stored
   - Added error callback to `_init_task` to properly log exceptions from background initialization
