@@ -406,21 +406,11 @@
 
 ### 🔴 Critical Bugs - Will Crash at Runtime
 
-- [ ] **BUG-038**: Undefined Variable `PYTHON_PARSER_AVAILABLE` 🔥🔥🔥
-  - **Location:** `src/memory/incremental_indexer.py:186`
-  - **Error:** `NameError: name 'PYTHON_PARSER_AVAILABLE' is not defined`
-  - **Impact:** Code crashes when Rust parser unavailable - fallback error handling broken
-  - **Root Cause:** Variable referenced but never defined; only `RUST_AVAILABLE` is imported
-  - **Fix:** Either define the variable or remove the check (Python parser was removed in REF-020)
-  - **Discovered:** 2025-11-29 comprehensive code review
+- [x] **BUG-038**: Undefined Variable `PYTHON_PARSER_AVAILABLE` ✅ FIXED (2025-11-29)
+  - Removed reference to undefined variable, updated error message for Rust-only support
 
-- [ ] **BUG-039**: Missing Import `PointIdsList` in QdrantStore 🔥🔥🔥
-  - **Location:** `src/store/qdrant_store.py:2331`
-  - **Error:** `NameError: name 'PointIdsList' is not defined`
-  - **Impact:** `merge_memories()` crashes at runtime - memory merge feature broken
-  - **Root Cause:** `PointIdsList` used but never imported from `qdrant_client.models`
-  - **Fix:** Add to imports: `from qdrant_client.models import PointIdsList`
-  - **Discovered:** 2025-11-29 comprehensive code review
+- [x] **BUG-039**: Missing Import `PointIdsList` in QdrantStore ✅ FIXED (2025-11-29)
+  - Added missing import from `qdrant_client.models`
 
 - [ ] **BUG-040**: Unreachable Code and Undefined Variable in Exception Handlers 🔥🔥
   - **Location:** `src/store/qdrant_store.py:2061-2064, 2337-2340`
@@ -435,22 +425,11 @@
   - **Fix:** Change to `except StorageError as e:` and move logging before raise
   - **Discovered:** 2025-11-29 comprehensive code review
 
-- [ ] **BUG-041**: Cache Return Type Mismatch Causes IndexError 🔥🔥🔥
-  - **Location:** `src/embeddings/cache.py:271`
-  - **Error:** `TypeError` or `IndexError` when cache disabled
-  - **Impact:** Batch embedding generation crashes when cache is disabled
-  - **Root Cause:** `batch_get()` returns `{}` (empty dict) when disabled, but callers expect list
-  - **Callers:** `parallel_generator.py:345`, `generator.py:268` iterate with `enumerate()`
-  - **Fix:** Return `[None] * len(texts)` instead of `{}` when disabled
-  - **Discovered:** 2025-11-29 comprehensive code review
+- [x] **BUG-041**: Cache Return Type Mismatch Causes IndexError ✅ FIXED (2025-11-29)
+  - Changed `batch_get()` to return `[None] * len(texts)` instead of `{}` when disabled
 
-- [ ] **BUG-042**: Missing CLI Method `_format_relative_time` 🔥🔥
-  - **Location:** `src/cli/status_command.py:409`
-  - **Error:** `AttributeError: 'StatusCommand' object has no attribute '_format_relative_time'`
-  - **Impact:** Status command crashes when displaying active project with last_activity
-  - **Root Cause:** Method doesn't exist; should be `_format_time_ago()` (defined at line 38)
-  - **Fix:** Change `_format_relative_time` to `_format_time_ago`
-  - **Discovered:** 2025-11-29 comprehensive code review
+- [x] **BUG-042**: Missing CLI Method `_format_relative_time` ✅ FIXED (2025-11-29)
+  - Changed method call to `_format_time_ago()` (correct method name)
 
 - [ ] **BUG-043**: Missing CLI Commands `verify_command` and `consolidate_command` 🔥🔥
   - **Location:** `src/cli/__init__.py:536, 548`
