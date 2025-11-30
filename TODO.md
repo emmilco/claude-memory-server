@@ -396,9 +396,553 @@
 
 ---
 
+---
+
+## 🚨 COMPREHENSIVE CODE REVIEW AUDIT (2025-11-29)
+
+**Source:** File-by-file codebase review analyzing all ~160 modules across src/ directory.
+**Methodology:** Thorough read-only analysis of src/core/, src/store/, src/memory/, src/embeddings/, src/services/, src/analysis/, src/cli/, src/search/ looking for bugs, tech debt, incomplete implementations, and code quality issues.
+**Finding:** ~100+ distinct issues identified. Many critical bugs in core indexing/search paths.
+
+### 🔴 Critical Bugs - Will Crash at Runtime
+
+- [ ] **BUG-038**: Undefined Variable `PYTHON_PARSER_AVAILABLE` 🔥🔥🔥
+  - **Location:** `src/memory/incremental_indexer.py:186`
+  - **Error:** `NameError: name 'PYTHON_PARSER_AVAILABLE' is not defined`
+  - **Impact:** Code crashes when Rust parser unavailable - fallback error handling broken
+  - **Root Cause:** Variable referenced but never defined; only `RUST_AVAILABLE` is imported
+  - **Fix:** Either define the variable or remove the check (Python parser was removed in REF-020)
+  - **Discovered:** 2025-11-29 comprehensive code review
+
+- [ ] **BUG-039**: Missing Import `PointIdsList` in QdrantStore 🔥🔥🔥
+  - **Location:** `src/store/qdrant_store.py:2331`
+  - **Error:** `NameError: name 'PointIdsList' is not defined`
+  - **Impact:** `merge_memories()` crashes at runtime - memory merge feature broken
+  - **Root Cause:** `PointIdsList` used but never imported from `qdrant_client.models`
+  - **Fix:** Add to imports: `from qdrant_client.models import PointIdsList`
+  - **Discovered:** 2025-11-29 comprehensive code review
+
+- [ ] **BUG-040**: Unreachable Code and Undefined Variable in Exception Handlers 🔥🔥
+  - **Location:** `src/store/qdrant_store.py:2061-2064, 2337-2340`
+  - **Error:** Code after `raise` is unreachable; variable `e` is undefined
+  - **Impact:** Error logging lost, exceptions lack context - debugging production failures impossible
+  - **Code Pattern:**
+    ```python
+    except StorageError:
+        raise
+        logger.error(f"Error: {e}")  # UNREACHABLE, e UNDEFINED
+    ```
+  - **Fix:** Change to `except StorageError as e:` and move logging before raise
+  - **Discovered:** 2025-11-29 comprehensive code review
+
+- [ ] **BUG-041**: Cache Return Type Mismatch Causes IndexError 🔥🔥🔥
+  - **Location:** `src/embeddings/cache.py:271`
+  - **Error:** `TypeError` or `IndexError` when cache disabled
+  - **Impact:** Batch embedding generation crashes when cache is disabled
+  - **Root Cause:** `batch_get()` returns `{}` (empty dict) when disabled, but callers expect list
+  - **Callers:** `parallel_generator.py:345`, `generator.py:268` iterate with `enumerate()`
+  - **Fix:** Return `[None] * len(texts)` instead of `{}` when disabled
+  - **Discovered:** 2025-11-29 comprehensive code review
+
+- [ ] **BUG-042**: Missing CLI Method `_format_relative_time` 🔥🔥
+  - **Location:** `src/cli/status_command.py:409`
+  - **Error:** `AttributeError: 'StatusCommand' object has no attribute '_format_relative_time'`
+  - **Impact:** Status command crashes when displaying active project with last_activity
+  - **Root Cause:** Method doesn't exist; should be `_format_time_ago()` (defined at line 38)
+  - **Fix:** Change `_format_relative_time` to `_format_time_ago`
+  - **Discovered:** 2025-11-29 comprehensive code review
+
+- [ ] **BUG-043**: Missing CLI Commands `verify_command` and `consolidate_command` 🔥🔥
+  - **Location:** `src/cli/__init__.py:536, 548`
+  - **Error:** `NameError: name 'verify_command' is not defined`
+  - **Impact:** CLI crashes when `verify` or `consolidate` subcommands are invoked
+  - **Root Cause:** Commands referenced in argparser but functions never imported/defined
+  - **Fix:** Either implement the commands or remove them from argparser (lines 413-473)
+  - **Discovered:** 2025-11-29 comprehensive code review
+
+- [ ] **BUG-044**: Undefined Variable After Date Parsing Error 🔥🔥
+  - **Location:** `src/cli/git_search_command.py:62-70`
+  - **Error:** `NameError: name 'since_dt' is not defined`
+  - **Impact:** Git search command crashes on invalid date format
+  - **Root Cause:** If date parsing fails, `since_dt` is never set but used at line 94
+  - **Fix:** Set `since_dt = None` before try block or after except block
+  - **Discovered:** 2025-11-29 comprehensive code review
+
+### 🟡 High Priority Bugs - Incorrect Behavior / Data Corruption
+
+- [ ] **BUG-045**: Call Extractor State Leak Between Files 🔥🔥
+  - **Location:** `src/analysis/call_extractors.py:59-105`
+  - **Problem:** `current_class` instance variable never reset between files
+  - **Impact:** Call graph corruption - methods from last class in file A attributed to classes in file B
+  - **Root Cause:** `self.current_class` set during `extract_calls()` but never cleared
+  - **Fix:** Reset `self.current_class = None` at start of `extract_calls()`
+  - **Discovered:** 2025-11-29 comprehensive code review
+
+- [ ] **BUG-046**: Store Attribute Access May Crash on Non-Qdrant Backends 🔥🔥
+  - **Location:** `src/services/memory_service.py:1406-1407`
+  - **Problem:** Direct access to `self.store.client` and `self.store.collection_name`
+  - **Impact:** `get_dashboard_stats()` crashes if store is wrapped or non-Qdrant
+  - **Root Cause:** Assumes Qdrant-specific attributes exist without checking
+  - **Fix:** Add `hasattr()` check or use store's API method
+  - **Discovered:** 2025-11-29 comprehensive code review
+
+- [ ] **BUG-047**: RRF Fusion Logic Has Inverted Control Flow 🔥
+  - **Location:** `src/search/hybrid_search.py:254-265`
+  - **Problem:** `else` block executes when memory IS found, not when NOT found
+  - **Impact:** Works by accident but confusing - high risk of breakage during maintenance
+  - **Root Cause:** Nested loop logic is logically inverted from intent
+  - **Fix:** Refactor to explicit search functions for clarity
+  - **Discovered:** 2025-11-29 comprehensive code review
+
+- [ ] **BUG-048**: Cascade Fusion Silently Drops Valid BM25 Results 🔥
+  - **Location:** `src/search/hybrid_search.py:300-310`
+  - **Problem:** Filters out results with `score == 0` without logging
+  - **Impact:** Returns fewer than `limit` results even when more are available
+  - **Root Cause:** `if score > 0:` check excludes legitimate zero-score results
+  - **Fix:** Remove filter or add logging, reconsider cascade strategy intent
+  - **Discovered:** 2025-11-29 comprehensive code review
+
+- [ ] **BUG-049**: Timezone Mismatch in Reranker Causes TypeError 🔥
+  - **Location:** `src/search/reranker.py:134-158`
+  - **Error:** `TypeError: can't subtract offset-naive and offset-aware datetimes`
+  - **Impact:** Recency scoring crashes if memory has naive datetime
+  - **Root Cause:** `datetime.now(timezone.utc)` subtracted from potentially naive `updated_at`
+  - **Fix:** Normalize both datetimes to UTC before comparison
+  - **Discovered:** 2025-11-29 comprehensive code review
+
+- [ ] **BUG-050**: Executor Not Null-Checked After Failed Initialize 🔥
+  - **Location:** `src/embeddings/parallel_generator.py:445-446`
+  - **Error:** `AttributeError: 'NoneType' object has no attribute...`
+  - **Impact:** Parallel embedding crashes if initialization failed
+  - **Root Cause:** `initialize()` can fail and leave `self.executor = None`
+  - **Fix:** Add null check after `await self.initialize()` or raise explicit error
+  - **Discovered:** 2025-11-29 comprehensive code review
+
+- [ ] **BUG-051**: MPS Generator Not Closed - Thread Leak 🔥
+  - **Location:** `src/embeddings/parallel_generator.py:247-253`
+  - **Problem:** `_mps_generator` created but never closed in `close()` method
+  - **Impact:** Thread pool executor leak when using MPS fallback
+  - **Root Cause:** `close()` doesn't call `_mps_generator.close()`
+  - **Fix:** Add `if self._mps_generator: await self._mps_generator.close()` to `close()`
+  - **Discovered:** 2025-11-29 comprehensive code review
+
+### 🟢 Medium Priority - Tech Debt and Code Quality
+
+- [ ] **REF-021**: Move Hardcoded Thresholds to Config (~2-3 days) 🔥
+  - **Locations:**
+    - `src/memory/duplicate_detector.py:74-76` - Similarity thresholds (0.95, 0.85, 0.75)
+    - `src/memory/incremental_indexer.py:622,658,802` - Limit 10000
+    - `src/memory/health_jobs.py:265` - Usage threshold `use_count > 5`
+    - `src/search/reranker.py:210-222` - Content length bounds (100, 500, 1000)
+    - `src/analysis/quality_analyzer.py:105-115` - Complexity thresholds
+  - **Problem:** 30+ hardcoded values make tuning require code changes
+  - **Impact:** Cannot optimize for different deployment scales without code modification
+  - **Fix:** Add to ServerConfig with sensible defaults
+  - **Discovered:** 2025-11-29 comprehensive code review
+
+- [ ] **REF-022**: Fix Inconsistent Error Handling Patterns (~1-2 days)
+  - **Locations:**
+    - `src/services/query_service.py` - Returns error dicts instead of raising
+    - `src/services/analytics_service.py` - Different response structure for disabled
+    - `src/services/cross_project_service.py:153-155` - Swallows all exceptions in loop
+  - **Problem:** Mix of return dicts vs raising exceptions, inconsistent response formats
+  - **Impact:** Callers don't know what to expect, debugging difficult
+  - **Fix:** Standardize on exception-based error handling with consistent response format
+  - **Discovered:** 2025-11-29 comprehensive code review
+
+- [ ] **REF-023**: Remove Defensive hasattr() Patterns (~1 day)
+  - **Locations:**
+    - `src/services/memory_service.py:569-578, 1033-1042, 1260-1262`
+    - `src/store/qdrant_store.py` - Throughout payload building
+  - **Problem:** Extensive `hasattr(x, 'value')` checks suggest unstable data models
+  - **Impact:** Code smell, maintenance burden, masks real type issues
+  - **Fix:** Fix root cause in data model - ensure consistent types from store
+  - **Discovered:** 2025-11-29 comprehensive code review
+
+- [ ] **REF-024**: Fix Race Conditions in File Watcher Debounce (~1 day)
+  - **Location:** `src/memory/file_watcher.py:254-273`
+  - **Problem:** Lock released between reading and modifying `debounce_task`
+  - **Impact:** Orphaned tasks or incorrect cancellation under high concurrency
+  - **Fix:** Hold lock through entire operation or use atomic task swap
+  - **Discovered:** 2025-11-29 comprehensive code review
+
+- [ ] **REF-025**: Complete Stub Implementations (~2-3 days)
+  - **Locations:**
+    - `src/memory/health_jobs.py:371-380` - `_store_health_score()` is no-op
+    - `src/memory/health_scorer.py:227-271` - `_calculate_contradiction_rate()` always returns 0.02
+    - `src/analysis/call_extractors.py:223-245` - JavaScript extractor returns empty
+  - **Problem:** Methods advertised but not implemented
+  - **Impact:** Features don't work as documented, metrics are meaningless
+  - **Fix:** Implement or clearly mark as unsupported
+  - **Discovered:** 2025-11-29 comprehensive code review
+
+- [ ] **REF-026**: Fix Memory Leak Risks in Large Dataset Operations (~1-2 days)
+  - **Locations:**
+    - `src/memory/health_scorer.py:156-195` - Loads all memories without pagination
+    - `src/analysis/code_duplicate_detector.py:125-176` - O(N²) matrix without size check
+  - **Problem:** No memory bounds on large operations
+  - **Impact:** OOM on large codebases/memory stores
+  - **Fix:** Add pagination or size validation with early rejection
+  - **Discovered:** 2025-11-29 comprehensive code review
+
+- [ ] **REF-027**: Add Missing Timeout Handling for Async Operations (~1 day)
+  - **Locations:**
+    - `src/embeddings/cache.py:124, 200, 274` - No timeout on `asyncio.to_thread()`
+    - `src/services/` - All store calls lack timeouts
+  - **Problem:** Hung operations block entire pipeline
+  - **Impact:** Single stuck query can freeze embedding/search pipeline
+  - **Fix:** Add `asyncio.timeout()` wrapper with configurable timeouts
+  - **Discovered:** 2025-11-29 comprehensive code review
+
+- [ ] **BUG-052**: Incorrect Median Calculation in ImportanceScorer 🔥
+  - **Location:** `src/analysis/importance_scorer.py:358`
+  - **Problem:** Uses `sorted_scores[len(sorted_scores) // 2]` - wrong for even-length lists
+  - **Impact:** Statistics biased - median off by up to 0.5 for small datasets
+  - **Example:** `[0.1, 0.2, 0.3, 0.4]` returns 0.3 instead of 0.25
+  - **Fix:** Average middle two elements for even-length lists
+  - **Discovered:** 2025-11-29 comprehensive code review
+
+- [ ] **BUG-053**: Query DSL Date Parsing Too Strict 🔥
+  - **Location:** `src/search/query_dsl_parser.py:235-255`
+  - **Problem:** Only accepts `YYYY-MM-DD` format, rejects valid ISO formats
+  - **Impact:** Users can't use `2024-01-01T00:00:00Z` or other valid formats
+  - **Fix:** Try multiple formats or use `fromisoformat()`
+  - **Discovered:** 2025-11-29 comprehensive code review
+
+### 📊 Code Review Audit Summary (2025-11-29)
+
+| Severity | Count | Status |
+|----------|-------|--------|
+| Critical (runtime crash) | 7 | ❌ NEW - Fix immediately |
+| High (incorrect behavior) | 7 | ❌ NEW - Fix in next sprint |
+| Medium (tech debt) | 9 | ❌ NEW - Address soon |
+| **Total New Issues** | **23** | |
+
+---
+
+## 🔍 FOLLOW-UP INVESTIGATIONS
+
+These investigations will help surface additional bugs by examining specific patterns and areas of concern.
+
+### Investigation Tickets
+
+- [ ] **INVEST-001**: Audit All Exception Handlers for Lost Context (~2-3 hours)
+  - **Theme:** Exception chain preservation
+  - **What to look for:**
+    - `raise SomeError(f"message: {e}")` without `from e`
+    - `except Exception:` followed by `raise` without re-raise context
+    - Bare `except:` or `except: pass` patterns
+  - **Search Pattern:** `grep -r "raise.*Error.*{e}\")" src/`
+  - **Expected Impact:** 20-40 instances losing traceback context
+
+- [ ] **INVEST-002**: Audit All Async Operations for Missing await (~1-2 hours)
+  - **Theme:** Async/await correctness
+  - **What to look for:**
+    - Coroutines assigned but never awaited
+    - `asyncio.create_task()` without error handling
+    - Missing `await` on async method calls
+  - **Grep Pattern:** Functions returning coroutines without await
+  - **Expected Impact:** 5-10 subtle async bugs
+
+- [ ] **INVEST-003**: Audit Stats/Counter Thread Safety (~2 hours)
+  - **Theme:** Race conditions in metrics
+  - **What to look for:**
+    - `self.stats[key] += 1` without locks
+    - `self.counter += 1` in async methods
+    - Mutable state shared across async tasks
+  - **Locations:** All `stats` dict mutations in `src/services/`, `src/core/`
+  - **Expected Impact:** 10-15 non-atomic increments
+
+- [ ] **INVEST-004**: Audit Type Annotations for Errors (~1-2 hours)
+  - **Theme:** Type hint correctness
+  - **What to look for:**
+    - `any` instead of `Any`
+    - `callable` instead of `Callable`
+    - `dict` instead of `Dict` in pre-3.9 syntax context
+    - Return type mismatches
+  - **Tools:** Run `mypy src/` or manual grep
+  - **Expected Impact:** 10-20 type annotation errors
+
+- [ ] **INVEST-005**: Audit Inline Imports for Performance (~1 hour)
+  - **Theme:** Import hygiene
+  - **What to look for:**
+    - `import X` inside functions (especially in hot paths)
+    - Duplicate imports in same file
+    - Unused imports
+  - **Known locations:** `qdrant_store.py`, `parallel_generator.py`, `reranker.py`
+  - **Expected Impact:** 15-20 inline imports to move
+
+- [ ] **INVEST-006**: Audit Resource Cleanup Patterns (~2-3 hours)
+  - **Theme:** Resource management
+  - **What to look for:**
+    - `finally:` blocks without proper cleanup
+    - `__del__` methods without error handling
+    - Connections/files opened without context managers
+    - Pool resources not released on error paths
+  - **Focus:** `src/store/`, `src/embeddings/`
+  - **Expected Impact:** 5-10 resource leak risks
+
+- [ ] **INVEST-007**: Audit Enum/String Value Handling (~2 hours)
+  - **Theme:** Data model consistency
+  - **What to look for:**
+    - `.value` access on strings (will fail)
+    - String comparison against enum (may fail)
+    - Inconsistent enum vs string returns from store
+  - **Pattern:** All uses of `MemoryCategory`, `ContextLevel`, `LifecycleState`
+  - **Expected Impact:** 10-15 enum handling issues
+
+- [ ] **INVEST-008**: Audit Empty Input Edge Cases (~2-3 hours)
+  - **Theme:** Boundary condition handling
+  - **What to look for:**
+    - Functions not handling `None`, `[]`, `""`, `{}`
+    - Division by zero risks (`len(x)` in denominator)
+    - Index errors on empty collections
+  - **Focus:** Search, retrieval, and scoring functions
+  - **Expected Impact:** 15-20 edge case bugs
+
+- [ ] **INVEST-009**: Audit Configuration Validation Completeness (~2 hours)
+  - **Theme:** Config robustness
+  - **What to look for:**
+    - Config values used without validation
+    - Range checks missing (negative values, >1.0 for ratios)
+    - Interdependent configs not validated together
+  - **Focus:** `src/config.py` and all config consumers
+  - **Expected Impact:** 10-15 validation gaps
+
+- [ ] **INVEST-010**: Audit TODO/FIXME/HACK Comments (~1 hour)
+  - **Theme:** Known tech debt
+  - **What to look for:**
+    - `# TODO:` comments indicating unfinished work
+    - `# FIXME:` comments indicating known bugs
+    - `# HACK:` comments indicating workarounds
+    - `# NOTE:` comments indicating gotchas
+  - **Grep Pattern:** `grep -rn "TODO\|FIXME\|HACK\|XXX" src/`
+  - **Expected Impact:** 20-30 tracked debt items
+
+### 📊 Investigation Results
+
+#### INVEST-001 Results: Exception Chain Preservation ✅ COMPLETE
+
+**Finding:** 117 instances of `raise SomeError(f"...{e}")` without `from e`, plus 1 bare `except: pass`
+
+- [ ] **REF-028**: Add Exception Chain Preservation (`from e`) - 117 Instances 🔥🔥
+  - **Locations:** See grep output for full list. Major concentrations:
+    - `src/store/qdrant_store.py` - 32 instances
+    - `src/core/server.py` - 32 instances
+    - `src/services/memory_service.py` - 16 instances
+    - `src/services/code_indexing_service.py` - 12 instances
+    - `src/services/health_service.py` - 7 instances
+    - `src/services/analytics_service.py` - 6 instances
+    - `src/core/structural_query_tools.py` - 6 instances
+    - `src/embeddings/` - 4 instances
+    - Others - 2 instances
+  - **Problem:** All 117 uses `raise Error(f"...{e}")` without `from e`, losing original traceback
+  - **Impact:** Cannot debug production failures - only get wrapper error, not root cause
+  - **Fix:** Add `from e` to all 117 raise statements
+  - **Pattern:** `raise StorageError(f"Failed: {e}")` → `raise StorageError(f"Failed: {e}") from e`
+  - **Discovered:** 2025-11-29 INVEST-001 audit
+
+- [ ] **BUG-054**: Bare `except: pass` Swallows All Errors
+  - **Location:** `src/review/patterns.py:222-223`
+  - **Problem:** Bare `except: pass` catches and ignores ALL exceptions including SystemExit, KeyboardInterrupt
+  - **Impact:** Completely silent failure - debugging impossible
+  - **Fix:** Catch specific exception types or at minimum log the error
+  - **Discovered:** 2025-11-29 INVEST-001 audit
+
+#### INVEST-002 Results: Async/Await Correctness ✅ COMPLETE
+
+**Finding:** 2 fire-and-forget `asyncio.create_task()` calls without error handling
+
+- [ ] **BUG-055**: Fire-and-Forget Task in Usage Tracker - No Error Handling
+  - **Location:** `src/memory/usage_tracker.py:143`
+  - **Problem:** `asyncio.create_task(self._flush())` - task not stored, exceptions silently lost
+  - **Impact:** If `_flush()` fails, error is swallowed and usage data may be lost
+  - **Fix:** Store task reference, add exception callback, or use `asyncio.shield()`
+  - **Discovered:** 2025-11-29 INVEST-002 audit
+
+- [ ] **BUG-056**: Fire-and-Forget Task in MCP Server - No Error Handling
+  - **Location:** `src/mcp_server.py:1595`
+  - **Problem:** `asyncio.create_task(complete_initialization())` - task not stored
+  - **Impact:** If background init fails, error is logged but task reference lost
+  - **Context:** Intentional fire-and-forget but should add done callback for error logging
+  - **Fix:** Add `task.add_done_callback()` to log failures explicitly
+  - **Discovered:** 2025-11-29 INVEST-002 audit
+
+#### INVEST-003 Results: Stats/Counter Thread Safety ✅ COMPLETE
+
+**Finding:** 97 non-atomic counter increments across the codebase
+
+- [ ] **REF-029**: Non-Atomic Stats Dict Increments - 81 Instances 🔥
+  - **Pattern:** `self.stats["key"] += 1` is not atomic in async/concurrent context
+  - **Locations:** Major concentrations:
+    - `src/services/` - 28 instances (memory_service: 9, code_indexing_service: 4, others)
+    - `src/memory/` - 40 instances (file_watcher: 12, usage_tracker: 3, git_indexer: 5, etc.)
+    - `src/core/server.py` - 5 instances
+    - `src/search/reranker.py` - 2 instances
+  - **Problem:** Read-modify-write cycle can lose updates under concurrent access
+  - **Impact:** Stats become inaccurate under load - not critical for functionality but affects observability
+  - **Fix Options:**
+    1. Use `threading.Lock` around stats updates
+    2. Use `collections.Counter` with atomic operations
+    3. Accept inaccuracy (document as known limitation)
+  - **Discovered:** 2025-11-29 INVEST-003 audit
+
+- [ ] **REF-030**: Non-Atomic Counter Attribute Increments - 16 Instances 🔥
+  - **Pattern:** `self.counter += 1` is not atomic
+  - **Locations:**
+    - `src/store/connection_pool.py:298, 521` - `_active_connections`, `_created_count`
+    - `src/store/connection_health_checker.py:108, 126, 137` - `total_checks`, `total_failures`
+    - `src/store/connection_pool_monitor.py:197, 292` - `total_collections`, `total_alerts`
+    - `src/embeddings/cache.py:146, 157, 178, 184, 341, 344` - `hits`, `misses`
+    - `src/memory/usage_tracker.py:38` - `use_count`
+    - `src/cli/validate_setup_command.py:42, 44` - `checks_passed`, `checks_failed`
+  - **Problem:** Connection pool counters are particularly critical - used for pool state management
+  - **Impact:** Pool corruption under high concurrency, cache stats inaccurate
+  - **Fix:** Use `threading.Lock` or `asyncio.Lock` for critical counters
+  - **Discovered:** 2025-11-29 INVEST-003 audit
+
+#### INVEST-004 Results: Type Annotation Errors ✅ COMPLETE
+
+**Finding:** 9 type annotation errors
+
+- [ ] **BUG-057**: Lowercase `any` Instead of `Any` - 5 Instances
+  - **Locations:**
+    - `src/memory/change_detector.py:280` - `-> Dict[str, any]`
+    - `src/search/bm25.py:222` - `-> Dict[str, any]`
+    - `src/memory/docstring_extractor.py:344` - `-> Dict[str, any]`
+    - `src/memory/project_archival.py:167` - `-> Dict[str, any]`
+    - `src/memory/project_archival.py:204` - `-> Dict[str, any]`
+  - **Problem:** `any` is a builtin function, not a type. Should be `Any` from `typing`
+  - **Impact:** Type checker errors, confusing semantics
+  - **Fix:** Change `any` to `Any` and ensure `from typing import Any`
+  - **Discovered:** 2025-11-29 INVEST-004 audit
+
+- [ ] **BUG-058**: Lowercase `callable` Instead of `Callable` - 4 Instances
+  - **Locations:**
+    - `src/services/code_indexing_service.py:627` - `Optional[callable]`
+    - `src/memory/incremental_indexer.py:112` - `Optional[callable]`
+    - `src/memory/incremental_indexer.py:394` - `Optional[callable]`
+    - `src/core/server.py:3169` - `Optional[callable]`
+  - **Problem:** `callable` is a builtin function, not a type. Should be `Callable`
+  - **Impact:** Type checker errors, no signature validation
+  - **Fix:** Change to `Optional[Callable[..., Any]]` or more specific signature
+  - **Discovered:** 2025-11-29 INVEST-004 audit
+
+#### INVEST-005 Results: Inline Imports ✅ COMPLETE
+
+**Finding:** 41 standard library imports inside functions (should be at module top)
+
+- [ ] **REF-031**: Move Inline Standard Library Imports to Module Top - 41 Instances
+  - **Locations:** Major concentrations:
+    - `src/core/server.py` - 16 instances (`time`, `re`, `fnmatch`)
+    - `src/monitoring/performance_tracker.py` - 4 instances (`json`, `statistics`)
+    - `src/store/qdrant_store.py` - 4 instances (`fnmatch`, `hashlib`, `uuid`)
+    - `src/memory/incremental_indexer.py` - 3 instances (`hashlib`, `re`)
+    - `src/search/reranker.py` - 2 instances (`math` - imported twice!)
+    - Others - 12 instances
+  - **Problem:** Re-importing on each function call wastes cycles, clutters code
+  - **Impact:** Minor performance overhead, code organization issue
+  - **Fix:** Move imports to module top (except intentional lazy imports like torch/numpy)
+  - **Note:** Some inline imports are intentional for optional dependencies (torch, numpy, git)
+  - **Discovered:** 2025-11-29 INVEST-005 audit
+
+#### INVEST-006 Results: Resource Cleanup Patterns ✅ COMPLETE
+
+**Finding:** Resource management is generally good. Only 2 issues found:
+- BUG-051 (already tracked): MPS generator not closed
+- All file handles use context managers
+- All SQLite connections use context managers
+- Executors have `close()` methods and `__del__` fallbacks
+
+**No new tickets needed** - existing BUG-051 covers the one issue found.
+
+#### INVEST-007 Results: Enum/String Value Handling ✅ COMPLETE
+
+**Finding:** 35 defensive `hasattr(x, 'value')` checks indicate inconsistent data model
+
+- [ ] **REF-032**: Fix Inconsistent Enum/String Handling - 35 Instances 🔥🔥
+  - **Pattern:** `x.value if hasattr(x, 'value') else x` used everywhere
+  - **Locations:**
+    - `src/services/memory_service.py` - 12 instances
+    - `src/store/qdrant_store.py` - 13 instances
+    - `src/core/server.py` - 7 instances
+    - `src/cli/memory_browser.py` - 3 instances
+  - **Affected Enums:** `MemoryCategory`, `ContextLevel`, `LifecycleState`, `Scope`
+  - **Root Cause:** Store sometimes returns enum objects, sometimes raw strings
+  - **Problem:**
+    1. Defensive code everywhere is a maintenance burden
+    2. Type safety is lost
+    3. Comparison operators may not work consistently
+  - **Fix Options:**
+    1. Ensure store always returns enums (normalize on retrieval)
+    2. Ensure store always returns strings (normalize on storage)
+    3. Use `str(enum)` consistently and accept string comparisons
+  - **Discovered:** 2025-11-29 INVEST-007 audit
+
+#### INVEST-008 Results: Empty Input Edge Cases ✅ COMPLETE
+
+**Finding:** Edge cases are generally well-handled. Most `len()` divisions have guards.
+
+**No new tickets needed** - existing guards like `if not x: return {}` are in place.
+
+#### INVEST-009 Results: Configuration Validation ✅ COMPLETE
+
+**Finding:** Only 3 field validators in config.py; many numeric fields lack range validation
+
+- [ ] **REF-033**: Add Missing Config Range Validators 🔥
+  - **Location:** `src/config.py`
+  - **Missing Validators:**
+    - `gpu_memory_fraction` (line 46) - Should be 0.0-1.0, comment says so but no validator
+    - `retrieval_gate_threshold` (line 64) - Should be 0.0-1.0
+    - `proactive_suggestions_threshold` (line 110) - Should be 0.0-1.0
+    - `hybrid_search_alpha` (line 242) - Should be 0.0-1.0
+    - `ranking_weight_*` (lines 233-235) - Should be 0.0-1.0
+    - `parallel_workers` (line 38) - Should be >= 1
+    - `qdrant_pool_size` (line 187) - Should be >= 1
+    - `qdrant_pool_min_size` (line 188) - Should be >= 0 and <= pool_size
+  - **Problem:** Invalid config values not caught until runtime failure
+  - **Impact:** Confusing errors when config is invalid
+  - **Fix:** Add pydantic validators for all numeric fields with documented constraints
+  - **Discovered:** 2025-11-29 INVEST-009 audit
+
+#### INVEST-010 Results: TODO/FIXME/HACK Comments ✅ COMPLETE
+
+**Finding:** 9 TODO comments in codebase (no FIXME/HACK/XXX found)
+
+| Location | TODO Comment | Status |
+|----------|-------------|--------|
+| `src/analysis/call_extractors.py:233` | Implement JS call extraction with tree-sitter | Already tracked in REF-025 |
+| `src/analysis/call_extractors.py:243` | Implement JS implementation extraction | Already tracked in REF-025 |
+| `src/memory/bulk_operations.py:394` | Implement actual rollback support | Already tracked in REF-012 |
+| `src/core/server.py:791` | Track cache usage | Minor - low priority |
+| `src/core/server.py:3698` | Map project_name to repo_path | Minor - enhancement |
+| `src/core/server.py:3948` | Check diff content if available | Minor - enhancement |
+| `src/core/server.py:4202` | Improve with direct query for file changes | Minor - performance |
+| `src/memory/multi_repository_search.py:221` | Add file_pattern/language filtering | Minor - enhancement |
+| `src/memory/incremental_indexer.py:1078` | Extract return_type from signature | Already noted in review |
+
+**No new tickets needed** - Major TODOs already tracked, others are minor enhancements.
+
+### 📊 Investigation Priority
+
+| Investigation | Effort | Expected Findings | Priority |
+|---------------|--------|-------------------|----------|
+| INVEST-001 (Exceptions) | 2-3h | 20-40 issues | ✅ COMPLETE (118 found) |
+| INVEST-002 (Async) | 1-2h | 5-10 bugs | ✅ COMPLETE (2 found) |
+| INVEST-003 (Thread Safety) | 2h | 10-15 races | ✅ COMPLETE (97 found) |
+| INVEST-006 (Resources) | 2-3h | 5-10 leaks | ✅ COMPLETE (0 new) |
+| INVEST-008 (Edge Cases) | 2-3h | 15-20 bugs | ✅ COMPLETE (0 new) |
+| INVEST-007 (Enums) | 2h | 10-15 issues | ✅ COMPLETE (35 found) |
+| INVEST-004 (Types) | 1-2h | 10-20 errors | ✅ COMPLETE (9 found) |
+| INVEST-005 (Imports) | 1h | 15-20 issues | ✅ COMPLETE (41 found) |
+| INVEST-009 (Config) | 2h | 10-15 gaps | ✅ COMPLETE (8 found) |
+| INVEST-010 (TODOs) | 1h | 20-30 items | ✅ COMPLETE (9 found) |
+
+---
+
 ## ID System
 Each item has a unique ID for tracking and association with planning documents in `planning_docs/`.
-Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
+Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX|INVEST
 
 ## Priority System
 
@@ -737,9 +1281,9 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
 
 ### 🌐 Tier 4: Language Support Extensions
 
-- [ ] **FEAT-007**: Add support for Ruby (~3 days)
-  - [ ] tree-sitter-ruby integration
-  - [ ] Method, class, module extraction
+- [x] **FEAT-007**: Add support for Ruby ✅ **COMPLETE**
+  - [x] tree-sitter-ruby integration
+  - [x] Method, class, module extraction
 
 - [x] **FEAT-008**: Add support for PHP ✅ **COMPLETE**
   - [x] tree-sitter-php integration

@@ -1,0 +1,41 @@
+# docker-compose.test.yml
+# Template for ephemeral test Qdrant instances
+#
+# This file is primarily for reference - test-isolated.sh uses docker run directly
+# for simpler lifecycle management. However, this can be used for manual testing:
+#
+#   PORT=6340 NAME=qdrant-test-main docker compose -f docker-compose.test.yml up -d
+#   PORT=6340 NAME=qdrant-test-main docker compose -f docker-compose.test.yml down
+
+version: '3.8'
+
+services:
+  qdrant-test:
+    image: qdrant/qdrant:v1.15.5
+    container_name: ${NAME:-qdrant-test-default}
+    ports:
+      - "${PORT:-6340}:6333"
+    environment:
+      # Reduce memory footprint for test instances
+      QDRANT__STORAGE__PERFORMANCE__MAX_SEARCH_THREADS: 1
+      QDRANT__STORAGE__OPTIMIZERS__INDEXING_THRESHOLD: 100
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    # No persistent volume - ephemeral by design
+    tmpfs:
+      - /qdrant/storage:size=256M
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/6333' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    labels:
+      - "ephemeral=true"
+      - "purpose=testing"

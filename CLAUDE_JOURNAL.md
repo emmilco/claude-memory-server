@@ -6,6 +6,95 @@ Work session entries from Claude agents. See [Work Journal Protocol](CLAUDE.md#-
 
 ---
 
+### 2025-11-29 20:04 | 1823afdc | SESSION_SUMMARY
+
+**Duration:** ~35 minutes
+**Main work:** Comprehensive codebase audit identifying tech debt and bugs, followed by 10 systematic investigations to surface additional issues
+
+**What went well:**
+- Efficient parallel agent spawning for initial code review (7 agents covering different src/ subdirectories simultaneously)
+- Systematic grep-based investigations found far more issues than expected (319 individual issues vs ~150 expected)
+- Good pattern recognition - the `hasattr(x, 'value')` defensive checks (35 instances) revealed a deeper data model inconsistency
+- Cross-referencing with existing TODO.md avoided duplicate tickets
+- Clear ticket structure with file:line references for easy fixing
+
+**What went poorly or was difficult:**
+- Initial code review agents produced some false positives that needed verification
+- INVEST-003 (thread safety) found 97 non-atomic increments - this is a lot of work to fix and may need a different approach (accept inaccuracy vs lock everything)
+- The 117 exception chain issues (INVEST-001) represent significant tech debt that accumulated over time
+
+**Open threads:**
+- 29 new tickets added to TODO.md but none started - significant backlog
+- Critical bugs (BUG-038 through BUG-044) should be prioritized - they will crash at runtime
+- The enum/string handling issue (REF-032) is a symptom of deeper data model inconsistency that needs architectural discussion
+- Exception chain preservation (REF-028) has 117 instances - consider scripted fix
+
+---
+
+### 2025-11-29 20:15 | 1823afdc | INVEST_COMPLETE
+
+Completed all 10 INVEST investigations. Summary of findings:
+
+| Investigation | Expected | Found | Notes |
+|---------------|----------|-------|-------|
+| INVEST-001 (Exceptions) | 20-40 | **118** | `raise Error(f"{e}")` without `from e` everywhere |
+| INVEST-002 (Async) | 5-10 | 2 | Fire-and-forget tasks without error handling |
+| INVEST-003 (Thread Safety) | 10-15 | **97** | Non-atomic `stats[k] += 1` throughout |
+| INVEST-004 (Types) | 10-20 | 9 | Lowercase `any`/`callable` instead of proper types |
+| INVEST-005 (Imports) | 15-20 | **41** | Standard library imports inside functions |
+| INVEST-006 (Resources) | 5-10 | 0 | Good cleanup patterns already in place |
+| INVEST-007 (Enums) | 10-15 | **35** | Defensive hasattr checks indicate data model issue |
+| INVEST-008 (Edge Cases) | 15-20 | 0 | Edge cases well-handled with guards |
+| INVEST-009 (Config) | 10-15 | 8 | Missing pydantic validators for range constraints |
+| INVEST-010 (TODOs) | 20-30 | 9 | Most already tracked; no FIXME/HACK/XXX |
+
+**New tickets created from investigations:**
+- REF-028: Exception chain preservation (117 instances)
+- BUG-054: Bare `except: pass`
+- BUG-055, BUG-056: Fire-and-forget tasks
+- REF-029, REF-030: Non-atomic stats increments
+- BUG-057, BUG-058: Type annotation errors
+- REF-031: Inline imports
+- REF-032: Enum/string handling
+- REF-033: Config validators
+
+### 2025-11-29 19:43 | 1823afdc | USER_PROMPT
+
+User requested adding all identified issues from comprehensive code review to TODO.md with appropriate priority placement, plus investigation tickets for follow-up audits.
+
+### 2025-11-29 19:31 | 1823afdc | COMPREHENSIVE_CODE_REVIEW
+
+**Duration:** ~40 minutes
+**Task:** Thorough read-only codebase review to identify tech debt and bugs
+
+**Methodology:**
+- Spawned 7 parallel exploration agents to review different src/ subdirectories
+- Each agent examined all files in their area looking for: bugs, tech debt, dead code, TODOs, error handling issues, resource leaks, race conditions, incomplete implementations, hardcoded values
+- Cross-referenced findings against existing TODO.md
+
+**Findings Summary:**
+- **Critical bugs (will crash):** 7 new issues (BUG-038 through BUG-044)
+- **High priority bugs (incorrect behavior):** 7 new issues (BUG-045 through BUG-051)
+- **Medium priority tech debt:** 9 new issues (REF-021 through REF-027, BUG-052, BUG-053)
+- **Investigation tickets:** 10 follow-up audits (INVEST-001 through INVEST-010)
+
+**Key Discoveries:**
+1. `PYTHON_PARSER_AVAILABLE` referenced but never defined (incremental_indexer.py:186)
+2. `PointIdsList` used but never imported (qdrant_store.py:2331)
+3. Cache returns wrong type when disabled (cache.py:271)
+4. Multiple CLI commands reference undefined functions
+5. Race conditions in file watcher debounce logic
+6. No timeout handling on async operations throughout codebase
+7. 30+ hardcoded thresholds that should be configurable
+
+**Observations:**
+- Tests with mocks hide real integration bugs
+- Defensive `hasattr()` patterns everywhere suggest unstable data models
+- Services extracted in REF-016 have inconsistent error handling patterns
+- Many "working by accident" code paths that are high risk for breakage
+
+---
+
 ### 2025-11-29 13:52 | b5fae9d9 | SESSION_SUMMARY
 
 **Duration:** ~65 minutes
