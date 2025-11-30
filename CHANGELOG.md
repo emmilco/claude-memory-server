@@ -52,6 +52,14 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **REF-030: Fix non-atomic counter increments with threading.Lock**
+  - Added atomic counter protection for 16 counter increment instances across 6 files
+  - Prevents race conditions in concurrent contexts by wrapping increments with `threading.Lock`
+  - Files modified: src/store/connection_pool.py (2 counters), src/store/connection_health_checker.py (3 counters), src/store/connection_pool_monitor.py (2 counters), src/embeddings/cache.py (6 counters), src/memory/usage_tracker.py (2 counters), src/cli/validate_setup_command.py (2 counters)
+  - Affected counters: _active_connections, _created_count, total_checks, total_failures, total_collections, total_alerts, hits, misses, use_count, checks_passed, checks_failed
+  - Ensures thread-safe updates in high-concurrency scenarios
+
+### Fixed - 2025-11-30
 - **BUG-058: Fix lowercase `callable` type annotations**
   - Changed `Optional[callable]` to `Optional[Callable[..., Any]]` in 4 locations
   - Added `Callable` import to `src/services/code_indexing_service.py`, `src/memory/incremental_indexer.py`, `src/core/server.py`

@@ -13,6 +13,7 @@ Note: Timeouts increased from (1ms/10ms/50ms) to be more realistic for CI and pr
 
 import asyncio
 import logging
+import threading
 import time
 from enum import Enum
 from typing import Optional
@@ -85,6 +86,7 @@ class ConnectionHealthChecker:
         self.total_failures = 0
         self.checks_by_level = {level: 0 for level in HealthCheckLevel}
         self.failures_by_level = {level: 0 for level in HealthCheckLevel}
+        self._counter_lock = threading.Lock()  # REF-030: Atomic counter operations
 
         logger.debug(
             f"Health checker initialized: fast={fast_timeout*1000:.1f}ms, "
@@ -105,8 +107,9 @@ class ConnectionHealthChecker:
         Returns:
             HealthCheckResult with health status and timing
         """
-        self.total_checks += 1
-        self.checks_by_level[level] += 1
+        with self._counter_lock:  # REF-030: Atomic counter increments
+            self.total_checks += 1
+            self.checks_by_level[level] += 1
 
         start_time = time.perf_counter()
 
@@ -123,8 +126,9 @@ class ConnectionHealthChecker:
             duration_ms = (time.perf_counter() - start_time) * 1000
 
             if not healthy:
-                self.total_failures += 1
-                self.failures_by_level[level] += 1
+                with self._counter_lock:  # REF-030: Atomic counter increment
+                    self.total_failures += 1
+                    self.failures_by_level[level] += 1
 
             return HealthCheckResult(
                 healthy=healthy,
@@ -134,8 +138,9 @@ class ConnectionHealthChecker:
 
         except Exception as e:
             duration_ms = (time.perf_counter() - start_time) * 1000
-            self.total_failures += 1
-            self.failures_by_level[level] += 1
+            with self._counter_lock:  # REF-030: Atomic counter increment
+                self.total_failures += 1
+                self.failures_by_level[level] += 1
 
             logger.warning(f"Health check failed: {e}")
 

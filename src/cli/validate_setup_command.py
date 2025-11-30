@@ -3,6 +3,7 @@
 import sys
 import subprocess
 import logging
+import threading
 from typing import Dict, Any, Tuple
 import requests
 
@@ -27,6 +28,7 @@ class ValidateSetupCommand:
         self.checks_passed = 0
         self.checks_failed = 0
         self.warnings = []
+        self._counter_lock = threading.Lock()  # REF-030: Atomic counter operations
 
     def print_header(self, message: str):
         """Print header message."""
@@ -38,10 +40,11 @@ class ValidateSetupCommand:
 
     def print_check(self, name: str, status: bool, message: str):
         """Print individual check result."""
-        if status:
-            self.checks_passed += 1
-        else:
-            self.checks_failed += 1
+        with self._counter_lock:  # REF-030: Atomic counter operations
+            if status:
+                self.checks_passed += 1
+            else:
+                self.checks_failed += 1
 
         if self.console:
             if status:

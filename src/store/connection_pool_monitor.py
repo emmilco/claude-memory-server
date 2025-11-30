@@ -12,6 +12,7 @@ PERF-007: Connection Pooling - Day 2 Monitoring
 
 import asyncio
 import logging
+import threading
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, UTC
@@ -116,6 +117,7 @@ class ConnectionPoolMonitor:
         # Stats
         self.total_collections = 0
         self.total_alerts = 0
+        self._counter_lock = threading.Lock()  # REF-030: Atomic counter operations
 
         logger.info(
             f"Pool monitor initialized: interval={collection_interval}s, "
@@ -194,7 +196,8 @@ class ConnectionPoolMonitor:
             # Store metrics
             self._metrics_history.append(metrics)
             self._last_collection = metrics.timestamp
-            self.total_collections += 1
+            with self._counter_lock:  # REF-030: Atomic counter increment
+                self.total_collections += 1
 
             # Limit history size to prevent memory growth (keep last 1000)
             if len(self._metrics_history) > 1000:
@@ -289,7 +292,8 @@ class ConnectionPoolMonitor:
         )
 
         self._alerts.append(alert)
-        self.total_alerts += 1
+        with self._counter_lock:  # REF-030: Atomic counter increment
+            self.total_alerts += 1
 
         # Limit alert history
         if len(self._alerts) > 1000:

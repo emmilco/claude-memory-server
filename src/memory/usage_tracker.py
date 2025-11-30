@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import math
+import threading
 from typing import Dict, Any, Optional, List, TYPE_CHECKING
 from datetime import datetime, UTC, timedelta
 from collections import defaultdict
@@ -31,11 +32,13 @@ class UsageStats:
         self.last_used = last_used or datetime.now(UTC)
         self.use_count = use_count
         self.last_search_score = last_search_score
+        self._counter_lock = threading.Lock()  # REF-030: Atomic counter operations
 
     def update_usage(self, search_score: float) -> None:
         """Update usage statistics."""
         self.last_used = datetime.now(UTC)
-        self.use_count += 1
+        with self._counter_lock:  # REF-030: Atomic counter increment
+            self.use_count += 1
         self.last_search_score = search_score
 
     def to_dict(self) -> Dict[str, Any]:
@@ -71,6 +74,7 @@ class UsageTracker:
         # Pending updates (memory_id -> UsageStats)
         self._pending_updates: Dict[str, UsageStats] = {}
         self._lock = asyncio.Lock()
+        self._counter_lock = threading.Lock()  # REF-030: Atomic counter operations
 
         # Background flush task
         self._flush_task: Optional[asyncio.Task] = None
@@ -139,7 +143,8 @@ class UsageTracker:
                     last_search_score=search_score,
                 )
 
-            self.stats["total_tracked"] += 1
+            with self._counter_lock:  # REF-030: Atomic counter increment
+                self.stats["total_tracked"] += 1
 
             # Check if we should flush (schedule as task to avoid deadlock)
             if len(self._pending_updates) >= self.config.usage_batch_size:
