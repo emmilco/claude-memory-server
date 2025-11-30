@@ -53,8 +53,10 @@ Organize entries under these headers in chronological order (newest first):
 
 ### Fixed - 2025-11-30
 - **BUG-077: File Proximity Score Calculation Fails for Pathlib.PurePath Objects**
-  - Added Path conversion at start of `_calculate_file_proximity()` method to handle PathLike objects (PurePosixPath, PureWindowsPath, etc.)
+  - Added proper validation and Path conversion in `_calculate_file_proximity()` method
+  - Handles None values, strings, and PathLike objects (PurePosixPath, PureWindowsPath, etc.)
   - Prevents AttributeError when calling `.stem`, `.parts` on non-Path objects
+  - Includes try-catch for conversion errors with graceful fallback to function-name-only scoring
   - File: src/analysis/criticality_analyzer.py
 
 - **BUG-064: Integer Overflow in Unix Timestamp Conversion**
