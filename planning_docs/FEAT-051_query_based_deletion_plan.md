@@ -197,3 +197,51 @@ result = await delete_memories_by_query(
 - Implementation: 1-1.5 hours
 - Testing: 1 hour
 - Documentation: 30 minutes
+
+## Code Review Findings (2025-11-29)
+
+### Bugs Fixed
+
+1. **Enum Type Conversion (CRITICAL)**
+   - **Issue:** String parameters (e.g., "code", "active") were passed directly to `SearchFilters` which expects enum objects
+   - **Impact:** Would cause `ValidationError` at runtime
+   - **Fix:** Added enum conversion in server.py with `.upper()` to match enum values
+   - **Commit:** 593d6b1
+
+2. **Enum Value Extraction (CRITICAL)**
+   - **Issue:** Enum objects were passed to Qdrant `MatchValue` without extracting `.value` property
+   - **Impact:** Would cause Qdrant filter failures
+   - **Fix:** Added `.value` extraction for all enum fields in qdrant_store.py
+   - **Commit:** 593d6b1
+
+3. **Missing Import (CRITICAL)**
+   - **Issue:** `LifecycleState` was used but not imported in server.py
+   - **Impact:** Would cause `NameError` at runtime
+   - **Fix:** Added `LifecycleState` to imports
+   - **Commit:** 6200cd1
+
+### Improvements
+
+1. **MCP Schema Documentation**
+   - Added explicit enum values to all enum parameters
+   - Added "(case-insensitive)" note to help users
+   - Commit: 6200cd1
+
+2. **Error Handling**
+   - Added try-except blocks for enum conversions
+   - Provide helpful error messages listing valid values
+   - Prevents confusing ValueError messages
+   - Commit: d36e362
+
+3. **Test Coverage**
+   - Added test for string-to-enum conversion
+   - Added test for invalid enum value validation
+   - Total: 20 tests (originally estimated 15-20)
+   - Commit: 593d6b1, d36e362
+
+## Review Status
+
+**Status:** ✅ READY_FOR_TEST
+
+All critical bugs fixed, comprehensive error handling added, tests updated.
+Ready for testing by TEST agent.
