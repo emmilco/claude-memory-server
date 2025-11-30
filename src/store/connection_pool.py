@@ -18,7 +18,7 @@ from weakref import WeakValueDictionary
 from qdrant_client import QdrantClient
 
 from src.config import ServerConfig
-from src.core.exceptions import QdrantConnectionError
+from src.core.exceptions import QdrantConnectionError, StorageError
 from src.store.connection_health_checker import (
     ConnectionHealthChecker,
     HealthCheckLevel,
@@ -58,10 +58,79 @@ class PooledConnection:
     use_count: int = 0
 
 
-class ConnectionPoolExhaustedError(Exception):
-    """Raised when connection pool is exhausted and cannot acquire a connection."""
+class PoolExhaustedError(StorageError):
+    """Raised when connection pool has no available connections and timeout reached."""
 
-    pass
+    error_code = "E016"
+
+    def __init__(self, active: int, max_size: int, timeout: float):
+        self.active = active
+        self.max_size = max_size
+        self.timeout = timeout
+
+        message = (
+            f"Connection pool exhausted: {active} active connections at max_size {max_size}, "
+            f"timeout reached after {timeout}s waiting for available connection"
+        )
+        solution = (
+            "Options to resolve:\n"
+            "1. Increase max_size: QdrantConnectionPool(config, max_size=20)\n"
+            "2. Increase timeout: QdrantConnectionPool(config, timeout=30.0)\n"
+            "3. Reduce concurrent operations: batch requests or add backpressure\n"
+            "4. Check Qdrant health: curl http://localhost:6333/health"
+        )
+
+        super().__init__(message, solution)
+
+
+class HealthCheckFailedError(StorageError):
+    """Raised when connection health check fails after multiple attempts."""
+
+    error_code = "E017"
+
+    def __init__(self, reason: str, attempt: int = 1):
+        self.reason = reason
+        self.attempt = attempt
+
+        message = (
+            f"Connection health check failed on attempt {attempt}: {reason}"
+        )
+        solution = (
+            "Steps to diagnose:\n"
+            "1. Check Qdrant is running: curl http://localhost:6333/health\n"
+            "2. Verify network connectivity: ping localhost:6333\n"
+            "3. Check logs: docker logs qdrant (if using Docker)\n"
+            "4. Reset connection pool: QdrantConnectionPool.reset()\n"
+            "5. Restart Qdrant: docker-compose restart qdrant"
+        )
+
+        super().__init__(message, solution)
+
+
+class ConnectionCreationFailedError(StorageError):
+    """Raised when connection creation fails."""
+
+    error_code = "E018"
+
+    def __init__(self, url: str, reason: str):
+        self.url = url
+        self.reason = reason
+
+        message = f"Failed to create connection to Qdrant at {url}: {reason}"
+        solution = (
+            "Steps to fix:\n"
+            "1. Verify Qdrant is running: docker ps | grep qdrant\n"
+            "2. Start Qdrant if needed: docker-compose up -d\n"
+            "3. Check Qdrant health: curl http://localhost:6333/health\n"
+            "4. Verify URL is correct in config: {url}\n"
+            "5. Check Docker logs: docker logs qdrant"
+        )
+
+        super().__init__(message, solution)
+
+
+# Legacy alias for backward compatibility
+ConnectionPoolExhaustedError = PoolExhaustedError
 
 
 class QdrantConnectionPool:
@@ -199,7 +268,8 @@ class QdrantConnectionPool:
             QdrantClient: A healthy connection from the pool
 
         Raises:
-            ConnectionPoolExhaustedError: If pool is exhausted and timeout reached
+            PoolExhaustedError: If all connections are active and timeout reached waiting for available connection
+            HealthCheckFailedError: If connection health check fails even after retry with new connection
             RuntimeError: If pool is not initialized or is closed
         """
         if self._closed:
@@ -256,9 +326,10 @@ class QdrantConnectionPool:
                 except asyncio.TimeoutError:
                     # Timeout waiting for connection
                     self._stats.total_timeouts += 1
-                    raise ConnectionPoolExhaustedError(
-                        f"Connection pool exhausted: {self._active_connections} active, "
-                        f"{self.max_size} max, {self.timeout}s timeout"
+                    raise PoolExhaustedError(
+                        active=self._active_connections,
+                        max_size=self.max_size,
+                        timeout=self.timeout
                     )
 
             # Perform health check if enabled
@@ -286,9 +357,9 @@ class QdrantConnectionPool:
                     if not health_result.healthy:
                         # Even new connection is unhealthy - serious issue
                         logger.error("Newly created connection is unhealthy!")
-                        raise QdrantConnectionError(
-                            url=self.config.qdrant_url,
-                            reason="Unable to create healthy connection"
+                        raise HealthCheckFailedError(
+                            reason="Unable to create healthy connection after retry",
+                            attempt=2
                         )
 
             # Update connection stats
@@ -317,7 +388,7 @@ class QdrantConnectionPool:
 
             return pooled_conn.client
 
-        except ConnectionPoolExhaustedError:
+        except (PoolExhaustedError, HealthCheckFailedError, ConnectionCreationFailedError):
             raise
         except Exception as e:
             logger.error(f"Failed to acquire connection: {e}")

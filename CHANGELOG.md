@@ -51,6 +51,15 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Fixed - 2025-11-30
+- **BUG-153: Connection Pool Errors Don't Distinguish Exhaustion from Health Check Failure**
+  - Replaced generic `ConnectionPoolExhaustedError` with three specific exception types: `PoolExhaustedError` (E016), `HealthCheckFailedError` (E017), `ConnectionCreationFailedError` (E018)
+  - Each exception provides distinct error message, actionable solution guidance, and error code
+  - Updated `QdrantConnectionPool.acquire()` to raise `PoolExhaustedError` when max connections reached and timeout expires
+  - Updated `QdrantConnectionPool.acquire()` to raise `HealthCheckFailedError` when connection health checks fail even after retry
+  - Added backward-compatible alias for legacy code using `ConnectionPoolExhaustedError`
+  - File: src/store/connection_pool.py
+
 ### Changed - 2025-11-30
 - **TODO.md Rebuild: Deduplicate, Prioritize, and Add ID Registry**
   - Reduced from 11,388 lines to 4,517 lines (60% reduction)
