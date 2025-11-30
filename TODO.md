@@ -412,7 +412,7 @@
 - [x] **BUG-039**: Missing Import `PointIdsList` in QdrantStore ✅ FIXED (2025-11-29)
   - Added missing import from `qdrant_client.models`
 
-- [ ] **BUG-040**: Unreachable Code and Undefined Variable in Exception Handlers 🔥🔥
+- [x] **BUG-040**: Unreachable Code and Undefined Variable in Exception Handlers ✅ FIXED (2025-11-30)
   - **Location:** `src/store/qdrant_store.py:2061-2064, 2337-2340`
   - **Error:** Code after `raise` is unreachable; variable `e` is undefined
   - **Impact:** Error logging lost, exceptions lack context - debugging production failures impossible
@@ -540,7 +540,7 @@
   - **Fix:** Add `asyncio.timeout()` wrapper with configurable timeouts
   - **Discovered:** 2025-11-29 comprehensive code review
 
-- [ ] **BUG-052**: Incorrect Median Calculation in ImportanceScorer 🔥
+- [x] **BUG-052**: Incorrect Median Calculation in ImportanceScorer ✅ FIXED (2025-11-30)
   - **Location:** `src/analysis/importance_scorer.py:358`
   - **Problem:** Uses `sorted_scores[len(sorted_scores) // 2]` - wrong for even-length lists
   - **Impact:** Statistics biased - median off by up to 0.5 for small datasets
@@ -737,7 +737,7 @@ These investigations will help surface additional bugs by examining specific pat
 - [x] **BUG-057**: Lowercase `any` Instead of `Any` - 5 Instances ✅ FIXED (2025-11-30)
   - Replaced lowercase `any` with `Any` in 5 files, added imports
 
-- [ ] **BUG-058**: Lowercase `callable` Instead of `Callable` - 4 Instances
+- [x] **BUG-058**: Lowercase `callable` Instead of `Callable` ✅ FIXED (2025-11-30)
   - **Locations:**
     - `src/services/code_indexing_service.py:627` - `Optional[callable]`
     - `src/memory/incremental_indexer.py:112` - `Optional[callable]`
