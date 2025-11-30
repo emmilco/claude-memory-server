@@ -76,6 +76,13 @@ Organize entries under these headers in chronological order (newest first):
   - Backward-compatible: hardcoded defaults are used if not overridden in config
 
 ### Fixed - 2025-11-30
+- **BUG-068: Keyword Boost Uses Substring Matching Instead of Word Boundaries**
+  - Fixed keyword boost calculation using substring matching instead of word boundary matching
+  - Changed `kw in content_lower` to `re.search(rf'\b{re.escape(kw)}\b', content_lower)` to match whole words only
+  - Prevents false positives where "auth" matched "author", "authenticate", "unauthorized", etc.
+  - Ensures keyword boost scores accurately reflect query-relevant terms
+  - Files: src/search/reranker.py
+
 - **BUG-066: Integration Test Suite Hangs**
   - Fixed integration tests hanging indefinitely (16+ minutes) in pytest-asyncio contexts
   - Wrapped synchronous QdrantClient.get_collections() in run_in_executor() to prevent event loop blocking
