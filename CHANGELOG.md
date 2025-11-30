@@ -98,7 +98,13 @@ Organize entries under these headers in chronological order (newest first):
   - Critical: lock covers only close→_closed=False→clear_state sequence, not reinitialization
   - Prevents concurrent `acquire()` from interleaving during critical state transition
   - Ensures atomic pool state transitions during recovery from corrupted state
-  - Files: src/store/connection_pool.py
+
+- **BUG-071: Query Synonyms Non-Deterministic Due to Set Ordering**
+  - Fixed non-deterministic query expansion by sorting set-to-list conversions before slicing
+  - Changed `list(word_synonyms)[:max_synonyms]` to `sorted(word_synonyms)[:max_synonyms]` in expand_with_synonyms()
+  - Changed `list(context_terms)[:max_context_terms]` to `sorted(context_terms)[:max_context_terms]` in expand_with_code_context()
+  - Ensures consistent, reproducible query expansion across multiple runs
+  - Files: src/search/query_synonyms.py
 
 - **BUG-061: Scroll Loop Infinite Loop Risk**
   - Added iteration counter with MAX_SCROLL_ITERATIONS (1000) limit to prevent infinite loops from malformed offset values

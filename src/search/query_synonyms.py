@@ -220,7 +220,7 @@ def expand_with_synonyms(query: str, max_synonyms: int = 3) -> str:
             word_synonyms = PROGRAMMING_SYNONYMS[word]
 
             # Add up to max_synonyms
-            for synonym in list(word_synonyms)[:max_synonyms]:
+            for synonym in sorted(word_synonyms)[:max_synonyms]:
                 if synonym not in words and synonym not in synonyms_to_add:
                     synonyms_to_add.append(synonym)
 
@@ -261,7 +261,7 @@ def expand_with_code_context(query: str, max_context_terms: int = 5) -> str:
 
     # Limit to max_context_terms
     if context_terms:
-        terms_to_add = list(context_terms)[:max_context_terms]
+        terms_to_add = sorted(context_terms)[:max_context_terms]
         expansion = ' '.join(terms_to_add)
         return f"{query} {expansion}"
 
