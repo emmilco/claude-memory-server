@@ -232,12 +232,12 @@ class MemoryBrowserApp(App):
             self.memories = [
                 {
                     "id": memory.id,
-                    "category": memory.category.value if hasattr(memory.category, 'value') else str(memory.category),
-                    "context_level": memory.context_level.value if hasattr(memory.context_level, 'value') else str(memory.context_level),
+                    "category": memory.category.value,
+                    "context_level": memory.context_level.value,
                     "importance": memory.importance,
                     "content": memory.content,
                     "created_at": memory.created_at.isoformat() if memory.created_at else "N/A",
-                    "scope": memory.scope.value if hasattr(memory.scope, 'value') else str(memory.scope),
+                    "scope": memory.scope.value,
                     "project_name": memory.project_name or "N/A",
                     "tags": memory.tags or [],
                 }
