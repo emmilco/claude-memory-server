@@ -119,12 +119,13 @@ Organize entries under these headers in chronological order (newest first):
   - Same text now returns identical vectors regardless of cache state
   - Files: src/embeddings/cache.py
 
-- **BUG-167: Payload Metadata Spread Allows Field Injection**
-  - Fixed security vulnerability where `**metadata` spread operator allowed users to inject arbitrary values and override reserved fields in both store and update paths
-  - Added RESERVED_FIELDS set to filter user metadata before spreading, preventing injection of id, importance, category, lifecycle_state and other controlled fields
-  - Implemented field filtering in `_build_payload()` and `_update_memory()` to only include non-reserved keys from user metadata dictionaries
-  - Both create (store) and update (upsert) operations now properly filter user-provided metadata
-  - Files: src/store/qdrant_store.py
+- **BUG-166: UsageTracker TOCTOU Between Batch Check and Flush**
+  - Fixed time-of-check-time-of-use (TOCTOU) race condition in `record_usage()` method
+  - Moved batch size check `if len(self._pending_updates) >= batch_size` inside `async with self._lock:` block
+  - Previously, lock was released after updating `_pending_updates` but before checking batch size, allowing concurrent flush to trigger between check and flush
+  - Prevents empty dict flush and ensures batch size check is atomic with pending updates modification
+  - Files: src/memory/usage_tracker.py
+
 - **BUG-066: Integration Test Suite Hangs**
   - Fixed integration tests hanging indefinitely (16+ minutes) in pytest-asyncio contexts
   - Wrapped synchronous QdrantClient.get_collections() in run_in_executor() to prevent event loop blocking
