@@ -692,6 +692,22 @@ class QdrantMemoryStore(MemoryStore):
                         return value.value
                     return value
 
+                # Reserved fields that cannot be overridden by user metadata
+                RESERVED_FIELDS = {
+                    "id", "content", "category", "context_level", "scope", "project_name",
+                    "importance", "embedding_model", "created_at", "updated_at",
+                    "last_accessed", "lifecycle_state", "tags",
+                    "provenance_source", "provenance_created_by", "provenance_last_confirmed",
+                    "provenance_confidence", "provenance_verified", "provenance_conversation_id",
+                    "provenance_file_context", "provenance_notes",
+                }
+
+                # Filter user metadata to exclude reserved fields
+                allowed_metadata = {
+                    k: v for k, v in merged_metadata.items()
+                    if k not in RESERVED_FIELDS
+                }
+
                 # Build base payload without metadata (we'll flatten it separately)
                 base_payload = {
                     "id": memory_id,
@@ -709,7 +725,7 @@ class QdrantMemoryStore(MemoryStore):
                 }
 
                 # Flatten metadata into payload (matches _build_payload behavior)
-                merged_payload = {**base_payload, **copy.deepcopy(merged_metadata)}
+                merged_payload = {**base_payload, **copy.deepcopy(allowed_metadata)}
 
                 # Handle provenance
                 if existing.provenance:
@@ -1263,6 +1279,23 @@ class QdrantMemoryStore(MemoryStore):
                 return value.value
             return value
 
+        # Reserved fields that cannot be overridden by user metadata
+        RESERVED_FIELDS = {
+            "id", "content", "category", "context_level", "scope", "project_name",
+            "importance", "embedding_model", "created_at", "updated_at",
+            "last_accessed", "lifecycle_state", "tags",
+            "provenance_source", "provenance_created_by", "provenance_last_confirmed",
+            "provenance_confidence", "provenance_verified", "provenance_conversation_id",
+            "provenance_file_context", "provenance_notes",
+        }
+
+        # Filter user metadata to exclude reserved fields
+        user_metadata = metadata.get("metadata", {})
+        allowed_metadata = {
+            k: v for k, v in user_metadata.items()
+            if k not in RESERVED_FIELDS
+        }
+
         payload = {
             "id": memory_id,
             "content": content,
@@ -1286,7 +1319,7 @@ class QdrantMemoryStore(MemoryStore):
             "provenance_conversation_id": provenance.get("conversation_id"),
             "provenance_file_context": provenance.get("file_context", []),
             "provenance_notes": provenance.get("notes"),
-            **metadata.get("metadata", {}),
+            **allowed_metadata,
         }
 
         return memory_id, payload
