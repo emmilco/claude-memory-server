@@ -52,6 +52,21 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **REF-026: Fix Memory Leak Risks in Large Dataset Operations**
+  - Added configurable memory limits to prevent unbounded allocation in large dataset operations
+  - **health_scorer.py**: Added pagination support with MAX_MEMORIES_PER_OPERATION (50,000) and PAGINATION_PAGE_SIZE (5,000)
+    - `_get_lifecycle_distribution()` now processes memories in batches instead of loading all at once
+    - `_calculate_duplicate_rate()` now skips processing if dataset exceeds MAX_DUPLICATE_CHECK_MEMORIES (10,000) to avoid O(N²) memory overhead
+    - Added WARN_THRESHOLD_MEMORIES (25,000) to alert on large datasets
+  - **code_duplicate_detector.py**: Added size validation for O(N²) matrix allocation
+    - `calculate_similarity_matrix()` raises ValueError if dataset exceeds MAX_UNITS_FOR_SIMILARITY_MATRIX (10,000)
+    - `cluster_duplicates()` raises ValueError if dataset exceeds MAX_UNITS_FOR_CLUSTERING (10,000)
+    - Added WARN_THRESHOLD_UNITS (5,000) with memory allocation estimates in warning messages
+    - Prevents O(N²) matrix allocation (e.g., 360 GB for 50,000 units, 14.4 GB for 10,000 units)
+  - Configuration limits are documented with memory cost calculations and recommendations for batch processing
+  - Files: src/memory/health_scorer.py, src/analysis/code_duplicate_detector.py
+
+### Fixed - 2025-11-30
 - **REF-028-C: Add Exception Chain Preservation (from e)**
   - Added `from e` to 41 raise statements lacking exception chain preservation
   - Ensures original exception tracebacks are preserved for debugging
