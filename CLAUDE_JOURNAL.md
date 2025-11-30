@@ -1282,3 +1282,27 @@ Memory leak fix confirmed: test_server.py 9 passed at 500MB stable. Running full
 
 ### 2025-11-30 11:26 | a4888b73 | SESSION_SUMMARY
 Hardening sprint continuation - merged 12 worktrees, fixed all recent BUG/REF tickets. Completed: REF-024 (race conditions), REF-027 (timeouts), REF-028-A/B/C (exception chains, 113 instances), REF-029 (stats atomicity), REF-021 (thresholds to config), REF-022 (error handling), REF-023 (hasattr patterns), REF-025 (stub implementations), REF-026 (memory leaks), REF-032 (enum handling). All open BUG/REF tickets from 2025-11-29 audit now closed.
+
+
+### 2025-11-30 16:30 | session_opus | SESSION_SUMMARY
+
+**Duration:** ~1.5 hours
+**Main work:** Reconciled TODO.md with CHANGELOG, fixed BUG-066 (integration test hang), created REF-106 ticket for hardcoded embedding dimensions
+
+**What went well:**
+- Systematic reconciliation of TODO.md: identified 16 items marked incomplete that were actually complete per CHANGELOG/git history
+- BUG-066 fix was successful: subagent correctly identified root cause (synchronous Qdrant calls blocking async event loop) and implemented proper fix with `run_in_executor()`
+- Good use of 15-minute timeout constraint for subagents - second agent completed in ~12 minutes
+- User caught the embedding dimension mismatch issue that surfaced after BUG-066 fix - led to REF-106 ticket creation
+
+**What went poorly or was difficult:**
+- First test suite run hung for 16+ minutes with only 2.5s CPU time - didn't recognize the hang pattern quickly enough
+- First BUG-066 subagent got stuck/ran too long before being interrupted
+- Many orphaned background bash processes accumulated from previous agent runs (8+ zombie pytest shells)
+- Discovered ~150 instances of hardcoded `384` in test files - significant tech debt that wasn't caught during model migration
+
+**Open threads:**
+- REF-106: 150+ test files still use hardcoded `[0.1] * 384` instead of dynamic dimension - needs systematic cleanup
+- Integration test passes but shows vector dimension error (stale Qdrant collection) - separate from hang fix
+- TODO.md has duplicate BUG-066 entries (lines 24, 140, 2054) - only line 24 was the test hang issue, others are unrelated bugs with same ID
+- Full test suite still needs verification run with new BUG-066 fix on main

@@ -1,5 +1,128 @@
 # TODO
 
+## AUDIT-002 Part 3: Error Propagation Findings (2025-11-30)
+
+**Investigation Scope:** Error handling from origin to user-visible result across exceptions.py, qdrant_store.py, services layer, server.py, and mcp_server.py
+
+### 🔴 CRITICAL Findings
+
+- [ ] **BUG-150**: Generic Exception Catch Loses Error Context at MCP Layer
+  - **Location:** `src/mcp_server.py:1546-1548`
+  - **Problem:** Single catch-all `except Exception as e: return [TextContent(text=f"Error: {str(e)}")]` loses error codes, solution guidance, and exception type from custom exceptions
+  - **Impact:** User sees "Error: Failed to generate embedding: ..." instead of structured error with E006 code, installation instructions, and root cause
+  - **Fix:** Catch custom exception types separately (ValidationError, StorageError, RetrievalError, EmbeddingError) and preserve their error_code, solution, and docs_url fields in MCP response
+
+- [ ] **BUG-151**: TimeoutError from asyncio.timeout() Not Wrapped in Custom Exception
+  - **Location:** `src/services/memory_service.py:320-322`, `src/services/code_indexing_service.py:271-273`, and 30+ other locations
+  - **Problem:** `except TimeoutError: logger.error(...); raise StorageError("... timed out")` loses original timeout context and doesn't indicate which operation timed out or what the timeout value was
+  - **Impact:** User sees generic "Memory store operation timed out" without knowing if it was Qdrant connection, embedding generation, or something else
+  - **Fix:** Include operation name and timeout value in error message: `raise StorageError(f"Memory store operation timed out after 30s (operation: {op_name})", solution="Increase timeout or check Qdrant performance")`
+
+- [ ] **BUG-152**: Silent Embedding Cache Failure Falls Back Without Warning
+  - **Location:** `src/embeddings/cache.py:93`, `src/embeddings/cache.py:193`, `src/embeddings/cache.py:239`
+  - **Problem:** Cache get/set operations catch all exceptions and silently log at debug level, returning None without warning user
+  - **Impact:** Performance degradation from cache misses goes unnoticed; corrupted cache never surfaces as error
+  - **Fix:** Log cache failures at WARNING level and include cache stats in health checks; consider emitting metric for cache error rate
+
+- [ ] **BUG-153**: Connection Pool Errors Don't Distinguish Exhaustion from Health Check Failure
+  - **Location:** `src/store/connection_pool.py:252-278`
+  - **Problem:** `acquire()` raises generic exception whether pool is exhausted, health check fails, or connection creation fails
+  - **Impact:** User can't tell if they need more connections, if Qdrant is down, or if there's a network issue
+  - **Fix:** Create specific exception types: `PoolExhaustedError`, `HealthCheckFailedError`, `ConnectionCreationError` with actionable guidance
+
+### 🟡 HIGH Priority Findings
+
+- [ ] **BUG-154**: Validation Errors Don't Include Field Name in Error Message
+  - **Location:** `src/core/server.py:947-963` (enum validation), `src/services/memory_service.py:654-690` (update validation)
+  - **Problem:** ValueError when converting string to enum gets wrapped but loses information about which parameter was invalid
+  - **Impact:** Error "Invalid category: XYZ" doesn't tell user it came from `category` parameter vs `lifecycle_state` or other enum field
+  - **Fix:** Include parameter name in ValidationError: `raise ValidationError(f"Invalid value '{category}' for parameter 'category'. Valid values: ...")`
+
+- [ ] **REF-100**: Inconsistent Error Message Format Across Exception Types
+  - **Location:** `src/core/exceptions.py` (has structured errors with codes) vs store/service layers (plain strings)
+  - **Problem:** StorageError/RetrievalError constructed with plain strings don't use error_code/solution/docs_url mechanism
+  - **Fix:** Update all exception instantiation to use structured format: `StorageError(message, solution="...", error_code="E0XX")`
+
+- [ ] **REF-101**: Error Code Gaps and Overlaps in Exception Hierarchy
+  - **Location:** `src/core/exceptions.py:1-239`
+  - **Problem:** Error codes E000-E015 are defined but not systematically assigned across all exception types; StorageError/RetrievalError have same base code E001/E004
+  - **Fix:** Create error code registry with ranges: E001-E050 (Storage), E051-E100 (Retrieval), E101-E150 (Validation), E151-E200 (Embedding), etc.
+
+- [ ] **BUG-155**: Qdrant Connection Errors Retry Without Backoff
+  - **Location:** `src/store/qdrant_store.py:154-161` wraps ConnectionError but doesn't implement retry
+  - **Problem:** First connection failure immediately propagates to user without attempting reconnection or checking if Qdrant just started
+  - **Fix:** Add exponential backoff retry (3 attempts, 1s/2s/4s delays) for ConnectionError before raising to user; log each retry attempt
+
+- [ ] **BUG-156**: Index Out of Range Errors in Result Processing Lost in Generic Catch
+  - **Location:** `src/store/qdrant_store.py:205-212` catches ValueError/KeyError when parsing payloads
+  - **Problem:** If Qdrant returns unexpected payload structure, IndexError/KeyError is caught but error message doesn't show which field was missing
+  - **Impact:** User sees "Invalid memory payload" without knowing if `category`, `content`, or `embedding_model` field is problematic
+  - **Fix:** Log full payload and field name in error: `logger.error(f"Missing field '{field}' in payload: {payload}"); raise ValidationError(...)`
+
+### 🟢 MEDIUM Priority Findings
+
+- [ ] **REF-102**: Embedding Generation Errors Don't Include Text Length or Model Name
+  - **Location:** `src/embeddings/generator.py:206-207`
+  - **Problem:** Generic "Failed to generate embedding" doesn't indicate if text was too long, too short, or model-specific issue
+  - **Fix:** Include context in error: `raise EmbeddingError(f"Failed to generate embedding (text_len={len(text)}, model={self.model_name}): {e}")`
+
+- [ ] **REF-103**: Store Layer Doesn't Validate Embedding Dimension Before Insert
+  - **Location:** `src/store/qdrant_store.py:129-161` (store method)
+  - **Problem:** If embedding dimension doesn't match collection config (384 vs 768), Qdrant rejects insert but error is cryptic
+  - **Fix:** Add dimension validation before insert: `if len(embedding) != self.embedding_dim: raise ValidationError(...)`
+
+- [ ] **BUG-157**: File System Errors During Indexing Don't Include File Path
+  - **Location:** `src/memory/incremental_indexer.py` (inferred from services)
+  - **Problem:** PermissionError/FileNotFoundError during file parsing wrapped in generic IndexingError without showing which file failed
+  - **Fix:** Include file path in all indexing errors: `raise IndexingError(f"Failed to parse {file_path}: {e}")`
+
+- [ ] **REF-104**: Missing Timeout Context in All Storage Operations
+  - **Location:** All `async with asyncio.timeout(30.0):` blocks (30+ locations)
+  - **Problem:** Hardcoded 30s timeout with no indication to user of what operation timed out or how to increase timeout
+  - **Fix:** Add timeout to config, include operation name in timeout error: `except TimeoutError: raise StorageError(f"{operation} timed out after {timeout}s", solution="Increase config.timeout_seconds")`
+
+- [ ] **REF-105**: Duplicate Detection in Store Layer Silently Catches Exceptions
+  - **Location:** `src/store/qdrant_store.py:2594` (inferred from grep results)
+  - **Problem:** Exception during payload parsing in deduplication loop is caught and logged but that memory is skipped without user notification
+  - **Fix:** Collect failed memory IDs and include in response: `"warnings": ["Failed to process memories: {ids}"]`
+
+- [ ] **REF-106**: Hardcoded 384-Dimension Embedding Vectors in Tests 🔥
+  - **Location:** 150+ test files with `[0.1] * 384` patterns
+  - **Problem:** Default model changed from `all-MiniLM-L6-v2` (384 dims) to `all-mpnet-base-v2` (768 dims), but tests still hardcode 384
+  - **Impact:** Tests fail with "Vector dimension error: expected dim: 384, got 768" when hitting real Qdrant collections
+  - **Files affected:**
+    - `tests/unit/test_advanced_filtering.py` (25+ instances)
+    - `tests/unit/test_confidence_scores.py` (6 instances)
+    - `tests/unit/test_services/*.py` (20+ instances)
+    - `tests/integration/test_*.py` (30+ instances)
+    - `tests/unit/test_git_*.py` (15+ instances)
+    - Many more (~150 total occurrences)
+  - **Fix:**
+    - [ ] Add `TEST_EMBEDDING_DIM` constant to `tests/conftest.py` that reads from config
+    - [ ] Create helper `mock_embedding(dim=None)` that returns `[0.1] * (dim or TEST_EMBEDDING_DIM)`
+    - [ ] Replace all `[0.1] * 384` with `mock_embedding()` or use the constant
+    - [ ] Update comments referencing "384 dimensions" or "MiniLM-L6"
+  - **Priority:** HIGH - causes test failures and confusion
+
+### ⚪ LOW Priority / Documentation
+
+- [ ] **DOC-020**: Error Recovery Guidance Missing from Exception Messages
+  - **Location:** All custom exceptions in `src/core/exceptions.py`
+  - **Problem:** Some exceptions have `solution` field but many are constructed without it
+  - **Fix:** Audit all exception instantiation and ensure 80%+ include actionable solution field
+
+- [ ] **DOC-021**: No Centralized Error Code Documentation
+  - **Location:** N/A (missing)
+  - **Problem:** Error codes E000-E015 are defined but not documented in user-facing docs
+  - **Fix:** Create `docs/ERROR_CODES.md` with table of all error codes, causes, and solutions
+
+- [ ] **DOC-022**: Timeout Values Not Documented in Configuration
+  - **Location:** `src/config.py` (inferred)
+  - **Problem:** 30-second timeout is hardcoded in 30+ places but not exposed as config option
+  - **Fix:** Add `timeout_seconds` to ServerConfig with default 30, document in README
+
+---
+
 ## AUDIT-001 Part 2: Qdrant Store & Connection Management Findings (2025-11-30)
 
 **Investigation Scope:** 3,181 lines across 7 files (qdrant_store.py, connection_pool.py, connection_health_checker.py, connection_pool_monitor.py, qdrant_setup.py, base.py, factory.py)
@@ -6300,3 +6423,870 @@ The codebase demonstrates many **good security practices**:
 4. Add comprehensive escaping tests and fix BUG-095, BUG-096
 5. Address performance issues (PERF-013, PERF-014) if large graphs are expected
 6. Standardize and document behavior for edge cases (REF-070-085)
+
+---
+
+## AUDIT-002 Part 4: Boundary Conditions & Limits (2025-11-30)
+
+**Investigation Scope:** Numeric limits, empty collections, string splitting, pagination boundaries, datetime edge cases, division by zero risks
+
+### 🔴 CRITICAL Findings
+
+- [ ] **BUG-150**: Division by Zero in Multiple Average Calculations
+  - **Locations:** 
+    - `src/store/connection_pool.py:582`: `sum(self._acquire_times) / len(self._acquire_times)` - no check if list is empty
+    - `src/services/code_indexing_service.py:141`: `sum(scores) / len(scores)` - assumes scores is non-empty
+    - `src/memory/proactive_suggester.py:379`: `matches / len(keywords)` - no validation that keywords is non-empty
+    - `src/search/reranker.py:268`: `matches / len(keywords)` - same issue
+    - `src/analysis/importance_scorer.py:356`: `sum(importances) / len(importances)` - no guard
+  - **Problem:** No validation that lists are non-empty before division, will raise ZeroDivisionError
+  - **Impact:** Server crashes on edge inputs (empty query results, no keywords, no acquire times)
+  - **Fix:** Add guard: `if not scores: return 0.0; avg = sum(scores) / len(scores)`
+
+- [ ] **BUG-151**: P95 Index Out of Bounds on Single-Element List
+  - **Location:** `src/store/connection_pool.py:586`: `p95_idx = int(len(sorted_times) * 0.95)`
+  - **Problem:** For single-element list, `int(1 * 0.95) = 0`, but `sorted_times[0]` is valid. However, for empty list this would calculate index as 0 but list is empty.
+  - **Impact:** IndexError if called when `_acquire_times` is empty
+  - **Fix:** Add check: `if not sorted_times: return 0.0; p95_idx = max(0, int(len(sorted_times) * 0.95) - 1) if len(sorted_times) > 1 else 0`
+
+- [ ] **BUG-152**: IndexError on Empty Results List Access
+  - **Locations:**
+    - `src/store/qdrant_store.py:572`: `result[0].payload` - no check if result list is empty
+    - `src/services/code_indexing_service.py:543,546`: `code_results[0]["similarity_score"]` - assumes at least one result
+    - `src/monitoring/metrics_collector.py:360`: `latencies[p95_index]` - no validation p95_index < len(latencies)
+  - **Problem:** Direct array access without checking list length
+  - **Impact:** IndexError crashes on empty query results
+  - **Fix:** Add guard: `if not result: return None` before accessing `result[0]`
+
+- [ ] **BUG-153**: String Split Without Length Validation
+  - **Locations:**
+    - `src/core/system_check.py:73`: `result.stdout.split()[1]` - assumes at least 2 words
+    - `src/cli/health_command.py:96`: `result.stdout.split(":")[1]` - assumes colon exists
+    - `scripts/verify-complete.py:397`: `line.split(':')[-1]` - uses -1 which is safe but no validation
+  - **Problem:** Assumes string format without validating, will raise IndexError on unexpected output
+  - **Impact:** Crashes on malformed command output
+  - **Fix:** Add validation: `parts = result.stdout.split(); version = parts[1] if len(parts) > 1 else "unknown"`
+
+### 🟡 HIGH Priority Findings
+
+- [ ] **BUG-154**: Pagination P95 Calculation Can Access Wrong Index
+  - **Location:** `src/monitoring/metrics_collector.py:359-360`
+  - **Problem:** `p95_index = int(len(latencies) * 0.95)` can equal `len(latencies)` for certain list sizes (e.g., len=20 → index=19, but len=21 → index=19, len=1 → index=0 which is valid but len=0 → index=0 but list is empty)
+  - **Impact:** For exactly 20 items: `int(20 * 0.95) = 19` which is valid (last index). But the issue is when `latencies` is empty, index=0 causes IndexError. Already caught by empty check at line 356-357, but still a boundary risk.
+  - **Fix:** Ensure index is clamped: `p95_index = min(int(len(latencies) * 0.95), len(latencies) - 1)`
+
+- [ ] **BUG-155**: Binary File Detection Division by Zero on Empty Chunk
+  - **Location:** `src/memory/optimization_analyzer.py:290`: `text_chars / len(chunk) < 0.7 if chunk else False`
+  - **Problem:** Uses ternary to guard division, but if `chunk` is empty bytes object, `len(chunk)=0` causes division by zero
+  - **Impact:** The guard `if chunk` catches empty case, so this is actually safe, but confusing code
+  - **Fix:** Clarify: `(text_chars / len(chunk) < 0.7) if chunk else False` or better: `if not chunk: return False; return text_chars / len(chunk) < 0.7`
+
+- [ ] **BUG-156**: Datetime strptime Without Timezone Can Cause Ambiguity
+  - **Locations:**
+    - `src/services/memory_service.py:229`: `datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=UTC)`
+    - `src/core/server.py:4739`: Same pattern
+    - `src/search/query_dsl_parser.py:264`: `datetime.strptime(date_str, '%Y-%m-%d')` - no timezone replacement
+  - **Problem:** Parses date strings without timezone, then adds UTC. If date_str contains timezone info, it will fail or be ignored. Also doesn't validate date is within reasonable bounds (e.g., year > 9999 causes issues in some systems)
+  - **Impact:** Can accept invalid dates, DST transitions not handled, year 2038 problem for 32-bit timestamps
+  - **Fix:** Add validation: `dt = datetime.strptime(...); if dt.year > 2100 or dt.year < 1970: raise ValidationError("Date out of valid range")`
+
+- [ ] **BUG-157**: Pagination Offset Clamped to 0 But No Max Limit Check
+  - **Location:** `src/store/qdrant_store.py:922`: `offset = max(0, offset)`
+  - **Problem:** Clamps offset to non-negative but doesn't validate upper bound. If offset=1000000000, query still runs but returns empty results. No warning to user.
+  - **Impact:** Silent failure for pagination beyond available data
+  - **Fix:** Add logging: `if offset > 0: logger.debug(f"Pagination offset {offset} may exceed available data")`
+
+- [ ] **BUG-158**: Float Division for Noise Ratio Without Zero Check
+  - **Location:** `src/monitoring/metrics_collector.py:298`: `return float(stale) / float(total)`
+  - **Problem:** No check if `total == 0` before division
+  - **Impact:** ZeroDivisionError if no memories exist in database
+  - **Fix:** Add guard in exception handler or before: `if total == 0: return 0.0`
+
+### 🟢 MEDIUM Priority Findings
+
+- [ ] **REF-100**: Inconsistent Empty List Handling in Aggregations
+  - **Locations:** Many functions guard with ternary `if results else 0.0`, others use try/except
+  - **Problem:** Inconsistent patterns make code hard to review. Examples:
+    - `src/services/memory_service.py:522`: `avg_relevance = sum(...) / len(...) if memory_results else 0.0` (good)
+    - `src/services/code_indexing_service.py:141`: `avg_score = sum(scores) / len(scores)` (missing guard)
+  - **Fix:** Standardize on ternary guard pattern for all average calculations
+
+- [ ] **REF-101**: Unicode Normalization Missing in Text Splitting
+  - **Location:** `src/search/pattern_matcher.py:166`: `lines = content.split("\n")`
+  - **Problem:** Splits on `\n` but doesn't handle `\r\n` (Windows) or `\r` (old Mac) line endings. Can cause line number mismatches.
+  - **Impact:** Incorrect line numbers reported for matches in Windows files
+  - **Fix:** Use `content.splitlines()` instead of `split("\n")`
+
+- [ ] **REF-102**: Max Score Calculation Assumes Non-Empty List
+  - **Location:** `src/services/code_indexing_service.py:140`: `max_score = max(scores)`
+  - **Problem:** `max()` on empty sequence raises ValueError
+  - **Impact:** Crash if results list is empty (though line 139 creates scores from results, so this implies results is non-empty, but not explicit)
+  - **Fix:** Add assertion or guard: `if not scores: return {"quality": "poor", ...}`
+
+- [ ] **REF-103**: Off-by-One Risk in Line Offset Calculation
+  - **Location:** `src/search/pattern_matcher.py:169`: `line_offsets.append(line_offsets[-1] + len(line) + 1)`
+  - **Problem:** Assumes last line has newline (`+1`), but last line in file may not. This could cause line number to be off by one for matches on last line.
+  - **Impact:** Incorrect line numbers for pattern matches on last line of files without trailing newline
+  - **Fix:** Check if line is last: `newline_len = 1 if i < len(lines) - 1 else 0; line_offsets.append(line_offsets[-1] + len(line) + newline_len)`
+
+### 🟦 LOW Priority / Edge Cases
+
+- [ ] **REF-104**: No NaN or Infinity Checks in Numeric Inputs
+  - **Location:** Throughout codebase, numeric parameters (scores, importance) not validated for NaN/Inf
+  - **Problem:** Python allows `float('nan')` and `float('inf')` which pass through Pydantic validators (they are valid floats)
+  - **Impact:** Could corrupt vector databases or cause unexpected comparison behavior
+  - **Fix:** Add validators in Pydantic models: `@field_validator('importance') def check_finite(v): if not math.isfinite(v): raise ValueError(...); return v`
+
+- [ ] **REF-105**: Large Integer Risk in Timestamp Conversion
+  - **Location:** Datetime to Unix timestamp conversions throughout
+  - **Problem:** Year 2038 problem (32-bit signed int overflow) not addressed. Python handles this, but Qdrant or SQLite might not.
+  - **Impact:** Dates after 2038-01-19 could overflow in 32-bit systems
+  - **Fix:** Document that system requires 64-bit integers for timestamps, or add validation rejecting dates after 2037
+
+- [ ] **REF-106**: Empty String Split Creates Single-Element List
+  - **Location:** Various `.split()` calls assume multiple elements
+  - **Problem:** `"".split("x")` returns `[""]`, not `[]`. Code checking `if len(parts) > 1` will be false for empty string.
+  - **Impact:** Minor logic errors on empty input
+  - **Fix:** Check for empty string before split: `if not text: return default; parts = text.split(...)`
+
+### Summary Statistics
+
+- **Total Issues Found:** 19
+- **Critical (BUG-150 to BUG-153):** 4 - Division by zero, index out of bounds, string split crashes
+- **High (BUG-154 to BUG-158):** 5 - Pagination edge cases, datetime validation, silent failures
+- **Medium (REF-100 to REF-103):** 4 - Inconsistent patterns, Unicode handling, off-by-one
+- **Low (REF-104 to REF-106):** 3 - NaN/Inf validation, year 2038, empty string edge cases
+
+**Common Patterns Found:**
+1. Division by zero in average calculations (7+ instances)
+2. List access without length check (15+ instances)
+3. String split without validation (10+ instances)
+4. Missing guards on empty collections
+5. No NaN/Infinity validation anywhere in codebase
+6. Datetime validation limited, no DST or leap second handling
+7. Pagination offsets validated for lower bound but not upper
+
+**Most Dangerous Code Paths:**
+- Connection pool metrics calculation when no connections have been acquired
+- Search result processing with empty results
+- Command output parsing in system checks
+- P95 percentile calculations on small or empty datasets
+
+**Recommended Fix Priority:**
+1. BUG-150: Add empty list guards to all division operations (immediate crash risk)
+2. BUG-152: Add length checks before list[0] access (immediate crash risk)
+3. BUG-153: Validate split results before indexing (immediate crash risk on malformed input)
+4. BUG-151: Fix P95 calculation edge cases
+5. BUG-156-158: Add datetime and numeric validation
+6. REF-100-106: Standardize empty collection handling patterns
+
+**Testing Gaps:**
+- No tests for empty result sets in search/aggregation paths
+- No tests for single-element collections in percentile calculations
+- No tests for malformed command output in system checks
+- No tests for dates at boundaries (epoch, year 2038, far future)
+- No tests for NaN or Infinity in numeric inputs
+- No tests for pagination at extreme offsets
+- No tests for files without trailing newlines in pattern matching
+
+---
+
+## AUDIT-002 Part 6: Resource Lifecycle Findings (2025-11-30)
+
+**Investigation Scope:** Resource acquisition, usage, and cleanup patterns across entire codebase focusing on: Qdrant connections, file handles, thread/process pools, temporary files, locks/semaphores, and network connections.
+
+### 🔴 CRITICAL Findings
+
+- [ ] **BUG-150**: ProcessPoolExecutor Not Cleaned Up in Parallel Generator __del__
+  - **Location:** `src/embeddings/parallel_generator.py:551-568`
+  - **Problem:** `__del__()` method uses `wait=False` for executor shutdown, meaning worker processes may not terminate cleanly, keeping model memory loaded. While intentional for non-blocking cleanup, can leak processes if `close()` is never called.
+  - **Impact:** On server crashes or improper shutdown, worker processes (each holding ~500MB+ model memory) may remain orphaned
+  - **Fix:** Add signal handlers to ensure `close()` is called on SIGTERM/SIGINT; document that `close()` must be called explicitly
+
+- [ ] **BUG-151**: ThreadPoolExecutor Cleanup Uses __del__ in Generator
+  - **Location:** `src/embeddings/generator.py:420-426`
+  - **Problem:** `__del__()` fallback cleanup with `wait=False` means threads may not finish cleanly, potentially leaving file handles or database connections open
+  - **Impact:** Under load, rapid generator creation/destruction could accumulate zombie threads
+  - **Fix:** Same as BUG-150 - ensure `close()` is always called via signal handlers or context managers
+
+- [ ] **BUG-152**: Missing Client Release on Exception in retrieve()
+  - **Location:** `src/store/qdrant_store.py:172-200` (and similar patterns in other methods)
+  - **Problem:** If `client.query_points()` raises exception, client is released in finally block, BUT if payload parsing fails during iteration, client may already be released while still in use
+  - **Impact:** Connection pool corruption - active connection count decrements while client is still being used by exception handler
+  - **Fix:** Ensure client assignment and release are in outermost try/finally, with all payload processing inside the try block
+
+- [ ] **BUG-153**: Temporary Directory Cleanup in Tests Ignores Errors Silently
+  - **Location:** Multiple test files use `shutil.rmtree(temp_dir, ignore_errors=True)` (e.g., `tests/integration/test_hybrid_search_integration.py:56`)
+  - **Problem:** If files are still open (due to leaked handles), cleanup fails silently, leaving temp directories on disk
+  - **Impact:** Test suite can leak dozens of temp directories over time, eventually filling disk on CI runners
+  - **Fix:** Remove `ignore_errors=True`, let cleanup failures raise to expose handle leaks; add explicit file close checks before rmtree
+
+### 🟡 HIGH Priority Findings
+
+- [ ] **BUG-154**: Connection Pool Does Not Enforce Max Size During Concurrent Acquisition
+  - **Location:** `src/store/connection_pool.py:229-233`
+  - **Problem:** Race condition: Multiple coroutines can check `if self._created_count < self.max_size` simultaneously, then all create connections, exceeding max_size
+  - **Impact:** Under high concurrency (100+ simultaneous requests), pool can grow to 2-3x max_size, exhausting database connections
+  - **Fix:** Use atomic increment: `async with self._lock: if self._created_count < self.max_size: self._created_count += 1; can_create = True` BEFORE creating connection
+
+- [ ] **BUG-155**: SQLite Connection Closed in __del__ Without Commit
+  - **Location:** `src/embeddings/cache.py:499-515`
+  - **Problem:** `close()` attempts to commit before closing, but if `close()` is never called and `__del__` runs, no commit happens - pending writes are lost
+  - **Impact:** Cache entries written but not committed will be lost on abnormal shutdown
+  - **Fix:** Add `try: self.conn.commit()` in `__del__` before close, or require explicit `close()` via context manager
+
+- [ ] **REF-100**: Inconsistent Resource Ownership in IndexingService
+  - **Location:** `src/memory/indexing_service.py:50-61` and `close()` at line 173-180
+  - **Problem:** `_owns_indexer` flag determines cleanup, but if caller passes indexer then forgets to close it, resources leak. Ownership transfer is implicit.
+  - **Impact:** Complex cleanup logic makes it easy to leak ProcessPoolExecutor when indexer is shared
+  - **Fix:** Document ownership model clearly; consider builder pattern or making indexer always owned (clone if needed)
+
+- [ ] **BUG-156**: File Descriptor Leak in mkstemp Usage
+  - **Location:** `tests/unit/test_usage_pattern_tracker.py:18-19`, `setup.py:606`, and similar
+  - **Problem:** `fd, path = tempfile.mkstemp()` returns file descriptor, but only some call sites close it with `os.close(fd)`. Others just use path and leave fd open.
+  - **Impact:** Each test that leaks fd consumes one file descriptor; running 1000 tests can exhaust ulimit
+  - **Fix:** Audit all mkstemp usage and ensure `os.close(fd)` is called immediately after, or use NamedTemporaryFile with context manager
+
+### 🟢 MEDIUM Priority Findings
+
+- [ ] **REF-101**: Lock Acquisition Without Timeout in Connection Pool
+  - **Location:** `src/store/connection_pool.py:230` (`async with self._lock`)
+  - **Problem:** Acquiring `_lock` has no timeout; if lock holder deadlocks, all future acquisitions hang forever
+  - **Impact:** Under rare race conditions, entire connection pool can freeze
+  - **Fix:** Use `asyncio.timeout(10.0)` wrapper around lock acquisition; raise ConnectionPoolExhaustedError on timeout
+
+- [ ] **REF-102**: Duplicate Cache Close Logic Between close() and __del__
+  - **Location:** `src/embeddings/cache.py:499-515` (close) and implicit in various generators
+  - **Problem:** close() and __del__ both attempt cleanup; if close() partially fails, __del__ may re-attempt causing errors
+  - **Impact:** Noisy error logs during cleanup, potential double-free issues
+  - **Fix:** Add `_closed` flag; skip cleanup in __del__ if already closed
+
+- [ ] **BUG-157**: Scheduler Shutdown Without Wait Can Leave Jobs Running
+  - **Location:** `src/core/server.py:5610` - `self.scheduler.shutdown(wait=False)`
+  - **Problem:** APScheduler jobs may still be running when process exits, leaving partial state in database
+  - **Impact:** Pruning job interrupted mid-execution could leave orphaned records
+  - **Fix:** Use `shutdown(wait=True)` or at minimum `wait=True, timeout=5.0` to allow graceful completion
+
+- [ ] **PERF-011**: Embedding Cache Uses Synchronous SQLite in Async Context
+  - **Location:** `src/embeddings/cache.py:127-129` wraps all DB ops in `asyncio.to_thread()`
+  - **Problem:** While correct for async compatibility, creates thread overhead on every cache hit (10-20μs per thread spawn)
+  - **Impact:** High cache hit rate (95%+) means most embedding requests pay thread spawn cost unnecessarily
+  - **Fix:** Consider using aiosqlite for native async SQLite, or batch cache operations to amortize thread cost
+
+### 🟦 LOW Priority / Tech Debt
+
+- [ ] **REF-103**: Inconsistent Context Manager Usage for Temporary Files
+  - **Location:** Some tests use `with tempfile.TemporaryDirectory()`, others use `mkdtemp()` + finally block
+  - **Problem:** Mixing patterns makes code harder to audit for leaks
+  - **Fix:** Standardize on context managers (`with TemporaryDirectory()`) for all temp file/dir usage
+
+- [ ] **REF-104**: Missing Documentation on Resource Cleanup Order
+  - **Location:** `src/core/server.py:5591-5623`
+  - **Problem:** Cleanup order matters (e.g., stop schedulers before closing stores), but no comments explain why
+  - **Impact:** Future refactoring could reorder cleanup and cause hangs/errors
+  - **Fix:** Add comments explaining dependency order: "Stop background tasks -> Wait for pending ops -> Close connections -> Close executors"
+
+- [ ] **REF-105**: No Centralized Resource Registry
+  - **Location:** Resources scattered across server.py, with manual tracking
+  - **Problem:** Easy to forget to close a new resource added to initialization
+  - **Impact:** New features may leak resources if developer forgets to add cleanup
+  - **Fix:** Consider resource manager pattern: register all resources on creation, automatic cleanup in reverse order
+
+### Summary Statistics
+
+- **Total Issues Found:** 16
+- **Critical (Resource Leaks):** 4
+- **High (Connection/FD Exhaustion):** 4
+- **Medium (Cleanup Safety):** 4
+- **Low (Tech Debt):** 4
+- **Files Analyzed:** 50+ across embeddings, store, memory, tests
+- **Key Patterns Identified:**
+  - Unreliable `__del__` cleanup (3 instances)
+  - Missing `os.close(fd)` after `mkstemp()` (4+ instances)
+  - Connection pool race conditions (2 instances)
+  - Temporary directory leaks in tests (10+ instances)
+
+### Recommendations
+
+1. **Immediate:** Fix BUG-150, BUG-151 (executor cleanup) - prevents process/memory leaks
+2. **Short-term:** Fix BUG-154 (connection pool race) - prevents connection exhaustion under load
+3. **Medium-term:** Standardize temp file cleanup (REF-103) - prevents disk space issues in CI
+4. **Long-term:** Implement resource registry (REF-105) - prevents future resource leaks
+
+### Test Coverage Gaps
+
+The following resource lifecycle scenarios lack explicit tests:
+- ProcessPoolExecutor cleanup on SIGTERM/SIGINT
+- Connection pool behavior when max_size is exceeded due to race condition
+- File descriptor exhaustion when mkstemp leaks accumulate
+- Scheduler job interruption during shutdown
+- Temporary directory cleanup when files remain open
+## AUDIT-002 Part 5: Concurrency Invariants & Atomicity Findings (2025-11-30)
+
+**Investigation Scope:** Concurrency patterns across entire codebase - focusing on race conditions, atomicity violations, and concurrent state management
+
+### CRITICAL Findings - Race Conditions & Atomicity Violations
+
+- [ ] **BUG-150**: Race Condition in Check-Then-Act Pattern (dict initialization)
+  - **Location:** `src/mcp_server.py:1026-1028`, `src/backup/exporter.py:555-557`
+  - **Pattern:** `if cat not in suggestions_by_cat: suggestions_by_cat[cat] = []` followed by `suggestions_by_cat[cat].append()`
+  - **Problem:** TOCTOU (Time-Of-Check-Time-Of-Use) bug. Between checking and initializing, another coroutine could initialize the same key, causing lost writes when both append.
+  - **Impact:** Lost suggestions/data in concurrent execution, silent data corruption
+  - **Fix:** Use `suggestions_by_cat.setdefault(cat, []).append(suggestion)` for atomic check-and-initialize
+  - **Additional Occurrences:**
+    - `src/core/server.py:3129-3131` (projects_with_results counter)
+    - `src/store/qdrant_store.py:966-974` (file_data accumulation in get_indexed_files_summary)
+
+- [ ] **BUG-151**: Unsafe Counter Increments Without Lock Protection
+  - **Location:** 200+ instances of `self.stats["key"] += 1` across services
+  - **Examples:**
+    - `src/services/memory_service.py:127,131,325,459,497,563` (stats dict updates)
+    - `src/services/analytics_service.py:81,118,159,202` (analytics_queries counter)
+    - `src/services/health_service.py:112,145,367` (health_checks counter)
+    - `src/memory/file_watcher.py:169,173,179,182,186,190,198,201,229,233,241,252` (event stats)
+  - **Problem:** Read-modify-write race. `x += 1` expands to `x = x + 1` (read x, add 1, write back). Two concurrent increments can result in only +1 instead of +2 due to lost update.
+  - **Impact:** Underreported metrics, incorrect statistics, violated invariants (e.g., total != sum of parts)
+  - **Fix:** Protect with `threading.Lock` (for sync code) or use `asyncio.Lock` (for async). See existing pattern in `src/memory/usage_tracker.py:40,146` and `src/embeddings/cache.py:154,166,188,195` which correctly use `with self._counter_lock:`
+  - **Note:** Some counters already protected (REF-030 fixes in connection_pool.py, usage_tracker.py, cache.py), but 150+ remain vulnerable
+
+- [ ] **BUG-152**: Dictionary Iteration During Modification (Phantom Read Risk)
+  - **Location:** `src/memory/repository_registry.py:228-230`, `src/memory/workspace_manager.py:242-244`
+  - **Code:**
+    ```python
+    for other_repo in self.repositories.values():  # Iteration
+        if repo_id in other_repo.depends_on:
+            other_repo.depends_on.remove(repo_id)  # Modification during iteration!
+    ```
+  - **Problem:** Modifying a collection (other_repo.depends_on) while iterating over another collection (self.repositories) is safe for different collections, but the pattern is fragile. If self.repositories is modified elsewhere concurrently, raises RuntimeError: dictionary changed size during iteration.
+  - **Impact:** Crashes with RuntimeError if concurrent unregister operations occur
+  - **Fix:** Take snapshot before iteration: `for other_repo in list(self.repositories.values()):`
+  - **Additional Locations:**
+    - `src/memory/conversation_tracker.py:252-260` (iterates sessions.items() while end_session can delete)
+    - `src/memory/workspace_manager.py:210-215` (iterates repository_ids while remove_from_workspace can modify)
+
+- [ ] **BUG-153**: Task Tracking Dictionary Race Condition
+  - **Location:** `src/memory/background_indexer.py:112-113,210-211,490-491`
+  - **Code:**
+    ```python
+    task = asyncio.create_task(self._run_job(job_id))
+    self._active_tasks[job_id] = task  # Race: check exists before insert?
+    # ...
+    finally:
+        if job_id in self._active_tasks:
+            del self._active_tasks[job_id]  # Race: concurrent delete?
+    ```
+  - **Problem:** No lock protecting `_active_tasks` dict. Multiple calls to `start_indexing_job` with same job_id could create race where first task gets orphaned. Delete in finally block could raise KeyError if job cancelled elsewhere.
+  - **Impact:** Lost task references (memory leak), KeyError crashes on cleanup
+  - **Fix:** Add `asyncio.Lock` protecting all `_active_tasks` access. Use `.pop(job_id, None)` for safe cleanup.
+  - **Similar Pattern:** `src/memory/usage_tracker.py:151-153` creates task without tracking properly
+
+- [ ] **BUG-154**: Client Map Race Condition in Connection Pool
+  - **Location:** `src/store/connection_pool.py:311,342`
+  - **Code:**
+    ```python
+    # acquire():
+    self._client_map[id(pooled_conn.client)] = pooled_conn  # Insert without lock
+    # release():
+    pooled_conn = self._client_map.pop(client_id, None)  # Delete with lock held
+    ```
+  - **Problem:** Insert at line 311 happens OUTSIDE the lock (lock ends at 309), but pop at 342 happens INSIDE the lock. Race window where concurrent acquire/release can corrupt the map.
+  - **Impact:** Lost client tracking, use_count corruption, potential connection leaks
+  - **Fix:** Move line 311 inside the lock scope, or use separate lock for _client_map
+
+- [ ] **BUG-155**: File Watcher Debounce Task Race Condition
+  - **Location:** `src/memory/file_watcher.py:265-273`
+  - **Code:**
+    ```python
+    if self.debounce_task and not self.debounce_task.done():
+        self.debounce_task.cancel()
+        try:
+            await old_task  # Wait outside lock!
+        except asyncio.CancelledError:
+            pass
+    async with self.pending_lock:
+        self.debounce_task = asyncio.create_task(...)
+    ```
+  - **Problem:** Cancellation and await happen OUTSIDE pending_lock, but assignment happens INSIDE. Between cancel and lock acquisition, another event could create new task, then both tasks run concurrently.
+  - **Impact:** Duplicate reindex operations, wasted resources, race conditions in callback
+  - **Fix:** Move entire block inside lock: `async with self.pending_lock: if self.debounce_task: ...`
+
+### HIGH Priority - Lost Updates & Memory Visibility
+
+- [ ] **BUG-156**: SQLite Cache Read-Modify-Write Race (access_count)
+  - **Location:** `src/embeddings/cache.py:171-178`
+  - **Code:**
+    ```python
+    row = cursor.fetchone()  # Read access_count
+    self.conn.execute("""UPDATE embeddings SET access_count = ?""",
+        (access_count + 1, cache_key))  # Write incremented value
+    ```
+  - **Problem:** Classic lost update. Two concurrent get() calls read same access_count (e.g., 5), both increment to 6, both write 6. Result: access_count = 6 instead of 7.
+  - **Impact:** Underreported access counts, incorrect LRU/popularity metrics
+  - **Fix:** Use SQLite atomic increment: `UPDATE embeddings SET access_count = access_count + 1 WHERE cache_key = ?`
+
+- [ ] **BUG-157**: ContextVar Leakage Risk in Tracing
+  - **Location:** `src/core/tracing.py:11,69-76`
+  - **Code:**
+    ```python
+    operation_id: ContextVar[str] = ContextVar('operation_id', default='')
+    
+    async def wrapper(*args, **kwargs):
+        op_id = new_operation()  # Sets context
+        try:
+            return await func(*args, **kwargs)
+        finally:
+            clear_operation_id()  # Clears on exit
+    ```
+  - **Problem:** If function raises exception before clear_operation_id(), AND asyncio reuses the context, next operation inherits stale ID. While finally should execute, asyncio.CancelledError could interrupt cleanup.
+  - **Impact:** Cross-request operation ID pollution, incorrect distributed tracing
+  - **Fix:** Use context manager or ensure cleanup with try/except CancelledError explicitly
+
+- [ ] **BUG-158**: Pending Updates Dict Accessed Without Full Lock Coverage
+  - **Location:** `src/memory/usage_tracker.py:137-153`
+  - **Code:**
+    ```python
+    async with self._lock:
+        if memory_id in self._pending_updates:
+            self._pending_updates[memory_id].update_usage(search_score)
+        else:
+            self._pending_updates[memory_id] = UsageStats(...)
+        # Check batch size and spawn task WITHOUT lock
+        if len(self._pending_updates) >= self.config.usage_batch_size:
+            task = asyncio.create_task(self._flush())  # Task can start before lock releases!
+    ```
+  - **Problem:** Task creation happens while lock is held, but task starts executing async. Task at line 151 calls _flush() which acquires same lock (line 184), creating potential deadlock or race if task starts before lock release.
+  - **Impact:** Deadlock potential, race between batch check and flush
+  - **Fix:** Create task after releasing lock, use separate condition variable
+
+- [ ] **REF-100**: Inconsistent Lock Usage Across Services
+  - **Location:** Connection pool uses both `asyncio.Lock` (self._lock) and `threading.Lock` (self._counter_lock)
+  - **Files:** `src/store/connection_pool.py:131,132,230,299,363,526,569` (asyncio.Lock), line 300,364,527 (threading.Lock)
+  - **Pattern:** Async lock protects structural changes (pool state), thread lock protects counters (stats)
+  - **Problem:** Mixing lock types is correct BUT confusing. Why use threading.Lock for stats when all code is async? Thread lock only needed if stats accessed from sync context.
+  - **Impact:** Cognitive overhead, potential deadlock if future code calls from sync context
+  - **Fix:** Document the rationale in comments, or use asyncio.Lock exclusively if no sync access needed
+
+- [ ] **REF-101**: No Deadlock Prevention Strategy Visible
+  - **Location:** Multiple services/managers acquire locks in different orders
+  - **Examples:**
+    - `WorkspaceManager` modifies workspaces, calls `RepositoryRegistry.remove_from_workspace`
+    - `RepositoryRegistry.unregister` iterates repositories, modifies other_repo.depends_on
+    - No documented lock ordering invariant (e.g., "always acquire workspace lock before repo lock")
+  - **Problem:** Without consistent lock ordering, future code changes could introduce ABBA deadlock (Thread 1: lock A then B, Thread 2: lock B then A)
+  - **Impact:** Deadlock risk increases as codebase grows
+  - **Fix:** Document lock hierarchy in ARCHITECTURE.md, enforce ordering via lint rules or runtime checks
+
+### MEDIUM Priority - Concurrent Collection Access
+
+- [ ] **REF-102**: Conversation Tracker Cleanup Iterator Pattern Unsafe
+  - **Location:** `src/memory/conversation_tracker.py:252-260`
+  - **Code:**
+    ```python
+    expired_sessions = [
+        session_id
+        for session_id, session in self.sessions.items()  # Iteration
+        if session.is_expired(...)
+    ]
+    for session_id in expired_sessions:
+        self.end_session(session_id)  # Deletes from self.sessions
+    ```
+  - **Problem:** Creates list snapshot (good!), but if concurrent request calls end_session() during cleanup loop, session already deleted, end_session returns False (harmless but inefficient).
+  - **Impact:** Minor inefficiency, no data corruption
+  - **Fix:** Add lock protection or use try/except to ignore already-deleted sessions
+
+- [ ] **REF-103**: Background Task Tracking Set Not Protected
+  - **Location:** `src/memory/usage_tracker.py:84,152-153`
+  - **Code:**
+    ```python
+    self._background_tasks: set = set()  # Instance variable
+    # Later:
+    task = asyncio.create_task(self._flush())
+    self._background_tasks.add(task)  # No lock!
+    task.add_done_callback(self._handle_background_task_done)
+    ```
+  - **Problem:** Set.add() is not atomic. Concurrent calls to record_usage() could corrupt the set if both try to add at same time.
+  - **Impact:** Set corruption, lost task tracking, memory leak
+  - **Fix:** Protect `_background_tasks` with same lock as `_pending_updates`, or use thread-safe collection
+
+- [ ] **REF-104**: Task Cancellation Leaves Partial State
+  - **Location:** `src/memory/background_indexer.py:141-155` (pause_job)
+  - **Code:**
+    ```python
+    self._cancel_events[job_id].set()  # Signal cancellation
+    self.job_manager.update_job_status(job_id, JobStatus.PAUSED)  # Update DB
+    if job_id in self._active_tasks:
+        await asyncio.wait_for(self._active_tasks[job_id], timeout=5.0)  # Wait for task
+    ```
+  - **Problem:** If task doesn't respect cancellation event, timeout fires, but job is marked PAUSED even though task still running. Subsequent resume could start duplicate task.
+  - **Impact:** Duplicate indexing jobs, resource waste, data corruption
+  - **Fix:** After timeout, force cancel task.cancel(), verify task.done(), update status to FAILED if timeout
+
+- [ ] **BUG-159**: Module-Level Mutable Constant Risk
+  - **Location:** Multiple files have module-level mutable constants
+  - **Examples:**
+    - `tests/conftest.py:490` - `COLLECTION_POOL = [f"test_pool_{i}" for i in range(4)]` (list)
+    - All other instances are immutable (tuples, lists of strings used as constants)
+  - **Problem:** While most are effectively immutable (lists of strings not modified), if code ever appends/modifies these, changes persist across test runs. Only real risk is COLLECTION_POOL if tests mutate it.
+  - **Impact:** Test isolation violations, flaky tests
+  - **Fix:** Convert to tuple or make defensive copy in fixture
+
+### LOW Priority - Best Practices & Edge Cases
+
+- [ ] **REF-105**: No Starvation Prevention for Locks
+  - **Location:** All asyncio.Lock usage lacks fairness guarantees
+  - **Problem:** Python's asyncio.Lock is unfair - waiting coroutines are not guaranteed FIFO ordering. Long-running critical sections could starve waiting tasks.
+  - **Impact:** Potential starvation under high concurrency
+  - **Fix:** If starvation observed, use queue-based fair lock or limit critical section duration
+
+- [ ] **REF-106**: No Protection Against asyncio.create_task Orphaning
+  - **Location:** Multiple locations create tasks without tracking
+  - **Examples:**
+    - `src/memory/usage_tracker.py:151` - Creates flush task but doesn't await or track for cleanup
+    - `src/store/connection_pool_monitor.py:135` - Monitor task stored but no graceful shutdown check
+  - **Problem:** Tasks created with create_task() keep running until complete. If parent object destroyed, tasks become orphaned, keep running in background, potentially access destroyed resources.
+  - **Impact:** Resource leaks, undefined behavior on shutdown
+  - **Fix:** Store all tasks in instance variable, await all tasks in cleanup/shutdown method
+
+- [ ] **REF-107**: Session Dictionary Grows Unbounded Without Lock
+  - **Location:** `src/memory/conversation_tracker.py:141,173,254`
+  - **Problem:** Sessions dict modified in start_session, end_session, _cleanup_expired_sessions without any lock. While individual dict operations are atomic in CPython, the dict can grow unbounded if cleanup fails or is too slow.
+  - **Impact:** Memory leak if sessions accumulate faster than cleanup
+  - **Fix:** Add lock protecting sessions dict, add max_sessions limit with LRU eviction
+
+- [ ] **REF-108**: No Timeout on Asyncio.gather() in Concurrent Operations
+  - **Location:** Suggested for `src/services/cross_project_service.py:124-159`
+  - **Problem:** Future concurrent implementation (per PERF-001) would use `asyncio.gather(*tasks)` without timeout. If one project search hangs, entire cross-project search hangs forever.
+  - **Impact:** Availability risk from slow dependencies
+  - **Fix:** Wrap in `asyncio.wait_for(asyncio.gather(...), timeout=30.0)` or use `asyncio.wait()` with timeout
+
+### Summary Statistics
+
+**Total Issues Found:** 17 (9 BUG, 8 REF)
+
+**Critical Race Conditions:** 6
+- BUG-150: TOCTOU dict initialization (3+ locations)
+- BUG-151: Unsafe counter increments (200+ locations)
+- BUG-152: Dictionary iteration during modification (4+ locations)
+- BUG-153: Task tracking dict race (background_indexer)
+- BUG-154: Client map race (connection_pool)
+- BUG-155: Debounce task race (file_watcher)
+
+**Lost Update Issues:** 2
+- BUG-156: SQLite access_count lost updates
+- BUG-158: Pending updates batch size race
+
+**Architectural Concerns:** 4
+- REF-100: Inconsistent lock types (async vs thread)
+- REF-101: No deadlock prevention strategy
+- REF-106: Task orphaning risk
+- REF-107: Unbounded session growth
+
+**Testing Gaps Identified:**
+- No concurrency stress tests found (no test files with "concurrent", "race", "stress" patterns)
+- No tests for simultaneous start_indexing_job calls with same job_id
+- No tests for concurrent workspace/repository modifications
+- No tests for stats counter accuracy under concurrent load
+- No tests for task cancellation edge cases
+
+**Comparison to Existing Protections:**
+- **Good:** connection_pool.py, usage_tracker.py, cache.py show proper use of threading.Lock for counters (REF-030 pattern)
+- **Good:** Most services use timeouts (30s) on async operations
+- **Missing:** Comprehensive locking strategy across services
+- **Missing:** Fair lock implementations for high-concurrency scenarios
+- **Missing:** Task lifecycle management (no structured shutdown)
+
+**Recommended Fix Priority:**
+1. **BUG-151** (200+ unsafe counter increments) - Highest volume, easiest fix with threading.Lock
+2. **BUG-153, BUG-154, BUG-155** (task/dict races) - Critical for background operations
+3. **BUG-150** (TOCTOU dict init) - Use setdefault() pattern
+4. **BUG-152** (iteration during modification) - Use list() snapshot
+5. **BUG-156** (SQLite lost updates) - Use atomic SQL increment
+6. **REF-101** (deadlock strategy) - Document lock ordering before adding more locks
+7. Address REF-106 (task orphaning) during shutdown handling refactor
+
+**Invariants at Risk:**
+1. **Statistics accuracy**: stats["total"] should equal sum of parts, violated by BUG-151
+2. **Task uniqueness**: Only one task per job_id, violated by BUG-153
+3. **Connection lifecycle**: Each acquired connection must be released once, violated by BUG-154
+4. **Access count monotonicity**: Should only increase, violated by BUG-156
+5. **Dict size consistency**: self.repositories.values() count should match, violated by BUG-152
+
+
+---
+
+## AUDIT-002 Part 2: API Contract & Interface Compliance Findings (2025-11-30)
+
+**Investigation Scope:** Abstract base classes, Protocol definitions, service interfaces, and MCP tool schemas across src/store/, src/services/, and src/core/
+
+### 🔴 CRITICAL Findings
+
+- [ ] **BUG-150**: MemoryStore.update() Abstract Method Signature Mismatch - Breaking LSP
+  - **Location:** `src/store/base.py:152` (abstract), `src/store/qdrant_store.py:621` (implementation), `src/services/memory_service.py:703,1286,1315` (callers)
+  - **Problem:** Abstract base class defines `update(memory_id: str, updates: Dict[str, Any]) -> bool` but QdrantMemoryStore implements `update(memory_id: str, updates: Dict[str, Any], new_embedding: Optional[List[float]] = None) -> bool`. The implementation adds a third parameter not in the interface. Callers in memory_service.py are passing `new_embedding` as a keyword argument, which works for Qdrant but would fail for other MemoryStore implementations.
+  - **LSP Violation:** Subclass signature is incompatible with base class - cannot substitute QdrantMemoryStore for MemoryStore
+  - **Impact:** HIGH - Any future MemoryStore implementation (SQLite, PostgreSQL) won't accept the `new_embedding` parameter, causing runtime failures. Memory service update operations won't work across different store backends.
+  - **Fix:** Add `new_embedding: Optional[List[float]] = None` parameter to abstract method signature in base.py to match implementation
+
+- [ ] **BUG-151**: bulk_operations.py MemoryStore Protocol Incomplete - Missing Required Methods
+  - **Location:** `src/memory/bulk_operations.py:56-70` (Protocol definition), `src/store/base.py:8-318` (actual interface)
+  - **Problem:** Protocol defines only 3 methods (delete, update, get_by_id) but BulkOperations class likely needs more store methods. Real MemoryStore ABC has 14 abstract methods. If BulkOperations uses any method not in Protocol, it will fail at runtime.
+  - **Impact:** MEDIUM - Protocol doesn't enforce full contract, type checkers won't catch missing method errors
+  - **Fix:** Either (1) extend Protocol to match MemoryStore ABC or (2) use MemoryStore ABC directly instead of Protocol
+
+- [ ] **BUG-152**: MemoryStore Abstract Methods Missing from QdrantMemoryStore - Dead Code
+  - **Location:** Methods in base.py NOT implemented in qdrant_store.py
+  - **Problem:** QdrantMemoryStore has 25 additional methods not declared in abstract base class:
+    - `migrate_memory_scope`, `bulk_update_context_level`, `find_duplicate_memories`, `merge_memories`
+    - `get_all_projects`, `get_project_stats`, `get_recent_activity`
+    - `delete_by_filter`, `delete_code_units_by_project`
+    - `find_memories_by_criteria`, `find_unused_memories`, `get_all_memories`
+    - Git-related: `store_git_commits`, `search_git_commits`, `get_git_commit`, `get_commits_by_file`, `store_git_file_changes`
+    - Usage tracking: `get_usage_stats`, `update_usage`, `get_all_usage_stats`, `batch_update_usage`, `delete_usage_tracking`, `cleanup_orphaned_usage_tracking`
+  - **Impact:** MEDIUM - These methods are Qdrant-specific and won't be available in other MemoryStore implementations. Services depending on them are tightly coupled to Qdrant. Future store backends will silently lack these features.
+  - **Fix:** Either (1) promote commonly-used methods to abstract base class OR (2) create separate feature interfaces/mixins (e.g., GitTrackingMixin, UsageTrackingMixin) that stores can optionally implement
+
+### 🟡 HIGH Priority Findings
+
+- [ ] **REF-100**: Service __init__ Methods Accept Too Many Optional Dependencies
+  - **Location:** `src/services/memory_service.py:59-70`, `src/services/code_indexing_service.py:50-61`, `src/services/query_service.py:30-38`
+  - **Problem:** Services accept 5-8 optional dependencies with default None. Example: `MemoryService.__init__(store, embedding_generator, embedding_cache, config, usage_tracker=None, conversation_tracker=None, query_expander=None, metrics_collector=None, project_name=None)`. This makes it hard to know which dependencies are actually required. Methods later do `if self.usage_tracker:` checks, making behavior inconsistent based on initialization.
+  - **Impact:** MEDIUM - Unclear which features are active, hard to test, runtime failures when optional features are used but not initialized
+  - **Fix:** Use builder pattern or dependency injection container, OR split into core service + feature extensions
+
+- [ ] **REF-101**: MemoryStore.update() Doesn't Document new_embedding Parameter Behavior
+  - **Location:** `src/store/base.py:152-166`, `src/store/qdrant_store.py:621-637`
+  - **Problem:** Abstract method docstring says "Update a memory's metadata" but doesn't mention embedding updates. Implementation accepts `new_embedding` but base class docs don't specify when/how to use it.
+  - **Impact:** LOW - Documentation mismatch, unclear contract
+  - **Fix:** Update base.py docstring to document new_embedding parameter: "Args: new_embedding: Optional new embedding vector (e.g., when content changes)"
+
+- [ ] **REF-102**: SpecializedRetrievalTools Methods Return List[MemoryResult] - Inconsistent with Store
+  - **Location:** `src/core/tools.py:42-334` (SpecializedRetrievalTools methods)
+  - **Problem:** Methods like `retrieve_preferences()` return `List[MemoryResult]` but underlying `store.search_with_filters()` returns `List[Tuple[MemoryUnit, float]]`. Tools convert tuples to MemoryResult objects, but this conversion logic is duplicated across 4 methods (lines 93-95, 154-156, 211-213, 259-261).
+  - **Impact:** LOW - Code duplication, inconsistent return types across layers
+  - **Fix:** Extract conversion to helper method `_convert_to_results(results: List[Tuple[MemoryUnit, float]]) -> List[MemoryResult]`
+
+### 🟢 MEDIUM Priority Findings
+
+- [ ] **REF-103**: BaseCodeIndexer Abstract Class Not Used - IncrementalIndexer Doesn't Inherit
+  - **Location:** `src/memory/incremental_indexer.py:76-147` (BaseCodeIndexer ABC), `src/memory/incremental_indexer.py:150+` (IncrementalIndexer class)
+  - **Problem:** BaseCodeIndexer defines abstract interface with 5 methods but IncrementalIndexer in same file doesn't inherit from it. The ABC appears to be unused dead code or a planned interface never implemented.
+  - **Impact:** LOW - Dead code, unclear design intent
+  - **Fix:** Either (1) remove BaseCodeIndexer if unused OR (2) make IncrementalIndexer inherit from it
+
+- [ ] **REF-104**: BaseCallExtractor Abstract Methods Don't Specify Return Type Consistency
+  - **Location:** `src/analysis/call_extractors.py:14-52`
+  - **Problem:** `extract_calls()` and `extract_implementations()` return `List[Dict[str, Any]]` but don't specify required dict keys. Implementations (PythonCallExtractor, etc.) may return different dict structures, breaking callers.
+  - **Impact:** MEDIUM - Type safety issue, callers can't rely on dict structure
+  - **Fix:** Define TypedDict or Pydantic model for call/implementation records
+
+- [ ] **REF-105**: NotificationBackend Abstract Method Missing Error Handling Contract
+  - **Location:** `src/memory/notification_manager.py:18-23`
+  - **Problem:** `notify()` method is abstract but doesn't specify whether it should raise exceptions or return error status. Implementations may have inconsistent error behavior.
+  - **Impact:** LOW - Unclear error handling contract
+  - **Fix:** Document in base class: "Raises: NotificationError if delivery fails" or "Returns: bool for success/failure"
+
+- [ ] **REF-106**: SearchFilters.to_dict() May Return None Values - Breaking Qdrant Filters
+  - **Location:** `src/core/models.py` (SearchFilters), `src/store/qdrant_store.py:2697-2800` (filter building)
+  - **Problem:** SearchFilters has many Optional fields that default to None. When converted to dict, None values are included. Qdrant filter builder does `if filters.category:` checks but if filters are passed as dict (e.g., in list_memories), None values could cause issues.
+  - **Impact:** LOW - Potential filter building errors
+  - **Fix:** Add `to_dict(exclude_none=True)` method or filter None values in store layer
+
+### 🟢 LOW Priority Findings
+
+- [ ] **REF-107**: MCP Tool Schemas Not Validated Against Implementation Signatures
+  - **Location:** `src/core/tools.py` (MCP tool definitions would be in server.py or tools registry)
+  - **Problem:** No automated validation that MCP tool JSON schemas match actual Python method signatures. Schema drift could cause runtime errors when tools are called.
+  - **Impact:** LOW - Manual verification required, risk of schema/code mismatch over time
+  - **Fix:** Add CI test that validates tool schemas against service method signatures using inspect module
+
+- [ ] **REF-108**: MemoryService Methods Return Dict[str, Any] - Overly Generic
+  - **Location:** `src/services/memory_service.py` - all public methods return `Dict[str, Any]`
+  - **Problem:** Return type is too generic, callers can't rely on dict structure. Example: `store_memory()` returns `{"memory_id": str, "status": str, "context_level": str}` but this isn't enforced by types.
+  - **Impact:** LOW - Reduced type safety, harder to refactor
+  - **Fix:** Define Pydantic response models (e.g., `StoreMemoryResponse`, `RetrieveMemoriesResponse`)
+
+- [ ] **REF-109**: Service Methods Mix Business Logic with I/O - Hard to Test
+  - **Location:** All service classes in `src/services/`
+  - **Problem:** Methods like `memory_service.store_memory()` combine validation, embedding generation, storage, and stats updates in one method. Hard to test individual pieces, hard to mock I/O.
+  - **Impact:** LOW - Testing difficulty, maintainability
+  - **Fix:** Extract pure business logic into separate methods, use composition over long methods
+
+---
+
+**Summary:**
+- **CRITICAL:** 3 LSP violations and interface mismatches that break substitutability
+- **HIGH:** 3 documentation gaps and dependency injection issues
+- **MEDIUM:** 4 dead code and type safety issues
+- **LOW:** 3 design improvements for maintainability
+
+**Recommended Fix Order:**
+1. BUG-150 (breaking change) - Add new_embedding to base.py abstract method
+2. BUG-152 - Document Qdrant-specific methods, consider mixins
+3. BUG-151 - Fix Protocol definition in bulk_operations.py
+4. REF-100, REF-104 - Improve dependency injection and type definitions
+5. REF-103, REF-105-109 - Clean up dead code and improve type safety
+
+---
+
+## AUDIT-002 Part 4: Boundary Conditions & Limits (2025-11-30)
+
+**Investigation Scope:** Numeric limits, empty collections, string splitting, pagination boundaries, datetime edge cases, division by zero risks
+
+### 🔴 CRITICAL Findings
+
+- [ ] **BUG-150**: Division by Zero in Multiple Average Calculations
+  - **Locations:**
+    - `src/store/connection_pool.py:582`: `sum(self._acquire_times) / len(self._acquire_times)` - no check if list is empty
+    - `src/services/code_indexing_service.py:141`: `sum(scores) / len(scores)` - assumes scores is non-empty
+    - `src/memory/proactive_suggester.py:379`: `matches / len(keywords)` - no validation that keywords is non-empty
+    - `src/search/reranker.py:268`: `matches / len(keywords)` - same issue
+    - `src/analysis/importance_scorer.py:356`: `sum(importances) / len(importances)` - no guard
+  - **Problem:** No validation that lists are non-empty before division, will raise ZeroDivisionError
+  - **Impact:** Server crashes on edge inputs (empty query results, no keywords, no acquire times)
+  - **Fix:** Add guard: `if not scores: return 0.0; avg = sum(scores) / len(scores)`
+
+- [ ] **BUG-151**: P95 Index Out of Bounds on Single-Element List
+  - **Location:** `src/store/connection_pool.py:586`: `p95_idx = int(len(sorted_times) * 0.95)`
+  - **Problem:** For single-element list, `int(1 * 0.95) = 0`, but `sorted_times[0]` is valid. However, for empty list this would calculate index as 0 but list is empty.
+  - **Impact:** IndexError if called when `_acquire_times` is empty
+  - **Fix:** Add check: `if not sorted_times: return 0.0; p95_idx = max(0, int(len(sorted_times) * 0.95) - 1) if len(sorted_times) > 1 else 0`
+
+- [ ] **BUG-152**: IndexError on Empty Results List Access
+  - **Locations:**
+    - `src/store/qdrant_store.py:572`: `result[0].payload` - no check if result list is empty
+    - `src/services/code_indexing_service.py:543,546`: `code_results[0]["similarity_score"]` - assumes at least one result
+    - `src/monitoring/metrics_collector.py:360`: `latencies[p95_index]` - no validation p95_index < len(latencies)
+  - **Problem:** Direct array access without checking list length
+  - **Impact:** IndexError crashes on empty query results
+  - **Fix:** Add guard: `if not result: return None` before accessing `result[0]`
+
+- [ ] **BUG-153**: String Split Without Length Validation
+  - **Locations:**
+    - `src/core/system_check.py:73`: `result.stdout.split()[1]` - assumes at least 2 words
+    - `src/cli/health_command.py:96`: `result.stdout.split(":")[1]` - assumes colon exists
+    - `scripts/verify-complete.py:397`: `line.split(':')[-1]` - uses -1 which is safe but no validation
+  - **Problem:** Assumes string format without validating, will raise IndexError on unexpected output
+  - **Impact:** Crashes on malformed command output
+  - **Fix:** Add validation: `parts = result.stdout.split(); version = parts[1] if len(parts) > 1 else "unknown"`
+
+### 🟡 HIGH Priority Findings
+
+- [ ] **BUG-154**: Pagination P95 Calculation Can Access Wrong Index
+  - **Location:** `src/monitoring/metrics_collector.py:359-360`
+  - **Problem:** `p95_index = int(len(latencies) * 0.95)` can equal `len(latencies)` for certain list sizes (e.g., len=20 → index=19, but len=21 → index=19, len=1 → index=0 which is valid but len=0 → index=0 but list is empty)
+  - **Impact:** For exactly 20 items: `int(20 * 0.95) = 19` which is valid (last index). But the issue is when `latencies` is empty, index=0 causes IndexError. Already caught by empty check at line 356-357, but still a boundary risk.
+  - **Fix:** Ensure index is clamped: `p95_index = min(int(len(latencies) * 0.95), len(latencies) - 1)`
+
+- [ ] **BUG-155**: Binary File Detection Division by Zero on Empty Chunk
+  - **Location:** `src/memory/optimization_analyzer.py:290`: `text_chars / len(chunk) < 0.7 if chunk else False`
+  - **Problem:** Uses ternary to guard division, but if `chunk` is empty bytes object, `len(chunk)=0` causes division by zero
+  - **Impact:** The guard `if chunk` catches empty case, so this is actually safe, but confusing code
+  - **Fix:** Clarify: `(text_chars / len(chunk) < 0.7) if chunk else False` or better: `if not chunk: return False; return text_chars / len(chunk) < 0.7`
+
+- [ ] **BUG-156**: Datetime strptime Without Timezone Can Cause Ambiguity
+  - **Locations:**
+    - `src/services/memory_service.py:229`: `datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=UTC)`
+    - `src/core/server.py:4739`: Same pattern
+    - `src/search/query_dsl_parser.py:264`: `datetime.strptime(date_str, '%Y-%m-%d')` - no timezone replacement
+  - **Problem:** Parses date strings without timezone, then adds UTC. If date_str contains timezone info, it will fail or be ignored. Also doesn't validate date is within reasonable bounds (e.g., year > 9999 causes issues in some systems)
+  - **Impact:** Can accept invalid dates, DST transitions not handled, year 2038 problem for 32-bit timestamps
+  - **Fix:** Add validation: `dt = datetime.strptime(...); if dt.year > 2100 or dt.year < 1970: raise ValidationError("Date out of valid range")`
+
+- [ ] **BUG-157**: Pagination Offset Clamped to 0 But No Max Limit Check
+  - **Location:** `src/store/qdrant_store.py:922`: `offset = max(0, offset)`
+  - **Problem:** Clamps offset to non-negative but doesn't validate upper bound. If offset=1000000000, query still runs but returns empty results. No warning to user.
+  - **Impact:** Silent failure for pagination beyond available data
+  - **Fix:** Add logging: `if offset > 0: logger.debug(f"Pagination offset {offset} may exceed available data")`
+
+- [ ] **BUG-158**: Float Division for Noise Ratio Without Zero Check
+  - **Location:** `src/monitoring/metrics_collector.py:298`: `return float(stale) / float(total)`
+  - **Problem:** No check if `total == 0` before division
+  - **Impact:** ZeroDivisionError if no memories exist in database
+  - **Fix:** Add guard in exception handler or before: `if total == 0: return 0.0`
+
+### 🟢 MEDIUM Priority Findings
+
+- [ ] **REF-100**: Inconsistent Empty List Handling in Aggregations
+  - **Locations:** Many functions guard with ternary `if results else 0.0`, others use try/except
+  - **Problem:** Inconsistent patterns make code hard to review. Examples:
+    - `src/services/memory_service.py:522`: `avg_relevance = sum(...) / len(...) if memory_results else 0.0` (good)
+    - `src/services/code_indexing_service.py:141`: `avg_score = sum(scores) / len(scores)` (missing guard)
+  - **Fix:** Standardize on ternary guard pattern for all average calculations
+
+- [ ] **REF-101**: Unicode Normalization Missing in Text Splitting
+  - **Location:** `src/search/pattern_matcher.py:166`: `lines = content.split("\n")`
+  - **Problem:** Splits on `\n` but doesn't handle `\r\n` (Windows) or `\r` (old Mac) line endings. Can cause line number mismatches.
+  - **Impact:** Incorrect line numbers reported for matches in Windows files
+  - **Fix:** Use `content.splitlines()` instead of `split("\n")`
+
+- [ ] **REF-102**: Max Score Calculation Assumes Non-Empty List
+  - **Location:** `src/services/code_indexing_service.py:140`: `max_score = max(scores)`
+  - **Problem:** `max()` on empty sequence raises ValueError
+  - **Impact:** Crash if results list is empty (though line 139 creates scores from results, so this implies results is non-empty, but not explicit)
+  - **Fix:** Add assertion or guard: `if not scores: return {"quality": "poor", ...}`
+
+- [ ] **REF-103**: Off-by-One Risk in Line Offset Calculation
+  - **Location:** `src/search/pattern_matcher.py:169`: `line_offsets.append(line_offsets[-1] + len(line) + 1)`
+  - **Problem:** Assumes last line has newline (`+1`), but last line in file may not. This could cause line number to be off by one for matches on last line.
+  - **Impact:** Incorrect line numbers for pattern matches on last line of files without trailing newline
+  - **Fix:** Check if line is last: `newline_len = 1 if i < len(lines) - 1 else 0; line_offsets.append(line_offsets[-1] + len(line) + newline_len)`
+
+### 🟦 LOW Priority / Edge Cases
+
+- [ ] **REF-104**: No NaN or Infinity Checks in Numeric Inputs
+  - **Location:** Throughout codebase, numeric parameters (scores, importance) not validated for NaN/Inf
+  - **Problem:** Python allows `float('nan')` and `float('inf')` which pass through Pydantic validators (they are valid floats)
+  - **Impact:** Could corrupt vector databases or cause unexpected comparison behavior
+  - **Fix:** Add validators in Pydantic models: `@field_validator('importance') def check_finite(v): if not math.isfinite(v): raise ValueError(...); return v`
+
+- [ ] **REF-105**: Large Integer Risk in Timestamp Conversion
+  - **Location:** Datetime to Unix timestamp conversions throughout
+  - **Problem:** Year 2038 problem (32-bit signed int overflow) not addressed. Python handles this, but Qdrant or SQLite might not.
+  - **Impact:** Dates after 2038-01-19 could overflow in 32-bit systems
+  - **Fix:** Document that system requires 64-bit integers for timestamps, or add validation rejecting dates after 2037
+
+- [ ] **REF-106**: Empty String Split Creates Single-Element List
+  - **Location:** Various `.split()` calls assume multiple elements
+  - **Problem:** `"".split("x")` returns `[""]`, not `[]`. Code checking `if len(parts) > 1` will be false for empty string.
+  - **Impact:** Minor logic errors on empty input
+  - **Fix:** Check for empty string before split: `if not text: return default; parts = text.split(...)`
+
+### Summary Statistics
+
+- **Total Issues Found:** 19
+- **Critical (BUG-150 to BUG-153):** 4 - Division by zero, index out of bounds, string split crashes
+- **High (BUG-154 to BUG-158):** 5 - Pagination edge cases, datetime validation, silent failures
+- **Medium (REF-100 to REF-103):** 4 - Inconsistent patterns, Unicode handling, off-by-one
+- **Low (REF-104 to REF-106):** 3 - NaN/Inf validation, year 2038, empty string edge cases
+
+**Common Patterns Found:**
+1. Division by zero in average calculations (7+ instances)
+2. List access without length check (15+ instances)
+3. String split without validation (10+ instances)
+4. Missing guards on empty collections
+5. No NaN/Infinity validation anywhere in codebase
+6. Datetime validation limited, no DST or leap second handling
+7. Pagination offsets validated for lower bound but not upper
+
+**Most Dangerous Code Paths:**
+- Connection pool metrics calculation when no connections have been acquired
+- Search result processing with empty results
+- Command output parsing in system checks
+- P95 percentile calculations on small or empty datasets
+
+**Recommended Fix Priority:**
+1. BUG-150: Add empty list guards to all division operations (immediate crash risk)
+2. BUG-152: Add length checks before list[0] access (immediate crash risk)
+3. BUG-153: Validate split results before indexing (immediate crash risk on malformed input)
+4. BUG-151: Fix P95 calculation edge cases
+5. BUG-156-158: Add datetime and numeric validation
+6. REF-100-106: Standardize empty collection handling patterns
+
+**Testing Gaps:**
+- No tests for empty result sets in search/aggregation paths
+- No tests for single-element collections in percentile calculations
+- No tests for malformed command output in system checks
+- No tests for dates at boundaries (epoch, year 2038, far future)
+- No tests for NaN or Infinity in numeric inputs
+- No tests for pagination at extreme offsets
+- No tests for files without trailing newlines in pattern matching
