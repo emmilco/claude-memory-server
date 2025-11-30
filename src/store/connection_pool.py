@@ -16,6 +16,7 @@ from datetime import datetime, UTC
 from weakref import WeakValueDictionary
 
 from qdrant_client import QdrantClient
+from requests.exceptions import Timeout
 
 from src.config import ServerConfig
 from src.core.exceptions import QdrantConnectionError
@@ -542,8 +543,8 @@ class QdrantConnectionPool:
                 logger.debug(f"Created new connection (total: {self._created_count})")
                 return pooled_conn
 
-            except ConnectionError as e:
-                # Connection error - retry with exponential backoff
+            except (ConnectionError, Timeout) as e:
+                # Connection error or timeout - retry with exponential backoff
                 if attempt < max_attempts - 1:
                     delay = 2 ** attempt  # 1s, 2s, 4s delays
                     logger.warning(
