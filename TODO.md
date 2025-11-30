@@ -63,10 +63,6 @@ BUG-456 created → Registry shows BUG: 457
 
 
 
-- [ ] **BUG-061**: Scroll Loop Infinite Loop Risk with Malformed Offset
-  - **Location:** `src/store/qdrant_store.py:594-610`, `src/store/qdrant_store.py:839-863`, and 20+ other scroll loops
-  - **Problem:** Scroll loops check `if offset is None` but don't handle malformed offset values that could cause infinite loops
-  - **Fix:** Add iteration counter with max limit (e.g., 1000 iterations) and explicit timeout; log warning if limit hit
 
 
 

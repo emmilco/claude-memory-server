@@ -1,7 +1,7 @@
 # IN_PROGRESS - Active Work
 
 **Maximum Concurrent Tasks: 6**
-**Current Active: 0/6**
+**Current Active: 5/6**
 
 ---
 
@@ -15,7 +15,30 @@
 
 ## Active Tasks
 
-*No tasks currently in progress.*
+### [BUG-059]: SQLite Connection Not Closed in Cache Error Paths
+**Started**: 2025-11-30
+**Branch**: BUG-059
+**Status**: In Progress
+
+### [BUG-060]: Cache Statistics Reset Without Holding Counter Lock
+**Started**: 2025-11-30
+**Branch**: BUG-060
+**Status**: In Progress
+
+### [BUG-062]: Connection Pool Reset Race Condition
+**Started**: 2025-11-30
+**Branch**: BUG-062
+**Status**: In Progress
+
+### [BUG-063]: Missing Client Release on Early Return in get_by_id
+**Started**: 2025-11-30
+**Branch**: BUG-063
+**Status**: In Progress
+
+### [BUG-075]: Importance Score Normalization Breaks with High Weights
+**Started**: 2025-11-30
+**Branch**: BUG-075
+**Status**: In Progress
 
 ---
 
