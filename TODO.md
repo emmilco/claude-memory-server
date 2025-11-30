@@ -449,61 +449,26 @@
 
 ### 🟡 High Priority Bugs - Incorrect Behavior / Data Corruption
 
-- [ ] **BUG-045**: Call Extractor State Leak Between Files 🔥🔥
-  - **Location:** `src/analysis/call_extractors.py:59-105`
-  - **Problem:** `current_class` instance variable never reset between files
-  - **Impact:** Call graph corruption - methods from last class in file A attributed to classes in file B
-  - **Root Cause:** `self.current_class` set during `extract_calls()` but never cleared
-  - **Fix:** Reset `self.current_class = None` at start of `extract_calls()`
-  - **Discovered:** 2025-11-29 comprehensive code review
+- [x] **BUG-045**: Call Extractor State Leak Between Files ✅ FIXED (2025-11-30)
+  - Reset `self.current_class = None` at start of `extract_calls()`
 
-- [ ] **BUG-046**: Store Attribute Access May Crash on Non-Qdrant Backends 🔥🔥
-  - **Location:** `src/services/memory_service.py:1406-1407`
-  - **Problem:** Direct access to `self.store.client` and `self.store.collection_name`
-  - **Impact:** `get_dashboard_stats()` crashes if store is wrapped or non-Qdrant
-  - **Root Cause:** Assumes Qdrant-specific attributes exist without checking
-  - **Fix:** Add `hasattr()` check or use store's API method
-  - **Discovered:** 2025-11-29 comprehensive code review
+- [x] **BUG-046**: Store Attribute Access May Crash on Non-Qdrant Backends ✅ FIXED (2025-11-30)
+  - Added `hasattr()` check for backend compatibility
 
-- [ ] **BUG-047**: RRF Fusion Logic Has Inverted Control Flow 🔥
-  - **Location:** `src/search/hybrid_search.py:254-265`
-  - **Problem:** `else` block executes when memory IS found, not when NOT found
-  - **Impact:** Works by accident but confusing - high risk of breakage during maintenance
-  - **Root Cause:** Nested loop logic is logically inverted from intent
-  - **Fix:** Refactor to explicit search functions for clarity
-  - **Discovered:** 2025-11-29 comprehensive code review
+- [x] **BUG-047**: RRF Fusion Logic Has Inverted Control Flow ✅ FIXED (2025-11-30)
+  - Refactored to explicit search functions for clarity
 
-- [ ] **BUG-048**: Cascade Fusion Silently Drops Valid BM25 Results 🔥
-  - **Location:** `src/search/hybrid_search.py:300-310`
-  - **Problem:** Filters out results with `score == 0` without logging
-  - **Impact:** Returns fewer than `limit` results even when more are available
-  - **Root Cause:** `if score > 0:` check excludes legitimate zero-score results
-  - **Fix:** Remove filter or add logging, reconsider cascade strategy intent
-  - **Discovered:** 2025-11-29 comprehensive code review
+- [x] **BUG-048**: Cascade Fusion Silently Drops Valid BM25 Results ✅ FIXED (2025-11-30)
+  - Fixed cascade fusion to preserve valid BM25 results
 
-- [ ] **BUG-049**: Timezone Mismatch in Reranker Causes TypeError 🔥
-  - **Location:** `src/search/reranker.py:134-158`
-  - **Error:** `TypeError: can't subtract offset-naive and offset-aware datetimes`
-  - **Impact:** Recency scoring crashes if memory has naive datetime
-  - **Root Cause:** `datetime.now(timezone.utc)` subtracted from potentially naive `updated_at`
-  - **Fix:** Normalize both datetimes to UTC before comparison
-  - **Discovered:** 2025-11-29 comprehensive code review
+- [x] **BUG-049**: Timezone Mismatch in Reranker Causes TypeError ✅ FIXED (2025-11-30)
+  - Normalized datetimes to UTC before comparison
 
-- [ ] **BUG-050**: Executor Not Null-Checked After Failed Initialize 🔥
-  - **Location:** `src/embeddings/parallel_generator.py:445-446`
-  - **Error:** `AttributeError: 'NoneType' object has no attribute...`
-  - **Impact:** Parallel embedding crashes if initialization failed
-  - **Root Cause:** `initialize()` can fail and leave `self.executor = None`
-  - **Fix:** Add null check after `await self.initialize()` or raise explicit error
-  - **Discovered:** 2025-11-29 comprehensive code review
+- [x] **BUG-050**: Executor Not Null-Checked After Failed Initialize ✅ FIXED (2025-11-30)
+  - Added null check after initialize() with clear error message
 
-- [ ] **BUG-051**: MPS Generator Not Closed - Thread Leak 🔥
-  - **Location:** `src/embeddings/parallel_generator.py:247-253`
-  - **Problem:** `_mps_generator` created but never closed in `close()` method
-  - **Impact:** Thread pool executor leak when using MPS fallback
-  - **Root Cause:** `close()` doesn't call `_mps_generator.close()`
-  - **Fix:** Add `if self._mps_generator: await self._mps_generator.close()` to `close()`
-  - **Discovered:** 2025-11-29 comprehensive code review
+- [x] **BUG-051**: MPS Generator Not Closed - Thread Leak ✅ FIXED (2025-11-30)
+  - Added MPS generator cleanup in close() method
 
 ### 🟢 Medium Priority - Tech Debt and Code Quality
 
@@ -581,12 +546,8 @@
   - **Fix:** Average middle two elements for even-length lists
   - **Discovered:** 2025-11-29 comprehensive code review
 
-- [ ] **BUG-053**: Query DSL Date Parsing Too Strict 🔥
-  - **Location:** `src/search/query_dsl_parser.py:235-255`
-  - **Problem:** Only accepts `YYYY-MM-DD` format, rejects valid ISO formats
-  - **Impact:** Users can't use `2024-01-01T00:00:00Z` or other valid formats
-  - **Fix:** Try multiple formats or use `fromisoformat()`
-  - **Discovered:** 2025-11-29 comprehensive code review
+- [x] **BUG-053**: Query DSL Date Parsing Too Strict ✅ FIXED (2025-11-30)
+  - Now accepts ISO 8601 date formats via `fromisoformat()`
 
 ### 📊 Code Review Audit Summary (2025-11-29)
 
@@ -721,31 +682,18 @@ These investigations will help surface additional bugs by examining specific pat
   - **Pattern:** `raise StorageError(f"Failed: {e}")` → `raise StorageError(f"Failed: {e}") from e`
   - **Discovered:** 2025-11-29 INVEST-001 audit
 
-- [ ] **BUG-054**: Bare `except: pass` Swallows All Errors
-  - **Location:** `src/review/patterns.py:222-223`
-  - **Problem:** Bare `except: pass` catches and ignores ALL exceptions including SystemExit, KeyboardInterrupt
-  - **Impact:** Completely silent failure - debugging impossible
-  - **Fix:** Catch specific exception types or at minimum log the error
-  - **Discovered:** 2025-11-29 INVEST-001 audit
+- [x] **BUG-054**: Bare `except: pass` Swallows All Errors ✅ FIXED (2025-11-30)
+  - Replaced with `except Exception:` for specific exception handling
 
 #### INVEST-002 Results: Async/Await Correctness ✅ COMPLETE
 
 **Finding:** 2 fire-and-forget `asyncio.create_task()` calls without error handling
 
-- [ ] **BUG-055**: Fire-and-Forget Task in Usage Tracker - No Error Handling
-  - **Location:** `src/memory/usage_tracker.py:143`
-  - **Problem:** `asyncio.create_task(self._flush())` - task not stored, exceptions silently lost
-  - **Impact:** If `_flush()` fails, error is swallowed and usage data may be lost
-  - **Fix:** Store task reference, add exception callback, or use `asyncio.shield()`
-  - **Discovered:** 2025-11-29 INVEST-002 audit
+- [x] **BUG-055**: Fire-and-Forget Task in Usage Tracker - No Error Handling ✅ FIXED (2025-11-30)
+  - Added task tracking and error callback for flush operations
 
-- [ ] **BUG-056**: Fire-and-Forget Task in MCP Server - No Error Handling
-  - **Location:** `src/mcp_server.py:1595`
-  - **Problem:** `asyncio.create_task(complete_initialization())` - task not stored
-  - **Impact:** If background init fails, error is logged but task reference lost
-  - **Context:** Intentional fire-and-forget but should add done callback for error logging
-  - **Fix:** Add `task.add_done_callback()` to log failures explicitly
-  - **Discovered:** 2025-11-29 INVEST-002 audit
+- [x] **BUG-056**: Fire-and-Forget Task in MCP Server - No Error Handling ✅ FIXED (2025-11-30)
+  - Added task tracking, error callback, and cleanup on shutdown
 
 #### INVEST-003 Results: Stats/Counter Thread Safety ✅ COMPLETE
 
@@ -784,17 +732,8 @@ These investigations will help surface additional bugs by examining specific pat
 
 **Finding:** 9 type annotation errors
 
-- [ ] **BUG-057**: Lowercase `any` Instead of `Any` - 5 Instances
-  - **Locations:**
-    - `src/memory/change_detector.py:280` - `-> Dict[str, any]`
-    - `src/search/bm25.py:222` - `-> Dict[str, any]`
-    - `src/memory/docstring_extractor.py:344` - `-> Dict[str, any]`
-    - `src/memory/project_archival.py:167` - `-> Dict[str, any]`
-    - `src/memory/project_archival.py:204` - `-> Dict[str, any]`
-  - **Problem:** `any` is a builtin function, not a type. Should be `Any` from `typing`
-  - **Impact:** Type checker errors, confusing semantics
-  - **Fix:** Change `any` to `Any` and ensure `from typing import Any`
-  - **Discovered:** 2025-11-29 INVEST-004 audit
+- [x] **BUG-057**: Lowercase `any` Instead of `Any` - 5 Instances ✅ FIXED (2025-11-30)
+  - Replaced lowercase `any` with `Any` in 5 files, added imports
 
 - [ ] **BUG-058**: Lowercase `callable` Instead of `Callable` - 4 Instances
   - **Locations:**

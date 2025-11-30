@@ -14,59 +14,29 @@ Tasks that are implementation-complete and awaiting review before merging.
 
 ## Awaiting Review
 
-### [REF-008]: Update Deprecated Qdrant API Usage
-**Completed**: 2025-11-29
-**Author**: Task Agent
-**Branch**: REF-008
-**Worktree**: `.worktrees/REF-008`
-**Type**: Refactoring
-
-**Changes**:
-- Updated `client.search()` to `client.query_points()` in `src/store/qdrant_store.py`
-- Renamed parameter `query_vector=` to `query=`
-- Added `.points` accessor for QueryResponse
+*No tasks currently awaiting review.*
 
 ---
 
-### [TEST-007-C]: Add Web Server Test Coverage
-**Completed**: 2025-11-29
-**Author**: Task Agent
-**Branch**: TEST-007-C
-**Worktree**: `.worktrees/TEST-007-C`
-**Type**: Testing
+## Recently Merged (2025-11-30)
 
-**Changes**:
-- Added 28 new tests to `tests/unit/test_web_server.py`
-- Covers DashboardServer class, routes, API endpoints
-- Total tests: 68 (40 existing + 28 new)
+- [x] BUG-050: Add null check for executor after failed initialize - MERGED ✅
+- [x] BUG-051: Fix MPS generator thread leak - MERGED ✅
+- [x] BUG-053: Accept ISO 8601 date formats in query DSL - MERGED ✅
+- [x] BUG-054: Replace bare except with specific exception handling - MERGED ✅
+- [x] BUG-055: Add error handling for usage tracker flush task - MERGED ✅
+- [x] BUG-056: Track and handle MCP server initialization task - MERGED ✅
+- [x] BUG-057: Fix lowercase any type annotations - MERGED ✅
 
 ---
 
-### [TEST-007-D]: Add Duplicate Detector Test Coverage
-**Completed**: 2025-11-29
-**Author**: Task Agent
-**Branch**: TEST-007-D
-**Worktree**: `.worktrees/TEST-007-D`
-**Type**: Testing
+## Stale Entries Removed (2025-11-30)
 
-**Changes**:
-- Created `tests/unit/test_duplicate_detector.py` (865 lines, 44 tests)
-- Covers initialization, similarity classification, duplicate detection
-- Target: 80%+ coverage for `src/memory/duplicate_detector.py`
-
----
-
-### [TEST-007-E]: Add Retrieval Predictor Test Coverage
-**Completed**: 2025-11-29
-**Author**: Task Agent
-**Branch**: TEST-007-E
-**Worktree**: `.worktrees/TEST-007-E`
-**Type**: Testing
-
-**Changes**:
-- Created `tests/unit/test_retrieval_predictor.py` (738 lines, 57 tests)
-- Covers all public/private methods, edge cases, real-world scenarios
-- Target: 80%+ coverage for `src/router/retrieval_predictor.py`
+The following entries were removed because their worktrees no longer exist:
+- REF-008: Update Deprecated Qdrant API Usage
+- TEST-007-C: Add Web Server Test Coverage
+- TEST-007-D: Add Duplicate Detector Test Coverage
+- TEST-007-E: Add Retrieval Predictor Test Coverage
 
 ---
 
