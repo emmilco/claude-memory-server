@@ -74,6 +74,22 @@ EOF
     cat >> "$LOG_FILE" << EOF
 {"ts":"$TIMESTAMP","event":"SESSION_END","session":"$SESSION_ID"}
 EOF
+    # Auto-commit journal changes to prevent loss
+    JOURNAL_FILE="${CLAUDE_WORKSPACE:-.}/CLAUDE_JOURNAL.md"
+    if [[ -f "$JOURNAL_FILE" ]]; then
+      # Check if journal has uncommitted changes
+      if git -C "$(dirname "$JOURNAL_FILE")" diff --quiet "$JOURNAL_FILE" 2>/dev/null; then
+        : # No changes, skip
+      else
+        # Journal has uncommitted changes - commit them
+        git -C "$(dirname "$JOURNAL_FILE")" add "$JOURNAL_FILE" 2>/dev/null
+        git -C "$(dirname "$JOURNAL_FILE")" commit -m "Auto-commit journal entries (session $SHORT_SESSION)" --no-verify 2>/dev/null || true
+      fi
+      # Also check for staged but uncommitted changes
+      if ! git -C "$(dirname "$JOURNAL_FILE")" diff --cached --quiet "$JOURNAL_FILE" 2>/dev/null; then
+        git -C "$(dirname "$JOURNAL_FILE")" commit -m "Auto-commit journal entries (session $SHORT_SESSION)" --no-verify 2>/dev/null || true
+      fi
+    fi
     ;;
 
   tool_use)
