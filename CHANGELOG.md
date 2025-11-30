@@ -51,6 +51,22 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Fixed - 2025-11-30
+- **REF-027: Add Missing Timeout Handling for Async Operations**
+  - Added `asyncio.timeout(30.0)` wrappers around all `asyncio.to_thread()` calls in embedding cache
+  - Prevents hung operations from blocking the entire embedding/search pipeline
+  - Added `asyncio.TimeoutError` exception handlers that log errors and return appropriate defaults
+  - Protected methods: `get()`, `set()`, `batch_get()`, `clean_old()`, `clear()`
+  - Ensures single stuck query cannot freeze the async pipeline
+  - Files: src/embeddings/cache.py
+
+- **REF-024: Fix race conditions in file watcher debounce**
+  - Fixed lock release between reading and modifying `debounce_task` in `_debounce_callback()`
+  - Now holds lock through entire operation: reading old task, canceling it, and creating new task
+  - Prevents orphaned tasks and incorrect cancellation under high concurrency
+  - Moved `await old_task` outside lock to avoid blocking other file changes
+  - Files: src/memory/file_watcher.py
+
 ### Changed - 2025-11-30
 - **REF-033: Add Missing Config Range Validators**
   - Added `@field_validator` decorators for configuration fields that lacked range validation

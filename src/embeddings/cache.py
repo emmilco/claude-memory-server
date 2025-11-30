@@ -124,7 +124,12 @@ class EmbeddingCache:
             return None
 
         # Run blocking SQLite operations in thread pool for proper async handling
-        return await asyncio.to_thread(self._get_sync, text, model_name)
+        try:
+            async with asyncio.timeout(30.0):
+                return await asyncio.to_thread(self._get_sync, text, model_name)
+        except asyncio.TimeoutError:
+            logger.error(f"Cache get timeout for text (model: {model_name})")
+            return None
 
     def _get_sync(self, text: str, model_name: str) -> Optional[List[float]]:
         """Synchronous implementation of get() for thread pool execution."""
@@ -204,7 +209,11 @@ class EmbeddingCache:
             return
 
         # Run blocking SQLite operations in thread pool for proper async handling
-        await asyncio.to_thread(self._set_sync, text, model_name, embedding)
+        try:
+            async with asyncio.timeout(30.0):
+                await asyncio.to_thread(self._set_sync, text, model_name, embedding)
+        except asyncio.TimeoutError:
+            logger.error(f"Cache set timeout for text (model: {model_name})")
 
     def _set_sync(self, text: str, model_name: str, embedding: List[float]) -> None:
         """Synchronous implementation of set() for thread pool execution."""
@@ -278,7 +287,12 @@ class EmbeddingCache:
             return [None] * len(texts)
 
         # Run blocking SQLite operations in thread pool for proper async handling
-        return await asyncio.to_thread(self._batch_get_sync, texts, model_name)
+        try:
+            async with asyncio.timeout(30.0):
+                return await asyncio.to_thread(self._batch_get_sync, texts, model_name)
+        except asyncio.TimeoutError:
+            logger.error(f"Cache batch_get timeout for {len(texts)} items (model: {model_name})")
+            return [None] * len(texts)
 
     def _batch_get_sync(self, texts: List[str], model_name: str) -> dict[str, Optional[List[float]]]:
         """Synchronous implementation of batch_get() for thread pool execution."""
@@ -373,7 +387,12 @@ class EmbeddingCache:
             return 0
 
         # Run blocking SQLite operations in thread pool for proper async handling
-        return await asyncio.to_thread(self._clean_old_sync, days)
+        try:
+            async with asyncio.timeout(30.0):
+                return await asyncio.to_thread(self._clean_old_sync, days)
+        except asyncio.TimeoutError:
+            logger.error(f"Cache clean_old timeout (days: {days})")
+            return 0
 
     def _clean_old_sync(self, days: Optional[int] = None) -> int:
         """Synchronous implementation of clean_old() for thread pool execution."""
@@ -449,7 +468,12 @@ class EmbeddingCache:
             return 0
 
         # Run blocking SQLite operations in thread pool for proper async handling
-        return await asyncio.to_thread(self._clear_sync)
+        try:
+            async with asyncio.timeout(30.0):
+                return await asyncio.to_thread(self._clear_sync)
+        except asyncio.TimeoutError:
+            logger.error("Cache clear timeout")
+            return 0
 
     def _clear_sync(self) -> int:
         """Synchronous implementation of clear() for thread pool execution."""
