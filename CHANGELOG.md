@@ -53,14 +53,24 @@ Organize entries under these headers in chronological order (newest first):
 
 ### Fixed - 2025-11-30
 - **BUG-154: Validation Errors Don't Include Field Name in Error Message**
-  - Added field name and valid value list to all enum validation errors in `src/services/memory_service.py`
-  - Enhanced error messages in `store_memory()`, `query()`, `update_memory()`, and `list_memories()` methods
-  - Wrapped enum conversions (MemoryCategory, LifecycleState, MemoryScope, ContextLevel) with try-except blocks
+  - Added field name and valid value list to all enum validation errors in both service and server layers
+  - Enhanced error messages in `src/services/memory_service.py`:
+    - `store_memory()`, `query()`, `update_memory()`, `list_memories()` methods
+  - Enhanced error messages in `src/core/server.py`:
+    - `store_memory()` MCP tool (lines 523-536)
+    - `query()` MCP tool (lines 681-695)
+    - `delete_memories_by_query()` MCP tool (lines 945-963)
+    - `update_memory()` MCP tool (lines 1160-1165, 1191-1196)
+    - `list_memories()` MCP tool (lines 1305-1318)
+    - `export_memories()` MCP tool (lines 1752-1765)
+  - Wrapped all enum conversions (MemoryCategory, LifecycleState, MemoryScope, ContextLevel) with try-except blocks
   - Error format now includes: `Invalid value 'X' for parameter 'field_name'. Valid values: ...`
   - Fixed error message values to match actual enum definitions:
-    - ContextLevel: lowercase -> uppercase (USER_PREFERENCE, PROJECT_CONTEXT, SESSION_STATE)
-    - MemoryScope: removed non-existent 'session' value (only global, project)
-  - Files: src/services/memory_service.py
+    - ContextLevel: USER_PREFERENCE, PROJECT_CONTEXT, SESSION_STATE (uppercase)
+    - LifecycleState: ACTIVE, RECENT, ARCHIVED, STALE (uppercase)
+    - MemoryCategory: preference, fact, event, workflow, context, code (lowercase)
+    - MemoryScope: global, project (lowercase, removed non-existent 'session' value)
+  - Files: src/services/memory_service.py, src/core/server.py
 
 ### Changed - 2025-11-30
 - **TODO.md Rebuild: Deduplicate, Prioritize, and Add ID Registry**
