@@ -595,16 +595,16 @@ class MemoryService:
                         "id": memory.id,
                         "memory_id": memory.id,
                         "content": memory.content,
-                        "category": memory.category.value if hasattr(memory.category, 'value') else memory.category,
-                        "context_level": memory.context_level.value if hasattr(memory.context_level, 'value') else memory.context_level,
+                        "category": memory.category.value,
+                        "context_level": memory.context_level.value,
                         "importance": memory.importance,
                         "tags": memory.tags or [],
                         "metadata": memory.metadata or {},
-                        "scope": memory.scope.value if hasattr(memory.scope, 'value') else memory.scope,
+                        "scope": memory.scope.value,
                         "project_name": memory.project_name,
-                        "created_at": memory.created_at.isoformat() if hasattr(memory.created_at, 'isoformat') else memory.created_at,
-                        "updated_at": memory.updated_at.isoformat() if hasattr(memory.updated_at, 'isoformat') else memory.updated_at,
-                        "last_accessed": memory.last_accessed.isoformat() if memory.last_accessed and hasattr(memory.last_accessed, 'isoformat') else memory.last_accessed,
+                        "created_at": memory.created_at.isoformat(),
+                        "updated_at": memory.updated_at.isoformat(),
+                        "last_accessed": memory.last_accessed.isoformat() if memory.last_accessed else None,
                     }
                 }
             else:
@@ -1094,16 +1094,16 @@ class MemoryService:
                     "id": mem.id,
                     "memory_id": mem.id,
                     "content": mem.content,
-                    "category": mem.category.value if hasattr(mem.category, 'value') else mem.category,
-                    "context_level": mem.context_level.value if hasattr(mem.context_level, 'value') else mem.context_level,
+                    "category": mem.category.value,
+                    "context_level": mem.context_level.value,
                     "importance": mem.importance,
                     "tags": mem.tags or [],
                     "metadata": mem.metadata or {},
-                    "scope": mem.scope.value if hasattr(mem.scope, 'value') else mem.scope,
+                    "scope": mem.scope.value,
                     "project_name": mem.project_name,
-                    "created_at": mem.created_at.isoformat() if hasattr(mem.created_at, 'isoformat') else mem.created_at,
-                    "updated_at": mem.updated_at.isoformat() if hasattr(mem.updated_at, 'isoformat') else mem.updated_at,
-                    "last_accessed": mem.last_accessed.isoformat() if mem.last_accessed and hasattr(mem.last_accessed, 'isoformat') else mem.last_accessed,
+                    "created_at": mem.created_at.isoformat(),
+                    "updated_at": mem.updated_at.isoformat(),
+                    "last_accessed": mem.last_accessed.isoformat() if mem.last_accessed else None,
                 })
 
             total_count = len(memories)
@@ -1340,9 +1340,9 @@ class MemoryService:
 
                         store_metadata = {
                             "id": mem_id,
-                            "category": request.category.value if hasattr(request.category, 'value') else request.category,
-                            "context_level": request.context_level.value if hasattr(request.context_level, 'value') else request.context_level,
-                            "scope": request.scope.value if hasattr(request.scope, 'value') else request.scope,
+                            "category": request.category,
+                            "context_level": request.context_level,
+                            "scope": request.scope,
                             "importance": request.importance,
                             "tags": request.tags,
                             "metadata": request.metadata,

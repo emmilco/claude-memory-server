@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from dataclasses import dataclass
 
 from src.core.models import MemoryUnit
+from src.config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -214,20 +215,24 @@ class ResultReranker:
         Returns:
             Length score (-1 to 0, penalty only)
         """
+        config = get_config()
         content_length = len(memory.content)
+        min_len = config.quality.reranker_min_content_length
+        max_len = config.quality.reranker_max_content_length
+        penalty_max = config.quality.reranker_length_penalty_max
 
-        # Ideal length range: 100-500 characters
-        if 100 <= content_length <= 500:
+        # Ideal length range
+        if min_len <= content_length <= max_len:
             return 0.0  # No penalty
 
-        # Too short (< 100)
-        if content_length < 100:
-            penalty = (100 - content_length) / 100.0
+        # Too short
+        if content_length < min_len:
+            penalty = (min_len - content_length) / min_len
             return -min(0.5, penalty)
 
-        # Too long (> 500)
-        if content_length > 500:
-            penalty = (content_length - 500) / 1000.0
+        # Too long
+        if content_length > max_len:
+            penalty = (content_length - max_len) / penalty_max
             return -min(0.5, penalty)
 
         return 0.0

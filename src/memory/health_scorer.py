@@ -321,16 +321,32 @@ class HealthScorer:
         - Contradictory facts
         - Opposing statements
 
-        For now, returns a conservative estimate.
+        Full implementation would require semantic similarity analysis (embedding-based),
+        which is deferred pending performance requirements and memory system scaling.
 
         Returns:
             Contradiction rate (0-1)
+
+        Note:
+            Currently returns 0.0 (conservative default) as full semantic analysis
+            is not yet implemented. This avoids false positives in health scoring.
         """
-        # This is a placeholder implementation
-        # Full implementation would require semantic analysis
         try:
-            # For now, assume contradictions are rare (2% baseline)
-            return 0.02
+            # UNSUPPORTED: Semantic contradiction detection
+            # Full implementation would require:
+            # 1. Retrieve all memories
+            # 2. Cluster memories by topic/category
+            # 3. Calculate embedding similarity within clusters
+            # 4. Identify semantic contradictions (opposing statements)
+            # 5. Weight by memory importance (recency, source reliability)
+            #
+            # This is deferred because:
+            # - Expensive at scale (O(n²) comparisons)
+            # - Requires tuning similarity thresholds per domain
+            # - May need user feedback for ground truth
+            #
+            # For now, return conservative estimate (0% contradictions detected)
+            return 0.0
 
         except Exception as e:
             logger.error(f"Error calculating contradiction rate: {e}")
