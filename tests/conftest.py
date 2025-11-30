@@ -519,11 +519,32 @@ def qdrant_client():
 
     QA Best Practice: Reuse connections instead of creating new ones per test.
     This reduces load on Qdrant and prevents connection exhaustion.
+
+    Handles ephemeral Qdrant instances (test-isolated.sh) by waiting for
+    the server to be ready before initializing the client.
     """
     import os
+    import time
     from qdrant_client import QdrantClient
 
     qdrant_url = os.getenv("CLAUDE_RAG_QDRANT_URL", "http://localhost:6333")
+
+    # Wait for Qdrant to be ready (handles ephemeral test instances)
+    import requests
+    max_retries = 10
+    retry_delay = 0.2
+
+    for attempt in range(max_retries):
+        try:
+            response = requests.get(f"{qdrant_url}/readyz", timeout=5)
+            if response.status_code == 200:
+                break
+        except Exception:
+            pass
+
+        if attempt < max_retries - 1:
+            time.sleep(retry_delay)
+
     client = QdrantClient(url=qdrant_url, timeout=30.0)
 
     yield client

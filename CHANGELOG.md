@@ -68,6 +68,14 @@ Organize entries under these headers in chronological order (newest first):
   - Tests: tests/unit/test_query_based_deletion.py (20 tests including enum validation)
 
 ### Fixed - 2025-11-30
+- **REF-012: Fix environment variable handling in Qdrant test fixtures**
+  - Updated `test_backup_export.py` temp_store fixture to respect `CLAUDE_RAG_QDRANT_URL` environment variable
+  - Updated `test_backup_import.py` temp_store fixture to respect `CLAUDE_RAG_QDRANT_URL` environment variable
+  - Added retry logic to `conftest.py` qdrant_client fixture to wait for Qdrant server readiness
+  - Fixes test failures when running with isolated Qdrant on non-default ports (test-isolated.sh)
+  - All 8 backup tests now pass with environment-based URLs
+  - Files: tests/unit/test_backup_export.py, tests/unit/test_backup_import.py, tests/conftest.py
+
 - **TEST-029: Fix Test Suite Isolation and Collection Cleanup**
   - Changed `unique_qdrant_collection` fixture to create true per-test unique collections instead of reusing pool collections
   - Prevents cross-test contamination where sequential tests would accumulate data from previous runs

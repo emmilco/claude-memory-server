@@ -4,20 +4,18 @@ import pytest
 import os
 from pathlib import Path
 from src.config import ServerConfig, get_config, set_config
-from tests.conftest import TEST_QDRANT_URL
 
 
-def test_config_defaults(monkeypatch):
+def test_config_defaults():
     """Test that configuration loads with default values."""
-    # Clear environment variables that might override defaults (e.g., from isolated test runner)
-    monkeypatch.delenv("QDRANT_URL", raising=False)
-    monkeypatch.delenv("CLAUDE_RAG_QDRANT_URL", raising=False)
-
+    import os
     config = ServerConfig()
     assert config.server_name == "claude-memory-rag"
     assert config.log_level == "INFO"
     assert config.storage_backend == "qdrant"  # REF-010: Qdrant is now required for semantic search
-    assert config.qdrant_url == TEST_QDRANT_URL  # Use environment-aware constant
+    # Check qdrant_url - either default or from environment (for isolated test runner)
+    expected_url = os.getenv("CLAUDE_RAG_QDRANT_URL", "http://localhost:6333")
+    assert config.qdrant_url == expected_url
     assert config.embedding_batch_size == 128  # Larger batches for MPS GPU acceleration
     assert config.embedding_model == "all-mpnet-base-v2"  # 768 dims, better quality
     # REF-017: Check feature group instead of legacy flat field

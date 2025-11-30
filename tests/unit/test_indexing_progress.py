@@ -8,12 +8,16 @@ from src.memory.incremental_indexer import IncrementalIndexer
 
 @pytest.fixture
 def mock_call_graph_store():
-    """Mock the QdrantCallGraphStore to avoid Qdrant connection in tests."""
-    with patch('src.memory.incremental_indexer.QdrantCallGraphStore') as mock_class:
-        mock_instance = MagicMock()
-        mock_instance.initialize = AsyncMock()
-        mock_class.return_value = mock_instance
-        yield mock_instance
+    """Mock QdrantCallGraphStore to avoid Qdrant connection during tests."""
+    with patch('src.memory.incremental_indexer.QdrantCallGraphStore') as MockCallGraphStore:
+        mock_call_graph = AsyncMock()
+        mock_call_graph.initialize = AsyncMock()
+        mock_call_graph.close = AsyncMock()
+        mock_call_graph.store_function_node = AsyncMock()
+        mock_call_graph.store_call_sites = AsyncMock()
+        mock_call_graph.store_implementations = AsyncMock()
+        MockCallGraphStore.return_value = mock_call_graph
+        yield mock_call_graph
 
 
 class TestIndexingProgressCallback:
@@ -40,57 +44,51 @@ class TestIndexingProgressCallback:
         mock_embeddings.batch_generate = AsyncMock(return_value=[[0.1] * 384, [0.2] * 384])
         mock_embeddings.close = AsyncMock()
 
-        # Mock call graph store to avoid Qdrant connection
-        with patch('src.memory.incremental_indexer.QdrantCallGraphStore') as MockCallGraphStore:
-            mock_call_graph = AsyncMock()
-            mock_call_graph.initialize = AsyncMock()
-            MockCallGraphStore.return_value = mock_call_graph
+        indexer = IncrementalIndexer(
+            store=mock_store,
+            embedding_generator=mock_embeddings,
+            project_name="test-project"
+        )
+        await indexer.initialize()
 
-            indexer = IncrementalIndexer(
-                store=mock_store,
-                embedding_generator=mock_embeddings,
-                project_name="test-project"
-            )
-            await indexer.initialize()
+        # Track progress callbacks
+        callback_calls = []
 
-            # Track progress callbacks
-            callback_calls = []
+        def progress_callback(current, total, current_file, error_info):
+            callback_calls.append({
+                "current": current,
+                "total": total,
+                "current_file": current_file,
+                "error_info": error_info,
+            })
 
-            def progress_callback(current, total, current_file, error_info):
-                callback_calls.append({
-                    "current": current,
-                    "total": total,
-                    "current_file": current_file,
-                    "error_info": error_info,
-                })
+        # Index directory with callback
+        result = await indexer.index_directory(
+            tmp_path,
+            recursive=False,
+            show_progress=False,
+            progress_callback=progress_callback,
+        )
 
-            # Index directory with callback
-            result = await indexer.index_directory(
-                tmp_path,
-                recursive=False,
-                show_progress=False,
-                progress_callback=progress_callback,
-            )
+        # Verify callbacks were made
+        assert len(callback_calls) > 0
 
-            # Verify callbacks were made
-            assert len(callback_calls) > 0
+        # First callback should have total count
+        first_call = callback_calls[0]
+        assert first_call["total"] == 2
+        assert first_call["current"] == 0
+        assert first_call["current_file"] is None
+        assert first_call["error_info"] is None
 
-            # First callback should have total count
-            first_call = callback_calls[0]
-            assert first_call["total"] == 2
-            assert first_call["current"] == 0
-            assert first_call["current_file"] is None
-            assert first_call["error_info"] is None
+        # Subsequent callbacks should have file names
+        file_callbacks = [c for c in callback_calls if c["current_file"] is not None]
+        assert len(file_callbacks) > 0
 
-            # Subsequent callbacks should have file names
-            file_callbacks = [c for c in callback_calls if c["current_file"] is not None]
-            assert len(file_callbacks) > 0
+        # Check that file names were provided
+        file_names = {c["current_file"] for c in file_callbacks}
+        assert "file1.py" in file_names or "file2.py" in file_names
 
-            # Check that file names were provided
-            file_names = {c["current_file"] for c in file_callbacks}
-            assert "file1.py" in file_names or "file2.py" in file_names
-
-            await indexer.close()
+        await indexer.close()
 
     @pytest.mark.asyncio
     async def test_progress_callback_tracks_completion(self, tmp_path, mock_call_graph_store):
@@ -114,43 +112,38 @@ class TestIndexingProgressCallback:
         mock_embeddings.batch_generate = AsyncMock(return_value=[[0.1] * 384])
         mock_embeddings.close = AsyncMock()
 
-        with patch('src.memory.incremental_indexer.QdrantCallGraphStore') as MockCallGraphStore:
-            mock_call_graph = AsyncMock()
-            mock_call_graph.initialize = AsyncMock()
-            MockCallGraphStore.return_value = mock_call_graph
+        indexer = IncrementalIndexer(
+            store=mock_store,
+            embedding_generator=mock_embeddings,
+            project_name="test-project"
+        )
+        await indexer.initialize()
 
-            indexer = IncrementalIndexer(
-                store=mock_store,
-                embedding_generator=mock_embeddings,
-                project_name="test-project"
-            )
-            await indexer.initialize()
+        callback_calls = []
 
-            callback_calls = []
+        def progress_callback(current, total, current_file, error_info):
+            callback_calls.append({"current": current, "total": total})
 
-            def progress_callback(current, total, current_file, error_info):
-                callback_calls.append({"current": current, "total": total})
+        await indexer.index_directory(
+            tmp_path,
+            recursive=False,
+            show_progress=False,
+            progress_callback=progress_callback,
+        )
 
-            await indexer.index_directory(
-                tmp_path,
-                recursive=False,
-                show_progress=False,
-                progress_callback=progress_callback,
-            )
+        # Verify completion count increases
+        current_values = [c["current"] for c in callback_calls]
 
-            # Verify completion count increases
-            current_values = [c["current"] for c in callback_calls]
+        # Should start at 0 and increase
+        assert 0 in current_values
+        assert max(current_values) >= 1
 
-            # Should start at 0 and increase
-            assert 0 in current_values
-            assert max(current_values) >= 1
+        # Should eventually reach total
+        final_current = current_values[-1]
+        final_total = callback_calls[-1]["total"]
+        assert final_current <= final_total
 
-            # Should eventually reach total
-            final_current = current_values[-1]
-            final_total = callback_calls[-1]["total"]
-            assert final_current <= final_total
-
-            await indexer.close()
+        await indexer.close()
 
     @pytest.mark.asyncio
     async def test_progress_callback_reports_errors(self, tmp_path, mock_call_graph_store):
@@ -172,41 +165,36 @@ class TestIndexingProgressCallback:
         mock_embeddings.batch_generate = AsyncMock(return_value=[[0.1] * 384])
         mock_embeddings.close = AsyncMock()
 
-        with patch('src.memory.incremental_indexer.QdrantCallGraphStore') as MockCallGraphStore:
-            mock_call_graph = AsyncMock()
-            mock_call_graph.initialize = AsyncMock()
-            MockCallGraphStore.return_value = mock_call_graph
+        indexer = IncrementalIndexer(
+            store=mock_store,
+            embedding_generator=mock_embeddings,
+            project_name="test-project"
+        )
+        await indexer.initialize()
 
-            indexer = IncrementalIndexer(
-                store=mock_store,
-                embedding_generator=mock_embeddings,
-                project_name="test-project"
-            )
-            await indexer.initialize()
+        error_callbacks = []
 
-            error_callbacks = []
+        def progress_callback(current, total, current_file, error_info):
+            if error_info:
+                error_callbacks.append(error_info)
 
-            def progress_callback(current, total, current_file, error_info):
-                if error_info:
-                    error_callbacks.append(error_info)
+        await indexer.index_directory(
+            tmp_path,
+            recursive=False,
+            show_progress=False,
+            progress_callback=progress_callback,
+        )
 
-            await indexer.index_directory(
-                tmp_path,
-                recursive=False,
-                show_progress=False,
-                progress_callback=progress_callback,
-            )
+        # Verify at least one error was reported
+        assert len(error_callbacks) > 0
 
-            # Verify at least one error was reported
-            assert len(error_callbacks) > 0
+        # Check error info structure
+        error_info = error_callbacks[0]
+        assert "file" in error_info
+        assert "error" in error_info
+        assert "bad.py" in error_info["file"]
 
-            # Check error info structure
-            error_info = error_callbacks[0]
-            assert "file" in error_info
-            assert "error" in error_info
-            assert "bad.py" in error_info["file"]
-
-            await indexer.close()
+        await indexer.close()
 
     @pytest.mark.asyncio
     async def test_progress_callback_empty_directory(self, tmp_path, mock_call_graph_store):
@@ -223,37 +211,32 @@ class TestIndexingProgressCallback:
         mock_embeddings.initialize = AsyncMock()
         mock_embeddings.close = AsyncMock()
 
-        with patch('src.memory.incremental_indexer.QdrantCallGraphStore') as MockCallGraphStore:
-            mock_call_graph = AsyncMock()
-            mock_call_graph.initialize = AsyncMock()
-            MockCallGraphStore.return_value = mock_call_graph
+        indexer = IncrementalIndexer(
+            store=mock_store,
+            embedding_generator=mock_embeddings,
+            project_name="test-project"
+        )
+        await indexer.initialize()
 
-            indexer = IncrementalIndexer(
-                store=mock_store,
-                embedding_generator=mock_embeddings,
-                project_name="test-project"
-            )
-            await indexer.initialize()
+        callback_calls = []
 
-            callback_calls = []
+        def progress_callback(current, total, current_file, error_info):
+            callback_calls.append({"current": current, "total": total})
 
-            def progress_callback(current, total, current_file, error_info):
-                callback_calls.append({"current": current, "total": total})
+        result = await indexer.index_directory(
+            empty_dir,
+            recursive=False,
+            show_progress=False,
+            progress_callback=progress_callback,
+        )
 
-            result = await indexer.index_directory(
-                empty_dir,
-                recursive=False,
-                show_progress=False,
-                progress_callback=progress_callback,
-            )
+        # Should call callback once with 0 total to initialize progress bar
+        assert result["total_files"] == 0
+        assert len(callback_calls) == 1
+        assert callback_calls[0]["total"] == 0
+        assert callback_calls[0]["current"] == 0
 
-            # Should call callback once with 0 total to initialize progress bar
-            assert result["total_files"] == 0
-            assert len(callback_calls) == 1
-            assert callback_calls[0]["total"] == 0
-            assert callback_calls[0]["current"] == 0
-
-            await indexer.close()
+        await indexer.close()
 
     @pytest.mark.asyncio
     async def test_indexing_without_callback(self, tmp_path, mock_call_graph_store):
@@ -274,28 +257,23 @@ class TestIndexingProgressCallback:
         mock_embeddings.batch_generate = AsyncMock(return_value=[[0.1] * 384])
         mock_embeddings.close = AsyncMock()
 
-        with patch('src.memory.incremental_indexer.QdrantCallGraphStore') as MockCallGraphStore:
-            mock_call_graph = AsyncMock()
-            mock_call_graph.initialize = AsyncMock()
-            MockCallGraphStore.return_value = mock_call_graph
+        indexer = IncrementalIndexer(
+            store=mock_store,
+            embedding_generator=mock_embeddings,
+            project_name="test-project"
+        )
+        await indexer.initialize()
 
-            indexer = IncrementalIndexer(
-                store=mock_store,
-                embedding_generator=mock_embeddings,
-                project_name="test-project"
-            )
-            await indexer.initialize()
+        # Index without callback - should not raise error
+        result = await indexer.index_directory(
+            tmp_path,
+            recursive=False,
+            show_progress=False,
+            progress_callback=None,
+        )
 
-            # Index without callback - should not raise error
-            result = await indexer.index_directory(
-                tmp_path,
-                recursive=False,
-                show_progress=False,
-                progress_callback=None,
-            )
-
-            assert result["total_files"] == 1
-            await indexer.close()
+        assert result["total_files"] == 1
+        await indexer.close()
 
     @pytest.mark.asyncio
     async def test_progress_callback_concurrent_processing(self, tmp_path, mock_call_graph_store):
@@ -317,47 +295,42 @@ class TestIndexingProgressCallback:
         mock_embeddings.batch_generate = AsyncMock(return_value=[[0.1] * 384])
         mock_embeddings.close = AsyncMock()
 
-        with patch('src.memory.incremental_indexer.QdrantCallGraphStore') as MockCallGraphStore:
-            mock_call_graph = AsyncMock()
-            mock_call_graph.initialize = AsyncMock()
-            MockCallGraphStore.return_value = mock_call_graph
+        indexer = IncrementalIndexer(
+            store=mock_store,
+            embedding_generator=mock_embeddings,
+            project_name="test-project"
+        )
+        await indexer.initialize()
 
-            indexer = IncrementalIndexer(
-                store=mock_store,
-                embedding_generator=mock_embeddings,
-                project_name="test-project"
-            )
-            await indexer.initialize()
+        callback_calls = []
 
-            callback_calls = []
+        def progress_callback(current, total, current_file, error_info):
+            callback_calls.append({
+                "current": current,
+                "total": total,
+                "file": current_file,
+            })
 
-            def progress_callback(current, total, current_file, error_info):
-                callback_calls.append({
-                    "current": current,
-                    "total": total,
-                    "file": current_file,
-                })
+        result = await indexer.index_directory(
+            tmp_path,
+            recursive=False,
+            show_progress=False,
+            max_concurrent=4,
+            progress_callback=progress_callback,
+        )
 
-            result = await indexer.index_directory(
-                tmp_path,
-                recursive=False,
-                show_progress=False,
-                max_concurrent=4,
-                progress_callback=progress_callback,
-            )
+        # Verify we got callbacks for all files
+        assert len(callback_calls) > 10  # At least one per file (start + completion)
 
-            # Verify we got callbacks for all files
-            assert len(callback_calls) > 10  # At least one per file (start + completion)
+        # Verify total was set
+        assert callback_calls[0]["total"] == 10
 
-            # Verify total was set
-            assert callback_calls[0]["total"] == 10
+        # Verify all files were processed
+        file_names = {c["file"] for c in callback_calls if c["file"]}
+        expected_files = {f"file{i}.py" for i in range(10)}
+        assert file_names == expected_files
 
-            # Verify all files were processed
-            file_names = {c["file"] for c in callback_calls if c["file"]}
-            expected_files = {f"file{i}.py" for i in range(10)}
-            assert file_names == expected_files
-
-            await indexer.close()
+        await indexer.close()
 
     @pytest.mark.asyncio
     async def test_progress_callback_signature(self, tmp_path, mock_call_graph_store):
@@ -377,39 +350,34 @@ class TestIndexingProgressCallback:
         mock_embeddings.batch_generate = AsyncMock(return_value=[[0.1] * 384])
         mock_embeddings.close = AsyncMock()
 
-        with patch('src.memory.incremental_indexer.QdrantCallGraphStore') as MockCallGraphStore:
-            mock_call_graph = AsyncMock()
-            mock_call_graph.initialize = AsyncMock()
-            MockCallGraphStore.return_value = mock_call_graph
+        indexer = IncrementalIndexer(
+            store=mock_store,
+            embedding_generator=mock_embeddings,
+            project_name="test-project"
+        )
+        await indexer.initialize()
 
-            indexer = IncrementalIndexer(
-                store=mock_store,
-                embedding_generator=mock_embeddings,
-                project_name="test-project"
-            )
-            await indexer.initialize()
+        callback_calls = []
 
-            callback_calls = []
+        def progress_callback(current, total, current_file, error_info):
+            # Verify types
+            assert isinstance(current, int)
+            assert isinstance(total, int)
+            assert current_file is None or isinstance(current_file, str)
+            assert error_info is None or isinstance(error_info, dict)
+            callback_calls.append(True)
 
-            def progress_callback(current, total, current_file, error_info):
-                # Verify types
-                assert isinstance(current, int)
-                assert isinstance(total, int)
-                assert current_file is None or isinstance(current_file, str)
-                assert error_info is None or isinstance(error_info, dict)
-                callback_calls.append(True)
+        await indexer.index_directory(
+            tmp_path,
+            recursive=False,
+            show_progress=False,
+            progress_callback=progress_callback,
+        )
 
-            await indexer.index_directory(
-                tmp_path,
-                recursive=False,
-                show_progress=False,
-                progress_callback=progress_callback,
-            )
+        # Verify callback was called with correct types
+        assert len(callback_calls) > 0
 
-            # Verify callback was called with correct types
-            assert len(callback_calls) > 0
-
-            await indexer.close()
+        await indexer.close()
 
 
 class TestIndexCommandProgressDisplay:

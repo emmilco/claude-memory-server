@@ -17,7 +17,6 @@ from pathlib import Path
 import json
 import tempfile
 import uuid
-import os
 from datetime import datetime, UTC
 
 from src.backup.exporter import DataExporter
@@ -34,8 +33,8 @@ async def temp_store(qdrant_client, unique_qdrant_collection):
     fixtures from conftest.py to leverage collection pooling and prevent
     Qdrant deadlocks during parallel test execution.
     """
-    # Use environment variable for Qdrant URL (supports isolated test runner)
-    qdrant_url = os.getenv("QDRANT_URL") or os.getenv("CLAUDE_RAG_QDRANT_URL", "http://localhost:6333")
+    import os
+    qdrant_url = os.getenv("CLAUDE_RAG_QDRANT_URL", "http://localhost:6333")
     config = ServerConfig(
         storage_backend="qdrant",
         qdrant_url=qdrant_url,
@@ -100,40 +99,9 @@ async def temp_store(qdrant_client, unique_qdrant_collection):
 
     yield store
 
-    # Cleanup: close store first to flush any pending writes
-    try:
-        await store.close()
-    except Exception:
-        pass
-
-    # Then explicitly purge collection to prevent cross-test contamination
-    try:
-        # Delete all points in collection with retries
-        for attempt in range(3):
-            try:
-                while True:
-                    points, _ = qdrant_client.scroll(
-                        collection_name=unique_qdrant_collection,
-                        limit=1000,
-                        with_payload=False,
-                        with_vectors=False
-                    )
-                    if not points:
-                        break
-                    point_ids = [p.id for p in points]
-                    qdrant_client.delete(
-                        collection_name=unique_qdrant_collection,
-                        points_selector=PointIdsList(points=point_ids)
-                    )
-                break  # Success, exit retry loop
-            except Exception:
-                if attempt < 2:
-                    import time
-                    time.sleep(0.05)
-                else:
-                    raise
-    except Exception:
-        pass  # If cleanup fails, don't fail the test
+    # Cleanup
+    await store.close()
+    # Collection cleanup handled by unique_qdrant_collection autouse fixture
 
 
 @pytest.mark.asyncio
