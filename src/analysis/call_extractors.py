@@ -61,26 +61,30 @@ class PythonCallExtractor(BaseCallExtractor):
         self.current_class: Optional[str] = None
         
     def extract_calls(
-        self, 
-        file_path: str, 
+        self,
+        file_path: str,
         source_code: str,
         parse_result: Optional[Any] = None
     ) -> List[CallSite]:
         """
         Extract function calls using Python AST.
-        
+
         Handles:
             - Direct calls: func(arg)
             - Method calls: obj.method(arg)
             - Constructor calls: MyClass(arg)
             - Async calls: await func(arg)
         """
+        # Reset state for this file (prevents state leak between files)
+        self.current_class = None
+        self.current_function = None
+
         try:
             tree = ast.parse(source_code)
         except SyntaxError as e:
             logger.warning(f"Syntax error parsing {file_path}: {e}")
             return []
-            
+
         calls = []
         
         # Visit all nodes in AST

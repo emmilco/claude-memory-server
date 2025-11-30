@@ -68,6 +68,12 @@ Organize entries under these headers in chronological order (newest first):
   - Tests: tests/unit/test_query_based_deletion.py (20 tests including enum validation)
 
 ### Fixed - 2025-11-30
+- **BUG-045: Fix call extractor state leak between files**
+  - Reset `self.current_class` and `self.current_function` at start of `extract_calls()` method
+  - Prevents state leak where methods from previous file would be attributed to wrong classes
+  - Instance variables were never reset between file processing, causing cross-file contamination
+  - Files: src/analysis/call_extractors.py
+
 - **REF-012: Fix environment variable handling in Qdrant test fixtures**
   - Updated `test_backup_export.py` temp_store fixture to respect `CLAUDE_RAG_QDRANT_URL` environment variable
   - Updated `test_backup_import.py` temp_store fixture to respect `CLAUDE_RAG_QDRANT_URL` environment variable
