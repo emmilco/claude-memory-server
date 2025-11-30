@@ -118,6 +118,14 @@ Organize entries under these headers in chronological order (newest first):
   - Cache now stores normalized vectors, eliminating double-normalization on cache hits
   - Same text now returns identical vectors regardless of cache state
   - Files: src/embeddings/cache.py
+
+- **BUG-070: Pattern Matcher Line Number Off-By-One Error**
+  - Fixed line number calculation in `get_match_locations()` when match offset is greater than line start position
+  - Changed condition from `if offset > start_pos: line_num = i` to `if offset > start_pos: line_num = i - 1`
+  - Correctly assigns line number to the previous offset boundary when match falls between boundaries
+  - Pattern matches now report accurate line numbers for regex search results
+  - Files: src/search/pattern_matcher.py
+
 - **BUG-066: Integration Test Suite Hangs**
   - Fixed integration tests hanging indefinitely (16+ minutes) in pytest-asyncio contexts
   - Wrapped synchronous QdrantClient.get_collections() in run_in_executor() to prevent event loop blocking
