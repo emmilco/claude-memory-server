@@ -103,6 +103,12 @@ Organize entries under these headers in chronological order (newest first):
   - Cache now stores normalized vectors, eliminating double-normalization on cache hits
   - Same text now returns identical vectors regardless of cache state
   - Files: src/embeddings/cache.py
+
+- **BUG-059: SQLite Connection Not Closed in Cache Error Paths**
+  - Fixed resource leak where SQLite connection was not closed if _initialize_db() failed during table creation
+  - Added nested try/except to properly close connection before disabling cache on initialization errors
+  - Connection cleanup ensures no orphaned database handles on table creation or index creation failures
+  - Files: src/embeddings/cache.py
 - **BUG-066: Integration Test Suite Hangs**
   - Fixed integration tests hanging indefinitely (16+ minutes) in pytest-asyncio contexts
   - Wrapped synchronous QdrantClient.get_collections() in run_in_executor() to prevent event loop blocking
