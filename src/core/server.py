@@ -939,42 +939,42 @@ class MemoryRAGServer(StructuralQueryMixin):
         if self.config.advanced.read_only_mode:
             raise ReadOnlyError("Cannot delete memories in read-only mode")
 
+        # Convert string parameters to enum types if provided (validation happens here, outside try-except)
         try:
-            # Convert string parameters to enum types if provided
-            try:
-                category_enum = MemoryCategory(category.upper()) if category else None
-            except ValueError:
-                raise ValidationError(f"Invalid category: {category}. Valid values: preference, fact, event, workflow, context, code")
+            category_enum = MemoryCategory(category.lower()) if category else None
+        except ValueError:
+            raise ValidationError(f"Invalid category: {category}. Valid values: preference, fact, event, workflow, context, code")
 
-            try:
-                lifecycle_enum = LifecycleState(lifecycle_state.upper()) if lifecycle_state else None
-            except ValueError:
-                raise ValidationError(f"Invalid lifecycle_state: {lifecycle_state}. Valid values: active, recent, archived, stale")
+        try:
+            lifecycle_enum = LifecycleState(lifecycle_state.upper()) if lifecycle_state else None
+        except ValueError:
+            raise ValidationError(f"Invalid lifecycle_state: {lifecycle_state}. Valid values: active, recent, archived, stale")
 
-            try:
-                scope_enum = MemoryScope(scope.upper()) if scope else None
-            except ValueError:
-                raise ValidationError(f"Invalid scope: {scope}. Valid values: global, project, session")
+        try:
+            scope_enum = MemoryScope(scope.lower()) if scope else None
+        except ValueError:
+            raise ValidationError(f"Invalid scope: {scope}. Valid values: global, project, session")
 
-            try:
-                context_level_enum = ContextLevel(context_level.upper()) if context_level else None
-            except ValueError:
-                raise ValidationError(f"Invalid context_level: {context_level}. Valid values: user_preference, project_context, session_state")
+        try:
+            context_level_enum = ContextLevel(context_level.upper()) if context_level else None
+        except ValueError:
+            raise ValidationError(f"Invalid context_level: {context_level}. Valid values: user_preference, project_context, session_state")
 
-            # Build SearchFilters from parameters
-            filters = SearchFilters(
-                category=category_enum,
-                project_name=project_name,
-                tags=tags or [],
-                date_from=date_from,
-                date_to=date_to,
-                min_importance=min_importance,
-                max_importance=max_importance,
-                lifecycle_state=lifecycle_enum,
-                scope=scope_enum,
-                context_level=context_level_enum,
-            )
+        # Build SearchFilters from parameters
+        filters = SearchFilters(
+            category=category_enum,
+            project_name=project_name,
+            tags=tags or [],
+            date_from=date_from,
+            date_to=date_to,
+            min_importance=min_importance,
+            max_importance=max_importance,
+            lifecycle_state=lifecycle_enum,
+            scope=scope_enum,
+            context_level=context_level_enum,
+        )
 
+        try:
             if dry_run:
                 # Preview mode: use list_memories to get matches
                 # Use a high limit to get accurate count (up to max_count)

@@ -82,8 +82,8 @@ class TestQdrantStoreDeleteByFilter:
         """Test deleting by project name."""
         store = QdrantMemoryStore(config=mock_config, use_pool=False)
 
-        # Mock client
-        mock_client = AsyncMock()
+        # Mock client (use MagicMock, not AsyncMock - scroll() is synchronous)
+        mock_client = MagicMock()
         mock_point1 = MagicMock()
         mock_point1.id = sample_memories[0].id
         mock_point1.payload = {
@@ -119,7 +119,7 @@ class TestQdrantStoreDeleteByFilter:
         """Test deleting by category."""
         store = QdrantMemoryStore(config=mock_config, use_pool=False)
 
-        mock_client = AsyncMock()
+        mock_client = MagicMock()
         mock_point = MagicMock()
         mock_point.id = sample_memories[1].id
         mock_point.payload = {
@@ -145,16 +145,19 @@ class TestQdrantStoreDeleteByFilter:
         """Test that max_count is enforced."""
         store = QdrantMemoryStore(config=mock_config, use_pool=False)
 
-        mock_client = AsyncMock()
+        mock_client = MagicMock()
         # Create 5 mock points
-        mock_points = []
+        all_mock_points = []
         for i in range(5):
             point = MagicMock()
             point.id = str(uuid4())
             point.payload = {"category": "code", "project_name": "test", "lifecycle_state": "active"}
-            mock_points.append(point)
+            all_mock_points.append(point)
 
-        mock_client.scroll.return_value = (mock_points, None)
+        # Mock scroll to return only the requested limit (3 in this case)
+        # The function will call scroll with limit=min(100, max_count - len(memories_to_delete))
+        # First call: limit=min(100, 3) = 3, so return first 3 points
+        mock_client.scroll.return_value = (all_mock_points[:3], None)
         mock_client.delete.return_value = MagicMock(status="completed")
 
         with patch.object(store, '_get_client', return_value=mock_client), \
@@ -186,7 +189,7 @@ class TestQdrantStoreDeleteByFilter:
         """Test deleting when no memories match the filter."""
         store = QdrantMemoryStore(config=mock_config, use_pool=False)
 
-        mock_client = AsyncMock()
+        mock_client = MagicMock()
         mock_client.scroll.return_value = ([], None)
 
         with patch.object(store, '_get_client', return_value=mock_client), \
@@ -204,7 +207,7 @@ class TestQdrantStoreDeleteByFilter:
         """Test deleting by tags."""
         store = QdrantMemoryStore(config=mock_config, use_pool=False)
 
-        mock_client = AsyncMock()
+        mock_client = MagicMock()
         mock_point = MagicMock()
         mock_point.id = str(uuid4())
         mock_point.payload = {
@@ -230,7 +233,7 @@ class TestQdrantStoreDeleteByFilter:
         """Test deleting by importance range."""
         store = QdrantMemoryStore(config=mock_config, use_pool=False)
 
-        mock_client = AsyncMock()
+        mock_client = MagicMock()
         mock_point = MagicMock()
         mock_point.id = str(uuid4())
         mock_point.payload = {
@@ -255,7 +258,7 @@ class TestQdrantStoreDeleteByFilter:
         """Test that errors are properly handled."""
         store = QdrantMemoryStore(config=mock_config, use_pool=False)
 
-        mock_client = AsyncMock()
+        mock_client = MagicMock()
         mock_client.scroll.side_effect = Exception("Database error")
 
         with patch.object(store, '_get_client', return_value=mock_client), \
@@ -274,10 +277,11 @@ class TestServerDeleteMemoriesByQuery:
     async def test_dry_run_mode(self, mock_config, sample_memories):
         """Test dry_run mode (preview only)."""
         server = MemoryRAGServer(config=mock_config)
-        server.store = AsyncMock()
 
-        # Mock store.list_memories to return sample memories
-        server.store.list_memories = AsyncMock(return_value=sample_memories[:2])
+        # Mock the store with list_memories method
+        mock_store = AsyncMock()
+        mock_store.list_memories = AsyncMock(return_value=sample_memories[:2])
+        server.store = mock_store
 
         result = await server.delete_memories_by_query(
             project_name="project1",
@@ -295,13 +299,16 @@ class TestServerDeleteMemoriesByQuery:
         """Test actual deletion mode."""
         server = MemoryRAGServer(config=mock_config)
 
-        # Mock store.delete_by_filter
+        # Mock the store
+        mock_store = AsyncMock()
         mock_result = {
             "deleted_count": 2,
             "breakdown_by_category": {"code": 2},
             "breakdown_by_project": {"project1": 2},
             "breakdown_by_lifecycle": {"active": 2}
         }
+        mock_store.delete_by_filter = AsyncMock(return_value=mock_result)
+        server.store = mock_store
 
         with patch.object(server.store, 'delete_by_filter', return_value=mock_result):
             result = await server.delete_memories_by_query(
@@ -343,6 +350,11 @@ class TestServerDeleteMemoriesByQuery:
             updated_at=datetime.now(UTC),
         )
 
+        # Mock the store
+        mock_store = AsyncMock()
+        mock_store.list_memories = AsyncMock(return_value=[high_importance_memory])
+        server.store = mock_store
+
         with patch.object(server.store, 'list_memories', return_value=[high_importance_memory]):
             result = await server.delete_memories_by_query(
                 max_importance=1.0,
@@ -356,6 +368,11 @@ class TestServerDeleteMemoriesByQuery:
     async def test_dry_run_with_multiple_projects_warning(self, mock_config, sample_memories):
         """Test that dry_run warns about multi-project deletion."""
         server = MemoryRAGServer(config=mock_config)
+
+        # Mock the store
+        mock_store = AsyncMock()
+        mock_store.list_memories = AsyncMock(return_value=sample_memories)
+        server.store = mock_store
 
         # Use all sample memories (includes project1 and project2)
         with patch.object(server.store, 'list_memories', return_value=sample_memories):
@@ -387,6 +404,11 @@ class TestServerDeleteMemoriesByQuery:
             for i in range(15)
         ]
 
+        # Mock the store
+        mock_store = AsyncMock()
+        mock_store.list_memories = AsyncMock(return_value=many_memories)
+        server.store = mock_store
+
         with patch.object(server.store, 'list_memories', return_value=many_memories):
             result = await server.delete_memories_by_query(dry_run=True)
 
@@ -403,6 +425,11 @@ class TestServerDeleteMemoriesByQuery:
             "breakdown_by_project": {"project1": 1},
             "breakdown_by_lifecycle": {"active": 1}
         }
+
+        # Mock the store
+        mock_store = AsyncMock()
+        mock_store.delete_by_filter = AsyncMock(return_value=mock_result)
+        server.store = mock_store
 
         with patch.object(server.store, 'delete_by_filter', return_value=mock_result):
             result = await server.delete_memories_by_query(
@@ -429,6 +456,11 @@ class TestServerDeleteMemoriesByQuery:
             "breakdown_by_lifecycle": {"active": 5}
         }
 
+        # Mock the store
+        mock_store = AsyncMock()
+        mock_store.delete_by_filter = AsyncMock(return_value=mock_result)
+        server.store = mock_store
+
         with patch.object(server.store, 'delete_by_filter', return_value=mock_result):
             await server.delete_memories_by_query(
                 project_name="project1",
@@ -441,6 +473,11 @@ class TestServerDeleteMemoriesByQuery:
     async def test_error_propagation(self, mock_config):
         """Test that errors are properly propagated."""
         server = MemoryRAGServer(config=mock_config)
+
+        # Mock the store
+        mock_store = AsyncMock()
+        mock_store.delete_by_filter = AsyncMock(side_effect=Exception("Database error"))
+        server.store = mock_store
 
         with patch.object(server.store, 'delete_by_filter', side_effect=Exception("Database error")):
             with pytest.raises(StorageError, match="Failed to delete memories by query"):
@@ -469,6 +506,11 @@ class TestServerDeleteMemoriesByQuery:
             for i in range(5)
         ]
 
+        # Mock the store
+        mock_store = AsyncMock()
+        mock_store.list_memories = AsyncMock(return_value=memories)
+        server.store = mock_store
+
         with patch.object(server.store, 'list_memories', return_value=memories):
             result = await server.delete_memories_by_query(dry_run=True)
 
@@ -486,6 +528,11 @@ class TestServerDeleteMemoriesByQuery:
             "breakdown_by_project": {"project1": 1},
             "breakdown_by_lifecycle": {"active": 1}
         }
+
+        # Mock the store
+        mock_store = AsyncMock()
+        mock_store.delete_by_filter = AsyncMock(return_value=mock_result)
+        server.store = mock_store
 
         with patch.object(server.store, 'delete_by_filter', return_value=mock_result) as mock_delete:
             # Test lowercase string values (as would come from MCP tool)

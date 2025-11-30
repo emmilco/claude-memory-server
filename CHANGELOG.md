@@ -63,6 +63,7 @@ Organize entries under these headers in chronological order (newest first):
   - Added LifecycleState import to server.py (bug fix)
   - Enhanced MCP tool schema with explicit enum values and case-insensitive documentation
   - Comprehensive error handling for invalid enum values with helpful error messages
+  - Review fixes: Fixed 3 critical enum handling bugs, improved test validation
   - Files: src/store/qdrant_store.py, src/core/server.py, src/mcp_server.py, src/core/models.py
   - Tests: tests/unit/test_query_based_deletion.py (20 tests including enum validation)
 
