@@ -144,9 +144,19 @@ class ResultReranker:
         if not memory.updated_at:
             return 0.5  # Neutral score if no timestamp
 
-        # Time since update
+        # Time since update - normalize both datetimes to UTC to avoid timezone mismatch
         now = datetime.now(timezone.utc)
-        age_seconds = (now - memory.updated_at).total_seconds()
+
+        # Ensure updated_at is timezone-aware (convert if naive)
+        updated_at = memory.updated_at
+        if updated_at.tzinfo is None:
+            # Assume naive datetimes are in UTC
+            updated_at = updated_at.replace(tzinfo=timezone.utc)
+        else:
+            # Convert to UTC if in different timezone
+            updated_at = updated_at.astimezone(timezone.utc)
+
+        age_seconds = (now - updated_at).total_seconds()
         age_days = age_seconds / 86400.0
 
         # Exponential decay: score = 0.5^(age / halflife)
