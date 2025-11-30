@@ -67,6 +67,11 @@ Organize entries under these headers in chronological order (newest first):
   - No consolidation needed - current design is correct
   - Planning document: planning_docs/REF-007_server_consolidation_plan.md
 ### Added - 2025-11-29
+- **TEST-007-G: Add test coverage for alert_engine.py**
+  - Created comprehensive test suite with 30+ tests for alert threshold evaluation, alert generation, storage, retrieval, snoozing, resolution, and cleanup
+  - Tests cover: AlertThreshold dataclass, Alert conversion methods, threshold operators, metric evaluation, severity levels, alert lifecycle, and recommendations
+  - File: tests/unit/monitoring/test_alert_engine.py
+
 - **TEST-007-F: Add test coverage for retrieval_predictor.py (0% → 100%)**
   - Created comprehensive test suite for `src/router/retrieval_predictor.py`
   - Tests cover: initialization, small talk detection, retrieval keyword detection, technical keyword detection, question detection, code marker detection, query length effects, signal extraction, utility computation, explanation generation, case insensitivity, edge cases, realistic queries, and class constants
@@ -83,7 +88,6 @@ Organize entries under these headers in chronological order (newest first):
   - New coverage: DashboardServer class (8 tests), _get_daily_metrics helper (2 tests), _generate_trends edge cases (2 tests), UX-037 time range support (2 tests), additional insights scenarios (2 tests), main() and start_dashboard_server() (12 tests)
   - Tests cover: Server lifecycle, API endpoints, error handling, insights generation, trends data, CLI entry point
   - File: tests/unit/test_web_server.py
-
 - **Service Layer Code Audit: 17 NEW bugs discovered (BUG-055 to BUG-063, REF-038 to REF-044)**
   - Comprehensive 3-agent parallel review of service layer (extracted in REF-013)
   - High priority: Stats race conditions, SQLite leak in feedback DB, path traversal in export
