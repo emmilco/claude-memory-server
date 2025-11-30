@@ -51,6 +51,16 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Changed - 2025-11-30
+- **REF-033: Add Missing Config Range Validators**
+  - Added `@field_validator` decorators for configuration fields that lacked range validation
+  - PerformanceFeatures: Added validators for `gpu_memory_fraction` (0.0-1.0) and `parallel_workers` (>=1)
+  - SearchFeatures: Added validator for `retrieval_gate_threshold` (0.0-1.0)
+  - MemoryFeatures: Added validator for `proactive_suggestions_threshold` (0.0-1.0)
+  - ServerConfig: Added validators for `hybrid_search_alpha` (0.0-1.0), ranking weights (0.0-1.0), `qdrant_pool_size` (>=1), and `qdrant_pool_min_size` (>=0 and <=pool_size)
+  - All validators include descriptive error messages explaining valid ranges and parameter semantics
+  - Files: src/config.py
+
 ### Fixed - 2025-11-30
 - **REF-030: Fix non-atomic counter increments with threading.Lock**
   - Added atomic counter protection for 16 counter increment instances across 6 files

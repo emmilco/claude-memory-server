@@ -46,6 +46,25 @@ class PerformanceFeatures(BaseModel):
     gpu_memory_fraction: float = 0.8  # Max GPU memory to use (0.0-1.0)
     force_cpu: bool = False  # Override GPU detection, use CPU only
 
+    @field_validator('parallel_workers')
+    @classmethod
+    def validate_parallel_workers(cls, v: int) -> int:
+        """Ensure parallel_workers is >= 1."""
+        if v < 1:
+            raise ValueError("parallel_workers must be >= 1")
+        return v
+
+    @field_validator('gpu_memory_fraction')
+    @classmethod
+    def validate_gpu_memory_fraction(cls, v: float) -> float:
+        """Ensure gpu_memory_fraction is between 0.0 and 1.0."""
+        if not 0.0 <= v <= 1.0:
+            raise ValueError(
+                f"gpu_memory_fraction must be between 0.0 and 1.0 "
+                f"(got {v}). This represents the maximum fraction of GPU memory to use."
+            )
+        return v
+
     @field_validator('force_cpu')
     @classmethod
     def validate_gpu_cpu_exclusive(cls, v: bool, info) -> bool:
@@ -73,6 +92,17 @@ class SearchFeatures(BaseModel):
     query_expansion_code_context: bool = True  # Code domain patterns
     query_expansion_max_synonyms: int = 2
     query_expansion_max_context_terms: int = 3
+
+    @field_validator('retrieval_gate_threshold')
+    @classmethod
+    def validate_retrieval_gate_threshold(cls, v: float) -> float:
+        """Ensure retrieval_gate_threshold is between 0.0 and 1.0."""
+        if not 0.0 <= v <= 1.0:
+            raise ValueError(
+                f"retrieval_gate_threshold must be between 0.0 and 1.0 "
+                f"(got {v}). This represents a similarity threshold."
+            )
+        return v
 
 
 class AnalyticsFeatures(BaseModel):
@@ -111,6 +141,17 @@ class MemoryFeatures(BaseModel):
 
     # Archival (REF-011)
     archival_threshold_days: int = 45  # Archive projects inactive for N days
+
+    @field_validator('proactive_suggestions_threshold')
+    @classmethod
+    def validate_proactive_suggestions_threshold(cls, v: float) -> float:
+        """Ensure proactive_suggestions_threshold is between 0.0 and 1.0."""
+        if not 0.0 <= v <= 1.0:
+            raise ValueError(
+                f"proactive_suggestions_threshold must be between 0.0 and 1.0 "
+                f"(got {v}). This represents a confidence threshold."
+            )
+        return v
 
 
 class IndexingFeatures(BaseModel):
@@ -191,6 +232,27 @@ class ServerConfig(BaseSettings):
     qdrant_prefer_grpc: bool = False  # Use gRPC for better performance
     qdrant_health_check_interval: int = 60  # Health check every N seconds
 
+    @field_validator('qdrant_pool_size')
+    @classmethod
+    def validate_qdrant_pool_size(cls, v: int) -> int:
+        """Ensure qdrant_pool_size is >= 1."""
+        if v < 1:
+            raise ValueError("qdrant_pool_size must be >= 1")
+        return v
+
+    @field_validator('qdrant_pool_min_size')
+    @classmethod
+    def validate_qdrant_pool_min_size(cls, v: int, info) -> int:
+        """Ensure qdrant_pool_min_size is >= 0 and <= pool_size."""
+        if v < 0:
+            raise ValueError("qdrant_pool_min_size must be >= 0")
+        pool_size = info.data.get('qdrant_pool_size', 5)
+        if v > pool_size:
+            raise ValueError(
+                f"qdrant_pool_min_size ({v}) must be <= qdrant_pool_size ({pool_size})"
+            )
+        return v
+
     # Performance tuning
     embedding_batch_size: int = 128  # Larger batches for MPS GPU acceleration
     max_query_context_tokens: int = 8000
@@ -234,6 +296,18 @@ class ServerConfig(BaseSettings):
     ranking_weight_recency: float = 0.2
     ranking_weight_usage: float = 0.2
     recency_decay_halflife_days: float = 7.0
+
+    @field_validator('ranking_weight_similarity', 'ranking_weight_recency', 'ranking_weight_usage')
+    @classmethod
+    def validate_ranking_weights(cls, v: float) -> float:
+        """Ensure ranking weights are between 0.0 and 1.0."""
+        if not 0.0 <= v <= 1.0:
+            raise ValueError(
+                f"Ranking weights must be between 0.0 and 1.0 "
+                f"(got {v}). Each weight represents a proportion of total ranking."
+            )
+        return v
+
     conversation_query_history_size: int = 5
     query_expansion_similarity_threshold: float = 0.7
     deduplication_fetch_multiplier: int = 3
@@ -241,6 +315,18 @@ class ServerConfig(BaseSettings):
     git_diff_size_limit_kb: int = 10
     hybrid_search_alpha: float = 0.5
     hybrid_fusion_method: str = "weighted"
+
+    @field_validator('hybrid_search_alpha')
+    @classmethod
+    def validate_hybrid_search_alpha(cls, v: float) -> float:
+        """Ensure hybrid_search_alpha is between 0.0 and 1.0."""
+        if not 0.0 <= v <= 1.0:
+            raise ValueError(
+                f"hybrid_search_alpha must be between 0.0 and 1.0 "
+                f"(got {v}). This represents the balance between BM25 (0.0) and vector search (1.0)."
+            )
+        return v
+
     bm25_k1: float = 1.5
     bm25_b: float = 0.75
     cross_project_opt_in_file: str = "~/.claude-rag/cross_project_consent.json"
