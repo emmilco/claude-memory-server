@@ -52,6 +52,12 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **BUG-052: Fix incorrect median calculation in ImportanceScorer**
+  - Fixed `get_summary_statistics()` method to properly calculate median for even-length lists
+  - Now averages the two middle elements for even-length sorted lists, consistent with statistical definition
+  - Previously only took one middle element, producing incorrect medians
+  - Files: src/analysis/importance_scorer.py
+
 - **BUG-049: Fix timezone mismatch in reranker datetime comparison**
   - Added timezone normalization in `_calculate_recency_score()` method
   - Handles both naive and timezone-aware datetimes by normalizing to UTC

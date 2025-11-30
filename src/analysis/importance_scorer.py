@@ -355,7 +355,14 @@ class ImportanceScorer:
         # Basic statistics
         mean = sum(importances) / len(importances)
         sorted_scores = sorted(importances)
-        median = sorted_scores[len(sorted_scores) // 2]
+
+        # Calculate median: average of middle two for even-length lists
+        n = len(sorted_scores)
+        if n % 2 == 1:
+            median = sorted_scores[n // 2]
+        else:
+            median = (sorted_scores[n // 2 - 1] + sorted_scores[n // 2]) / 2
+
         min_score = min(importances)
         max_score = max(importances)
 
