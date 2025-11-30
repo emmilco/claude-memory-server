@@ -26,6 +26,7 @@ class IndexingService:
         watch_path: Path,
         project_name: Optional[str] = None,
         config: Optional[ServerConfig] = None,
+        indexer: Optional[IncrementalIndexer] = None,
     ):
         """
         Initialize indexing service.
@@ -34,6 +35,9 @@ class IndexingService:
             watch_path: Directory to watch for changes
             project_name: Project name for scoping
             config: Server configuration
+            indexer: Optional existing indexer to reuse. If None, creates a new one.
+                     PERF-009: Pass an existing indexer to avoid creating duplicate
+                     ProcessPoolExecutor instances, which causes memory bloat.
         """
         if config is None:
             config = get_config()
@@ -42,24 +46,34 @@ class IndexingService:
         self.watch_path = Path(watch_path).resolve()
         self.project_name = project_name or self.watch_path.name
 
-        # Create indexer
-        self.indexer = IncrementalIndexer(
-            project_name=self.project_name,
-            config=config,
-        )
+        # PERF-009: Reuse existing indexer if provided, otherwise create new one
+        # This prevents duplicate ProcessPoolExecutor/embedding generator instances
+        if indexer is not None:
+            self.indexer = indexer
+            self._owns_indexer = False  # Don't close it - caller owns it
+            logger.info(f"Indexing service reusing existing indexer for {self.watch_path}")
+        else:
+            self.indexer = IncrementalIndexer(
+                project_name=self.project_name,
+                config=config,
+            )
+            self._owns_indexer = True  # We created it, we close it
+            logger.info(f"Indexing service created new indexer for {self.watch_path}")
 
         # File watcher will be created when starting (needs event loop)
         self.watcher = None
 
         self.is_initialized = False
-        logger.info(f"Indexing service created for {self.watch_path}")
 
     async def initialize(self) -> None:
         """Initialize the service."""
         if self.is_initialized:
             return
 
-        await self.indexer.initialize()
+        # PERF-009: Only initialize indexer if we own it (created it ourselves)
+        # If reusing an existing indexer, it's already initialized
+        if self._owns_indexer:
+            await self.indexer.initialize()
         self.is_initialized = True
         logger.info("Indexing service initialized")
 
@@ -159,7 +173,10 @@ class IndexingService:
     async def close(self) -> None:
         """Clean up resources."""
         await self.stop()
-        await self.indexer.close()
+        # PERF-009: Only close indexer if we own it (created it ourselves)
+        # If reusing an existing indexer, the caller is responsible for closing it
+        if self._owns_indexer:
+            await self.indexer.close()
         logger.info("Indexing service closed")
 
     def __enter__(self):
