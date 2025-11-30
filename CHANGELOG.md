@@ -51,6 +51,7 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+<<<<<<< HEAD
 ### Fixed - 2025-11-30
 - **REF-028-C: Add Exception Chain Preservation (from e)**
   - Added `from e` to 41 raise statements lacking exception chain preservation
@@ -76,6 +77,18 @@ Organize entries under these headers in chronological order (newest first):
   - Moved `await old_task` outside lock to avoid blocking other file changes
   - Files: src/memory/file_watcher.py
 
+||||||| 9fd7178
+=======
+### Fixed - 2025-11-30
+- **REF-028-A: Add Exception Chain Preservation**
+  - Added `from e` clause to all 32 exception raise statements in `src/store/qdrant_store.py`
+  - Preserves original exception traceback when raising custom exceptions
+  - Affected exception types: StorageError, RetrievalError, ValidationError
+  - Pattern changed from `raise CustomError(f"...{e}")` to `raise CustomError(f"...{e}") from e`
+  - Enables proper root cause analysis via `__cause__` attribute in exception chain
+  - Files: src/store/qdrant_store.py
+
+>>>>>>> REF-028-A
 ### Changed - 2025-11-30
 - **REF-033: Add Missing Config Range Validators**
   - Added `@field_validator` decorators for configuration fields that lacked range validation

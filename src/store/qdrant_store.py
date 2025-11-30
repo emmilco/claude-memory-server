@@ -89,7 +89,7 @@ class QdrantMemoryStore(MemoryStore):
                 self.setup.ensure_collection_exists()
                 logger.info("Qdrant store initialized with single client (legacy mode)")
         except Exception as e:
-            raise StorageError(f"Failed to initialize Qdrant store: {e}")
+            raise StorageError(f"Failed to initialize Qdrant store: {e}") from e
 
     async def _get_client(self) -> QdrantClient:
         """Get a Qdrant client (from pool or single client).
@@ -150,15 +150,15 @@ class QdrantMemoryStore(MemoryStore):
         except ValueError as e:
             # Invalid payload structure
             logger.error(f"Invalid payload for storage: {e}", exc_info=True)
-            raise ValidationError(f"Invalid memory payload: {e}")
+            raise ValidationError(f"Invalid memory payload: {e}") from e
         except ConnectionError as e:
             # Connection issues
             logger.error(f"Connection error during store: {e}", exc_info=True)
-            raise StorageError(f"Failed to connect to Qdrant: {e}")
+            raise StorageError(f"Failed to connect to Qdrant: {e}") from e
         except Exception as e:
             # Generic fallback
             logger.error(f"Unexpected error storing memory: {e}", exc_info=True)
-            raise StorageError(f"Failed to store memory: {e}")
+            raise StorageError(f"Failed to store memory: {e}") from e
         finally:
             if client is not None:
                 await self._release_client(client)
@@ -211,22 +211,22 @@ class QdrantMemoryStore(MemoryStore):
 
         except ConnectionError as e:
             logger.error(f"Connection error during retrieval: {e}", exc_info=True)
-            raise RetrievalError(f"Failed to connect to Qdrant: {e}")
+            raise RetrievalError(f"Failed to connect to Qdrant: {e}") from e
         except OSError as e:
             # OSError covers socket errors, connection refused, etc.
             logger.error(f"Network error during retrieval: {e}", exc_info=True)
-            raise RetrievalError(f"Qdrant connection error: {e}")
+            raise RetrievalError(f"Qdrant connection error: {e}") from e
         except ValueError as e:
             logger.error(f"Invalid filter or query: {e}", exc_info=True)
-            raise RetrievalError(f"Invalid search parameters: {e}")
+            raise RetrievalError(f"Invalid search parameters: {e}") from e
         except Exception as e:
             # Check if it's a connection-related error by string matching
             error_str = str(e).lower()
             if any(keyword in error_str for keyword in ['connection', 'refused', 'timeout', 'unreachable', 'qdrant']):
                 logger.error(f"Connection-related error during retrieval: {e}", exc_info=True)
-                raise RetrievalError(f"Failed to connect to Qdrant: {e}")
+                raise RetrievalError(f"Failed to connect to Qdrant: {e}") from e
             logger.error(f"Unexpected error during retrieval: {e}", exc_info=True)
-            raise RetrievalError(f"Failed to retrieve memories from Qdrant: {e}")
+            raise RetrievalError(f"Failed to retrieve memories from Qdrant: {e}") from e
         finally:
             if client is not None:
                 await self._release_client(client)
@@ -247,7 +247,7 @@ class QdrantMemoryStore(MemoryStore):
             return deleted
 
         except Exception as e:
-            raise StorageError(f"Failed to delete memory: {e}")
+            raise StorageError(f"Failed to delete memory: {e}") from e
         finally:
             if client is not None:
                 await self._release_client(client)
@@ -317,7 +317,7 @@ class QdrantMemoryStore(MemoryStore):
 
         except Exception as e:
             logger.error(f"Failed to delete code units for project {project_name}: {e}", exc_info=True)
-            raise StorageError(f"Failed to delete code units: {e}")
+            raise StorageError(f"Failed to delete code units: {e}") from e
         finally:
             if client is not None:
                 await self._release_client(client)
@@ -534,13 +534,13 @@ class QdrantMemoryStore(MemoryStore):
 
         except ValueError as e:
             logger.error(f"Invalid payload in batch: {e}", exc_info=True)
-            raise ValidationError(f"Invalid memory payload in batch: {e}")
+            raise ValidationError(f"Invalid memory payload in batch: {e}") from e
         except ConnectionError as e:
             logger.error(f"Connection error during batch store: {e}", exc_info=True)
-            raise StorageError(f"Failed to connect to Qdrant: {e}")
+            raise StorageError(f"Failed to connect to Qdrant: {e}") from e
         except Exception as e:
             logger.error(f"Unexpected error in batch store: {e}", exc_info=True)
-            raise StorageError(f"Failed to batch store memories: {e}")
+            raise StorageError(f"Failed to batch store memories: {e}") from e
         finally:
             if client is not None:
                 await self._release_client(client)
@@ -721,7 +721,7 @@ class QdrantMemoryStore(MemoryStore):
             return True
 
         except Exception as e:
-            raise StorageError(f"Failed to update memory: {e}")
+            raise StorageError(f"Failed to update memory: {e}") from e
 
         finally:
             if client is not None:
@@ -887,7 +887,7 @@ class QdrantMemoryStore(MemoryStore):
 
         except Exception as e:
             logger.error(f"Error listing memories: {e}", exc_info=True)
-            raise StorageError(f"Failed to list memories: {e}")
+            raise StorageError(f"Failed to list memories: {e}") from e
 
         finally:
             if client is not None:
@@ -995,7 +995,7 @@ class QdrantMemoryStore(MemoryStore):
 
         except Exception as e:
             logger.error(f"Error getting indexed files: {e}", exc_info=True)
-            raise StorageError(f"Failed to get indexed files: {e}")
+            raise StorageError(f"Failed to get indexed files: {e}") from e
 
         finally:
             if client is not None:
@@ -1128,7 +1128,7 @@ class QdrantMemoryStore(MemoryStore):
 
         except Exception as e:
             logger.error(f"Error listing indexed units: {e}", exc_info=True)
-            raise StorageError(f"Failed to list indexed units: {e}")
+            raise StorageError(f"Failed to list indexed units: {e}") from e
 
         finally:
             if client is not None:
@@ -1598,7 +1598,7 @@ class QdrantMemoryStore(MemoryStore):
 
         except Exception as e:
             logger.error(f"Error getting all projects: {e}", exc_info=True)
-            raise StorageError(f"Failed to get projects: {e}")
+            raise StorageError(f"Failed to get projects: {e}") from e
 
         finally:
             if client is not None:
@@ -1695,7 +1695,7 @@ class QdrantMemoryStore(MemoryStore):
 
         except Exception as e:
             logger.error(f"Error getting project stats for {project_name}: {e}", exc_info=True)
-            raise StorageError(f"Failed to get project stats: {e}")
+            raise StorageError(f"Failed to get project stats: {e}") from e
 
         finally:
             if client is not None:
@@ -1753,7 +1753,7 @@ class QdrantMemoryStore(MemoryStore):
 
         except Exception as e:
             logger.error(f"Failed to update usage tracking: {e}", exc_info=True)
-            raise StorageError(f"Failed to update usage tracking: {e}")
+            raise StorageError(f"Failed to update usage tracking: {e}") from e
 
         finally:
             if client is not None:
@@ -1817,7 +1817,7 @@ class QdrantMemoryStore(MemoryStore):
 
         except Exception as e:
             logger.error(f"Failed to batch update usage tracking: {e}", exc_info=True)
-            raise StorageError(f"Failed to batch update usage tracking: {e}")
+            raise StorageError(f"Failed to batch update usage tracking: {e}") from e
 
         finally:
             if client is not None:
@@ -2335,7 +2335,7 @@ class QdrantMemoryStore(MemoryStore):
 
         except Exception as e:
             logger.error(f"Error bulk updating context level: {e}", exc_info=True)
-            raise StorageError(f"Failed to bulk update context level: {e}")
+            raise StorageError(f"Failed to bulk update context level: {e}") from e
 
         finally:
             if client is not None:
@@ -2426,7 +2426,7 @@ class QdrantMemoryStore(MemoryStore):
 
         except Exception as e:
             logger.error(f"Error finding duplicate memories: {e}", exc_info=True)
-            raise StorageError(f"Failed to find duplicates: {e}")
+            raise StorageError(f"Failed to find duplicates: {e}") from e
 
         finally:
             if client is not None:
@@ -2651,15 +2651,15 @@ class QdrantMemoryStore(MemoryStore):
 
         except Exception as e:
             logger.error(f"Error retrieving recent activity: {e}", exc_info=True)
-            raise StorageError(f"Failed to retrieve recent activity: {e}")
-
-    # ============================================================
-    # Git History Storage and Search (FEAT-055)
-    # ============================================================
+            raise StorageError(f"Failed to retrieve recent activity: {e}") from e
 
         finally:
             if client is not None:
                 await self._release_client(client)
+
+    # ============================================================
+    # Git History Storage and Search (FEAT-055)
+    # ============================================================
 
     async def store_git_commits(
         self,
@@ -2752,7 +2752,7 @@ class QdrantMemoryStore(MemoryStore):
 
         except Exception as e:
             logger.error(f"Error storing git commits: {e}", exc_info=True)
-            raise StorageError(f"Failed to store git commits: {e}")
+            raise StorageError(f"Failed to store git commits: {e}") from e
 
         finally:
             if client is not None:
@@ -2833,7 +2833,7 @@ class QdrantMemoryStore(MemoryStore):
 
         except Exception as e:
             logger.error(f"Error storing git file changes: {e}", exc_info=True)
-            raise StorageError(f"Failed to store git file changes: {e}")
+            raise StorageError(f"Failed to store git file changes: {e}") from e
 
         finally:
             if client is not None:
@@ -2965,7 +2965,7 @@ class QdrantMemoryStore(MemoryStore):
 
         except Exception as e:
             logger.error(f"Error searching git commits: {e}", exc_info=True)
-            raise StorageError(f"Failed to search git commits: {e}")
+            raise StorageError(f"Failed to search git commits: {e}") from e
 
         finally:
             if client is not None:
@@ -3017,7 +3017,7 @@ class QdrantMemoryStore(MemoryStore):
 
         except Exception as e:
             logger.error(f"Error retrieving git commit {commit_hash}: {e}", exc_info=True)
-            raise StorageError(f"Failed to retrieve git commit: {e}")
+            raise StorageError(f"Failed to retrieve git commit: {e}") from e
 
         finally:
             if client is not None:
@@ -3114,7 +3114,7 @@ class QdrantMemoryStore(MemoryStore):
 
         except Exception as e:
             logger.error(f"Error getting commits by file {file_path}: {e}", exc_info=True)
-            raise StorageError(f"Failed to get commits by file: {e}")
+            raise StorageError(f"Failed to get commits by file: {e}") from e
 
         finally:
             if client is not None:
