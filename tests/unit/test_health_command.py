@@ -7,6 +7,7 @@ import shutil
 from pathlib import Path
 from unittest.mock import Mock, patch, AsyncMock, MagicMock
 from src.cli.health_command import HealthCommand
+from conftest import mock_embedding
 
 
 class TestHealthCommandInitialization:
@@ -245,7 +246,7 @@ class TestEmbeddingChecks:
 
         with patch('src.embeddings.generator.EmbeddingGenerator') as mock_gen:
             mock_instance = AsyncMock()
-            mock_instance.generate = AsyncMock(return_value=[0.1] * 384)
+            mock_instance.generate = AsyncMock(return_value=mock_embedding(value=0.1))
             mock_gen.return_value = mock_instance
 
             with patch('src.config.get_config') as mock_config:

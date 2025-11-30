@@ -25,6 +25,7 @@ from src.core.models import (
     MemoryScope,
 )
 from src.core.exceptions import (
+from conftest import mock_embedding
     StorageError,
     ValidationError,
     ReadOnlyError,
@@ -253,7 +254,7 @@ class TestStoreMemory:
         store.store = AsyncMock(return_value="mem_123")
 
         embedding_generator = AsyncMock()
-        embedding_generator.generate = AsyncMock(return_value=[0.1] * 384)
+        embedding_generator.generate = AsyncMock(return_value=mock_embedding(value=0.1))
 
         embedding_cache = AsyncMock()
         embedding_cache.get = AsyncMock(return_value=None)
@@ -316,7 +317,7 @@ class TestStoreMemory:
     @pytest.mark.asyncio
     async def test_store_memory_uses_cache(self, service):
         """Test embedding cache is checked before generation."""
-        service.embedding_cache.get = AsyncMock(return_value=[0.2] * 384)
+        service.embedding_cache.get = AsyncMock(return_value=mock_embedding(value=0.2))
 
         await service.store_memory(content="Cached content", category="fact")
 
@@ -355,7 +356,7 @@ class TestRetrieveMemories:
         store.retrieve = AsyncMock(return_value=[(test_memory, 0.85)])
 
         embedding_generator = AsyncMock()
-        embedding_generator.generate = AsyncMock(return_value=[0.1] * 384)
+        embedding_generator.generate = AsyncMock(return_value=mock_embedding(value=0.1))
 
         embedding_cache = AsyncMock()
         embedding_cache.get = AsyncMock(return_value=None)
@@ -528,7 +529,7 @@ class TestUpdateMemory:
         store.update = AsyncMock(return_value=True)
 
         embedding_generator = AsyncMock()
-        embedding_generator.generate = AsyncMock(return_value=[0.1] * 384)
+        embedding_generator.generate = AsyncMock(return_value=mock_embedding(value=0.1))
 
         return MemoryService(
             store=store,
@@ -890,7 +891,7 @@ class TestImportMemories:
         store.store = AsyncMock(return_value="new_mem")
 
         embedding_generator = AsyncMock()
-        embedding_generator.generate = AsyncMock(return_value=[0.1] * 384)
+        embedding_generator.generate = AsyncMock(return_value=mock_embedding(value=0.1))
 
         return MemoryService(
             store=store,
@@ -972,7 +973,7 @@ class TestSpecializedRetrieval:
         store.retrieve = AsyncMock(return_value=[(test_memory, 0.85)])
 
         embedding_generator = AsyncMock()
-        embedding_generator.generate = AsyncMock(return_value=[0.1] * 384)
+        embedding_generator.generate = AsyncMock(return_value=mock_embedding(value=0.1))
 
         embedding_cache = AsyncMock()
         embedding_cache.get = AsyncMock(return_value=None)
@@ -1083,7 +1084,7 @@ class TestEmbeddingCaching:
         embedding_cache.set = AsyncMock()
 
         embedding_generator = AsyncMock()
-        embedding_generator.generate = AsyncMock(return_value=[0.1] * 384)
+        embedding_generator.generate = AsyncMock(return_value=mock_embedding(value=0.1))
 
         return MemoryService(
             store=AsyncMock(),
@@ -1107,7 +1108,7 @@ class TestEmbeddingCaching:
     @pytest.mark.asyncio
     async def test_cache_hit_returns_cached(self, service):
         """Test cache hit returns cached embedding."""
-        cached_embedding = [0.2] * 384
+        cached_embedding = mock_embedding(value=0.2)
         service.embedding_cache.get = AsyncMock(return_value=cached_embedding)
 
         result = await service._get_embedding("cached text")

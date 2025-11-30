@@ -51,6 +51,15 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Changed - 2025-11-30
+- **REF-106: Hardcoded 384-Dimension Embedding Vectors in Tests**
+  - Added `TEST_EMBEDDING_DIM` constant to `tests/conftest.py` (defaults to 768 from `src.config.DEFAULT_EMBEDDING_DIM`)
+  - Added `mock_embedding(dim=None, value=0.1)` helper function for creating test embedding vectors
+  - Replaced 156+ hardcoded `[0.1] * 384` patterns across 25+ test files with `mock_embedding()` calls
+  - Updated comments referencing "384 dimensions" or "MiniLM-L6" to reflect current default model (all-mpnet-base-v2, 768-dim)
+  - Tests now automatically adapt to embedding dimension changes in config
+  - Files: tests/conftest.py, 23 test files in tests/unit/ and tests/integration/
+
 ### Added - 2025-11-30
 - **REF-025: Complete Stub Implementations**
   - Implemented JavaScript/TypeScript call extraction using tree-sitter parser

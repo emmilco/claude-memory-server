@@ -18,6 +18,7 @@ from src.store.qdrant_store import QdrantMemoryStore
 from src.core.server import MemoryRAGServer
 from src.core.exceptions import ValidationError
 from src.config import ServerConfig
+from conftest import mock_embedding
 
 
 @pytest_asyncio.fixture
@@ -41,7 +42,7 @@ async def sample_dependency_graph(qdrant_store):
     # File A -> imports B and C
     await qdrant_store.store(
         content="from utils import helper\nfrom models import User",
-        embedding=[0.1] * 384,
+        embedding=mock_embedding(value=0.1),
         metadata={
             "id": "00000000-0000-0000-0000-000000000001",
             "category": "context",  # Code is stored as context
@@ -66,7 +67,7 @@ async def sample_dependency_graph(qdrant_store):
     # File B (utils.py)
     await qdrant_store.store(
         content="def helper(): pass",
-        embedding=[0.2] * 384,
+        embedding=mock_embedding(value=0.2),
         metadata={
             "id": "00000000-0000-0000-0000-000000000002",
             "category": "context",
@@ -91,7 +92,7 @@ async def sample_dependency_graph(qdrant_store):
     # File C (models.py)
     await qdrant_store.store(
         content="class User: pass",
-        embedding=[0.3] * 384,
+        embedding=mock_embedding(value=0.3),
         metadata={
             "id": "00000000-0000-0000-0000-000000000003",
             "category": "context",
@@ -116,7 +117,7 @@ async def sample_dependency_graph(qdrant_store):
     # File D (JavaScript file for language filtering tests)
     await qdrant_store.store(
         content="const test = require('./lib')",
-        embedding=[0.4] * 384,
+        embedding=mock_embedding(value=0.4),
         metadata={
             "id": "00000000-0000-0000-0000-000000000004",
             "category": "context",
@@ -141,7 +142,7 @@ async def sample_dependency_graph(qdrant_store):
     # File E (lib.js)
     await qdrant_store.store(
         content="module.exports = {}",
-        embedding=[0.5] * 384,
+        embedding=mock_embedding(value=0.5),
         metadata={
             "id": "00000000-0000-0000-0000-000000000005",
             "category": "context",
@@ -172,7 +173,7 @@ async def circular_dependency_graph(qdrant_store):
     # A -> B -> C -> A (circular)
     await qdrant_store.store(
         content="from b import func_b",
-        embedding=[0.1] * 384,
+        embedding=mock_embedding(value=0.1),
         metadata={
             "id": "00000000-0000-0000-0000-000000000011",
             "category": "context",
@@ -192,7 +193,7 @@ async def circular_dependency_graph(qdrant_store):
 
     await qdrant_store.store(
         content="from c import func_c",
-        embedding=[0.2] * 384,
+        embedding=mock_embedding(value=0.2),
         metadata={
             "id": "00000000-0000-0000-0000-000000000012",
             "category": "context",
@@ -212,7 +213,7 @@ async def circular_dependency_graph(qdrant_store):
 
     await qdrant_store.store(
         content="from a import func_a",
-        embedding=[0.3] * 384,
+        embedding=mock_embedding(value=0.3),
         metadata={
             "id": "00000000-0000-0000-0000-000000000013",
             "category": "context",

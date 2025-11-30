@@ -14,6 +14,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from src.services.cross_project_service import CrossProjectService
 from src.config import ServerConfig
 from src.core.exceptions import RetrievalError
+from conftest import mock_embedding
 
 
 class TestCrossProjectServiceInit:
@@ -101,7 +102,7 @@ class TestSearchAllProjectsWithConsent:
         consent.get_opted_in_projects.return_value = ["project1", "project2"]
 
         embedding_generator = AsyncMock()
-        embedding_generator.generate = AsyncMock(return_value=[0.1] * 384)
+        embedding_generator.generate = AsyncMock(return_value=mock_embedding(value=0.1))
 
         return CrossProjectService(
             store=AsyncMock(),
@@ -472,7 +473,7 @@ class TestConsentManagerIntegration:
 
         # Now configure consent to return the opted-in project
         service_with_consent.consent.get_opted_in_projects.return_value = ["new-project"]
-        service_with_consent.embedding_generator.generate = AsyncMock(return_value=[0.1] * 384)
+        service_with_consent.embedding_generator.generate = AsyncMock(return_value=mock_embedding(value=0.1))
 
         # Search should work
         with patch("src.memory.multi_repository_search.MultiRepositorySearcher") as MockSearcher:
@@ -488,7 +489,7 @@ class TestConsentManagerIntegration:
         """Test opting out removes project from search."""
         # Initial state: project is opted in
         service_with_consent.consent.get_opted_in_projects.return_value = ["project1"]
-        service_with_consent.embedding_generator.generate = AsyncMock(return_value=[0.1] * 384)
+        service_with_consent.embedding_generator.generate = AsyncMock(return_value=mock_embedding(value=0.1))
 
         # Opt out
         await service_with_consent.opt_out_cross_project("project1")
@@ -513,7 +514,7 @@ class TestEdgeCases:
         consent.opt_out = MagicMock()
 
         embedding_generator = AsyncMock()
-        embedding_generator.generate = AsyncMock(return_value=[0.1] * 384)
+        embedding_generator.generate = AsyncMock(return_value=mock_embedding(value=0.1))
 
         return CrossProjectService(
             store=MagicMock(),

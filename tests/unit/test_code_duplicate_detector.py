@@ -77,7 +77,7 @@ class TestCodeDuplicateDetector:
 
         # Generate random embeddings (simulating real code)
         np.random.seed(42)
-        embeddings = np.random.randn(5, 384)  # 5 units, 384-dim embeddings
+        embeddings = np.random.randn(5, 768)  # 5 units, 768-dim embeddings
 
         similarity_matrix = detector.calculate_similarity_matrix(embeddings)
 

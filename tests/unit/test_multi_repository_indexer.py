@@ -19,6 +19,7 @@ from src.memory.repository_registry import (
 )
 from src.memory.workspace_manager import Workspace, WorkspaceManager
 from src.memory.incremental_indexer import IncrementalIndexer
+from conftest import mock_embedding
 
 
 # ============================================================================
@@ -112,7 +113,7 @@ async def mock_embedding_generator():
     generator = AsyncMock()
     generator.initialize = AsyncMock()
     generator.close = AsyncMock()
-    generator.batch_generate = AsyncMock(return_value=[[0.1] * 384])
+    generator.batch_generate = AsyncMock(return_value=[mock_embedding(value=0.1)])
     return generator
 
 

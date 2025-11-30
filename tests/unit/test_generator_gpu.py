@@ -5,6 +5,7 @@ from unittest.mock import Mock, patch, MagicMock, AsyncMock
 
 from src.embeddings.generator import EmbeddingGenerator
 from src.config import ServerConfig
+from conftest import mock_embedding
 
 
 class TestGeneratorGpuSupport:
@@ -160,7 +161,7 @@ class TestGeneratorGpuSupport:
              patch("src.embeddings.generator.RustBridge.batch_normalize") as mock_normalize:
 
             # Setup normalize to return proper format
-            mock_normalize.return_value = [[0.1] * 384]
+            mock_normalize.return_value = [mock_embedding(value=0.1)]
 
             generator = EmbeddingGenerator(config)
 
