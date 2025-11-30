@@ -109,6 +109,9 @@ class MemoryFeatures(BaseModel):
     proactive_suggestions: bool = True  # Analyze messages for context patterns
     proactive_suggestions_threshold: float = 0.90
 
+    # Archival (REF-011)
+    archival_threshold_days: int = 45  # Archive projects inactive for N days
+
 
 class IndexingFeatures(BaseModel):
     """Code indexing features."""
