@@ -40,6 +40,13 @@ except ImportError:
 # Import modern server implementation
 from src.core.server import MemoryRAGServer
 from src.config import get_config
+from src.core.exceptions import (
+    ValidationError,
+    StorageError,
+    RetrievalError,
+    EmbeddingError,
+    MemoryRAGError,
+)
 
 # Initialize MCP server
 app = Server("claude-memory-rag")
@@ -1543,9 +1550,60 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
         else:
             return [TextContent(type="text", text=f"Unknown tool: {name}")]
 
+    except ValidationError as e:
+        """Catch validation errors and preserve error code and solution."""
+        logger.exception(f"Validation error in tool call: {name}")
+        error_msg = f"[{e.error_code}] Validation Error: {str(e)}"
+        if hasattr(e, 'solution') and e.solution:
+            error_msg += f"\n\nSolution: {e.solution}"
+        if hasattr(e, 'docs_url') and e.docs_url:
+            error_msg += f"\nDocs: {e.docs_url}"
+        return [TextContent(type="text", text=error_msg)]
+
+    except StorageError as e:
+        """Catch storage errors and preserve error code and solution."""
+        logger.exception(f"Storage error in tool call: {name}")
+        error_msg = f"[{e.error_code}] Storage Error: {str(e)}"
+        if hasattr(e, 'solution') and e.solution:
+            error_msg += f"\n\nSolution: {e.solution}"
+        if hasattr(e, 'docs_url') and e.docs_url:
+            error_msg += f"\nDocs: {e.docs_url}"
+        return [TextContent(type="text", text=error_msg)]
+
+    except RetrievalError as e:
+        """Catch retrieval errors and preserve error code and solution."""
+        logger.exception(f"Retrieval error in tool call: {name}")
+        error_msg = f"[{e.error_code}] Retrieval Error: {str(e)}"
+        if hasattr(e, 'solution') and e.solution:
+            error_msg += f"\n\nSolution: {e.solution}"
+        if hasattr(e, 'docs_url') and e.docs_url:
+            error_msg += f"\nDocs: {e.docs_url}"
+        return [TextContent(type="text", text=error_msg)]
+
+    except EmbeddingError as e:
+        """Catch embedding errors and preserve error code and solution."""
+        logger.exception(f"Embedding error in tool call: {name}")
+        error_msg = f"[{e.error_code}] Embedding Error: {str(e)}"
+        if hasattr(e, 'solution') and e.solution:
+            error_msg += f"\n\nSolution: {e.solution}"
+        if hasattr(e, 'docs_url') and e.docs_url:
+            error_msg += f"\nDocs: {e.docs_url}"
+        return [TextContent(type="text", text=error_msg)]
+
+    except MemoryRAGError as e:
+        """Catch other MemoryRAG errors and preserve error code and solution."""
+        logger.exception(f"MemoryRAG error in tool call: {name}")
+        error_msg = f"[{e.error_code}] Error: {str(e)}"
+        if hasattr(e, 'solution') and e.solution:
+            error_msg += f"\n\nSolution: {e.solution}"
+        if hasattr(e, 'docs_url') and e.docs_url:
+            error_msg += f"\nDocs: {e.docs_url}"
+        return [TextContent(type="text", text=error_msg)]
+
     except Exception as e:
-        logger.exception(f"Error handling tool call: {name}")
-        return [TextContent(type="text", text=f"Error: {str(e)}")]
+        """Catch all remaining exceptions as fallback."""
+        logger.exception(f"Unexpected error handling tool call: {name}")
+        return [TextContent(type="text", text=f"Unexpected Error: {str(e)}")]
 
 
 async def _startup_health_check(config, memory_server) -> bool:

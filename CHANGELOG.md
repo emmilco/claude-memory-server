@@ -85,6 +85,14 @@ Organize entries under these headers in chronological order (newest first):
   - Backward-compatible: hardcoded defaults are used if not overridden in config
 
 ### Fixed - 2025-11-30
+- **BUG-150: Generic Exception Catch Loses Error Context at MCP Layer**
+  - Replaced single catch-all `except Exception as e` handler with specific handlers for ValidationError, StorageError, RetrievalError, EmbeddingError, and MemoryRAGError
+  - Now preserves error_code, solution, and docs_url fields from custom exceptions in MCP responses
+  - Each custom exception type gets its own handler that formats the error response with structured context information
+  - Maintains fallback Exception handler for unexpected errors
+  - Improves error diagnostics and user guidance when MCP tool calls fail
+  - File: src/mcp_server.py (call_tool function)
+
 - **BUG-060: Cache Statistics Reset Without Holding Counter Lock**
   - Fixed race condition in `clear()` method that reset hit/miss counters without acquiring `_counter_lock`
   - Added lock acquisition around counter reset in `_clear_sync()` to ensure atomic operations
