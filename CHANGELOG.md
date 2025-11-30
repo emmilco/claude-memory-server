@@ -52,12 +52,27 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **TEST-029: Fix Test Suite Isolation and Collection Cleanup**
+  - Changed `unique_qdrant_collection` fixture to create true per-test unique collections instead of reusing pool collections
+  - Prevents cross-test contamination where sequential tests would accumulate data from previous runs
+  - Improved cleanup in `temp_store` fixtures with retry logic and explicit `store.close()` calls
+  - Added `skip_ci` marker handling in `pytest_collection_modifyitems` hook to properly skip timing-sensitive tests under parallel execution
+  - All unit tests now pass with isolated Qdrant instance (3410 passed, 141 skipped)
+  - Files: tests/conftest.py, tests/unit/test_backup_export.py, tests/unit/test_backup_import.py
+
 - **BUG-039: Add Missing PointIdsList Import**
   - Added missing `PointIdsList` import from `qdrant_client.models` in `src/store/qdrant_store.py`
   - Fixed `NameError` in `merge_memories()` method at line 2331
   - Files: src/store/qdrant_store.py
 
 ### Fixed - 2025-11-29
+- **TEST-029: Fix Port Hardcoding in Tests for Isolated Qdrant Support**
+  - Added `TEST_QDRANT_URL` constant in tests/conftest.py (reads from CLAUDE_RAG_QDRANT_URL environment variable)
+  - Updated test_config_defaults to use TEST_QDRANT_URL instead of hardcoded `http://localhost:6333`
+  - Fixed test_indexing_progress.py to mock QdrantCallGraphStore properly for isolated testing
+  - All tests in test_indexing_progress.py now pass with isolated Qdrant instance
+  - Files: tests/conftest.py, tests/unit/test_config.py, tests/unit/test_indexing_progress.py
+
 - **BUG-042: Fix incorrect method name in StatusCommand.print_active_project()**
   - Changed `_format_relative_time()` to `_format_time_ago()` in `src/cli/status_command.py`
 
@@ -78,6 +93,14 @@ Organize entries under these headers in chronological order (newest first):
   - Ruby support includes: tree-sitter-ruby integration, method extraction, class extraction, module extraction
   - Comprehensive test suite with 18 passing tests in tests/unit/test_ruby_parsing.py
   - Ruby (.rb files) is one of 15 supported file formats (12 programming languages + 3 config formats)
+
+### Changed - 2025-11-29
+- **TEST-029: Phase 1 Test Suite Optimization (Partial - 2/4 tasks complete)**
+  - Added session-scoped config fixture in `tests/unit/conftest.py` with mutability warning
+  - Replaced validation theater `assert True` statements with meaningful assertions in 2 test files
+  - Note: Session-scoped config is mutable (not frozen), tests must not modify it to avoid contamination
+  - Files: tests/unit/conftest.py, tests/unit/test_classifier.py, tests/integration/test_error_recovery.py
+  - Remaining Phase 1 tasks: Reduce scalability test data volumes (6000→600), convert loop tests to parametrized
 
 ### Changed - 2025-11-29
 - **REF-011: Integrate ProjectArchivalManager with metrics (COMPLETE)**

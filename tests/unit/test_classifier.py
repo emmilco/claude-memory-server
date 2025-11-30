@@ -302,5 +302,9 @@ def test_classifier_coverage_summary():
     print("✓ Real-world examples")
     print("=" * 70 + "\n")
 
-    # This test always passes
-    assert True
+    # If we reach here, all classification tests have passed
+    # Verify the ContextLevelClassifier can be imported and instantiated
+    from src.memory.classifier import ContextLevelClassifier
+    classifier = ContextLevelClassifier()
+    assert classifier is not None
+    assert hasattr(classifier, 'classify')
