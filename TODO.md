@@ -474,71 +474,31 @@
 
 ### 🟢 Medium Priority - Tech Debt and Code Quality
 
-- [ ] **REF-021**: Move Hardcoded Thresholds to Config (~2-3 days) 🔥
-  - **Locations:**
-    - `src/memory/duplicate_detector.py:74-76` - Similarity thresholds (0.95, 0.85, 0.75)
-    - `src/memory/incremental_indexer.py:622,658,802` - Limit 10000
-    - `src/memory/health_jobs.py:265` - Usage threshold `use_count > 5`
-    - `src/search/reranker.py:210-222` - Content length bounds (100, 500, 1000)
-    - `src/analysis/quality_analyzer.py:105-115` - Complexity thresholds
-  - **Problem:** 30+ hardcoded values make tuning require code changes
-  - **Impact:** Cannot optimize for different deployment scales without code modification
-  - **Fix:** Add to ServerConfig with sensible defaults
-  - **Discovered:** 2025-11-29 comprehensive code review
+- [x] **REF-021**: Move Hardcoded Thresholds to Config ✅ FIXED (2025-11-30)
+  - Added QualityThresholds config class with 24 configurable fields
+  - Updated duplicate_detector, incremental_indexer, health_jobs, reranker, quality_analyzer
 
-- [ ] **REF-022**: Fix Inconsistent Error Handling Patterns (~1-2 days)
-  - **Locations:**
-    - `src/services/query_service.py` - Returns error dicts instead of raising
-    - `src/services/analytics_service.py` - Different response structure for disabled
-    - `src/services/cross_project_service.py:153-155` - Swallows all exceptions in loop
-  - **Problem:** Mix of return dicts vs raising exceptions, inconsistent response formats
-  - **Impact:** Callers don't know what to expect, debugging difficult
-  - **Fix:** Standardize on exception-based error handling with consistent response format
-  - **Discovered:** 2025-11-29 comprehensive code review
+- [x] **REF-022**: Fix Inconsistent Error Handling Patterns ✅ FIXED (2025-11-30)
+  - Standardized on exception-based error handling in services layer
+  - Updated query_service, analytics_service, cross_project_service
 
-- [ ] **REF-023**: Remove Defensive hasattr() Patterns (~1 day)
-  - **Locations:**
-    - `src/services/memory_service.py:569-578, 1033-1042, 1260-1262`
-    - `src/store/qdrant_store.py` - Throughout payload building
-  - **Problem:** Extensive `hasattr(x, 'value')` checks suggest unstable data models
-  - **Impact:** Code smell, maintenance burden, masks real type issues
-  - **Fix:** Fix root cause in data model - ensure consistent types from store
-  - **Discovered:** 2025-11-29 comprehensive code review
+- [x] **REF-023**: Remove Defensive hasattr() Patterns ✅ FIXED (2025-11-30)
+  - Fixed enum normalization in qdrant_store._build_payload()
+  - Removed 35 defensive hasattr() checks across services and store
 
-- [ ] **REF-024**: Fix Race Conditions in File Watcher Debounce (~1 day)
-  - **Location:** `src/memory/file_watcher.py:254-273`
-  - **Problem:** Lock released between reading and modifying `debounce_task`
-  - **Impact:** Orphaned tasks or incorrect cancellation under high concurrency
-  - **Fix:** Hold lock through entire operation or use atomic task swap
-  - **Discovered:** 2025-11-29 comprehensive code review
+- [x] **REF-024**: Fix Race Conditions in File Watcher Debounce ✅ FIXED (2025-11-30)
+  - Fixed lock handling in `_debounce_callback()` to hold lock through entire operation
 
-- [ ] **REF-025**: Complete Stub Implementations (~2-3 days)
-  - **Locations:**
-    - `src/memory/health_jobs.py:371-380` - `_store_health_score()` is no-op
-    - `src/memory/health_scorer.py:227-271` - `_calculate_contradiction_rate()` always returns 0.02
-    - `src/analysis/call_extractors.py:223-245` - JavaScript extractor returns empty
-  - **Problem:** Methods advertised but not implemented
-  - **Impact:** Features don't work as documented, metrics are meaningless
-  - **Fix:** Implement or clearly mark as unsupported
-  - **Discovered:** 2025-11-29 comprehensive code review
+- [x] **REF-025**: Complete Stub Implementations ✅ FIXED (2025-11-30)
+  - Implemented JavaScript/TypeScript call extractor (267 lines)
+  - Marked _store_health_score() and _calculate_contradiction_rate() as unsupported
 
-- [ ] **REF-026**: Fix Memory Leak Risks in Large Dataset Operations (~1-2 days)
-  - **Locations:**
-    - `src/memory/health_scorer.py:156-195` - Loads all memories without pagination
-    - `src/analysis/code_duplicate_detector.py:125-176` - O(N²) matrix without size check
-  - **Problem:** No memory bounds on large operations
-  - **Impact:** OOM on large codebases/memory stores
-  - **Fix:** Add pagination or size validation with early rejection
-  - **Discovered:** 2025-11-29 comprehensive code review
+- [x] **REF-026**: Fix Memory Leak Risks in Large Dataset Operations ✅ FIXED (2025-11-30)
+  - Added pagination to health_scorer.py (50K limit, 5K batch size)
+  - Added size checks to code_duplicate_detector.py (10K limit for O(N²) ops)
 
-- [ ] **REF-027**: Add Missing Timeout Handling for Async Operations (~1 day)
-  - **Locations:**
-    - `src/embeddings/cache.py:124, 200, 274` - No timeout on `asyncio.to_thread()`
-    - `src/services/` - All store calls lack timeouts
-  - **Problem:** Hung operations block entire pipeline
-  - **Impact:** Single stuck query can freeze embedding/search pipeline
-  - **Fix:** Add `asyncio.timeout()` wrapper with configurable timeouts
-  - **Discovered:** 2025-11-29 comprehensive code review
+- [x] **REF-027**: Add Missing Timeout Handling for Async Operations ✅ FIXED (2025-11-30)
+  - Added asyncio.timeout(30.0) to embeddings cache (5 calls) and services layer (34 calls)
 
 - [x] **BUG-052**: Incorrect Median Calculation in ImportanceScorer ✅ FIXED (2025-11-30)
   - **Location:** `src/analysis/importance_scorer.py:358`
@@ -780,24 +740,9 @@ These investigations will help surface additional bugs by examining specific pat
 
 **Finding:** 35 defensive `hasattr(x, 'value')` checks indicate inconsistent data model
 
-- [ ] **REF-032**: Fix Inconsistent Enum/String Handling - 35 Instances 🔥🔥
-  - **Pattern:** `x.value if hasattr(x, 'value') else x` used everywhere
-  - **Locations:**
-    - `src/services/memory_service.py` - 12 instances
-    - `src/store/qdrant_store.py` - 13 instances
-    - `src/core/server.py` - 7 instances
-    - `src/cli/memory_browser.py` - 3 instances
-  - **Affected Enums:** `MemoryCategory`, `ContextLevel`, `LifecycleState`, `Scope`
-  - **Root Cause:** Store sometimes returns enum objects, sometimes raw strings
-  - **Problem:**
-    1. Defensive code everywhere is a maintenance burden
-    2. Type safety is lost
-    3. Comparison operators may not work consistently
-  - **Fix Options:**
-    1. Ensure store always returns enums (normalize on retrieval)
-    2. Ensure store always returns strings (normalize on storage)
-    3. Use `str(enum)` consistently and accept string comparisons
-  - **Discovered:** 2025-11-29 INVEST-007 audit
+- [x] **REF-032**: Fix Inconsistent Enum/String Handling ✅ FIXED (2025-11-30)
+  - Consolidated with REF-023 (enum normalization in qdrant_store)
+  - All 35 defensive hasattr checks removed
 
 #### INVEST-008 Results: Empty Input Edge Cases ✅ COMPLETE
 
