@@ -335,8 +335,8 @@ class TestStoreMemory:
 
     @pytest.mark.asyncio
     async def test_store_memory_invalid_category_raises(self, service):
-        """Test invalid category raises StorageError."""
-        with pytest.raises(StorageError):
+        """Test invalid category raises ValidationError."""
+        with pytest.raises(ValidationError):
             await service.store_memory(
                 content="Test",
                 category="invalid_category",

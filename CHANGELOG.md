@@ -79,6 +79,21 @@ Organize entries under these headers in chronological order (newest first):
   - Added backward-compatible alias for legacy code using `ConnectionPoolExhaustedError`
   - File: src/store/connection_pool.py
 
+- **BUG-154: Validation Errors Don't Include Field Name in Error Message**
+  - Added field name and valid value list to all enum validation errors in both service and server layers
+  - Enhanced error messages in `src/services/memory_service.py`:
+    - `store_memory()`, `query()`, `update_memory()`, `list_memories()` methods
+  - Enhanced error messages in `src/core/server.py`:
+    - `store_memory()` MCP tool
+    - `query()` MCP tool
+    - `delete_memories_by_query()` MCP tool
+    - `update_memory()` MCP tool
+    - `list_memories()` MCP tool
+    - `export_memories()` MCP tool
+  - Wrapped all enum conversions (MemoryCategory, LifecycleState, MemoryScope, ContextLevel) with try-except blocks
+  - Error format now includes: `Invalid value 'X' for parameter 'field_name'. Valid values: ...`
+  - Files: src/services/memory_service.py, src/core/server.py
+
 ### Changed - 2025-11-30
 - **TODO.md Rebuild: Deduplicate, Prioritize, and Add ID Registry**
   - Reduced from 11,388 lines to 4,517 lines (60% reduction)

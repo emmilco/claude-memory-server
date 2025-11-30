@@ -265,15 +265,30 @@ class MemoryService:
 
         try:
             # Validate request
+            try:
+                category_enum = MemoryCategory(category)
+            except ValueError:
+                raise ValidationError(f"Invalid value '{category}' for parameter 'category'. Valid values: preference, fact, event, workflow, context, code")
+
+            try:
+                scope_enum = MemoryScope(scope)
+            except ValueError:
+                raise ValidationError(f"Invalid value '{scope}' for parameter 'scope'. Valid values: global, project")
+
+            try:
+                context_level_enum = ContextLevel(context_level) if context_level else None
+            except ValueError:
+                raise ValidationError(f"Invalid value '{context_level}' for parameter 'context_level'. Valid values: USER_PREFERENCE, PROJECT_CONTEXT, SESSION_STATE")
+
             request = StoreMemoryRequest(
                 content=content,
-                category=MemoryCategory(category),
-                scope=MemoryScope(scope),
+                category=category_enum,
+                scope=scope_enum,
                 project_name=project_name,
                 importance=importance,
                 tags=tags or [],
                 metadata=metadata or {},
-                context_level=ContextLevel(context_level) if context_level else None,
+                context_level=context_level_enum,
             )
 
             # Auto-classify context level if not provided
@@ -382,14 +397,30 @@ class MemoryService:
                 from src.core.models import AdvancedSearchFilters
                 adv_filters_obj = AdvancedSearchFilters(**advanced_filters)
 
+            # Validate enum parameters
+            try:
+                context_level_enum = ContextLevel(context_level) if context_level else None
+            except ValueError:
+                raise ValidationError(f"Invalid value '{context_level}' for parameter 'context_level'. Valid values: USER_PREFERENCE, PROJECT_CONTEXT, SESSION_STATE")
+
+            try:
+                scope_enum = MemoryScope(scope) if scope else None
+            except ValueError:
+                raise ValidationError(f"Invalid value '{scope}' for parameter 'scope'. Valid values: global, project")
+
+            try:
+                category_enum = MemoryCategory(category) if category else None
+            except ValueError:
+                raise ValidationError(f"Invalid value '{category}' for parameter 'category'. Valid values: preference, fact, event, workflow, context, code")
+
             # Validate request
             request = QueryRequest(
                 query=query,
                 limit=limit,
-                context_level=ContextLevel(context_level) if context_level else None,
-                scope=MemoryScope(scope) if scope else None,
+                context_level=context_level_enum,
+                scope=scope_enum,
                 project_name=project_name,
-                category=MemoryCategory(category) if category else None,
+                category=category_enum,
                 min_importance=min_importance,
                 tags=tags or [],
                 advanced_filters=adv_filters_obj,
@@ -658,9 +689,12 @@ class MemoryService:
                 updated_fields.append("content")
 
             if category is not None:
-                cat = MemoryCategory(category)
-                updates["category"] = cat.value
-                updated_fields.append("category")
+                try:
+                    cat = MemoryCategory(category)
+                    updates["category"] = cat.value
+                    updated_fields.append("category")
+                except ValueError:
+                    raise ValidationError(f"Invalid value '{category}' for parameter 'category'. Valid values: preference, fact, event, workflow, context, code")
 
             if importance is not None:
                 if not (0.0 <= importance <= 1.0):
@@ -682,9 +716,12 @@ class MemoryService:
                 updated_fields.append("metadata")
 
             if context_level is not None:
-                cl = ContextLevel(context_level)
-                updates["context_level"] = cl.value
-                updated_fields.append("context_level")
+                try:
+                    cl = ContextLevel(context_level)
+                    updates["context_level"] = cl.value
+                    updated_fields.append("context_level")
+                except ValueError:
+                    raise ValidationError(f"Invalid value '{context_level}' for parameter 'context_level'. Valid values: USER_PREFERENCE, PROJECT_CONTEXT, SESSION_STATE")
 
             if not updates:
                 raise ValidationError("At least one field must be provided for update")
@@ -782,11 +819,20 @@ class MemoryService:
             filters = {}
 
             if category:
-                filters["category"] = MemoryCategory(category)
+                try:
+                    filters["category"] = MemoryCategory(category)
+                except ValueError:
+                    raise ValidationError(f"Invalid value '{category}' for parameter 'category'. Valid values: preference, fact, event, workflow, context, code")
             if context_level:
-                filters["context_level"] = ContextLevel(context_level)
+                try:
+                    filters["context_level"] = ContextLevel(context_level)
+                except ValueError:
+                    raise ValidationError(f"Invalid value '{context_level}' for parameter 'context_level'. Valid values: USER_PREFERENCE, PROJECT_CONTEXT, SESSION_STATE")
             if scope:
-                filters["scope"] = MemoryScope(scope)
+                try:
+                    filters["scope"] = MemoryScope(scope)
+                except ValueError:
+                    raise ValidationError(f"Invalid value '{scope}' for parameter 'scope'. Valid values: global, project")
             if project_name:
                 filters["project_name"] = project_name
             if tags:
