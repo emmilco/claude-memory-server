@@ -51,6 +51,12 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Fixed - 2025-11-30
+- **BUG-039: Add Missing PointIdsList Import**
+  - Added missing `PointIdsList` import from `qdrant_client.models` in `src/store/qdrant_store.py`
+  - Fixed `NameError` in `merge_memories()` method at line 2331
+  - Files: src/store/qdrant_store.py
+
 ### Fixed - 2025-11-29
 - **PERF-009: Fix Virtual Memory Leak (Address Space Fragmentation)**
   - Set bounded default executor (max 8 workers) for `asyncio.to_thread()` calls in mcp_server.py
