@@ -63,12 +63,11 @@ Organize entries under these headers in chronological order (newest first):
   - Prevents loss of original exception context in exception hierarchies
 
 - **REF-027: Add Missing Timeout Handling for Async Operations**
-  - Added `asyncio.timeout(30.0)` wrappers around all `asyncio.to_thread()` calls in embedding cache
-  - Prevents hung operations from blocking the entire embedding/search pipeline
-  - Added `asyncio.TimeoutError` exception handlers that log errors and return appropriate defaults
-  - Protected methods: `get()`, `set()`, `batch_get()`, `clean_old()`, `clear()`
-  - Ensures single stuck query cannot freeze the async pipeline
-  - Files: src/embeddings/cache.py
+  - Added `asyncio.timeout(30.0)` wrappers around all store operations in services layer (34 calls total)
+  - Prevents hung database operations from blocking service operations indefinitely
+  - Added `asyncio.TimeoutError` exception handlers that log errors and raise appropriate service exceptions
+  - Protected all store method calls: `store()`, `retrieve()`, `delete()`, `get_by_id()`, `update()`, `list_memories()`, `migrate_memory_scope()`, `bulk_update_context_level()`, `find_duplicate_memories()`, `merge_memories()`, `count()`, `get_all_projects()`, `get_project_stats()`, `get_recent_activity()`, `submit_search_feedback()`, `get_quality_metrics()`, `health_check()`, `delete_code_units_by_project()`, `get_indexed_files()`, `list_indexed_units()`
+  - Files: src/services/memory_service.py (23 calls), src/services/code_indexing_service.py (8 calls), src/services/analytics_service.py (2 calls), src/services/health_service.py (1 call), src/embeddings/cache.py (5 calls)
 
 - **REF-024: Fix race conditions in file watcher debounce**
   - Fixed lock release between reading and modifying `debounce_task` in `_debounce_callback()`

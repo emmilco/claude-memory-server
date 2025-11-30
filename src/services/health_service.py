@@ -10,6 +10,7 @@ Responsibilities:
 - Generate health reports
 """
 
+import asyncio
 import logging
 from typing import Optional, Dict, Any
 
@@ -140,7 +141,12 @@ class HealthService:
             self.stats["health_checks"] += 1
 
             # Check store health
-            store_healthy = await self.store.health_check()
+            try:
+                async with asyncio.timeout(30.0):
+                    store_healthy = await self.store.health_check()
+            except TimeoutError:
+                logger.error("Store health check operation timed out after 30s")
+                raise StorageError("Store health check operation timed out")
 
             if self.health_reporter:
                 report = self.health_reporter.get_health_report()

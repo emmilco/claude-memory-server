@@ -9,6 +9,7 @@ Responsibilities:
 - Monitor frequently accessed code
 """
 
+import asyncio
 import logging
 from typing import Optional, Dict, Any
 
@@ -238,14 +239,19 @@ class AnalyticsService:
             Dict with feedback ID and status
         """
         try:
-            feedback_id = await self.store.submit_search_feedback(
-                search_id=search_id,
-                query=query,
-                result_ids=result_ids,
-                rating=rating,
-                comment=comment,
-                project_name=project_name,
-            )
+            try:
+                async with asyncio.timeout(30.0):
+                    feedback_id = await self.store.submit_search_feedback(
+                        search_id=search_id,
+                        query=query,
+                        result_ids=result_ids,
+                        rating=rating,
+                        comment=comment,
+                        project_name=project_name,
+                    )
+            except TimeoutError:
+                logger.error("Submit search feedback operation timed out after 30s")
+                raise StorageError("Submit search feedback operation timed out")
 
             logger.info(f"Submitted feedback {feedback_id} for search {search_id}")
 
@@ -276,10 +282,15 @@ class AnalyticsService:
             Dict with quality metrics
         """
         try:
-            metrics = await self.store.get_quality_metrics(
-                time_range_hours=time_range_hours,
-                project_name=project_name,
-            )
+            try:
+                async with asyncio.timeout(30.0):
+                    metrics = await self.store.get_quality_metrics(
+                        time_range_hours=time_range_hours,
+                        project_name=project_name,
+                    )
+            except TimeoutError:
+                logger.error("Get quality metrics operation timed out after 30s")
+                raise StorageError("Get quality metrics operation timed out")
 
             logger.info(
                 f"Retrieved quality metrics: {metrics.get('total_searches', 0)} searches, "
