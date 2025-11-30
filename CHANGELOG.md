@@ -144,7 +144,9 @@ Organize entries under these headers in chronological order (newest first):
 
 - **BUG-152: Silent Embedding Cache Failure Falls Back Without Warning**
   - Upgraded cache operation exception handlers from debug/error to WARNING level logging
-  - All cache failures (get, set, batch_get, clean_old, clear, get_stats) now log at WARNING level with consistent message format
+  - Cache operations (get, set, batch_get, clean_old, clear, get_stats) now log failures at WARNING level with consistent message format
+  - Initialization failure also upgraded to WARNING level with specific "Failed to initialize cache database" message for clarity
+  - Connection cleanup errors during initialization now log at WARNING instead of DEBUG
   - Performance degradation from cache failures is now immediately visible in logs instead of silently failing at debug level
   - Prevents undetected cache corruption or database connection issues from silently degrading system performance
   - Files: src/embeddings/cache.py (8 exception handlers updated)
