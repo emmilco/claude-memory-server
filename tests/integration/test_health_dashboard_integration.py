@@ -12,7 +12,7 @@ from src.core.models import MemoryUnit, ContextLevel, LifecycleState, MemoryCate
 from src.memory.health_scorer import HealthScorer
 from src.memory.health_jobs import HealthMaintenanceJobs
 from src.memory.lifecycle_manager import LifecycleManager
-from conftest import mock_embedding
+from tests.conftest import mock_embedding
 
 # Skip entire module in CI - Qdrant timing sensitive under parallel execution
 pytestmark = pytest.mark.skip_ci(reason="Flaky under parallel execution - Qdrant timing sensitive")

@@ -16,7 +16,7 @@ from pathlib import Path
 
 from src.store.qdrant_store import QdrantMemoryStore
 from src.config import ServerConfig
-from conftest import mock_embedding
+from tests.conftest import mock_embedding
 
 # Git storage feature implemented in FEAT-055
 # Tests enabled as of 2025-11-22

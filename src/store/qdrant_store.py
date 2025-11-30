@@ -29,6 +29,9 @@ from src.config import ServerConfig, DEFAULT_EMBEDDING_DIM
 
 logger = logging.getLogger(__name__)
 
+# Maximum iterations for scroll loops to prevent infinite loops with malformed offsets
+MAX_SCROLL_ITERATIONS = 1000
+
 
 class QdrantMemoryStore(MemoryStore):
     """Qdrant implementation of the MemoryStore interface."""
@@ -290,8 +293,14 @@ class QdrantMemoryStore(MemoryStore):
             # Count units before deletion
             offset = None
             count = 0
+            iteration_count = 0
 
             while True:
+                iteration_count += 1
+                if iteration_count > MAX_SCROLL_ITERATIONS:
+                    logger.warning(f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in delete_code_units, breaking")
+                    break
+
                 results, offset = client.scroll(
                     collection_name=self.collection_name,
                     scroll_filter=filter_conditions,
@@ -446,8 +455,14 @@ class QdrantMemoryStore(MemoryStore):
             category_breakdown = {}
             project_breakdown = {}
             lifecycle_breakdown = {}
+            iteration_count = 0
 
             while len(memories_to_delete) < max_count:
+                iteration_count += 1
+                if iteration_count > MAX_SCROLL_ITERATIONS:
+                    logger.warning(f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in delete_old_memories, breaking")
+                    break
+
                 results, offset = client.scroll(
                     collection_name=self.collection_name,
                     scroll_filter=filter_conditions,
@@ -593,8 +608,14 @@ class QdrantMemoryStore(MemoryStore):
             filter_conditions = self._build_filter(filters)
             total = 0
             offset = None
+            iteration_count = 0
 
             while True:
+                iteration_count += 1
+                if iteration_count > MAX_SCROLL_ITERATIONS:
+                    logger.warning(f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in count_memories, breaking")
+                    break
+
                 points, offset = client.scroll(
                     collection_name=self.collection_name,
                     scroll_filter=filter_conditions,
@@ -839,8 +860,14 @@ class QdrantMemoryStore(MemoryStore):
             # Scroll through all matching results
             all_memories = []
             scroll_offset = None
+            iteration_count = 0
 
             while True:
+                iteration_count += 1
+                if iteration_count > MAX_SCROLL_ITERATIONS:
+                    logger.warning(f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in list_memories, breaking")
+                    break
+
                 result = client.scroll(
                     collection_name=self.collection_name,
                     scroll_filter=qdrant_filter,
@@ -949,8 +976,14 @@ class QdrantMemoryStore(MemoryStore):
             # Scroll through all code memories to group by file
             file_data = {}  # file_path -> {language, last_indexed, unit_count}
             scroll_offset = None
+            iteration_count = 0
 
             while True:
+                iteration_count += 1
+                if iteration_count > MAX_SCROLL_ITERATIONS:
+                    logger.warning(f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in list_code_files, breaking")
+                    break
+
                 result = client.scroll(
                     collection_name=self.collection_name,
                     scroll_filter=qdrant_filter,
@@ -1079,8 +1112,14 @@ class QdrantMemoryStore(MemoryStore):
             # Scroll through all matching code units
             all_units = []
             scroll_offset = None
+            iteration_count = 0
 
             while True:
+                iteration_count += 1
+                if iteration_count > MAX_SCROLL_ITERATIONS:
+                    logger.warning(f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in search_code_units, breaking")
+                    break
+
                 result = client.scroll(
                     collection_name=self.collection_name,
                     scroll_filter=qdrant_filter,
@@ -1597,8 +1636,14 @@ class QdrantMemoryStore(MemoryStore):
             # Scroll through all points and collect unique project names
             projects = set()
             offset = None
+            iteration_count = 0
 
             while True:
+                iteration_count += 1
+                if iteration_count > MAX_SCROLL_ITERATIONS:
+                    logger.warning(f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in list_projects, breaking")
+                    break
+
                 results, offset = client.scroll(
                     collection_name=self.collection_name,
                     limit=100,
@@ -1648,8 +1693,14 @@ class QdrantMemoryStore(MemoryStore):
             context_levels = {}
             latest_update = None
             file_paths = set()
+            iteration_count = 0
 
             while True:
+                iteration_count += 1
+                if iteration_count > MAX_SCROLL_ITERATIONS:
+                    logger.warning(f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in get_project_details, breaking")
+                    break
+
                 results, offset = client.scroll(
                     collection_name=self.collection_name,
                     scroll_filter=Filter(
@@ -1895,8 +1946,14 @@ class QdrantMemoryStore(MemoryStore):
             client = await self._get_client()
             stats = []
             offset = None
+            iteration_count = 0
 
             while True:
+                iteration_count += 1
+                if iteration_count > MAX_SCROLL_ITERATIONS:
+                    logger.warning(f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in get_usage_stats, breaking")
+                    break
+
                 results, offset = client.scroll(
                     collection_name=self.collection_name,
                     limit=100,
@@ -2034,8 +2091,14 @@ class QdrantMemoryStore(MemoryStore):
             scroll_filter = Filter(must=conditions) if conditions else None
             offset = None
             results_list = []
+            iteration_count = 0
 
             while True:
+                iteration_count += 1
+                if iteration_count > MAX_SCROLL_ITERATIONS:
+                    logger.warning(f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in get_expiring_memories, breaking")
+                    break
+
                 results, offset = client.scroll(
                     collection_name=self.collection_name,
                     scroll_filter=scroll_filter,
@@ -2103,8 +2166,14 @@ class QdrantMemoryStore(MemoryStore):
             client = await self._get_client()
             offset = None
             results_list = []
+            iteration_count = 0
 
             while True:
+                iteration_count += 1
+                if iteration_count > MAX_SCROLL_ITERATIONS:
+                    logger.warning(f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in get_orphaned_memories, breaking")
+                    break
+
                 results, offset = client.scroll(
                     collection_name=self.collection_name,
                     limit=100,
@@ -2178,8 +2247,14 @@ class QdrantMemoryStore(MemoryStore):
             client = await self._get_client()
             offset = None
             memories = []
+            iteration_count = 0
 
             while True:
+                iteration_count += 1
+                if iteration_count > MAX_SCROLL_ITERATIONS:
+                    logger.warning(f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in export_all, breaking")
+                    break
+
                 results, offset = client.scroll(
                     collection_name=self.collection_name,
                     limit=100,
@@ -2317,8 +2392,14 @@ class QdrantMemoryStore(MemoryStore):
             # Get all matching memories and update them
             offset = None
             count = 0
+            iteration_count = 0
 
             while True:
+                iteration_count += 1
+                if iteration_count > MAX_SCROLL_ITERATIONS:
+                    logger.warning(f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in bulk_update_context_level, breaking")
+                    break
+
                 results, offset = client.scroll(
                     collection_name=self.collection_name,
                     scroll_filter=filter_obj,
@@ -2400,8 +2481,14 @@ class QdrantMemoryStore(MemoryStore):
 
             offset = None
             memories = []
+            iteration_count = 0
 
             while True:
+                iteration_count += 1
+                if iteration_count > MAX_SCROLL_ITERATIONS:
+                    logger.warning(f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in find_duplicates, breaking")
+                    break
+
                 results, offset = client.scroll(
                     collection_name=self.collection_name,
                     scroll_filter=filter_obj,
@@ -2619,8 +2706,14 @@ class QdrantMemoryStore(MemoryStore):
             # Note: Qdrant doesn't support sorting by payload fields in scroll,
             # so we need to fetch more and sort in memory
             all_memories = []
+            iteration_count = 0
 
             while len(all_memories) < limit * 10 and collected < 1000:  # Fetch up to 1000 to sort
+                iteration_count += 1
+                if iteration_count > MAX_SCROLL_ITERATIONS:
+                    logger.warning(f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in get_recent_memories, breaking")
+                    break
+
                 results, next_offset = client.scroll(
                     collection_name=self.collection_name,
                     scroll_filter=scroll_filter,
@@ -2958,8 +3051,14 @@ class QdrantMemoryStore(MemoryStore):
                 # No query - just filter and scroll
                 offset = None
                 collected = 0
+                iteration_count = 0
 
                 while collected < limit:
+                    iteration_count += 1
+                    if iteration_count > MAX_SCROLL_ITERATIONS:
+                        logger.warning(f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in search_memories (no query), breaking")
+                        break
+
                     scroll_results, next_offset = client.scroll(
                         collection_name=self.collection_name,
                         scroll_filter=search_filter,
@@ -3079,8 +3178,14 @@ class QdrantMemoryStore(MemoryStore):
             file_changes = []
             offset = None
             collected = 0
+            iteration_count = 0
 
             while collected < limit:
+                iteration_count += 1
+                if iteration_count > MAX_SCROLL_ITERATIONS:
+                    logger.warning(f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in get_commit_changes, breaking")
+                    break
+
                 scroll_results, next_offset = client.scroll(
                     collection_name=self.collection_name,
                     scroll_filter=search_filter,

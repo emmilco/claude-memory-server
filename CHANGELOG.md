@@ -85,6 +85,12 @@ Organize entries under these headers in chronological order (newest first):
   - Backward-compatible: hardcoded defaults are used if not overridden in config
 
 ### Fixed - 2025-11-30
+- **BUG-061: Scroll Loop Infinite Loop Risk**
+  - Added iteration counter with MAX_SCROLL_ITERATIONS (1000) limit to prevent infinite loops from malformed offset values
+  - Protected 17 scroll loops across qdrant_store.py with iteration limit and warning logging
+  - Prevents infinite loops when Qdrant returns corrupted or malformed offset values during pagination
+  - Files: src/store/qdrant_store.py
+
 - **BUG-067: Normalization Returns Max Score for All-Zero Results**
   - Fixed `_normalize_scores()` returning [1.0] for all-zero score vectors, giving maximum normalized score to zero-relevance results
   - Added explicit check for `max_score == 0.0` to return [0.0] instead of [1.0]

@@ -5,7 +5,7 @@ from unittest.mock import Mock, patch, MagicMock, AsyncMock
 
 from src.embeddings.generator import EmbeddingGenerator
 from src.config import ServerConfig
-from conftest import mock_embedding
+from tests.conftest import mock_embedding
 
 
 class TestGeneratorGpuSupport:

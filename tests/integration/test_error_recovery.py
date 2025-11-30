@@ -22,7 +22,7 @@ from src.core.server import MemoryRAGServer
 from src.core.exceptions import EmbeddingError, ReadOnlyError, SecurityError
 from src.store.qdrant_store import QdrantMemoryStore
 from src.embeddings.generator import EmbeddingGenerator
-from conftest import mock_embedding
+from tests.conftest import mock_embedding
 
 
 

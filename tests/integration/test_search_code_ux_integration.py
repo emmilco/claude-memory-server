@@ -5,7 +5,7 @@ import pytest_asyncio
 from unittest.mock import AsyncMock, MagicMock
 from src.core.server import MemoryRAGServer
 from src.config import ServerConfig
-from conftest import mock_embedding
+from tests.conftest import mock_embedding
 
 
 @pytest.fixture

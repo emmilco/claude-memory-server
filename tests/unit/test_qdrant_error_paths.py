@@ -9,7 +9,7 @@ from src.config import ServerConfig
 from src.store.qdrant_store import QdrantMemoryStore
 from src.core.models import MemoryCategory, MemoryScope, ContextLevel
 from src.core.exceptions import StorageError, ValidationError, RetrievalError
-from conftest import mock_embedding
+from tests.conftest import mock_embedding
 
 
 class TestQdrantStoreErrorPaths:

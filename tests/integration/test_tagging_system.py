@@ -13,7 +13,7 @@ from src.tagging.models import TagCreate, CollectionCreate
 from src.config import ServerConfig
 from src.store.qdrant_store import QdrantMemoryStore
 from src.core.models import MemoryUnit, MemoryCategory, ContextLevel, MemoryScope, SearchFilters
-from conftest import mock_embedding
+from tests.conftest import mock_embedding
 
 
 @pytest.fixture

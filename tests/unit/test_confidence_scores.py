@@ -8,7 +8,7 @@ from src.core.server import MemoryRAGServer
 from src.core.models import MemoryUnit, ContextLevel, MemoryCategory, MemoryScope
 from src.config import ServerConfig
 from src.analysis.quality_analyzer import CodeQualityMetrics
-from conftest import mock_embedding
+from tests.conftest import mock_embedding
 
 
 class TestConfidenceLabels:

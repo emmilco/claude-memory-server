@@ -18,7 +18,7 @@ from src.store.qdrant_store import QdrantMemoryStore
 from src.core.server import MemoryRAGServer
 from src.core.exceptions import ValidationError
 from src.config import ServerConfig
-from conftest import mock_embedding
+from tests.conftest import mock_embedding
 
 
 @pytest_asyncio.fixture
