@@ -431,21 +431,23 @@
 - [x] **BUG-042**: Missing CLI Method `_format_relative_time` ✅ FIXED (2025-11-29)
   - Changed method call to `_format_time_ago()` (correct method name)
 
-- [ ] **BUG-043**: Missing CLI Commands `verify_command` and `consolidate_command` 🔥🔥
+- [x] **BUG-043**: Missing CLI Commands `verify_command` and `consolidate_command` ✅ COMPLETE (2025-11-30)
   - **Location:** `src/cli/__init__.py:536, 548`
   - **Error:** `NameError: name 'verify_command' is not defined`
   - **Impact:** CLI crashes when `verify` or `consolidate` subcommands are invoked
   - **Root Cause:** Commands referenced in argparser but functions never imported/defined
-  - **Fix:** Either implement the commands or remove them from argparser (lines 413-473)
+  - **Fix:** Removed `verify` and `consolidate` command definitions from argparser (lines 412-472) and corresponding handlers from `main_async()` (lines 474-492)
   - **Discovered:** 2025-11-29 comprehensive code review
+  - **Merged:** commit 5339b15, merged into main on 2025-11-30
 
-- [ ] **BUG-044**: Undefined Variable After Date Parsing Error 🔥🔥
+- [x] **BUG-044**: Undefined Variable After Date Parsing Error 🔥🔥 ✅ COMPLETE (2025-11-30)
   - **Location:** `src/cli/git_search_command.py:62-70`
   - **Error:** `NameError: name 'since_dt' is not defined`
   - **Impact:** Git search command crashes on invalid date format
   - **Root Cause:** If date parsing fails, `since_dt` is never set but used at line 94
   - **Fix:** Set `since_dt = None` before try block or after except block
   - **Discovered:** 2025-11-29 comprehensive code review
+  - **Merged:** commit 6868485, merged into main on 2025-11-30
 
 ### 🟡 High Priority Bugs - Incorrect Behavior / Data Corruption
 
