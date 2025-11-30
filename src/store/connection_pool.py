@@ -425,26 +425,30 @@ class QdrantConnectionPool:
         (e.g., after Qdrant restart, network issues, or connection leaks).
 
         This closes all existing connections and reinitializes the pool.
+
+        BUG-062: Wrap entire reset sequence in lock to prevent race condition where
+        acquire() could interleave with state reset after close() but before _closed = False.
         """
         logger.warning("Resetting connection pool to recover from corrupted state")
 
-        # Close existing pool
-        was_initialized = self._initialized
-        await self.close()
+        async with self._lock:
+            # Close existing pool
+            was_initialized = self._initialized
+            await self.close()
 
-        # Reset closed flag to allow reinitialization
-        self._closed = False
+            # Reset closed flag to allow reinitialization
+            self._closed = False
 
-        # Clear any stale state
-        self._client_map.clear()
-        self._pool = asyncio.Queue(maxsize=self.max_size)
+            # Clear any stale state
+            self._client_map.clear()
+            self._pool = asyncio.Queue(maxsize=self.max_size)
 
-        # Reinitialize if pool was previously initialized
-        if was_initialized:
-            await self.initialize()
-            logger.info("Connection pool reset and reinitialized successfully")
-        else:
-            logger.info("Connection pool reset (not reinitialized - was not initialized before)")
+            # Reinitialize if pool was previously initialized
+            if was_initialized:
+                await self.initialize()
+                logger.info("Connection pool reset and reinitialized successfully")
+            else:
+                logger.info("Connection pool reset (not reinitialized - was not initialized before)")
 
     def is_healthy(self) -> bool:
         """Check if pool is in a healthy state.

@@ -85,6 +85,13 @@ Organize entries under these headers in chronological order (newest first):
   - Backward-compatible: hardcoded defaults are used if not overridden in config
 
 ### Fixed - 2025-11-30
+- **BUG-062: Connection Pool Reset Race Condition**
+  - Fixed race condition in `reset()` method where `_closed = False` assignment occurred outside lock
+  - Wrapped entire reset sequence (close, reset flag, clear state, reinitialize) in `async with self._lock:`
+  - Prevents concurrent `acquire()` from interleaving during state transition after close but before reinitialization
+  - Ensures atomic pool state transitions during recovery from corrupted state
+  - Files: src/store/connection_pool.py
+
 - **BUG-061: Scroll Loop Infinite Loop Risk**
   - Added iteration counter with MAX_SCROLL_ITERATIONS (1000) limit to prevent infinite loops from malformed offset values
   - Protected 17 scroll loops across qdrant_store.py with iteration limit and warning logging
