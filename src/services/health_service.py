@@ -130,7 +130,7 @@ class HealthService:
 
         except Exception as e:
             logger.error(f"Failed to get performance metrics: {e}", exc_info=True)
-            raise StorageError(f"Failed to get performance metrics: {e}")
+            raise StorageError(f"Failed to get performance metrics: {e}") from e
 
     async def get_health_score(self) -> Dict[str, Any]:
         """
@@ -172,7 +172,7 @@ class HealthService:
 
         except Exception as e:
             logger.error(f"Failed to get health score: {e}", exc_info=True)
-            raise StorageError(f"Failed to get health score: {e}")
+            raise StorageError(f"Failed to get health score: {e}") from e
 
     async def get_active_alerts(
         self,
@@ -208,7 +208,7 @@ class HealthService:
 
         except Exception as e:
             logger.error(f"Failed to get active alerts: {e}", exc_info=True)
-            raise StorageError(f"Failed to get active alerts: {e}")
+            raise StorageError(f"Failed to get active alerts: {e}") from e
 
     async def resolve_alert(self, alert_id: str) -> Dict[str, Any]:
         """
@@ -245,7 +245,7 @@ class HealthService:
 
         except Exception as e:
             logger.error(f"Failed to resolve alert: {e}", exc_info=True)
-            raise StorageError(f"Failed to resolve alert: {e}")
+            raise StorageError(f"Failed to resolve alert: {e}") from e
 
     async def get_capacity_forecast(
         self,
@@ -277,7 +277,7 @@ class HealthService:
 
         except Exception as e:
             logger.error(f"Failed to get capacity forecast: {e}", exc_info=True)
-            raise StorageError(f"Failed to get capacity forecast: {e}")
+            raise StorageError(f"Failed to get capacity forecast: {e}") from e
 
     async def get_weekly_report(self) -> Dict[str, Any]:
         """
@@ -310,7 +310,7 @@ class HealthService:
 
         except Exception as e:
             logger.error(f"Failed to generate weekly report: {e}", exc_info=True)
-            raise StorageError(f"Failed to generate weekly report: {e}")
+            raise StorageError(f"Failed to generate weekly report: {e}") from e
 
     async def start_dashboard(
         self,
@@ -351,7 +351,7 @@ class HealthService:
 
         except Exception as e:
             logger.error(f"Failed to start dashboard: {e}", exc_info=True)
-            raise StorageError(f"Failed to start dashboard: {e}")
+            raise StorageError(f"Failed to start dashboard: {e}") from e
 
     async def collect_metrics_snapshot(self) -> None:
         """Collect and store current metrics."""

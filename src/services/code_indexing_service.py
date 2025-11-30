@@ -419,7 +419,7 @@ class CodeIndexingService:
             )
         except Exception as e:
             logger.error(f"Failed to search code: {e}", exc_info=True)
-            raise RetrievalError(f"Code search failed: {e}")
+            raise RetrievalError(f"Code search failed: {e}") from e
 
     async def find_similar_code(
         self,
@@ -546,7 +546,7 @@ class CodeIndexingService:
 
         except Exception as e:
             logger.error(f"Failed to find similar code: {e}", exc_info=True)
-            raise RetrievalError(f"Failed to find similar code: {e}")
+            raise RetrievalError(f"Failed to find similar code: {e}") from e
 
     async def index_codebase(
         self,
@@ -620,7 +620,7 @@ class CodeIndexingService:
 
         except Exception as e:
             logger.error(f"Failed to index codebase: {e}", exc_info=True)
-            raise StorageError(f"Failed to index codebase: {e}")
+            raise StorageError(f"Failed to index codebase: {e}") from e
 
     async def reindex_project(
         self,
@@ -712,7 +712,7 @@ class CodeIndexingService:
 
         except Exception as e:
             logger.error(f"Failed to reindex project: {e}", exc_info=True)
-            raise StorageError(f"Failed to reindex project: {e}")
+            raise StorageError(f"Failed to reindex project: {e}") from e
 
     async def get_indexed_files(
         self,
@@ -749,7 +749,7 @@ class CodeIndexingService:
 
         except Exception as e:
             logger.error(f"Failed to get indexed files: {e}", exc_info=True)
-            raise StorageError(f"Failed to get indexed files: {e}")
+            raise StorageError(f"Failed to get indexed files: {e}") from e
 
     async def list_indexed_units(
         self,
@@ -795,7 +795,7 @@ class CodeIndexingService:
 
         except Exception as e:
             logger.error(f"Failed to list indexed units: {e}", exc_info=True)
-            raise StorageError(f"Failed to list indexed units: {e}")
+            raise StorageError(f"Failed to list indexed units: {e}") from e
 
     async def _build_dependency_graph(
         self,
@@ -889,7 +889,7 @@ class CodeIndexingService:
 
         except Exception as e:
             logger.error(f"Failed to get file dependencies: {e}", exc_info=True)
-            raise RetrievalError(f"Failed to get file dependencies: {e}")
+            raise RetrievalError(f"Failed to get file dependencies: {e}") from e
 
     async def get_file_dependents(
         self,
@@ -929,7 +929,7 @@ class CodeIndexingService:
 
         except Exception as e:
             logger.error(f"Failed to get file dependents: {e}", exc_info=True)
-            raise RetrievalError(f"Failed to get file dependents: {e}")
+            raise RetrievalError(f"Failed to get file dependents: {e}") from e
 
     async def find_dependency_path(
         self,
@@ -986,7 +986,7 @@ class CodeIndexingService:
 
         except Exception as e:
             logger.error(f"Failed to find dependency path: {e}", exc_info=True)
-            raise RetrievalError(f"Failed to find dependency path: {e}")
+            raise RetrievalError(f"Failed to find dependency path: {e}") from e
 
     async def get_dependency_stats(
         self,
@@ -1017,4 +1017,4 @@ class CodeIndexingService:
 
         except Exception as e:
             logger.error(f"Failed to get dependency stats: {e}", exc_info=True)
-            raise RetrievalError(f"Failed to get dependency stats: {e}")
+            raise RetrievalError(f"Failed to get dependency stats: {e}") from e
