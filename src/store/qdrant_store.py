@@ -1,6 +1,9 @@
 """Qdrant vector store implementation."""
 
 import logging
+import fnmatch
+import hashlib
+import uuid
 from enum import Enum
 from typing import List, Tuple, Optional, Dict, Any, Union
 from uuid import uuid4
@@ -1087,7 +1090,6 @@ class QdrantMemoryStore(MemoryStore):
                         file_path = payload.get("file_path", "")
                         # Convert glob pattern to simple matching
                         # For now, support basic wildcards
-                        import fnmatch
                         if not fnmatch.fnmatch(file_path, file_pattern):
                             continue
 
@@ -2694,7 +2696,6 @@ class QdrantMemoryStore(MemoryStore):
         client = None
         try:
             client = await self._get_client()
-            import hashlib
             points = []
 
             for commit_data in commits:
@@ -2729,7 +2730,6 @@ class QdrantMemoryStore(MemoryStore):
 
                 # Generate deterministic UUID from commit hash for Qdrant point ID
                 # This allows us to have consistent IDs across re-indexes
-                import uuid
                 point_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"git-commit-{commit_hash}"))
                 payload["id"] = point_id
 
@@ -2811,7 +2811,6 @@ class QdrantMemoryStore(MemoryStore):
                 }
 
                 # Generate deterministic UUID from change ID for Qdrant point ID
-                import uuid
                 point_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"git-file-change-{change_id}"))
                 payload["id"] = point_id
 

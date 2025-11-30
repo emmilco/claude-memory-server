@@ -58,6 +58,13 @@ Organize entries under these headers in chronological order (newest first):
   - Fixes type checker warnings: `callable` is a builtin function, not a proper type annotation
 
 ### Changed - 2025-11-30
+- **REF-031: Move Inline Standard Library Imports to Module Top**
+  - Consolidated 41 inline standard library imports to module-level imports
+  - Removed inline imports of `time`, `re`, `fnmatch`, `json`, `statistics`, `hashlib`, `uuid`, `math` from function bodies
+  - Preserved intentional lazy imports (torch, numpy) as inline imports
+  - Files modified: src/core/server.py (16 instances), src/monitoring/performance_tracker.py (4 instances), src/store/qdrant_store.py (4 instances), src/memory/incremental_indexer.py (3 instances), src/search/reranker.py (2 instances)
+  - Improves code maintainability and follows PEP 8 import style guidelines
+
 - **DOC: Optimize CLAUDE.md for AI agent context efficiency**
   - Reduced CLAUDE.md from 617 lines to 92 lines (85% reduction)
   - Added scope calibration section (quick fix vs tracked task vs investigation)

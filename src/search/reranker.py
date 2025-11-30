@@ -2,6 +2,7 @@
 
 import logging
 import re
+import math
 from typing import List, Tuple, Optional, Callable
 from datetime import datetime, timezone
 from dataclasses import dataclass
@@ -162,7 +163,6 @@ class ResultReranker:
         # Exponential decay: score = 0.5^(age / halflife)
         # halflife days -> score = 0.5
         # 0 days -> score = 1.0
-        import math
         decay_factor = math.pow(0.5, age_days / self.recency_halflife_days)
 
         return min(1.0, decay_factor)
@@ -190,7 +190,6 @@ class ResultReranker:
 
         # Logarithmic scaling: score = log(count + 1) / log(max + 1)
         # This prevents very frequently used items from dominating
-        import math
         max_use_count = max(
             (s.get("use_count", 0) for s in usage_data.values()),
             default=1
