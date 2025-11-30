@@ -51,6 +51,12 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Fixed - 2025-11-30
+- **BUG-039: Add Missing PointIdsList Import**
+  - Added missing `PointIdsList` import from `qdrant_client.models` in `src/store/qdrant_store.py`
+  - Fixed `NameError` in `merge_memories()` method at line 2331
+  - Files: src/store/qdrant_store.py
+
 ### Fixed - 2025-11-29
 - **TEST-029: Fix Port Hardcoding in Tests for Isolated Qdrant Support**
   - Added `TEST_QDRANT_URL` constant in tests/conftest.py (reads from CLAUDE_RAG_QDRANT_URL environment variable)
@@ -59,6 +65,13 @@ Organize entries under these headers in chronological order (newest first):
   - All tests in test_indexing_progress.py now pass with isolated Qdrant instance
   - Files: tests/conftest.py, tests/unit/test_config.py, tests/unit/test_indexing_progress.py
 
+- **BUG-042: Fix incorrect method name in StatusCommand.print_active_project()**
+  - Changed `_format_relative_time()` to `_format_time_ago()` in `src/cli/status_command.py`
+
+- **BUG-038: Fix Undefined PYTHON_PARSER_AVAILABLE Variable**
+  - Removed reference to undefined variable in IncrementalIndexer.__init__()
+  - Python parser was removed in REF-020; now only Rust parser is supported
+  - Files: src/memory/incremental_indexer.py
 - **PERF-009: Fix Virtual Memory Leak (Address Space Fragmentation)**
   - Set bounded default executor (max 8 workers) for `asyncio.to_thread()` calls in mcp_server.py
   - Added proper cleanup for ProcessPoolExecutor with `cancel_futures=True` in parallel_generator.py

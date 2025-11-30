@@ -268,7 +268,7 @@ class EmbeddingCache:
             List[Optional[List[float]]]: List of embeddings (None if not found/expired).
         """
         if not self.enabled or self.conn is None:
-            return {}
+            return [None] * len(texts)
 
         # Run blocking SQLite operations in thread pool for proper async handling
         return await asyncio.to_thread(self._batch_get_sync, texts, model_name)
