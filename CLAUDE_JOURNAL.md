@@ -1334,3 +1334,31 @@ Hardening sprint continuation - merged 12 worktrees, fixed all recent BUG/REF ti
 - Integration test passes but shows vector dimension error (stale Qdrant collection) - separate from hang fix
 - TODO.md has duplicate BUG-066 entries (lines 24, 140, 2054) - only line 24 was the test hang issue, others are unrelated bugs with same ID
 - Full test suite still needs verification run with new BUG-066 fix on main
+
+---
+
+### 2025-11-30 16:45 | todo-cleanup | SESSION_SUMMARY
+
+**Duration:** ~2.5 hours
+**Main work:** Complete TODO.md rebuild - deduplicated, organized by priority, added ID registry system
+
+**What went well:**
+- Systematic approach: parallel task agents extracted tasks from different file sections efficiently
+- Identified massive duplication problem: 647 task occurrences → 214 unique IDs (3x average duplication)
+- Successfully resolved 102 ID conflicts where different bugs shared same ID (e.g., BUG-066 used for 3 completely different issues)
+- Created clear ID Registry system with workflow rules to prevent future collisions
+- User collaboration was excellent: they questioned the 161 completed items count (legitimate skepticism), asked for strategy explanation before proceeding, and provided clear direction on ID uniqueness requirements
+- Final result: 60% reduction (11,388 → 4,517 lines), 575 unique tasks, priority-sorted
+
+**What went poorly or was difficult:**
+- Initial deduplication strategy was unclear - had to explain approach to user before they approved
+- Some bash commands failed due to shell escaping issues (multi-line commands with loops)
+- File had grown through multiple audit sessions where entire sections were duplicated, not just individual tasks
+- The true duplicates vs ID conflicts distinction required careful analysis - couldn't just blindly merge by ID
+- Pre-commit hook blocked first commit attempt (missing CHANGELOG entry)
+
+**Open threads:**
+- 575 open tasks remain - significant backlog to work through
+- Several planning_docs from audit sessions left untracked (user may want to clean up or archive)
+- New ID system needs to be followed consistently - next session should verify agents use the registry when creating tasks
+- Some SEC-* tasks may have been lost in consolidation (registry shows SEC: 001 but no SEC tasks in file)
