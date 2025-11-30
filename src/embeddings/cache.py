@@ -101,7 +101,7 @@ class EmbeddingCache:
                     finally:
                         self.conn = None
 
-                logger.warning(f"Cache operation failed: {e}")
+                logger.warning(f"Failed to initialize cache database: {e}")
                 self.enabled = False
 
         except Exception as e:
