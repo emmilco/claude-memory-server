@@ -85,6 +85,12 @@ Organize entries under these headers in chronological order (newest first):
   - Backward-compatible: hardcoded defaults are used if not overridden in config
 
 ### Fixed - 2025-11-30
+- **BUG-060: Cache Statistics Reset Without Holding Counter Lock**
+  - Fixed race condition in `clear()` method that reset hit/miss counters without acquiring `_counter_lock`
+  - Added lock acquisition around counter reset in `_clear_sync()` to ensure atomic operations
+  - Prevents concurrent cache statistics corruption when clear() runs alongside cache get/set operations
+  - Files: src/embeddings/cache.py
+
 - **BUG-062: Connection Pool Reset Race Condition & Deadlock Fix**
   - Fixed race condition in `reset()` method where `_closed = False` assignment occurred outside lock
   - Wrapped state reset (close, reset flag, clear state) in `async with self._lock:` to prevent interleaving
@@ -112,18 +118,6 @@ Organize entries under these headers in chronological order (newest first):
   - Cache now stores normalized vectors, eliminating double-normalization on cache hits
   - Same text now returns identical vectors regardless of cache state
   - Files: src/embeddings/cache.py
-- **BUG-063: Missing Client Release on Early Return in Multiple Methods**
-  - Fixed missing client releases in `migrate_memory_scope()` and `merge_memories()` methods
-  - Added finally blocks to ensure clients are released to connection pool even when exceptions occur
-  - Prevents connection pool exhaustion during memory migration and merge operations
-  - Files: src/store/qdrant_store.py (migrate_memory_scope, merge_memories)
-
-- **BUG-165: HybridSearcher Corpus Replaced Without Synchronization**
-  - Fixed race condition in `index_documents()` where corpus replacement was non-atomic
-  - Implemented copy-on-write pattern: build new BM25 index and corpus copies, then atomically swap all components together
-  - Prevents concurrent `hybrid_search()` operations from reading half-old/half-new corpus causing IndexError or incorrect results
-  - BM25 index, documents list, and memory_units list now updated together in single atomic operation
-  - Files: src/search/hybrid_search.py
 - **BUG-066: Integration Test Suite Hangs**
   - Fixed integration tests hanging indefinitely (16+ minutes) in pytest-asyncio contexts
   - Wrapped synchronous QdrantClient.get_collections() in run_in_executor() to prevent event loop blocking
@@ -170,12 +164,10 @@ Organize entries under these headers in chronological order (newest first):
   - Added `from e` to 41 raise statements lacking exception chain preservation
   - Ensures original exception tracebacks are preserved for debugging
   - src/services/memory_service.py: 16 instances fixed
-
-- **BUG-164: Search Filter Validation Bypass Allows Invalid Enums to Reach Qdrant**
-  - Fixed SearchFilters built from raw dict without Pydantic validation allowing invalid enum values (e.g., "INVALID_STATE" in lifecycle_states) to pass through to Qdrant
-  - Replaced 3 instances of direct SearchFilters() instantiation with SearchFilters.model_validate() for proper validation
-  - Invalid filter values now raise ValidationError at filter construction time instead of cryptic Qdrant errors
-  - Files: src/services/memory_service.py (lines 414-422, 1065-1074, 1511)
+  - src/services/code_indexing_service.py: 12 instances fixed
+  - src/services/health_service.py: 7 instances fixed
+  - src/services/analytics_service.py: 6 instances fixed
+  - Prevents loss of original exception context in exception hierarchies
 
 - **REF-028-B: Add Exception Chain Preservation with `from e`**
   - Preserved original exception tracebacks by adding `from e` clause to 40 exception re-raises
