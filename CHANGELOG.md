@@ -76,6 +76,12 @@ Organize entries under these headers in chronological order (newest first):
   - Backward-compatible: hardcoded defaults are used if not overridden in config
 
 ### Fixed - 2025-11-30
+- **BUG-061: Scroll Loop Infinite Loop Risk**
+  - Added iteration counter with MAX_SCROLL_ITERATIONS (1000) limit to prevent infinite loops from malformed offset values
+  - Protected 17 scroll loops across qdrant_store.py with iteration limit and warning logging
+  - Prevents infinite loops when Qdrant returns corrupted or malformed offset values during pagination
+  - Files: src/store/qdrant_store.py
+
 - **BUG-066: Integration Test Suite Hangs**
   - Fixed integration tests hanging indefinitely (16+ minutes) in pytest-asyncio contexts
   - Wrapped synchronous QdrantClient.get_collections() in run_in_executor() to prevent event loop blocking
