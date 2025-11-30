@@ -68,6 +68,12 @@ Organize entries under these headers in chronological order (newest first):
   - Tests: tests/unit/test_query_based_deletion.py (20 tests including enum validation)
 
 ### Fixed - 2025-11-30
+- **BUG-044: Fix undefined since_dt and until_dt variables on date parsing error**
+  - Added explicit `since_dt = None` after failed date parsing in lines 62-71
+  - Added explicit `until_dt = None` after failed date parsing in lines 80-89
+  - Ensures variables are always defined even when both ISO format and %Y-%m-%d parsing fail
+  - Files: src/cli/git_search_command.py
+
 - **REF-012: Fix environment variable handling in Qdrant test fixtures**
   - Updated `test_backup_export.py` temp_store fixture to respect `CLAUDE_RAG_QDRANT_URL` environment variable
   - Updated `test_backup_import.py` temp_store fixture to respect `CLAUDE_RAG_QDRANT_URL` environment variable
@@ -89,7 +95,6 @@ Organize entries under these headers in chronological order (newest first):
   - Automatically falls back to creating isolated container on Linux
   - Fixes backup export/import test failures when running in macOS worktree (Docker Desktop limitation)
   - Files: scripts/test-isolated.sh
-
 - **BUG-039: Add Missing PointIdsList Import**
   - Added missing `PointIdsList` import from `qdrant_client.models` in `src/store/qdrant_store.py`
   - Fixed `NameError` in `merge_memories()` method at line 2331
