@@ -103,6 +103,14 @@ Organize entries under these headers in chronological order (newest first):
   - Cache now stores normalized vectors, eliminating double-normalization on cache hits
   - Same text now returns identical vectors regardless of cache state
   - Files: src/embeddings/cache.py
+
+- **BUG-165: HybridSearcher Corpus Replaced Without Synchronization**
+  - Fixed race condition in `index_documents()` where corpus replacement was non-atomic
+  - Implemented copy-on-write pattern: build new BM25 index and corpus copies, then atomically swap all components together
+  - Prevents concurrent `hybrid_search()` operations from reading half-old/half-new corpus causing IndexError or incorrect results
+  - BM25 index, documents list, and memory_units list now updated together in single atomic operation
+  - Files: src/search/hybrid_search.py
+
 - **BUG-066: Integration Test Suite Hangs**
   - Fixed integration tests hanging indefinitely (16+ minutes) in pytest-asyncio contexts
   - Wrapped synchronous QdrantClient.get_collections() in run_in_executor() to prevent event loop blocking
