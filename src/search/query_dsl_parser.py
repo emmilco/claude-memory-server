@@ -236,8 +236,14 @@ class QueryDSLParser:
         """
         Validate date string format.
 
+        Accepts ISO 8601 formats including:
+        - YYYY-MM-DD
+        - YYYY-MM-DDTHH:MM:SS
+        - YYYY-MM-DDTHH:MM:SSZ
+        - YYYY-MM-DDTHH:MM:SS+HH:MM
+
         Args:
-            date_str: Date string in YYYY-MM-DD format
+            date_str: Date string in ISO 8601 format
 
         Returns:
             Validated date string
@@ -245,14 +251,23 @@ class QueryDSLParser:
         Raises:
             ValueError: If date format is invalid
         """
+        # Normalize 'Z' suffix to '+00:00' for fromisoformat compatibility
+        normalized = date_str.replace('Z', '+00:00') if date_str.endswith('Z') else date_str
+
         try:
-            # Parse and validate
-            datetime.strptime(date_str, '%Y-%m-%d')
+            # Try ISO format first (handles most ISO 8601 variants)
+            datetime.fromisoformat(normalized)
             return date_str
         except ValueError:
-            raise ValueError(
-                f"Invalid date format: '{date_str}'. Use YYYY-MM-DD format."
-            )
+            # Fallback to strict YYYY-MM-DD format
+            try:
+                datetime.strptime(date_str, '%Y-%m-%d')
+                return date_str
+            except ValueError:
+                raise ValueError(
+                    f"Invalid date format: '{date_str}'. "
+                    f"Use ISO 8601 format (e.g., YYYY-MM-DD, YYYY-MM-DDTHH:MM:SSZ)."
+                )
 
     def get_filter_help(self) -> str:
         """
