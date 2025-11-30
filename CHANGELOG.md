@@ -52,6 +52,16 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **BUG-083: Division by Zero Risk in Health Score Calculations**
+  - Added zero-denominator checks before all percentage calculations across health monitoring modules
+  - Fixed 8 locations where division could fail: health_reporter.py (1), capacity_planner.py (3), health_scorer.py (4)
+  - health_reporter.py line 346: Added check before `change_percent = (change / previous_value) * 100`
+  - capacity_planner.py lines 235-236, 304-305, 371-372: Added checks before growth rate divisions
+  - health_scorer.py lines 256, 379, 438, 472: Added checks before total divisions
+  - All divisions now safely handle zero denominators by returning 0.0 or float('inf') as appropriate
+  - Files: src/monitoring/health_reporter.py, src/monitoring/capacity_planner.py, src/memory/health_scorer.py
+
+### Fixed - 2025-11-30
 - **BUG-064: Integer Overflow in Unix Timestamp Conversion**
   - Added validation for Unix timestamps to prevent overflow/underflow in extreme dates
   - Added `_validate_timestamp()` helper function to check timestamps against 32-bit signed integer range [-2^31, 2^31-1]
