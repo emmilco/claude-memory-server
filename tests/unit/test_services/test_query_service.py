@@ -79,16 +79,16 @@ class TestStartConversationSession:
 
     @pytest.mark.asyncio
     async def test_start_without_tracker_returns_disabled(self):
-        """Test starting session without tracker returns disabled."""
+        """Test starting session without tracker raises StorageError."""
+        from src.core.exceptions import StorageError
+
         service = QueryService(
             config=ServerConfig(),
             conversation_tracker=None,
         )
 
-        result = await service.start_conversation_session()
-
-        assert result["status"] == "disabled"
-        assert "error" in result
+        with pytest.raises(StorageError):
+            await service.start_conversation_session()
 
     @pytest.mark.asyncio
     async def test_start_success(self, service):
@@ -112,13 +112,13 @@ class TestStartConversationSession:
 
     @pytest.mark.asyncio
     async def test_start_error_returns_failed(self, service):
-        """Test start error returns failed status."""
+        """Test start error raises StorageError."""
+        from src.core.exceptions import StorageError
+
         service.conversation_tracker.create_session.side_effect = Exception("Creation failed")
 
-        result = await service.start_conversation_session()
-
-        assert result["status"] == "failed"
-        assert "error" in result
+        with pytest.raises(StorageError):
+            await service.start_conversation_session()
 
 
 class TestEndConversationSession:
@@ -140,15 +140,16 @@ class TestEndConversationSession:
 
     @pytest.mark.asyncio
     async def test_end_without_tracker_returns_disabled(self):
-        """Test ending session without tracker returns disabled."""
+        """Test ending session without tracker raises StorageError."""
+        from src.core.exceptions import StorageError
+
         service = QueryService(
             config=ServerConfig(),
             conversation_tracker=None,
         )
 
-        result = await service.end_conversation_session("session_123")
-
-        assert result["status"] == "disabled"
+        with pytest.raises(StorageError):
+            await service.end_conversation_session("session_123")
 
     @pytest.mark.asyncio
     async def test_end_success(self, service):
@@ -170,12 +171,13 @@ class TestEndConversationSession:
 
     @pytest.mark.asyncio
     async def test_end_error_returns_failed(self, service):
-        """Test end error returns failed status."""
+        """Test end error raises StorageError."""
+        from src.core.exceptions import StorageError
+
         service.conversation_tracker.end_session.side_effect = Exception("End failed")
 
-        result = await service.end_conversation_session("session_123")
-
-        assert result["status"] == "failed"
+        with pytest.raises(StorageError):
+            await service.end_conversation_session("session_123")
 
 
 class TestListConversationSessions:
@@ -197,15 +199,16 @@ class TestListConversationSessions:
 
     @pytest.mark.asyncio
     async def test_list_without_tracker_returns_disabled(self):
-        """Test listing without tracker returns disabled."""
+        """Test listing without tracker raises StorageError."""
+        from src.core.exceptions import StorageError
+
         service = QueryService(
             config=ServerConfig(),
             conversation_tracker=None,
         )
 
-        result = await service.list_conversation_sessions()
-
-        assert result["status"] == "disabled"
+        with pytest.raises(StorageError):
+            await service.list_conversation_sessions()
 
     @pytest.mark.asyncio
     async def test_list_success(self, service):
@@ -218,12 +221,13 @@ class TestListConversationSessions:
 
     @pytest.mark.asyncio
     async def test_list_error_returns_failed(self, service):
-        """Test list error returns failed status."""
+        """Test list error raises StorageError."""
+        from src.core.exceptions import StorageError
+
         service.conversation_tracker.list_sessions.side_effect = Exception("List failed")
 
-        result = await service.list_conversation_sessions()
-
-        assert result["status"] == "failed"
+        with pytest.raises(StorageError):
+            await service.list_conversation_sessions()
 
 
 class TestAnalyzeConversation:
@@ -247,15 +251,16 @@ class TestAnalyzeConversation:
 
     @pytest.mark.asyncio
     async def test_analyze_without_engine_returns_disabled(self):
-        """Test analyzing without engine returns disabled."""
+        """Test analyzing without engine raises StorageError."""
+        from src.core.exceptions import StorageError
+
         service = QueryService(
             config=ServerConfig(),
             suggestion_engine=None,
         )
 
-        result = await service.analyze_conversation(messages=["test"])
-
-        assert result["status"] == "disabled"
+        with pytest.raises(StorageError):
+            await service.analyze_conversation(messages=["test"])
 
     @pytest.mark.asyncio
     async def test_analyze_success(self, service):
@@ -281,12 +286,13 @@ class TestAnalyzeConversation:
 
     @pytest.mark.asyncio
     async def test_analyze_error_returns_failed(self, service):
-        """Test analysis error returns failed status."""
+        """Test analysis error raises StorageError."""
+        from src.core.exceptions import StorageError
+
         service.suggestion_engine.analyze.side_effect = Exception("Analysis failed")
 
-        result = await service.analyze_conversation(messages=["test"])
-
-        assert result["status"] == "failed"
+        with pytest.raises(StorageError):
+            await service.analyze_conversation(messages=["test"])
 
 
 class TestGetSuggestionStats:
@@ -308,15 +314,16 @@ class TestGetSuggestionStats:
 
     @pytest.mark.asyncio
     async def test_stats_without_engine_returns_disabled(self):
-        """Test stats without engine returns disabled."""
+        """Test stats without engine raises StorageError."""
+        from src.core.exceptions import StorageError
+
         service = QueryService(
             config=ServerConfig(),
             suggestion_engine=None,
         )
 
-        result = await service.get_suggestion_stats()
-
-        assert result["status"] == "disabled"
+        with pytest.raises(StorageError):
+            await service.get_suggestion_stats()
 
     @pytest.mark.asyncio
     async def test_stats_success(self, service):
@@ -328,12 +335,13 @@ class TestGetSuggestionStats:
 
     @pytest.mark.asyncio
     async def test_stats_error_returns_failed(self, service):
-        """Test stats error returns failed status."""
+        """Test stats error raises StorageError."""
+        from src.core.exceptions import StorageError
+
         service.suggestion_engine.get_statistics.side_effect = Exception("Stats failed")
 
-        result = await service.get_suggestion_stats()
-
-        assert result["status"] == "failed"
+        with pytest.raises(StorageError):
+            await service.get_suggestion_stats()
 
 
 class TestProvideSuggestionFeedback:
@@ -352,18 +360,19 @@ class TestProvideSuggestionFeedback:
 
     @pytest.mark.asyncio
     async def test_feedback_without_engine_returns_disabled(self):
-        """Test feedback without engine returns disabled."""
+        """Test feedback without engine raises StorageError."""
+        from src.core.exceptions import StorageError
+
         service = QueryService(
             config=ServerConfig(),
             suggestion_engine=None,
         )
 
-        result = await service.provide_suggestion_feedback(
-            suggestion_id="s1",
-            accepted=True,
-        )
-
-        assert result["status"] == "disabled"
+        with pytest.raises(StorageError):
+            await service.provide_suggestion_feedback(
+                suggestion_id="s1",
+                accepted=True,
+            )
 
     @pytest.mark.asyncio
     async def test_feedback_accepted(self, service):
@@ -404,15 +413,16 @@ class TestProvideSuggestionFeedback:
 
     @pytest.mark.asyncio
     async def test_feedback_error_returns_failed(self, service):
-        """Test feedback error returns failed status."""
+        """Test feedback error raises StorageError."""
+        from src.core.exceptions import StorageError
+
         service.suggestion_engine.record_feedback.side_effect = Exception("Feedback failed")
 
-        result = await service.provide_suggestion_feedback(
-            suggestion_id="s1",
-            accepted=True,
-        )
-
-        assert result["status"] == "failed"
+        with pytest.raises(StorageError):
+            await service.provide_suggestion_feedback(
+                suggestion_id="s1",
+                accepted=True,
+            )
 
 
 class TestSetSuggestionMode:
@@ -431,15 +441,16 @@ class TestSetSuggestionMode:
 
     @pytest.mark.asyncio
     async def test_mode_without_engine_returns_disabled(self):
-        """Test setting mode without engine returns disabled."""
+        """Test setting mode without engine raises StorageError."""
+        from src.core.exceptions import StorageError
+
         service = QueryService(
             config=ServerConfig(),
             suggestion_engine=None,
         )
 
-        result = await service.set_suggestion_mode(mode="balanced")
-
-        assert result["status"] == "disabled"
+        with pytest.raises(StorageError):
+            await service.set_suggestion_mode(mode="balanced")
 
     @pytest.mark.asyncio
     async def test_mode_aggressive(self, service):
@@ -471,20 +482,21 @@ class TestSetSuggestionMode:
 
     @pytest.mark.asyncio
     async def test_mode_invalid_returns_failed(self, service):
-        """Test invalid mode returns failed status."""
-        result = await service.set_suggestion_mode(mode="invalid_mode")
+        """Test invalid mode raises StorageError."""
+        from src.core.exceptions import StorageError
 
-        assert result["status"] == "failed"
-        assert "Invalid mode" in result["error"]
+        with pytest.raises(StorageError, match="Invalid.*mode"):
+            await service.set_suggestion_mode(mode="invalid_mode")
 
     @pytest.mark.asyncio
     async def test_mode_error_returns_failed(self, service):
-        """Test mode setting error returns failed status."""
+        """Test mode setting error raises StorageError."""
+        from src.core.exceptions import StorageError
+
         service.suggestion_engine.set_mode.side_effect = Exception("Mode failed")
 
-        result = await service.set_suggestion_mode(mode="balanced")
-
-        assert result["status"] == "failed"
+        with pytest.raises(StorageError):
+            await service.set_suggestion_mode(mode="balanced")
 
 
 class TestExpandQuery:
@@ -505,18 +517,16 @@ class TestExpandQuery:
 
     @pytest.mark.asyncio
     async def test_expand_without_expander_returns_original(self):
-        """Test expanding without expander returns original query."""
+        """Test expanding without expander raises StorageError."""
+        from src.core.exceptions import StorageError
+
         service = QueryService(
             config=ServerConfig(),
             query_expander=None,
         )
 
-        result = await service.expand_query(query="auth login")
-
-        assert result["original_query"] == "auth login"
-        assert result["expanded_query"] == "auth login"
-        assert result["expansion_applied"] is False
-        assert result["status"] == "disabled"
+        with pytest.raises(StorageError):
+            await service.expand_query(query="auth login")
 
     @pytest.mark.asyncio
     async def test_expand_success(self, service):
@@ -562,17 +572,15 @@ class TestExpandQuery:
 
     @pytest.mark.asyncio
     async def test_expand_error_returns_original(self, service):
-        """Test expansion error returns original query."""
+        """Test expansion error raises StorageError."""
+        from src.core.exceptions import StorageError
+
         service.query_expander.expand_query = AsyncMock(
             side_effect=Exception("Expansion failed")
         )
 
-        result = await service.expand_query(query="test query")
-
-        assert result["status"] == "failed"
-        assert result["expanded_query"] == "test query"
-        assert result["expansion_applied"] is False
-        assert "error" in result
+        with pytest.raises(StorageError, match="Failed to expand query"):
+            await service.expand_query(query="test query")
 
 
 class TestIntegrationScenarios:

@@ -74,6 +74,7 @@ Organize entries under these headers in chronological order (newest first):
   - Ensures consistent error handling pattern: early validation checks raise exceptions, operational failures raise exceptions
   - Methods standardized: start_conversation_session, end_conversation_session, list_conversation_sessions, analyze_conversation, get_suggestion_stats, provide_suggestion_feedback, set_suggestion_mode, expand_query, get_usage_statistics, get_top_queries, get_frequently_accessed_code, get_token_analytics
   - Files: src/services/query_service.py, src/services/analytics_service.py, src/services/cross_project_service.py
+  - Updated 88 test cases in test_query_service.py and test_analytics_service.py to expect `StorageError` exceptions instead of error dicts
 
 - **REF-028-C: Add Exception Chain Preservation (from e)**
   - Added `from e` to 41 raise statements lacking exception chain preservation
