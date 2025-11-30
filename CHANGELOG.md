@@ -51,6 +51,22 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Added - 2025-11-29
+- **FEAT-051: Query-based Deletion for Qdrant**
+  - Added `delete_by_filter()` method to QdrantMemoryStore for filter-based deletion
+  - Added `delete_memories_by_query()` MCP tool for bulk deletion with filters
+  - Supports filtering by: project_name, category, tags, date_range, importance_range, lifecycle_state, scope, context_level
+  - Safety features: dry_run mode (default: true), max_count limit (1-1000), confirmation warnings for large deletions
+  - Returns deletion statistics with breakdown by category, project, and lifecycle state
+  - Enhanced SearchFilters model with lifecycle_state, date_from, date_to, max_importance fields
+  - Proper enum handling: string parameters converted to uppercase enums, .value extracted for Qdrant filters
+  - Added LifecycleState import to server.py (bug fix)
+  - Enhanced MCP tool schema with explicit enum values and case-insensitive documentation
+  - Comprehensive error handling for invalid enum values with helpful error messages
+  - Review fixes: Fixed 3 critical enum handling bugs, improved test validation
+  - Files: src/store/qdrant_store.py, src/core/server.py, src/mcp_server.py, src/core/models.py
+  - Tests: tests/unit/test_query_based_deletion.py (20 tests including enum validation)
+
 ### Fixed - 2025-11-30
 - **TEST-029: Fix Test Suite Isolation and Collection Cleanup**
   - Changed `unique_qdrant_collection` fixture to create true per-test unique collections instead of reusing pool collections
@@ -59,6 +75,12 @@ Organize entries under these headers in chronological order (newest first):
   - Added `skip_ci` marker handling in `pytest_collection_modifyitems` hook to properly skip timing-sensitive tests under parallel execution
   - All unit tests now pass with isolated Qdrant instance (3410 passed, 141 skipped)
   - Files: tests/conftest.py, tests/unit/test_backup_export.py, tests/unit/test_backup_import.py
+
+- **FEAT-051: Fix test-isolated.sh for macOS Docker Desktop compatibility**
+  - Simplified test-isolated.sh to detect and reuse existing Qdrant at port 6333 when available
+  - Automatically falls back to creating isolated container on Linux
+  - Fixes backup export/import test failures when running in macOS worktree (Docker Desktop limitation)
+  - Files: scripts/test-isolated.sh
 
 - **BUG-039: Add Missing PointIdsList Import**
   - Added missing `PointIdsList` import from `qdrant_client.models` in `src/store/qdrant_store.py`
@@ -73,6 +95,12 @@ Organize entries under these headers in chronological order (newest first):
   - All tests in test_indexing_progress.py now pass with isolated Qdrant instance
   - Files: tests/conftest.py, tests/unit/test_config.py, tests/unit/test_indexing_progress.py
 
+- **FEAT-051: Fix port hardcoding in tests**
+  - Fixed `test_config_defaults` to clear `QDRANT_URL` env var before testing true defaults
+  - Added `mock_call_graph_store` fixture to avoid unwanted Qdrant connections in indexing tests
+  - Updated backup export/import tests to use `QDRANT_URL`/`CLAUDE_RAG_QDRANT_URL` env vars instead of hardcoded port 6333
+  - Enables tests to work with both default Qdrant (6333) and isolated test runner (dynamic port)
+  - Files: tests/unit/test_config.py, tests/unit/test_indexing_progress.py, tests/unit/test_backup_export.py, tests/unit/test_backup_import.py
 - **BUG-042: Fix incorrect method name in StatusCommand.print_active_project()**
   - Changed `_format_relative_time()` to `_format_time_ago()` in `src/cli/status_command.py`
 

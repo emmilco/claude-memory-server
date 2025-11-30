@@ -404,7 +404,11 @@ class SearchFilters(BaseModel):
     project_name: Optional[str] = None
     category: Optional[MemoryCategory] = None
     min_importance: float = Field(default=0.0, ge=0.0, le=1.0)
+    max_importance: float = Field(default=1.0, ge=0.0, le=1.0)
     tags: List[str] = Field(default_factory=list)
+    lifecycle_state: Optional[LifecycleState] = None
+    date_from: Optional[str] = None
+    date_to: Optional[str] = None
     advanced_filters: Optional[AdvancedSearchFilters] = None
 
     def to_dict(self) -> Dict[str, Any]:
@@ -420,8 +424,16 @@ class SearchFilters(BaseModel):
             filters["category"] = self.category.value
         if self.min_importance > 0.0:
             filters["min_importance"] = self.min_importance
+        if self.max_importance < 1.0:
+            filters["max_importance"] = self.max_importance
         if self.tags:
             filters["tags"] = self.tags
+        if self.lifecycle_state:
+            filters["lifecycle_state"] = self.lifecycle_state.value
+        if self.date_from:
+            filters["date_from"] = self.date_from
+        if self.date_to:
+            filters["date_to"] = self.date_to
         if self.advanced_filters:
             filters["advanced_filters"] = self.advanced_filters
         return filters

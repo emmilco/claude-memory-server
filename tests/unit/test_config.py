@@ -7,8 +7,12 @@ from src.config import ServerConfig, get_config, set_config
 from tests.conftest import TEST_QDRANT_URL
 
 
-def test_config_defaults():
+def test_config_defaults(monkeypatch):
     """Test that configuration loads with default values."""
+    # Clear environment variables that might override defaults (e.g., from isolated test runner)
+    monkeypatch.delenv("QDRANT_URL", raising=False)
+    monkeypatch.delenv("CLAUDE_RAG_QDRANT_URL", raising=False)
+
     config = ServerConfig()
     assert config.server_name == "claude-memory-rag"
     assert config.log_level == "INFO"
