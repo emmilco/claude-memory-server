@@ -1,5 +1,6 @@
 """Qdrant vector store implementation."""
 
+import copy
 import logging
 import fnmatch
 import hashlib
@@ -655,10 +656,11 @@ class QdrantMemoryStore(MemoryStore):
                 existing_dict = existing.model_dump()
 
                 # IMPORTANT: Merge metadata dicts to preserve existing keys
-                merged_metadata = existing.metadata or {}
+                # Use deepcopy to prevent shared references between memories
+                merged_metadata = copy.deepcopy(existing.metadata) if existing.metadata else {}
                 if "metadata" in updates:
                     new_metadata = updates["metadata"] or {}
-                    merged_metadata = {**merged_metadata, **new_metadata}
+                    merged_metadata.update(copy.deepcopy(new_metadata))
 
                 # Normalize enum values to strings
                 def _normalize_enum(value, default=None):
@@ -709,12 +711,14 @@ class QdrantMemoryStore(MemoryStore):
             else:
                 # Only update payload (no vector change)
                 # IMPORTANT: Merge metadata if it's being updated to preserve existing keys
+                # Use deepcopy to prevent shared references between memories
                 payload_updates = updates.copy()
                 if "metadata" in updates:
                     # Merge new metadata with existing metadata
-                    existing_metadata = existing.metadata or {}
+                    existing_metadata = copy.deepcopy(existing.metadata) if existing.metadata else {}
                     new_metadata = updates["metadata"] or {}
-                    merged_metadata = {**existing_metadata, **new_metadata}
+                    existing_metadata.update(copy.deepcopy(new_metadata))
+                    merged_metadata = existing_metadata
 
                     # Remove the nested "metadata" key and flatten it into payload
                     payload_updates.pop("metadata", None)

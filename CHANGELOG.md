@@ -76,6 +76,12 @@ Organize entries under these headers in chronological order (newest first):
   - Backward-compatible: hardcoded defaults are used if not overridden in config
 
 ### Fixed - 2025-11-30
+- **BUG-163: Metadata Dictionary Mutation via Shallow Copy**
+  - Fixed metadata mutation bug where nested dictionaries/lists were shared between memories
+  - Replaced shallow copy pattern `{**existing_metadata, **new_metadata}` with `copy.deepcopy()` to prevent shared references
+  - Updated two metadata merge locations in update path to use deep copy
+  - Files: src/store/qdrant_store.py
+
 - **BUG-066: Integration Test Suite Hangs**
   - Fixed integration tests hanging indefinitely (16+ minutes) in pytest-asyncio contexts
   - Wrapped synchronous QdrantClient.get_collections() in run_in_executor() to prevent event loop blocking
