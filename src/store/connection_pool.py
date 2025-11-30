@@ -16,6 +16,7 @@ from datetime import datetime, UTC
 from weakref import WeakValueDictionary
 
 from qdrant_client import QdrantClient
+from requests.exceptions import Timeout
 
 from src.config import ServerConfig
 from src.core.exceptions import QdrantConnectionError, StorageError
@@ -571,51 +572,73 @@ class QdrantConnectionPool:
         )
 
     async def _create_connection(self) -> PooledConnection:
-        """Create a new Qdrant connection.
+        """Create a new Qdrant connection with exponential backoff retry.
 
         Returns:
             PooledConnection: Newly created pooled connection
 
         Raises:
-            QdrantConnectionError: If connection creation fails
+            QdrantConnectionError: If connection creation fails after 3 attempts
         """
-        try:
-            # Create new Qdrant client
-            client = QdrantClient(
-                url=self.config.qdrant_url,
-                api_key=self.config.qdrant_api_key,
-                timeout=30.0,
-                prefer_grpc=getattr(self.config, 'qdrant_prefer_grpc', False),
-            )
+        max_attempts = 3
 
-            # BUG-066: Run blocking get_collections() in executor to prevent event loop blocking
-            # QdrantClient methods are synchronous and can hang async code in pytest-asyncio
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, client.get_collections)
+        for attempt in range(max_attempts):
+            try:
+                # Create new Qdrant client
+                client = QdrantClient(
+                    url=self.config.qdrant_url,
+                    api_key=self.config.qdrant_api_key,
+                    timeout=30.0,
+                    prefer_grpc=getattr(self.config, 'qdrant_prefer_grpc', False),
+                )
 
-            # Wrap in pooled connection
-            pooled_conn = PooledConnection(
-                client=client,
-                created_at=datetime.now(UTC),
-                last_used=datetime.now(UTC),
-            )
+                # BUG-066: Run blocking get_collections() in executor to prevent event loop blocking
+                # QdrantClient methods are synchronous and can hang async code in pytest-asyncio
+                loop = asyncio.get_event_loop()
+                await loop.run_in_executor(None, client.get_collections)
 
-            # Update metrics
-            async with self._lock:
-                with self._counter_lock:  # REF-030: Atomic counter increment
-                    self._created_count += 1
-                self._stats.connections_created += 1
-                self._stats.pool_size = self._created_count
+                # Wrap in pooled connection
+                pooled_conn = PooledConnection(
+                    client=client,
+                    created_at=datetime.now(UTC),
+                    last_used=datetime.now(UTC),
+                )
 
-            logger.debug(f"Created new connection (total: {self._created_count})")
-            return pooled_conn
+                # Update metrics
+                async with self._lock:
+                    with self._counter_lock:  # REF-030: Atomic counter increment
+                        self._created_count += 1
+                    self._stats.connections_created += 1
+                    self._stats.pool_size = self._created_count
 
-        except Exception as e:
-            logger.error(f"Failed to create connection: {e}")
-            raise QdrantConnectionError(
-                url=self.config.qdrant_url,
-                reason=f"Connection creation failed: {e}"
-            )
+                logger.debug(f"Created new connection (total: {self._created_count})")
+                return pooled_conn
+
+            except (ConnectionError, Timeout) as e:
+                # Connection error or timeout - retry with exponential backoff
+                if attempt < max_attempts - 1:
+                    delay = 2 ** attempt  # 1s, 2s, 4s delays
+                    logger.warning(
+                        f"Connection error on attempt {attempt + 1}/{max_attempts}: {e}. "
+                        f"Retrying in {delay}s..."
+                    )
+                    await asyncio.sleep(delay)
+                    continue
+                else:
+                    # Final attempt failed
+                    logger.error(f"Failed to create connection after {max_attempts} attempts: {e}")
+                    raise QdrantConnectionError(
+                        url=self.config.qdrant_url,
+                        reason=f"Failed to connect after {max_attempts} attempts: {e}"
+                    )
+
+            except Exception as e:
+                # Non-connection errors - fail immediately
+                logger.error(f"Failed to create connection: {e}")
+                raise QdrantConnectionError(
+                    url=self.config.qdrant_url,
+                    reason=f"Connection creation failed: {e}"
+                )
 
     def _should_recycle(self, pooled_conn: PooledConnection) -> bool:
         """Check if connection should be recycled based on age.

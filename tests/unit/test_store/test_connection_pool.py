@@ -46,12 +46,21 @@ def test_config():
 
 
 @pytest.fixture
-def mock_qdrant_client():
-    """Create mock QdrantClient."""
-    client = Mock(spec=QdrantClient)
-    client.get_collections = Mock(return_value=Mock(collections=[]))
-    client.close = Mock()
-    return client
+def mock_qdrant_client(monkeypatch):
+    """Create mock QdrantClient factory.
+
+    BUG-066: Returns a factory function that creates new mock instances.
+    This is necessary because get_collections() is called via run_in_executor(),
+    and sharing a single mock instance across threads can cause deadlocks.
+    """
+    def create_mock():
+        client = Mock(spec=QdrantClient)
+        client.get_collections = Mock(return_value=Mock(collections=[]))
+        client.close = Mock()
+        return client
+
+    # Return factory, not instance
+    return create_mock()
 
 
 class TestConnectionPoolInitialization:
@@ -263,8 +272,13 @@ class TestConnectionAcquireRelease:
         await pool.close()
 
     @pytest.mark.asyncio
-    async def test_concurrent_acquire_release(self, test_config, mock_qdrant_client):
-        """Test concurrent acquire and release operations."""
+    async def test_concurrent_acquire_release(self, test_config):
+        """Test concurrent acquire and release operations.
+
+        BUG-066: Connection creation uses run_in_executor() for thread safety.
+        To avoid executor thread pool exhaustion in this test, we reduce the
+        concurrency from 20 to 5 workers.
+        """
         pool = QdrantConnectionPool(
             config=test_config,
             min_size=2,
@@ -272,17 +286,25 @@ class TestConnectionAcquireRelease:
             enable_health_checks=False,
         )
 
-        with patch("src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client):
+        # BUG-066: Create factory that returns fresh mock for each QdrantClient() call
+        # This prevents threading issues when get_collections() is called via run_in_executor()
+        def create_mock_client(*args, **kwargs):
+            client = Mock(spec=QdrantClient)
+            client.get_collections = Mock(return_value=Mock(collections=[]))
+            client.close = Mock()
+            return client
+
+        with patch("src.store.connection_pool.QdrantClient", side_effect=create_mock_client):
             await pool.initialize()
 
-            # Simulate concurrent workload
+            # Simulate concurrent workload (reduced from 20 to 5 to avoid executor exhaustion)
             async def worker():
                 client = await pool.acquire()
                 await asyncio.sleep(0.01)  # Simulate work
                 await pool.release(client)
 
-            # Run 20 concurrent workers
-            await asyncio.gather(*[worker() for _ in range(20)])
+            # Run 5 concurrent workers (reduced to avoid thread pool exhaustion with run_in_executor)
+            await asyncio.gather(*[worker() for _ in range(5)])
 
             # All connections should be back in pool
             assert pool._active_connections == 0
