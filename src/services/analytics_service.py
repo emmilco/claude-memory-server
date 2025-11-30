@@ -90,7 +90,7 @@ class AnalyticsService:
 
         except Exception as e:
             logger.error(f"Failed to get usage statistics: {e}", exc_info=True)
-            raise StorageError(f"Failed to get usage statistics: {e}")
+            raise StorageError(f"Failed to get usage statistics: {e}") from e
 
     async def get_top_queries(
         self,
@@ -130,7 +130,7 @@ class AnalyticsService:
 
         except Exception as e:
             logger.error(f"Failed to get top queries: {e}", exc_info=True)
-            raise StorageError(f"Failed to get top queries: {e}")
+            raise StorageError(f"Failed to get top queries: {e}") from e
 
     async def get_frequently_accessed_code(
         self,
@@ -170,7 +170,7 @@ class AnalyticsService:
 
         except Exception as e:
             logger.error(f"Failed to get frequently accessed code: {e}", exc_info=True)
-            raise StorageError(f"Failed to get frequently accessed code: {e}")
+            raise StorageError(f"Failed to get frequently accessed code: {e}") from e
 
     async def get_token_analytics(
         self,
@@ -212,7 +212,7 @@ class AnalyticsService:
 
         except Exception as e:
             logger.error(f"Failed to get token analytics: {e}", exc_info=True)
-            raise StorageError(f"Failed to get token analytics: {e}")
+            raise StorageError(f"Failed to get token analytics: {e}") from e
 
     async def submit_search_feedback(
         self,
@@ -258,7 +258,7 @@ class AnalyticsService:
 
         except Exception as e:
             logger.error(f"Failed to submit search feedback: {e}", exc_info=True)
-            raise StorageError(f"Failed to submit search feedback: {e}")
+            raise StorageError(f"Failed to submit search feedback: {e}") from e
 
     async def get_quality_metrics(
         self,
@@ -293,4 +293,4 @@ class AnalyticsService:
 
         except Exception as e:
             logger.error(f"Failed to retrieve quality metrics: {e}", exc_info=True)
-            raise StorageError(f"Failed to retrieve quality metrics: {e}")
+            raise StorageError(f"Failed to retrieve quality metrics: {e}") from e
