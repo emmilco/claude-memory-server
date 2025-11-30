@@ -24,6 +24,10 @@ def session_config():
     all tests in the session. Use this for tests that only read config values
     and do not modify the config object.
 
+    WARNING: ServerConfig is mutable (not frozen). Tests MUST NOT modify this
+    config instance or it will cause cross-test contamination. For tests that
+    need to modify config, use a function-scoped fixture instead.
+
     For tests that modify config or need isolated config, use a function-scoped
     fixture instead.
     """

@@ -103,7 +103,8 @@ class TestStoreFailureRecovery:
         except Exception as e:
             # Failing entire batch is acceptable - verify we got an exception
             assert isinstance(e, Exception)
-            assert str(e) or True  # Ensure exception has a message or exists
+            # Exception should have a meaningful message
+            assert len(str(e)) > 0, "Exception should have a descriptive message"
 
         await server.close()
 
@@ -129,8 +130,8 @@ class TestStoreFailureRecovery:
         except (AttributeError, Exception) as e:
             # Expected to fail with connection issues - verify we got an exception
             assert isinstance(e, (AttributeError, Exception))
-            # Verify the exception relates to the missing connection
-            assert e is not None
+            # Verify the exception has a meaningful message about the connection issue
+            assert len(str(e)) > 0, "Exception should describe the connection issue"
         finally:
             # Restore connection
             server.store.client = original_client
@@ -222,7 +223,7 @@ class TestCacheFailureRecovery:
             # Acceptable to fail, but shouldn't crash the server
             assert isinstance(e, Exception)
             # Verify exception contains useful information
-            assert str(e) or True
+            assert len(str(e)) > 0, "Exception should have a descriptive message"
         finally:
             await server.close()
 
