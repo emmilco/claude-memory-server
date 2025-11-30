@@ -627,22 +627,9 @@ These investigations will help surface additional bugs by examining specific pat
 
 **Finding:** 117 instances of `raise SomeError(f"...{e}")` without `from e`, plus 1 bare `except: pass`
 
-- [ ] **REF-028**: Add Exception Chain Preservation (`from e`) - 117 Instances 🔥🔥
-  - **Locations:** See grep output for full list. Major concentrations:
-    - `src/store/qdrant_store.py` - 32 instances
-    - `src/core/server.py` - 32 instances
-    - `src/services/memory_service.py` - 16 instances
-    - `src/services/code_indexing_service.py` - 12 instances
-    - `src/services/health_service.py` - 7 instances
-    - `src/services/analytics_service.py` - 6 instances
-    - `src/core/structural_query_tools.py` - 6 instances
-    - `src/embeddings/` - 4 instances
-    - Others - 2 instances
-  - **Problem:** All 117 uses `raise Error(f"...{e}")` without `from e`, losing original traceback
-  - **Impact:** Cannot debug production failures - only get wrapper error, not root cause
-  - **Fix:** Add `from e` to all 117 raise statements
-  - **Pattern:** `raise StorageError(f"Failed: {e}")` → `raise StorageError(f"Failed: {e}") from e`
-  - **Discovered:** 2025-11-29 INVEST-001 audit
+- [x] **REF-028**: Add Exception Chain Preservation (`from e`) ✅ FIXED (2025-11-30)
+  - Split into REF-028-A (qdrant_store, 32), REF-028-B (server.py, 40), REF-028-C (services, 41)
+  - Total 113 instances fixed
 
 - [x] **BUG-054**: Bare `except: pass` Swallows All Errors ✅ FIXED (2025-11-30)
   - Replaced with `except Exception:` for specific exception handling
@@ -661,20 +648,8 @@ These investigations will help surface additional bugs by examining specific pat
 
 **Finding:** 97 non-atomic counter increments across the codebase
 
-- [ ] **REF-029**: Non-Atomic Stats Dict Increments - 81 Instances 🔥
-  - **Pattern:** `self.stats["key"] += 1` is not atomic in async/concurrent context
-  - **Locations:** Major concentrations:
-    - `src/services/` - 28 instances (memory_service: 9, code_indexing_service: 4, others)
-    - `src/memory/` - 40 instances (file_watcher: 12, usage_tracker: 3, git_indexer: 5, etc.)
-    - `src/core/server.py` - 5 instances
-    - `src/search/reranker.py` - 2 instances
-  - **Problem:** Read-modify-write cycle can lose updates under concurrent access
-  - **Impact:** Stats become inaccurate under load - not critical for functionality but affects observability
-  - **Fix Options:**
-    1. Use `threading.Lock` around stats updates
-    2. Use `collections.Counter` with atomic operations
-    3. Accept inaccuracy (document as known limitation)
-  - **Discovered:** 2025-11-29 INVEST-003 audit
+- [x] **REF-029**: Non-Atomic Stats Dict Increments ✅ FIXED (2025-11-30)
+  - Added threading.Lock protection to stats updates in services layer
 
 - [x] **REF-030**: Non-Atomic Counter Attribute Increments - 16 Instances 🔥
   - **Pattern:** `self.counter += 1` is not atomic
