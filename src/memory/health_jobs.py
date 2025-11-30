@@ -14,6 +14,7 @@ from src.core.models import LifecycleState, ContextLevel
 from src.store import MemoryStore
 from src.memory.lifecycle_manager import LifecycleManager
 from src.memory.health_scorer import HealthScorer, HealthScore
+from src.config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -262,7 +263,8 @@ class HealthMaintenanceJobs:
 
                 # Check usage (skip if frequently accessed)
                 use_count = memory.get('use_count', 0)
-                if use_count > 5:  # Has been used at least 5 times
+                config = get_config()
+                if use_count > config.quality.stale_memory_usage_threshold:  # REF-021: Configurable threshold
                     continue
 
                 candidates.append(memory)

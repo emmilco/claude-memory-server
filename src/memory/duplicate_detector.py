@@ -10,7 +10,7 @@ from src.core.models import MemoryUnit, MemoryCategory
 from src.store.base import MemoryStore
 from src.embeddings.generator import EmbeddingGenerator
 from src.core.exceptions import ValidationError
-from src.config import DEFAULT_EMBEDDING_DIM
+from src.config import DEFAULT_EMBEDDING_DIM, get_config
 
 logger = logging.getLogger(__name__)
 
@@ -71,9 +71,9 @@ class DuplicateDetector:
         self,
         store: MemoryStore,
         embedding_generator: EmbeddingGenerator,
-        high_threshold: float = 0.95,
-        medium_threshold: float = 0.85,
-        low_threshold: float = 0.75
+        high_threshold: Optional[float] = None,
+        medium_threshold: Optional[float] = None,
+        low_threshold: Optional[float] = None
     ):
         """
         Initialize duplicate detector.
@@ -81,22 +81,25 @@ class DuplicateDetector:
         Args:
             store: Memory store for retrieving memories
             embedding_generator: Generator for creating embeddings
-            high_threshold: Threshold for high-confidence duplicates (auto-merge)
-            medium_threshold: Threshold for medium-confidence duplicates (prompt user)
-            low_threshold: Threshold for low-confidence duplicates (flag as related)
+            high_threshold: Threshold for high-confidence duplicates (auto-merge), uses config default if None
+            medium_threshold: Threshold for medium-confidence duplicates (prompt user), uses config default if None
+            low_threshold: Threshold for low-confidence duplicates (flag as related), uses config default if None
         """
-        if not (0.0 <= low_threshold <= medium_threshold <= high_threshold <= 1.0):
+        # Load defaults from config if not provided
+        config = get_config()
+        self.high_threshold = high_threshold if high_threshold is not None else config.quality.duplicate_high_threshold
+        self.medium_threshold = medium_threshold if medium_threshold is not None else config.quality.duplicate_medium_threshold
+        self.low_threshold = low_threshold if low_threshold is not None else config.quality.duplicate_low_threshold
+
+        if not (0.0 <= self.low_threshold <= self.medium_threshold <= self.high_threshold <= 1.0):
             raise ValidationError("Thresholds must satisfy: 0 <= low <= medium <= high <= 1")
 
         self.store = store
         self.embedding_generator = embedding_generator
-        self.high_threshold = high_threshold
-        self.medium_threshold = medium_threshold
-        self.low_threshold = low_threshold
 
         logger.info(
-            f"DuplicateDetector initialized (high={high_threshold}, "
-            f"medium={medium_threshold}, low={low_threshold})"
+            f"DuplicateDetector initialized (high={self.high_threshold}, "
+            f"medium={self.medium_threshold}, low={self.low_threshold})"
         )
 
     async def find_duplicates(
