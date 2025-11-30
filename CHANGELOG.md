@@ -57,6 +57,9 @@ Organize entries under these headers in chronological order (newest first):
   - Enhanced error messages in `store_memory()`, `query()`, `update_memory()`, and `list_memories()` methods
   - Wrapped enum conversions (MemoryCategory, LifecycleState, MemoryScope, ContextLevel) with try-except blocks
   - Error format now includes: `Invalid value 'X' for parameter 'field_name'. Valid values: ...`
+  - Fixed error message values to match actual enum definitions:
+    - ContextLevel: lowercase -> uppercase (USER_PREFERENCE, PROJECT_CONTEXT, SESSION_STATE)
+    - MemoryScope: removed non-existent 'session' value (only global, project)
   - Files: src/services/memory_service.py
 
 ### Changed - 2025-11-30
