@@ -52,6 +52,13 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **BUG-043: Remove Missing CLI Commands (verify and consolidate)**
+  - Removed `verify` and `consolidate` command definitions from argparser (lines 412-472)
+  - Removed corresponding command handlers from `main_async()` (lines 474-492)
+  - Root cause: These commands were intentionally removed in commit 8c598c8 as part of relationship feature removal
+  - Impact: CLI no longer crashes when attempting to use `verify` or `consolidate` subcommands
+  - Files: src/cli/__init__.py
+
 - **BUG-039: Add Missing PointIdsList Import**
   - Added missing `PointIdsList` import from `qdrant_client.models` in `src/store/qdrant_store.py`
   - Fixed `NameError` in `merge_memories()` method at line 2331
