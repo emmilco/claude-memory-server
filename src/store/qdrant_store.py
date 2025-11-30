@@ -32,6 +32,40 @@ logger = logging.getLogger(__name__)
 # Maximum iterations for scroll loops to prevent infinite loops with malformed offsets
 MAX_SCROLL_ITERATIONS = 1000
 
+# Unix timestamp range limits (32-bit signed integer for Qdrant compatibility)
+# MIN: -2^31 (-2147483648) represents ~1901-12-13 20:45:52 UTC
+# MAX: 2^31 - 1 (2147483647) represents ~2038-01-19 03:14:07 UTC
+MIN_UNIX_TIMESTAMP = -(2**31)
+MAX_UNIX_TIMESTAMP = 2**31 - 1
+
+
+def _validate_timestamp(timestamp: float, field_name: str = "timestamp") -> None:
+    """
+    Validate that a Unix timestamp is within Qdrant's supported range.
+
+    Qdrant uses 32-bit signed integers for numeric range filters,
+    so timestamps must be within [-2^31, 2^31 - 1].
+
+    Args:
+        timestamp: Unix timestamp value (seconds since epoch)
+        field_name: Name of the field being validated (for error message)
+
+    Raises:
+        ValidationError: If timestamp is outside the supported range
+    """
+    if timestamp < MIN_UNIX_TIMESTAMP:
+        raise ValidationError(
+            f"Date in field '{field_name}' is too far in past. "
+            f"Timestamp {timestamp} is below minimum supported value {MIN_UNIX_TIMESTAMP} "
+            f"(~1901-12-13). Please use a later date."
+        )
+    if timestamp > MAX_UNIX_TIMESTAMP:
+        raise ValidationError(
+            f"Date in field '{field_name}' is too far in future. "
+            f"Timestamp {timestamp} exceeds maximum supported value {MAX_UNIX_TIMESTAMP} "
+            f"(~2038-01-19). Please use an earlier date."
+        )
+
 
 class QdrantMemoryStore(MemoryStore):
     """Qdrant implementation of the MemoryStore interface."""
@@ -2862,10 +2896,12 @@ class QdrantMemoryStore(MemoryStore):
                 author_date = commit_data["author_date"]
                 if isinstance(author_date, datetime):
                     author_date = author_date.timestamp()
+                    _validate_timestamp(author_date, "author_date")
 
                 committer_date = commit_data.get("committer_date")
                 if isinstance(committer_date, datetime):
                     committer_date = committer_date.timestamp()
+                    _validate_timestamp(committer_date, "committer_date")
 
                 # Build payload for git commit
                 payload = {
@@ -3049,9 +3085,13 @@ class QdrantMemoryStore(MemoryStore):
                 # Date range filter - convert to Unix timestamps for Qdrant
                 date_range = {}
                 if since:
-                    date_range["gte"] = since.timestamp()
+                    since_ts = since.timestamp()
+                    _validate_timestamp(since_ts, "since")
+                    date_range["gte"] = since_ts
                 if until:
-                    date_range["lte"] = until.timestamp()
+                    until_ts = until.timestamp()
+                    _validate_timestamp(until_ts, "until")
+                    date_range["lte"] = until_ts
 
                 if date_range:
                     must_conditions.append(
