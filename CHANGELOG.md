@@ -51,7 +51,6 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
-<<<<<<< HEAD
 ### Fixed - 2025-11-30
 - **REF-028-C: Add Exception Chain Preservation (from e)**
   - Added `from e` to 41 raise statements lacking exception chain preservation
@@ -61,6 +60,21 @@ Organize entries under these headers in chronological order (newest first):
   - src/services/health_service.py: 7 instances fixed
   - src/services/analytics_service.py: 6 instances fixed
   - Prevents loss of original exception context in exception hierarchies
+
+- **REF-028-B: Add Exception Chain Preservation with `from e`**
+  - Preserved original exception tracebacks by adding `from e` clause to 40 exception re-raises
+  - Prevents loss of stack traces when converting between exception types
+  - Improves debugging and error diagnostics by maintaining the full exception chain
+  - Files modified: src/core/server.py
+  - Fixed exceptions in: store_memory, retrieve_memories, delete_memory, update_memory, list_memories, import_memories, get_memory_by_id, delete_memories_by_query, export_memories, all analytics and git-related operations
+
+- **REF-028-A: Add Exception Chain Preservation**
+  - Added `from e` clause to all 32 exception raise statements in `src/store/qdrant_store.py`
+  - Preserves original exception traceback when raising custom exceptions
+  - Affected exception types: StorageError, RetrievalError, ValidationError
+  - Pattern changed from `raise CustomError(f"...{e}")` to `raise CustomError(f"...{e}") from e`
+  - Enables proper root cause analysis via `__cause__` attribute in exception chain
+  - Files: src/store/qdrant_store.py
 
 - **REF-027: Add Missing Timeout Handling for Async Operations**
   - Added `asyncio.timeout(30.0)` wrappers around all store operations in services layer (34 calls total)
@@ -76,18 +90,6 @@ Organize entries under these headers in chronological order (newest first):
   - Moved `await old_task` outside lock to avoid blocking other file changes
   - Files: src/memory/file_watcher.py
 
-||||||| 9fd7178
-=======
-### Fixed - 2025-11-30
-- **REF-028-A: Add Exception Chain Preservation**
-  - Added `from e` clause to all 32 exception raise statements in `src/store/qdrant_store.py`
-  - Preserves original exception traceback when raising custom exceptions
-  - Affected exception types: StorageError, RetrievalError, ValidationError
-  - Pattern changed from `raise CustomError(f"...{e}")` to `raise CustomError(f"...{e}") from e`
-  - Enables proper root cause analysis via `__cause__` attribute in exception chain
-  - Files: src/store/qdrant_store.py
-
->>>>>>> REF-028-A
 ### Changed - 2025-11-30
 - **REF-033: Add Missing Config Range Validators**
   - Added `@field_validator` decorators for configuration fields that lacked range validation

@@ -585,7 +585,7 @@ class MemoryRAGServer(StructuralQueryMixin):
             raise
         except Exception as e:
             logger.error(f"Failed to store memory: {e}", exc_info=True)
-            raise StorageError(f"Failed to store memory: {e}")
+            raise StorageError(f"Failed to store memory: {e}") from e
 
     async def retrieve_memories(
         self,
@@ -823,7 +823,7 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         except Exception as e:
             logger.error(f"Failed to retrieve memories: {e}", exc_info=True)
-            raise RetrievalError(f"Failed to retrieve memories: {e}")
+            raise RetrievalError(f"Failed to retrieve memories: {e}") from e
 
     async def delete_memory(self, memory_id: str) -> Dict[str, Any]:
         """
@@ -858,7 +858,7 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         except Exception as e:
             logger.error(f"Failed to delete memory: {e}", exc_info=True)
-            raise StorageError(f"Failed to delete memory: {e}")
+            raise StorageError(f"Failed to delete memory: {e}") from e
 
     async def delete_memories_by_query(
         self,
@@ -1105,7 +1105,7 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         except Exception as e:
             logger.error(f"Failed to get memory by ID: {e}", exc_info=True)
-            raise StorageError(f"Failed to get memory by ID: {e}")
+            raise StorageError(f"Failed to get memory by ID: {e}") from e
 
     async def update_memory(
         self,
@@ -1230,7 +1230,7 @@ class MemoryRAGServer(StructuralQueryMixin):
             raise
         except Exception as e:
             logger.error(f"Failed to update memory {memory_id}: {e}", exc_info=True)
-            raise StorageError(f"Failed to update memory: {e}")
+            raise StorageError(f"Failed to update memory: {e}") from e
 
     async def list_memories(
         self,
@@ -1356,7 +1356,7 @@ class MemoryRAGServer(StructuralQueryMixin):
             raise
         except Exception as e:
             logger.error(f"Failed to list memories: {e}", exc_info=True)
-            raise StorageError(f"Failed to list memories: {e}")
+            raise StorageError(f"Failed to list memories: {e}") from e
 
     async def get_indexed_files(
         self,
@@ -1417,7 +1417,7 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         except Exception as e:
             logger.error(f"Failed to get indexed files: {e}", exc_info=True)
-            raise StorageError(f"Failed to get indexed files: {e}")
+            raise StorageError(f"Failed to get indexed files: {e}") from e
 
     async def list_indexed_units(
         self,
@@ -1497,7 +1497,7 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         except Exception as e:
             logger.error(f"Failed to list indexed units: {e}", exc_info=True)
-            raise StorageError(f"Failed to list indexed units: {e}")
+            raise StorageError(f"Failed to list indexed units: {e}") from e
 
     async def migrate_memory_scope(
         self,
@@ -1534,7 +1534,7 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         except Exception as e:
             logger.error(f"Failed to migrate memory scope: {e}", exc_info=True)
-            raise StorageError(f"Failed to migrate memory scope: {e}")
+            raise StorageError(f"Failed to migrate memory scope: {e}") from e
 
     async def bulk_reclassify(
         self,
@@ -1582,7 +1582,7 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         except Exception as e:
             logger.error(f"Failed to bulk reclassify memories: {e}", exc_info=True)
-            raise StorageError(f"Failed to bulk reclassify memories: {e}")
+            raise StorageError(f"Failed to bulk reclassify memories: {e}") from e
 
     async def find_duplicate_memories(
         self,
@@ -1616,7 +1616,7 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         except Exception as e:
             logger.error(f"Failed to find duplicate memories: {e}", exc_info=True)
-            raise StorageError(f"Failed to find duplicate memories: {e}")
+            raise StorageError(f"Failed to find duplicate memories: {e}") from e
 
     async def merge_memories(
         self,
@@ -1655,7 +1655,7 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         except Exception as e:
             logger.error(f"Failed to merge memories: {e}", exc_info=True)
-            raise StorageError(f"Failed to merge memories: {e}")
+            raise StorageError(f"Failed to merge memories: {e}") from e
 
     async def export_memories(
         self,
@@ -1819,7 +1819,7 @@ class MemoryRAGServer(StructuralQueryMixin):
             raise
         except Exception as e:
             logger.error(f"Failed to export memories: {e}", exc_info=True)
-            raise StorageError(f"Failed to export memories: {e}")
+            raise StorageError(f"Failed to export memories: {e}") from e
 
     async def import_memories(
         self,
@@ -1887,7 +1887,7 @@ class MemoryRAGServer(StructuralQueryMixin):
             try:
                 data = json.loads(import_content)
             except json.JSONDecodeError as e:
-                raise ValidationError(f"Invalid JSON format: {e}")
+                raise ValidationError(f"Invalid JSON format: {e}") from e
 
             # Validate schema
             if "memories" not in data:
@@ -2028,7 +2028,7 @@ class MemoryRAGServer(StructuralQueryMixin):
             raise
         except Exception as e:
             logger.error(f"Failed to import memories: {e}", exc_info=True)
-            raise StorageError(f"Failed to import memories: {e}")
+            raise StorageError(f"Failed to import memories: {e}") from e
 
     async def submit_search_feedback(
         self,
@@ -2073,7 +2073,7 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         except Exception as e:
             logger.error(f"Failed to submit search feedback: {e}", exc_info=True)
-            raise StorageError(f"Failed to submit search feedback: {e}")
+            raise StorageError(f"Failed to submit search feedback: {e}") from e
 
     async def get_quality_metrics(
         self,
@@ -2107,7 +2107,7 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         except Exception as e:
             logger.error(f"Failed to retrieve quality metrics: {e}", exc_info=True)
-            raise StorageError(f"Failed to retrieve quality metrics: {e}")
+            raise StorageError(f"Failed to retrieve quality metrics: {e}") from e
 
     async def get_dashboard_stats(self) -> Dict[str, Any]:
         """
@@ -2189,7 +2189,7 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         except Exception as e:
             logger.error(f"Failed to retrieve dashboard stats: {e}", exc_info=True)
-            raise StorageError(f"Failed to retrieve dashboard stats: {e}")
+            raise StorageError(f"Failed to retrieve dashboard stats: {e}") from e
 
     async def get_recent_activity(
         self,
@@ -2224,7 +2224,7 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         except Exception as e:
             logger.error(f"Failed to retrieve recent activity: {e}", exc_info=True)
-            raise StorageError(f"Failed to retrieve recent activity: {e}")
+            raise StorageError(f"Failed to retrieve recent activity: {e}") from e
 
     async def retrieve_preferences(
         self,
@@ -3026,7 +3026,7 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         except Exception as e:
             logger.error(f"Failed to find similar code: {e}", exc_info=True)
-            raise RetrievalError(f"Failed to find similar code: {e}")
+            raise RetrievalError(f"Failed to find similar code: {e}") from e
 
     async def search_all_projects(
         self,
@@ -3188,7 +3188,7 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         except Exception as e:
             logger.error(f"Failed to search across projects: {e}", exc_info=True)
-            raise RetrievalError(f"Failed to search across projects: {e}")
+            raise RetrievalError(f"Failed to search across projects: {e}") from e
 
     async def opt_in_cross_project(self, project_name: str) -> Dict[str, Any]:
         """
@@ -3214,7 +3214,7 @@ class MemoryRAGServer(StructuralQueryMixin):
             return result
         except Exception as e:
             logger.error(f"Failed to opt-in project: {e}", exc_info=True)
-            raise StorageError(f"Failed to opt-in project: {e}")
+            raise StorageError(f"Failed to opt-in project: {e}") from e
 
     async def opt_out_cross_project(self, project_name: str) -> Dict[str, Any]:
         """
@@ -3240,7 +3240,7 @@ class MemoryRAGServer(StructuralQueryMixin):
             return result
         except Exception as e:
             logger.error(f"Failed to opt-out project: {e}", exc_info=True)
-            raise StorageError(f"Failed to opt-out project: {e}")
+            raise StorageError(f"Failed to opt-out project: {e}") from e
 
     async def list_opted_in_projects(self) -> Dict[str, Any]:
         """
@@ -3270,7 +3270,7 @@ class MemoryRAGServer(StructuralQueryMixin):
             }
         except Exception as e:
             logger.error(f"Failed to list opted-in projects: {e}", exc_info=True)
-            raise RetrievalError(f"Failed to list opted-in projects: {e}")
+            raise RetrievalError(f"Failed to list opted-in projects: {e}") from e
 
     async def index_codebase(
         self,
@@ -3359,7 +3359,7 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         except Exception as e:
             logger.error(f"Failed to index codebase: {e}", exc_info=True)
-            raise StorageError(f"Failed to index codebase: {e}")
+            raise StorageError(f"Failed to index codebase: {e}") from e
 
     async def reindex_project(
         self,
@@ -3484,7 +3484,7 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         except Exception as e:
             logger.error(f"Failed to reindex project: {e}", exc_info=True)
-            raise StorageError(f"Failed to reindex project: {e}")
+            raise StorageError(f"Failed to reindex project: {e}") from e
 
     async def get_file_dependencies(
         self,
@@ -3546,7 +3546,7 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         except Exception as e:
             logger.error(f"Failed to get file dependencies: {e}", exc_info=True)
-            raise RetrievalError(f"Failed to get file dependencies: {e}")
+            raise RetrievalError(f"Failed to get file dependencies: {e}") from e
 
     async def get_file_dependents(
         self,
@@ -3591,7 +3591,7 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         except Exception as e:
             logger.error(f"Failed to get file dependents: {e}", exc_info=True)
-            raise RetrievalError(f"Failed to get file dependents: {e}")
+            raise RetrievalError(f"Failed to get file dependents: {e}") from e
 
     async def find_dependency_path(
         self,
@@ -3655,7 +3655,7 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         except Exception as e:
             logger.error(f"Failed to find dependency path: {e}", exc_info=True)
-            raise RetrievalError(f"Failed to find dependency path: {e}")
+            raise RetrievalError(f"Failed to find dependency path: {e}") from e
 
     async def get_dependency_stats(
         self,
@@ -3693,7 +3693,7 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         except Exception as e:
             logger.error(f"Failed to get dependency stats: {e}", exc_info=True)
-            raise RetrievalError(f"Failed to get dependency stats: {e}")
+            raise RetrievalError(f"Failed to get dependency stats: {e}") from e
 
     async def _build_dependency_graph(
         self,
@@ -3843,7 +3843,7 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         except Exception as e:
             logger.error(f"Failed to get token analytics: {e}", exc_info=True)
-            raise RetrievalError(f"Failed to get token analytics: {e}")
+            raise RetrievalError(f"Failed to get token analytics: {e}") from e
 
     async def search_git_history(
         self,
@@ -3960,7 +3960,7 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         except Exception as e:
             logger.error(f"Failed to search git history: {e}", exc_info=True)
-            raise RetrievalError(f"Failed to search git history: {e}")
+            raise RetrievalError(f"Failed to search git history: {e}") from e
 
     async def index_git_history(
         self,
@@ -4084,7 +4084,7 @@ class MemoryRAGServer(StructuralQueryMixin):
             )
         except Exception as e:
             logger.error(f"Failed to index git history: {e}", exc_info=True)
-            raise StorageError(f"Failed to index git history: {e}")
+            raise StorageError(f"Failed to index git history: {e}") from e
 
     async def get_file_history(
         self,
@@ -4185,7 +4185,7 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         except Exception as e:
             logger.error(f"Failed to show function evolution: {e}", exc_info=True)
-            raise RetrievalError(f"Failed to show function evolution: {e}")
+            raise RetrievalError(f"Failed to show function evolution: {e}") from e
 
     async def get_change_frequency(
         self,
@@ -4327,7 +4327,7 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         except Exception as e:
             logger.error(f"Failed to calculate change frequency: {e}", exc_info=True)
-            raise RetrievalError(f"Failed to calculate change frequency: {e}")
+            raise RetrievalError(f"Failed to calculate change frequency: {e}") from e
 
     async def get_churn_hotspots(
         self,
@@ -4412,7 +4412,7 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         except Exception as e:
             logger.error(f"Failed to find churn hotspots: {e}", exc_info=True)
-            raise RetrievalError(f"Failed to find churn hotspots: {e}")
+            raise RetrievalError(f"Failed to find churn hotspots: {e}") from e
 
     async def get_recent_changes(
         self,
@@ -4505,7 +4505,7 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         except Exception as e:
             logger.error(f"Failed to get recent changes: {e}", exc_info=True)
-            raise RetrievalError(f"Failed to get recent changes: {e}")
+            raise RetrievalError(f"Failed to get recent changes: {e}") from e
 
     async def blame_search(
         self,
@@ -4581,7 +4581,7 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         except Exception as e:
             logger.error(f"Failed to search blame: {e}", exc_info=True)
-            raise RetrievalError(f"Failed to search blame: {e}")
+            raise RetrievalError(f"Failed to search blame: {e}") from e
 
     async def get_code_authors(
         self,
@@ -4680,7 +4680,7 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         except Exception as e:
             logger.error(f"Failed to get code authors: {e}", exc_info=True)
-            raise RetrievalError(f"Failed to get code authors: {e}")
+            raise RetrievalError(f"Failed to get code authors: {e}") from e
 
     def _parse_date_filter(self, date_str: str) -> datetime:
         """
