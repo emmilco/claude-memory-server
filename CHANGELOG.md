@@ -52,6 +52,13 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **BUG-053: Accept ISO 8601 date formats in query DSL parser**
+  - Enhanced `_validate_date()` method to accept ISO 8601 formats beyond strict YYYY-MM-DD
+  - Now supports formats: YYYY-MM-DDTHH:MM:SS, YYYY-MM-DDTHH:MM:SSZ, YYYY-MM-DDTHH:MM:SS+HH:MM
+  - Handles 'Z' timezone suffix by normalizing to '+00:00' before parsing with `datetime.fromisoformat()`
+  - Maintains backward compatibility with YYYY-MM-DD format via fallback to `strptime()`
+  - Files: src/search/query_dsl_parser.py
+
 - **BUG-052: Fix incorrect median calculation in ImportanceScorer**
   - Fixed `get_summary_statistics()` method to properly calculate median for even-length lists
   - Now averages the two middle elements for even-length sorted lists, consistent with statistical definition
