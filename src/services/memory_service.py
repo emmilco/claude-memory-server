@@ -1400,22 +1400,16 @@ class MemoryService:
                     continue
 
             # Try to count global memories
+            # Use store API method for backend compatibility
             try:
-                from qdrant_client.models import Filter, FieldCondition, IsNullCondition
+                # Create filters to count only global memories (project_name is None)
+                # SearchFilters doesn't directly support filtering for None/null values,
+                # so we use an empty scope filter (which matches global-scoped memories)
+                from src.core.models import SearchFilters, MemoryScope
 
-                count_result = await self.store.client.count(
-                    collection_name=self.store.collection_name,
-                    count_filter=Filter(
-                        should=[
-                            FieldCondition(
-                                key="project_name",
-                                match=IsNullCondition()
-                            ),
-                        ]
-                    ),
-                    exact=True,
-                )
-                global_count = count_result.count
+                # Create a filter for global-scoped memories only
+                global_filters = SearchFilters(scope=MemoryScope.GLOBAL)
+                global_count = await self.store.count(filters=global_filters)
             except Exception as e:
                 logger.debug(f"Could not count global memories: {e}")
                 global_count = 0

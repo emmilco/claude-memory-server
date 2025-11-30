@@ -60,6 +60,13 @@ Organize entries under these headers in chronological order (newest first):
   - Prevents `TypeError: can't subtract offset-naive and offset-aware datetimes`
   - Files: src/search/reranker.py
 
+- **BUG-046: Store Attribute Access May Crash on Non-Qdrant Backends**
+  - Fixed backend compatibility issue in `get_dashboard_stats()` method (src/services/memory_service.py)
+  - Replaced direct access to `self.store.client` and `self.store.collection_name` (Qdrant-specific attributes)
+  - Now uses backend-agnostic `self.store.count()` API method with SearchFilters
+  - Global memory count now uses `SearchFilters(scope=MemoryScope.GLOBAL)` for proper filtering
+  - Ensures code works with any MemoryStore implementation (Qdrant, SQLite, or custom backends)
+  - Files: src/services/memory_service.py
 ### Added - 2025-11-29
 - **FEAT-051: Query-based Deletion for Qdrant**
   - Added `delete_by_filter()` method to QdrantMemoryStore for filter-based deletion
