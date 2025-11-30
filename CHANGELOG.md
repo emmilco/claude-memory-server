@@ -85,10 +85,12 @@ Organize entries under these headers in chronological order (newest first):
   - Backward-compatible: hardcoded defaults are used if not overridden in config
 
 ### Fixed - 2025-11-30
-- **BUG-062: Connection Pool Reset Race Condition**
+- **BUG-062: Connection Pool Reset Race Condition & Deadlock Fix**
   - Fixed race condition in `reset()` method where `_closed = False` assignment occurred outside lock
-  - Wrapped entire reset sequence (close, reset flag, clear state, reinitialize) in `async with self._lock:`
-  - Prevents concurrent `acquire()` from interleaving during state transition after close but before reinitialization
+  - Wrapped state reset (close, reset flag, clear state) in `async with self._lock:` to prevent interleaving
+  - Moved `initialize()` call outside lock to prevent deadlock (initialize calls _create_connection which needs lock)
+  - Critical: lock covers only close→_closed=False→clear_state sequence, not reinitialization
+  - Prevents concurrent `acquire()` from interleaving during critical state transition
   - Ensures atomic pool state transitions during recovery from corrupted state
   - Files: src/store/connection_pool.py
 
