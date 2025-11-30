@@ -277,7 +277,13 @@ class HealthReporter:
         return int(activity_score * 0.6 + results_score * 0.4)
 
     def _apply_alert_penalty(self, score: int, alerts: List[Alert]) -> int:
-        """Apply penalty to score based on active alerts."""
+        """
+        Apply penalty to score based on active alerts.
+
+        Uses multiplicative penalty to prevent excessive reduction.
+        Caps maximum penalty at 30% of score to ensure other component
+        scores remain meaningful even with many alerts.
+        """
         penalty = 0
 
         for alert in alerts:
@@ -287,6 +293,11 @@ class HealthReporter:
                 penalty += 5
             elif alert.severity == AlertSeverity.INFO:
                 penalty += 1
+
+        # Cap penalty at 30% of score to prevent complete reduction to 0
+        # This ensures that excellent performance/quality scores still matter
+        max_penalty = int(score * 0.30)
+        penalty = min(penalty, max_penalty)
 
         return max(0, score - penalty)
 
