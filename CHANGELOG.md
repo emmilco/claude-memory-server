@@ -52,6 +52,13 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **BUG-056: Track and handle MCP server initialization task properly**
+  - Fixed fire-and-forget task issue: background initialization task reference is now stored
+  - Added error callback to `_init_task` to properly log exceptions from background initialization
+  - Added cleanup logic in shutdown to cancel pending tasks and prevent resource leaks
+  - Improved error visibility: exceptions now logged with `exc_info=True` for full traceback
+  - Files: src/mcp_server.py
+
 - **BUG-052: Fix incorrect median calculation in ImportanceScorer**
   - Fixed `get_summary_statistics()` method to properly calculate median for even-length lists
   - Now averages the two middle elements for even-length sorted lists, consistent with statistical definition
