@@ -51,6 +51,15 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Fixed - 2025-11-30
+- **BUG-049: Fix timezone mismatch in reranker datetime comparison**
+  - Added timezone normalization in `_calculate_recency_score()` method
+  - Handles both naive and timezone-aware datetimes by normalizing to UTC
+  - Naive datetimes assumed to be UTC and converted with `replace(tzinfo=timezone.utc)`
+  - Timezone-aware datetimes converted to UTC using `astimezone(timezone.utc)`
+  - Prevents `TypeError: can't subtract offset-naive and offset-aware datetimes`
+  - Files: src/search/reranker.py
+
 ### Added - 2025-11-29
 - **FEAT-051: Query-based Deletion for Qdrant**
   - Added `delete_by_filter()` method to QdrantMemoryStore for filter-based deletion
