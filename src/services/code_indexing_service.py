@@ -12,6 +12,7 @@ Responsibilities:
 
 import asyncio
 import logging
+import threading
 import time
 from pathlib import Path
 from typing import Optional, Dict, Any, List, Callable
@@ -89,6 +90,7 @@ class CodeIndexingService:
             "units_indexed": 0,
             "similar_code_searches": 0,
         }
+        self._stats_lock = threading.Lock()
 
     def get_stats(self) -> Dict[str, Any]:
         """Get code indexing service statistics."""
@@ -380,7 +382,8 @@ class CodeIndexingService:
                 code_results.append(result_dict)
 
             query_time_ms = (time.time() - start_time) * 1000
-            self.stats["searches_performed"] += 1
+            with self._stats_lock:
+                self.stats["searches_performed"] += 1
 
             quality_info = self._analyze_search_quality(code_results, query, filter_project_name)
 
@@ -518,7 +521,8 @@ class CodeIndexingService:
                 })
 
             query_time_ms = (time.time() - start_time) * 1000
-            self.stats["similar_code_searches"] += 1
+            with self._stats_lock:
+                self.stats["similar_code_searches"] += 1
 
             if self.metrics_collector:
                 avg_relevance = sum(r["similarity_score"] for r in code_results) / len(code_results) if code_results else 0.0
@@ -611,8 +615,9 @@ class CodeIndexingService:
             )
 
             total_time_s = time.time() - start_time
-            self.stats["files_indexed"] += result["indexed_files"]
-            self.stats["units_indexed"] += result["total_units"]
+            with self._stats_lock:
+                self.stats["files_indexed"] += result["indexed_files"]
+                self.stats["units_indexed"] += result["total_units"]
 
             logger.info(
                 f"Indexed {result['total_units']} units from "

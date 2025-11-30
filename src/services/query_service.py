@@ -10,6 +10,7 @@ Responsibilities:
 """
 
 import logging
+import threading
 from typing import Optional, Dict, Any, List
 
 from src.config import ServerConfig
@@ -59,6 +60,7 @@ class QueryService:
             "suggestions_generated": 0,
             "feedback_collected": 0,
         }
+        self._stats_lock = threading.Lock()
 
     def get_stats(self) -> Dict[str, Any]:
         """Get query service statistics."""
@@ -85,7 +87,8 @@ class QueryService:
 
         try:
             session_id = self.conversation_tracker.create_session(description)
-            self.stats["sessions_created"] += 1
+            with self._stats_lock:
+                self.stats["sessions_created"] += 1
 
             logger.info(f"Started conversation session: {session_id}")
 
@@ -123,7 +126,8 @@ class QueryService:
 
         try:
             summary = self.conversation_tracker.end_session(session_id)
-            self.stats["sessions_ended"] += 1
+            with self._stats_lock:
+                self.stats["sessions_ended"] += 1
 
             logger.info(f"Ended conversation session: {session_id}")
 
@@ -196,7 +200,8 @@ class QueryService:
                 session_id=session_id
             )
 
-            self.stats["suggestions_generated"] += 1
+            with self._stats_lock:
+                self.stats["suggestions_generated"] += 1
 
             return {
                 "status": "success",
@@ -270,7 +275,8 @@ class QueryService:
                 feedback=feedback
             )
 
-            self.stats["feedback_collected"] += 1
+            with self._stats_lock:
+                self.stats["feedback_collected"] += 1
 
             return {
                 "status": "success",
@@ -359,7 +365,8 @@ class QueryService:
             expansion_applied = expanded != query
 
             if expansion_applied:
-                self.stats["queries_expanded"] += 1
+                with self._stats_lock:
+                    self.stats["queries_expanded"] += 1
 
             return {
                 "original_query": query,

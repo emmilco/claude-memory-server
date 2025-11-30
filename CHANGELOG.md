@@ -108,6 +108,13 @@ Organize entries under these headers in chronological order (newest first):
   - Affected counters: _active_connections, _created_count, total_checks, total_failures, total_collections, total_alerts, hits, misses, use_count, checks_passed, checks_failed
   - Ensures thread-safe updates in high-concurrency scenarios
 
+- **REF-029: Fix non-atomic stats dict increments in services layer**
+  - Added `threading.Lock` protection for 24 stats increment operations across 6 service classes
+  - Prevents race conditions in async/concurrent contexts by wrapping `self.stats[key] += 1` patterns with `with self._stats_lock:`
+  - Services modified: MemoryService (6 increments), CodeIndexingService (4 increments), AnalyticsService (4 increments), QueryService (5 increments), HealthService (3 increments), CrossProjectService (3 increments)
+  - Affected stats: cache_hits, cache_misses, memories_stored, memories_retrieved, memories_deleted, queries_processed, queries_retrieved, searches_performed, similar_code_searches, files_indexed, units_indexed, analytics_queries, sessions_created, sessions_ended, suggestions_generated, feedback_collected, queries_expanded, health_checks, metrics_collected, cross_project_searches, projects_opted_in, projects_opted_out
+  - Ensures thread-safe stats updates in high-concurrency scenarios
+
 ### Fixed - 2025-11-30
 - **BUG-058: Fix lowercase `callable` type annotations**
   - Changed `Optional[callable]` to `Optional[Callable[..., Any]]` in 4 locations

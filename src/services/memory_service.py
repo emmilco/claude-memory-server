@@ -14,6 +14,7 @@ import asyncio
 import json
 import logging
 import re
+import threading
 from datetime import datetime, timedelta, UTC
 from pathlib import Path
 from typing import Optional, Dict, Any, List
@@ -103,6 +104,7 @@ class MemoryService:
             "cache_hits": 0,
             "cache_misses": 0,
         }
+        self._stats_lock = threading.Lock()
 
     def get_stats(self) -> Dict[str, Any]:
         """Get memory service statistics."""
@@ -121,10 +123,12 @@ class MemoryService:
         # Try cache first
         cached = await self.embedding_cache.get(text, self.config.embedding_model)
         if cached is not None:
-            self.stats["cache_hits"] += 1
+            with self._stats_lock:
+                self.stats["cache_hits"] += 1
             return cached
 
-        self.stats["cache_misses"] += 1
+        with self._stats_lock:
+            self.stats["cache_misses"] += 1
 
         # Generate embedding
         embedding = await self.embedding_generator.generate(text)
@@ -317,7 +321,8 @@ class MemoryService:
                 logger.error("Store operation timed out after 30s")
                 raise StorageError("Memory store operation timed out")
 
-            self.stats["memories_stored"] += 1
+            with self._stats_lock:
+                self.stats["memories_stored"] += 1
             logger.info(f"Stored memory: {memory_id}")
 
             return {
@@ -450,7 +455,8 @@ class MemoryService:
                 results = filtered_results[:request.limit]
 
             # Update stats for successful retrieval
-            self.stats["queries_retrieved"] += 1
+            with self._stats_lock:
+                self.stats["queries_retrieved"] += 1
 
             # Apply composite ranking if usage tracking is enabled
             if self.usage_tracker and self.config.analytics.usage_tracking:
@@ -486,8 +492,9 @@ class MemoryService:
             ]
 
             query_time_ms = (time.time() - start_time) * 1000
-            self.stats["memories_retrieved"] += len(memory_results)
-            self.stats["queries_processed"] += 1
+            with self._stats_lock:
+                self.stats["memories_retrieved"] += len(memory_results)
+                self.stats["queries_processed"] += 1
 
             response = RetrievalResponse(
                 results=memory_results,
@@ -552,7 +559,8 @@ class MemoryService:
                 raise StorageError("Memory delete operation timed out")
 
             if success:
-                self.stats["memories_deleted"] += 1
+                with self._stats_lock:
+                    self.stats["memories_deleted"] += 1
                 logger.info(f"Deleted memory: {memory_id}")
                 return {"status": "success", "memory_id": memory_id}
             else:

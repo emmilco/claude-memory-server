@@ -9,6 +9,7 @@ Responsibilities:
 """
 
 import logging
+import threading
 import time
 from typing import Optional, Dict, Any, List
 
@@ -59,6 +60,7 @@ class CrossProjectService:
             "projects_opted_in": 0,
             "projects_opted_out": 0,
         }
+        self._stats_lock = threading.Lock()
 
     def get_stats(self) -> Dict[str, Any]:
         """Get cross-project service statistics."""
@@ -159,7 +161,8 @@ class CrossProjectService:
             all_results = all_results[:limit]
 
             query_time_ms = (time.time() - start_time) * 1000
-            self.stats["cross_project_searches"] += 1
+            with self._stats_lock:
+                self.stats["cross_project_searches"] += 1
 
             if self.metrics_collector:
                 avg_relevance = sum(r.get("relevance_score", 0) for r in all_results) / len(all_results) if all_results else 0.0
@@ -206,7 +209,8 @@ class CrossProjectService:
 
         try:
             self.consent.opt_in(project_name)
-            self.stats["projects_opted_in"] += 1
+            with self._stats_lock:
+                self.stats["projects_opted_in"] += 1
 
             logger.info(f"Project {project_name} opted in for cross-project search")
 
@@ -238,7 +242,8 @@ class CrossProjectService:
 
         try:
             self.consent.opt_out(project_name)
-            self.stats["projects_opted_out"] += 1
+            with self._stats_lock:
+                self.stats["projects_opted_out"] += 1
 
             logger.info(f"Project {project_name} opted out of cross-project search")
 

@@ -11,6 +11,7 @@ Responsibilities:
 
 import asyncio
 import logging
+import threading
 from typing import Optional, Dict, Any
 
 from src.config import ServerConfig
@@ -57,6 +58,7 @@ class AnalyticsService:
         self.stats = {
             "analytics_queries": 0,
         }
+        self._stats_lock = threading.Lock()
 
     def get_stats(self) -> Dict[str, Any]:
         """Get analytics service statistics."""
@@ -73,7 +75,8 @@ class AnalyticsService:
             Dict with usage statistics
         """
         try:
-            self.stats["analytics_queries"] += 1
+            with self._stats_lock:
+                self.stats["analytics_queries"] += 1
 
             if not self.pattern_tracker:
                 return {
@@ -109,7 +112,8 @@ class AnalyticsService:
             Dict with top queries
         """
         try:
-            self.stats["analytics_queries"] += 1
+            with self._stats_lock:
+                self.stats["analytics_queries"] += 1
 
             if not self.pattern_tracker:
                 return {
@@ -149,7 +153,8 @@ class AnalyticsService:
             Dict with frequently accessed code
         """
         try:
-            self.stats["analytics_queries"] += 1
+            with self._stats_lock:
+                self.stats["analytics_queries"] += 1
 
             if not self.pattern_tracker:
                 return {
@@ -191,7 +196,8 @@ class AnalyticsService:
             Dict with token analytics
         """
         try:
-            self.stats["analytics_queries"] += 1
+            with self._stats_lock:
+                self.stats["analytics_queries"] += 1
 
             if not self.usage_tracker:
                 return {
