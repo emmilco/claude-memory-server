@@ -19,6 +19,7 @@ from typing import List
 from src.config import ServerConfig
 from src.store.qdrant_store import QdrantMemoryStore
 from src.core.models import MemoryCategory, ContextLevel, MemoryScope
+from conftest import mock_embedding
 
 # Skip in parallel test runs - flaky due to Qdrant resource contention
 pytestmark = pytest.mark.skip(reason="Flaky in parallel execution - pass when run in isolation")
@@ -56,7 +57,7 @@ async def test_immediate_retrieval_after_storage(store):
     # Create a unique test embedding to avoid collisions with parallel tests
     import uuid
     test_unique = str(uuid.uuid4())[:8]
-    test_embedding = [0.5] * 384
+    test_embedding = mock_embedding(value=0.5)
 
     # Store a memory
     memory_id = await store.store(
@@ -77,7 +78,7 @@ async def test_immediate_retrieval_after_storage(store):
     await asyncio.sleep(0.05)
 
     # Immediately retrieve with very similar embedding
-    query_embedding = [0.51] * 384  # Very close to original
+    query_embedding = mock_embedding(value=0.51)  # Very close to original
     results = await store.retrieve(query_embedding, limit=10)
 
     # Should find the memory we just stored
@@ -151,7 +152,7 @@ async def test_retrieval_with_filters_after_storage(store):
     # Store memories with different categories
     pref_id = await store.store(
         content=f"User prefers FastAPI for Python web development {test_unique}",
-        embedding=[0.1] * 384,
+        embedding=mock_embedding(value=0.1),
         metadata={
             "category": MemoryCategory.PREFERENCE.value,
             "context_level": ContextLevel.USER_PREFERENCE.value,
@@ -163,7 +164,7 @@ async def test_retrieval_with_filters_after_storage(store):
 
     fact_id = await store.store(
         content=f"Django is a Python web framework {test_unique}",
-        embedding=[0.11] * 384,
+        embedding=mock_embedding(value=0.11),
         metadata={
             "category": MemoryCategory.FACT.value,
             "context_level": ContextLevel.PROJECT_CONTEXT.value,
@@ -183,7 +184,7 @@ async def test_retrieval_with_filters_after_storage(store):
         category=MemoryCategory.PREFERENCE,
     )
 
-    query_embedding = [0.1] * 384
+    query_embedding = mock_embedding(value=0.1)
     results = await store.retrieve(query_embedding, filters=filters, limit=10)
 
     # Should only retrieve the preference, not the fact
@@ -204,7 +205,7 @@ async def test_high_importance_immediate_retrieval(store):
     # Store a high-importance memory
     high_imp_id = await store.store(
         content="Critical security decision: Use OAuth2 with JWT tokens",
-        embedding=[0.3] * 384,
+        embedding=mock_embedding(value=0.3),
         metadata={
             "category": MemoryCategory.PREFERENCE.value,
             "context_level": ContextLevel.USER_PREFERENCE.value,
@@ -217,7 +218,7 @@ async def test_high_importance_immediate_retrieval(store):
     # Store a low-importance memory
     low_imp_id = await store.store(
         content="Minor note: Consider code formatting",
-        embedding=[0.31] * 384,
+        embedding=mock_embedding(value=0.31),
         metadata={
             "category": MemoryCategory.FACT.value,
             "context_level": ContextLevel.PROJECT_CONTEXT.value,
@@ -233,7 +234,7 @@ async def test_high_importance_immediate_retrieval(store):
         min_importance=0.8,
     )
 
-    query_embedding = [0.3] * 384
+    query_embedding = mock_embedding(value=0.3)
     results = await store.retrieve(query_embedding, filters=filters, limit=10)
 
     # Should retrieve high-importance memory
@@ -254,7 +255,7 @@ async def test_no_artificial_delay_in_retrieval(store):
     import time
 
     # Store a memory
-    test_embedding = [0.7] * 384
+    test_embedding = mock_embedding(value=0.7)
     memory_id = await store.store(
         content="Testing for retrieval speed",
         embedding=test_embedding,
@@ -268,7 +269,7 @@ async def test_no_artificial_delay_in_retrieval(store):
 
     # Measure retrieval time
     start_time = time.time()
-    results = await store.retrieve([0.71] * 384, limit=10)
+    results = await store.retrieve(mock_embedding(value=0.71), limit=10)
     elapsed_ms = (time.time() - start_time) * 1000
 
     # Should retrieve quickly (< 100ms for local Qdrant)
@@ -289,7 +290,7 @@ async def test_concurrent_store_and_retrieve(store):
     """
     async def store_and_retrieve(index):
         # Store a memory
-        embedding = [float(index) / 100.0] * 384
+        embedding = mock_embedding(value=float(index) / 100.0)
         memory_id = await store.store(
             content=f"Concurrent test memory {index}",
             embedding=embedding,

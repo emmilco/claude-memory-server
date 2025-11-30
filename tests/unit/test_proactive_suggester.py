@@ -8,6 +8,7 @@ from src.memory.proactive_suggester import ProactiveSuggester
 from src.memory.intent_detector import IntentDetector, DetectedIntent
 from src.memory.conversation_tracker import ConversationTracker, QueryRecord
 from src.core.models import (
+from conftest import mock_embedding
     MemoryResult,
     MemoryUnit,
     MemoryProvenance,
@@ -58,7 +59,7 @@ def mock_store():
 def mock_embedding_generator():
     """Create mock embedding generator."""
     generator = AsyncMock()
-    generator.generate_embedding.return_value = [0.1] * 384  # Mock embedding
+    generator.generate_embedding.return_value = mock_embedding(value=0.1)  # Mock embedding
     return generator
 
 

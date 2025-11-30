@@ -18,6 +18,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 from src.core.server import MemoryRAGServer
 from src.core.models import MemoryCategory, MemoryScope, ContextLevel
+from conftest import mock_embedding
 
 
 @pytest.fixture
@@ -35,7 +36,7 @@ def mock_server():
 
     # Use the real search_code method from MemoryRAGServer
     server.search_code = MemoryRAGServer.search_code.__get__(server, type(server))
-    server._get_embedding = AsyncMock(return_value=[0.1] * 384)
+    server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
     server._get_confidence_label = staticmethod(MemoryRAGServer._get_confidence_label)
     server._analyze_search_quality = MagicMock(return_value={
         "quality": "good",
@@ -90,7 +91,7 @@ class TestGlobPatternMatching:
             (create_mock_memory("/src/api/routes.py", "get_user"), 0.8),
             (create_mock_memory("/tests/test_auth.py", "test_validator"), 0.7),
         ])
-        mock_server._get_embedding = AsyncMock(return_value=[0.1] * 384)
+        mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         # Search with glob pattern for auth files only
         result = await mock_server.search_code(
@@ -110,7 +111,7 @@ class TestGlobPatternMatching:
             (create_mock_memory("/tests/utils.test.py", "test_helper"), 0.8),
             (create_mock_memory("/tests/integration/auth.test.py", "test_auth"), 0.7),
         ])
-        mock_server._get_embedding = AsyncMock(return_value=[0.1] * 384)
+        mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
             query="helper functions",
@@ -127,7 +128,7 @@ class TestGlobPatternMatching:
             (create_mock_memory("/src/app.ts", "main", language="typescript"), 0.9),
             (create_mock_memory("/src/utils.py", "helper", language="python"), 0.8),
         ])
-        mock_server._get_embedding = AsyncMock(return_value=[0.1] * 384)
+        mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
             query="utilities",
@@ -149,7 +150,7 @@ class TestExclusionPatterns:
             (create_mock_memory("/tests/test_auth.py", "test_authenticate"), 0.8),
             (create_mock_memory("/src/auth_helper.py", "validate"), 0.7),
         ])
-        mock_server._get_embedding = AsyncMock(return_value=[0.1] * 384)
+        mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
             query="authentication",
@@ -167,7 +168,7 @@ class TestExclusionPatterns:
             (create_mock_memory("/generated/models_pb2.py", "UserProto"), 0.8),
             (create_mock_memory("/build/dist/main.py", "Main"), 0.7),
         ])
-        mock_server._get_embedding = AsyncMock(return_value=[0.1] * 384)
+        mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
             query="user model",
@@ -186,7 +187,7 @@ class TestExclusionPatterns:
             (create_mock_memory("/node_modules/lib.js", "external"), 0.7),
             (create_mock_memory("/.venv/site-packages/pkg.py", "package"), 0.6),
         ])
-        mock_server._get_embedding = AsyncMock(return_value=[0.1] * 384)
+        mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
             query="processing",
@@ -208,7 +209,7 @@ class TestComplexityFiltering:
             (create_mock_memory("/src/complex.py", "complex_func", complexity=12), 0.8),
             (create_mock_memory("/src/moderate.py", "moderate_func", complexity=6), 0.7),
         ])
-        mock_server._get_embedding = AsyncMock(return_value=[0.1] * 384)
+        mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
             query="functions",
@@ -226,7 +227,7 @@ class TestComplexityFiltering:
             (create_mock_memory("/src/complex.py", "complex_func", complexity=12), 0.8),
             (create_mock_memory("/src/moderate.py", "moderate_func", complexity=6), 0.7),
         ])
-        mock_server._get_embedding = AsyncMock(return_value=[0.1] * 384)
+        mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
             query="functions",
@@ -245,7 +246,7 @@ class TestComplexityFiltering:
             (create_mock_memory("/src/moderate1.py", "moderate_func1", complexity=6), 0.7),
             (create_mock_memory("/src/moderate2.py", "moderate_func2", complexity=9), 0.6),
         ])
-        mock_server._get_embedding = AsyncMock(return_value=[0.1] * 384)
+        mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
             query="functions",
@@ -268,7 +269,7 @@ class TestLineCountFiltering:
             (create_mock_memory("/src/long.py", "long_func", line_count=150), 0.8),
             (create_mock_memory("/src/medium.py", "medium_func", line_count=80), 0.7),
         ])
-        mock_server._get_embedding = AsyncMock(return_value=[0.1] * 384)
+        mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
             query="functions",
@@ -287,7 +288,7 @@ class TestLineCountFiltering:
             (create_mock_memory("/src/medium1.py", "medium_func1", line_count=60), 0.7),
             (create_mock_memory("/src/medium2.py", "medium_func2", line_count=90), 0.6),
         ])
-        mock_server._get_embedding = AsyncMock(return_value=[0.1] * 384)
+        mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
             query="functions",
@@ -314,7 +315,7 @@ class TestDateFiltering:
             (create_mock_memory("/src/recent.py", "recent_func", modified_at=now.timestamp()), 0.8),
             (create_mock_memory("/src/medium.py", "medium_func", modified_at=thirty_days_ago.timestamp()), 0.7),
         ])
-        mock_server._get_embedding = AsyncMock(return_value=[0.1] * 384)
+        mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
             query="functions",
@@ -336,7 +337,7 @@ class TestDateFiltering:
             (create_mock_memory("/src/recent.py", "recent_func", modified_at=now.timestamp()), 0.8),
             (create_mock_memory("/src/medium.py", "medium_func", modified_at=thirty_days_ago.timestamp()), 0.7),
         ])
-        mock_server._get_embedding = AsyncMock(return_value=[0.1] * 384)
+        mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
             query="functions",
@@ -361,7 +362,7 @@ class TestDateFiltering:
             (create_mock_memory("/src/inrange1.py", "inrange_func1", modified_at=(now - timedelta(days=20)).timestamp()), 0.7),
             (create_mock_memory("/src/inrange2.py", "inrange_func2", modified_at=(now - timedelta(days=10)).timestamp()), 0.6),
         ])
-        mock_server._get_embedding = AsyncMock(return_value=[0.1] * 384)
+        mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
             query="functions",
@@ -384,7 +385,7 @@ class TestSorting:
             (create_mock_memory("/src/complex.py", "complex_func", complexity=12), 0.8),
             (create_mock_memory("/src/moderate.py", "moderate_func", complexity=6), 0.7),
         ])
-        mock_server._get_embedding = AsyncMock(return_value=[0.1] * 384)
+        mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
             query="functions",
@@ -403,7 +404,7 @@ class TestSorting:
             (create_mock_memory("/src/complex.py", "complex_func", complexity=12), 0.8),
             (create_mock_memory("/src/moderate.py", "moderate_func", complexity=6), 0.7),
         ])
-        mock_server._get_embedding = AsyncMock(return_value=[0.1] * 384)
+        mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
             query="functions",
@@ -422,7 +423,7 @@ class TestSorting:
             (create_mock_memory("/src/long.py", "long_func", line_count=150), 0.8),
             (create_mock_memory("/src/medium.py", "medium_func", line_count=80), 0.7),
         ])
-        mock_server._get_embedding = AsyncMock(return_value=[0.1] * 384)
+        mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
             query="functions",
@@ -448,7 +449,7 @@ class TestSorting:
             (create_mock_memory("/src/recent.py", "recent_func", modified_at=timestamps[1]), 0.8),
             (create_mock_memory("/src/medium.py", "medium_func", modified_at=timestamps[2]), 0.7),
         ])
-        mock_server._get_embedding = AsyncMock(return_value=[0.1] * 384)
+        mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
             query="functions",
@@ -468,7 +469,7 @@ class TestSorting:
             (create_mock_memory("/src/high.py", "high_func"), 0.95),
             (create_mock_memory("/src/medium.py", "medium_func"), 0.75),
         ])
-        mock_server._get_embedding = AsyncMock(return_value=[0.1] * 384)
+        mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
             query="functions",
@@ -487,7 +488,7 @@ class TestSorting:
             (create_mock_memory("/src/high.py", "high_func"), 0.95),
             (create_mock_memory("/src/medium.py", "medium_func"), 0.75),
         ])
-        mock_server._get_embedding = AsyncMock(return_value=[0.1] * 384)
+        mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
             query="functions"
@@ -520,7 +521,7 @@ class TestCombinedFiltersAndSorting:
             # Does not match: too old
             (create_mock_memory("/src/auth/legacy.py", "old_auth", complexity=9, modified_at=(now - timedelta(days=30)).timestamp()), 0.5),
         ])
-        mock_server._get_embedding = AsyncMock(return_value=[0.1] * 384)
+        mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
             query="authentication",
@@ -553,7 +554,7 @@ class TestCombinedFiltersAndSorting:
             (create_mock_memory("/tests/test_core.py", "test_complex", complexity=15), 0.8),
             (create_mock_memory("/src/utils.py", "helper", complexity=3), 0.7),
         ])
-        mock_server._get_embedding = AsyncMock(return_value=[0.1] * 384)
+        mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
             query="logic",

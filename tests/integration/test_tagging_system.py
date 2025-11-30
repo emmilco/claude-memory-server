@@ -13,6 +13,7 @@ from src.tagging.models import TagCreate, CollectionCreate
 from src.config import ServerConfig
 from src.store.qdrant_store import QdrantMemoryStore
 from src.core.models import MemoryUnit, MemoryCategory, ContextLevel, MemoryScope, SearchFilters
+from conftest import mock_embedding
 
 
 @pytest.fixture
@@ -89,7 +90,7 @@ async def test_end_to_end_auto_tagging(store, tag_manager, auto_tagger):
     # Store memory
     await store.store(
         content=memory.content,
-        embedding=[0.1] * 384,
+        embedding=mock_embedding(value=0.1),
         metadata=memory.model_dump(exclude={"content"}),
     )
 
@@ -134,12 +135,12 @@ async def test_tag_based_search(store, tag_manager):
     )
 
     # Store memories
-    id1 = await store.store(memory1.content, [0.1] * 384, memory1.model_dump(exclude={"content"}))
-    id2 = await store.store(memory2.content, [0.2] * 384, memory2.model_dump(exclude={"content"}))
+    id1 = await store.store(memory1.content, mock_embedding(value=0.1), memory1.model_dump(exclude={"content"}))
+    id2 = await store.store(memory2.content, mock_embedding(value=0.2), memory2.model_dump(exclude={"content"}))
 
     # Search with tag filter
     filters = SearchFilters(tags=["python"])
-    results = await store.retrieve([0.1] * 384, filters, limit=10)
+    results = await store.retrieve(mock_embedding(value=0.1), filters, limit=10)
 
     # Should only return Python memory
     memory_ids = [mem.id for mem, _ in results]
@@ -173,8 +174,8 @@ async def test_collection_workflow(collection_manager, store, tag_manager, auto_
         tags=["python"],
     )
 
-    id1 = await store.store(memory1.content, [0.1] * 384, memory1.model_dump(exclude={"content"}))
-    id2 = await store.store(memory2.content, [0.2] * 384, memory2.model_dump(exclude={"content"}))
+    id1 = await store.store(memory1.content, mock_embedding(value=0.1), memory1.model_dump(exclude={"content"}))
+    id2 = await store.store(memory2.content, mock_embedding(value=0.2), memory2.model_dump(exclude={"content"}))
 
     # Add matching memory to collection
     collection_manager.add_to_collection(collection.id, [id1])
