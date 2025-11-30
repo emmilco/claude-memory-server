@@ -125,6 +125,13 @@ Organize entries under these headers in chronological order (newest first):
   - Same text now returns identical vectors regardless of cache state
   - Files: src/embeddings/cache.py
 
+- **BUG-070: Pattern Matcher Line Number Off-By-One Error**
+  - Fixed line number calculation in `get_match_locations()` when match offset is greater than line start position
+  - Changed condition from `if offset > start_pos: line_num = i` to `if offset > start_pos: line_num = i - 1`
+  - Correctly assigns line number to the previous offset boundary when match falls between boundaries
+  - Pattern matches now report accurate line numbers for regex search results
+  - Files: src/search/pattern_matcher.py
+
 - **BUG-166: UsageTracker TOCTOU Between Batch Check and Flush**
   - Fixed time-of-check-time-of-use (TOCTOU) race condition in `record_usage()` method
   - Moved batch size check `if len(self._pending_updates) >= batch_size` inside `async with self._lock:` block
