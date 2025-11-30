@@ -52,6 +52,12 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-29
+- **REF-012: Fix port hardcoding in tests**
+  - Updated `test_config_defaults` to respect `CLAUDE_RAG_QDRANT_URL` environment variable
+  - Added `mock_call_graph_store` fixture to `test_indexing_progress.py` to avoid Qdrant connection attempts
+  - Fixes test failures when running with isolated Qdrant on non-default port (test-isolated.sh)
+  - Files: tests/unit/test_config.py, tests/unit/test_indexing_progress.py
+
 - **PERF-009: Fix Virtual Memory Leak (Address Space Fragmentation)**
   - Set bounded default executor (max 8 workers) for `asyncio.to_thread()` calls in mcp_server.py
   - Added proper cleanup for ProcessPoolExecutor with `cancel_futures=True` in parallel_generator.py

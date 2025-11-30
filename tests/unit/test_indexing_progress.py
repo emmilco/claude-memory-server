@@ -6,11 +6,25 @@ from unittest.mock import Mock, AsyncMock, MagicMock, patch
 from src.memory.incremental_indexer import IncrementalIndexer
 
 
+@pytest.fixture
+def mock_call_graph_store():
+    """Mock QdrantCallGraphStore to avoid Qdrant connection during tests."""
+    with patch('src.memory.incremental_indexer.QdrantCallGraphStore') as MockCallGraphStore:
+        mock_call_graph = AsyncMock()
+        mock_call_graph.initialize = AsyncMock()
+        mock_call_graph.close = AsyncMock()
+        mock_call_graph.store_function_node = AsyncMock()
+        mock_call_graph.store_call_sites = AsyncMock()
+        mock_call_graph.store_implementations = AsyncMock()
+        MockCallGraphStore.return_value = mock_call_graph
+        yield mock_call_graph
+
+
 class TestIndexingProgressCallback:
     """Test progress callback functionality during indexing."""
 
     @pytest.mark.asyncio
-    async def test_progress_callback_called_with_total(self, tmp_path):
+    async def test_progress_callback_called_with_total(self, tmp_path, mock_call_graph_store):
         """Test that progress callback receives total file count."""
         # Create test files
         (tmp_path / "file1.py").write_text("def foo(): pass")
@@ -77,7 +91,7 @@ class TestIndexingProgressCallback:
         await indexer.close()
 
     @pytest.mark.asyncio
-    async def test_progress_callback_tracks_completion(self, tmp_path):
+    async def test_progress_callback_tracks_completion(self, tmp_path, mock_call_graph_store):
         """Test that progress callback tracks completion count."""
         # Create test files
         (tmp_path / "file1.py").write_text("def foo(): pass")
@@ -132,7 +146,7 @@ class TestIndexingProgressCallback:
         await indexer.close()
 
     @pytest.mark.asyncio
-    async def test_progress_callback_reports_errors(self, tmp_path):
+    async def test_progress_callback_reports_errors(self, tmp_path, mock_call_graph_store):
         """Test that progress callback reports errors."""
         # Create test file that will cause an error
         (tmp_path / "bad.py").write_text("def foo(): pass")
@@ -183,7 +197,7 @@ class TestIndexingProgressCallback:
         await indexer.close()
 
     @pytest.mark.asyncio
-    async def test_progress_callback_empty_directory(self, tmp_path):
+    async def test_progress_callback_empty_directory(self, tmp_path, mock_call_graph_store):
         """Test progress callback with empty directory."""
         # Create empty directory
         empty_dir = tmp_path / "empty"
@@ -225,7 +239,7 @@ class TestIndexingProgressCallback:
         await indexer.close()
 
     @pytest.mark.asyncio
-    async def test_indexing_without_callback(self, tmp_path):
+    async def test_indexing_without_callback(self, tmp_path, mock_call_graph_store):
         """Test that indexing works without progress callback."""
         # Create test file
         (tmp_path / "file1.py").write_text("def foo(): pass")
@@ -262,7 +276,7 @@ class TestIndexingProgressCallback:
         await indexer.close()
 
     @pytest.mark.asyncio
-    async def test_progress_callback_concurrent_processing(self, tmp_path):
+    async def test_progress_callback_concurrent_processing(self, tmp_path, mock_call_graph_store):
         """Test that progress callback handles concurrent file processing."""
         # Create multiple files
         for i in range(10):
@@ -319,7 +333,7 @@ class TestIndexingProgressCallback:
         await indexer.close()
 
     @pytest.mark.asyncio
-    async def test_progress_callback_signature(self, tmp_path):
+    async def test_progress_callback_signature(self, tmp_path, mock_call_graph_store):
         """Test that progress callback receives correct parameter types."""
         (tmp_path / "test.py").write_text("def test(): pass")
 
