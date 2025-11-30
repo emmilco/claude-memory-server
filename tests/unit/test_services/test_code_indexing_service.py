@@ -24,6 +24,7 @@ from src.core.models import (
     MemoryScope,
 )
 from src.core.exceptions import (
+from conftest import mock_embedding
     StorageError,
     ValidationError,
     ReadOnlyError,
@@ -230,7 +231,7 @@ class TestSearchCode:
         store.retrieve = AsyncMock(return_value=[(mock_memory, 0.85)])
 
         embedding_generator = AsyncMock()
-        embedding_generator.generate = AsyncMock(return_value=[0.1] * 384)
+        embedding_generator.generate = AsyncMock(return_value=mock_embedding(value=0.1))
 
         embedding_cache = AsyncMock()
         embedding_cache.get = AsyncMock(return_value=None)
@@ -414,7 +415,7 @@ class TestFindSimilarCode:
         store.retrieve = AsyncMock(return_value=[(mock_memory, 0.92)])
 
         embedding_generator = AsyncMock()
-        embedding_generator.generate = AsyncMock(return_value=[0.1] * 384)
+        embedding_generator.generate = AsyncMock(return_value=mock_embedding(value=0.1))
 
         embedding_cache = AsyncMock()
         embedding_cache.get = AsyncMock(return_value=None)
@@ -494,7 +495,7 @@ class TestIndexCodebase:
         store = AsyncMock()
 
         embedding_generator = AsyncMock()
-        embedding_generator.generate = AsyncMock(return_value=[0.1] * 384)
+        embedding_generator.generate = AsyncMock(return_value=mock_embedding(value=0.1))
 
         return CodeIndexingService(
             store=store,
@@ -565,7 +566,7 @@ class TestReindexProject:
         store.delete_code_units_by_project = AsyncMock(return_value=10)
 
         embedding_generator = AsyncMock()
-        embedding_generator.generate = AsyncMock(return_value=[0.1] * 384)
+        embedding_generator.generate = AsyncMock(return_value=mock_embedding(value=0.1))
 
         return CodeIndexingService(
             store=store,
@@ -879,7 +880,7 @@ class TestEmbeddingCaching:
         embedding_cache.set = AsyncMock()
 
         embedding_generator = AsyncMock()
-        embedding_generator.generate = AsyncMock(return_value=[0.1] * 384)
+        embedding_generator.generate = AsyncMock(return_value=mock_embedding(value=0.1))
 
         return CodeIndexingService(
             store=AsyncMock(),
@@ -900,7 +901,7 @@ class TestEmbeddingCaching:
     @pytest.mark.asyncio
     async def test_cache_hit_returns_cached(self, service):
         """Test cache hit returns cached embedding."""
-        cached_embedding = [0.2] * 384
+        cached_embedding = mock_embedding(value=0.2)
         service.embedding_cache.get = AsyncMock(return_value=cached_embedding)
 
         result = await service._get_embedding("cached code")
@@ -930,7 +931,7 @@ class TestMetricsCollection:
         store.retrieve = AsyncMock(return_value=[(mock_memory, 0.85)])
 
         embedding_generator = AsyncMock()
-        embedding_generator.generate = AsyncMock(return_value=[0.1] * 384)
+        embedding_generator.generate = AsyncMock(return_value=mock_embedding(value=0.1))
 
         embedding_cache = AsyncMock()
         embedding_cache.get = AsyncMock(return_value=None)
@@ -996,7 +997,7 @@ class TestDeduplication:
         ])
 
         embedding_generator = AsyncMock()
-        embedding_generator.generate = AsyncMock(return_value=[0.1] * 384)
+        embedding_generator.generate = AsyncMock(return_value=mock_embedding(value=0.1))
 
         embedding_cache = AsyncMock()
         embedding_cache.get = AsyncMock(return_value=None)

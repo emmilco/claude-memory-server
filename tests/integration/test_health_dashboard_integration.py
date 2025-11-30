@@ -12,6 +12,7 @@ from src.core.models import MemoryUnit, ContextLevel, LifecycleState, MemoryCate
 from src.memory.health_scorer import HealthScorer
 from src.memory.health_jobs import HealthMaintenanceJobs
 from src.memory.lifecycle_manager import LifecycleManager
+from conftest import mock_embedding
 
 # Skip entire module in CI - Qdrant timing sensitive under parallel execution
 pytestmark = pytest.mark.skip_ci(reason="Flaky under parallel execution - Qdrant timing sensitive")
@@ -61,8 +62,8 @@ class TestHealthDashboardIntegration:
         """Test complete lifecycle progression from ACTIVE to STALE."""
         # Create memories with different ages
         now = datetime.now(UTC)
-        # Create test embedding (384 dimensions for MiniLM-L6)
-        test_embedding = [0.1] * 384
+        # Create test embedding (768 dimensions for all-mpnet-base-v2)
+        test_embedding = mock_embedding(value=0.1)
 
         memories = [
             # Recent (should be ACTIVE)
@@ -124,8 +125,8 @@ class TestHealthDashboardIntegration:
         """Test weekly archival job on real data."""
         # Create old ACTIVE memories
         now = datetime.now(UTC)
-        # Create test embedding (384 dimensions for MiniLM-L6)
-        test_embedding = [0.1] * 384
+        # Create test embedding (768 dimensions for all-mpnet-base-v2)
+        test_embedding = mock_embedding(value=0.1)
 
         for i in range(5):
             mem = MemoryUnit(
@@ -165,8 +166,8 @@ class TestHealthDashboardIntegration:
         """Test monthly cleanup job on real data."""
         # Create old STALE memories
         now = datetime.now(UTC)
-        # Create test embedding (384 dimensions for MiniLM-L6)
-        test_embedding = [0.1] * 384
+        # Create test embedding (768 dimensions for all-mpnet-base-v2)
+        test_embedding = mock_embedding(value=0.1)
 
         for i in range(3):
             mem = MemoryUnit(
@@ -219,8 +220,8 @@ class TestHealthDashboardIntegration:
         """Test weekly health report generation."""
         # Create some memories
         now = datetime.now(UTC)
-        # Create test embedding (384 dimensions for MiniLM-L6)
-        test_embedding = [0.1] * 384
+        # Create test embedding (768 dimensions for all-mpnet-base-v2)
+        test_embedding = mock_embedding(value=0.1)
 
         for i in range(10):
             mem = MemoryUnit(
@@ -279,8 +280,8 @@ class TestHealthDashboardIntegration:
         """Test that health scorer generates appropriate recommendations."""
         # Create a problematic database (all STALE)
         now = datetime.now(UTC)
-        # Create test embedding (384 dimensions for MiniLM-L6)
-        test_embedding = [0.1] * 384
+        # Create test embedding (768 dimensions for all-mpnet-base-v2)
+        test_embedding = mock_embedding(value=0.1)
 
         for i in range(10):
             mem = MemoryUnit(
@@ -315,8 +316,8 @@ class TestHealthDashboardIntegration:
         """Test that USER_PREFERENCE memories are protected from cleanup."""
         # Create old USER_PREFERENCE memory
         now = datetime.now(UTC)
-        # Create test embedding (384 dimensions for MiniLM-L6)
-        test_embedding = [0.1] * 384
+        # Create test embedding (768 dimensions for all-mpnet-base-v2)
+        test_embedding = mock_embedding(value=0.1)
 
         mem = MemoryUnit(
             content="Important user preference",
@@ -353,8 +354,8 @@ class TestHealthDashboardIntegration:
         """Test that quick stats match full health calculation."""
         # Create memories
         now = datetime.now(UTC)
-        # Create test embedding (384 dimensions for MiniLM-L6)
-        test_embedding = [0.1] * 384
+        # Create test embedding (768 dimensions for all-mpnet-base-v2)
+        test_embedding = mock_embedding(value=0.1)
 
         for i in range(5):
             mem = MemoryUnit(
@@ -397,8 +398,8 @@ class TestHealthDashboardIntegration:
         """Test that multiple jobs can run concurrently without conflicts."""
         # Create some memories
         now = datetime.now(UTC)
-        # Create test embedding (384 dimensions for MiniLM-L6)
-        test_embedding = [0.1] * 384
+        # Create test embedding (768 dimensions for all-mpnet-base-v2)
+        test_embedding = mock_embedding(value=0.1)
 
         for i in range(20):
             mem = MemoryUnit(
