@@ -280,9 +280,9 @@ class HealthReporter:
         """
         Apply penalty to score based on active alerts.
 
-        Uses multiplicative penalty to prevent excessive reduction.
-        Caps maximum penalty at 30% of score to ensure other component
-        scores remain meaningful even with many alerts.
+        Caps maximum penalty at 30% of score to prevent excessive reduction.
+        This ensures that excellent performance/quality scores remain
+        meaningful even with many alerts.
         """
         penalty = 0
 
