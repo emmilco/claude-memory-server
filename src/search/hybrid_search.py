@@ -303,8 +303,13 @@ class HybridSearcher:
         results = []
         seen_ids = set()
 
-        # Add BM25 results (include all results from BM25, even with zero scores)
-        for rank, (memory, score) in enumerate(bm25_results[:limit]):
+        # Add BM25 results with non-zero scores first
+        bm25_with_scores = [
+            (memory, score) for memory, score in bm25_results
+            if score > 0
+        ]
+
+        for rank, (memory, score) in enumerate(bm25_with_scores[:limit]):
             results.append(HybridSearchResult(
                 memory=memory,
                 total_score=score,
@@ -314,9 +319,6 @@ class HybridSearcher:
                 fusion_method="cascade"
             ))
             seen_ids.add(memory.id)
-
-            if len(results) >= limit:
-                break
 
         # Log results included and backfilled
         logger.debug(f"Cascade fusion: included {len(results)} BM25 results")
@@ -337,8 +339,9 @@ class HybridSearcher:
                 ))
                 seen_ids.add(memory.id)
 
-        if len(results) < len(seen_ids):
-            logger.debug(f"Cascade fusion: backfilled with {len(results) - len([r for r in results if r.bm25_score > 0])} vector results")
+        num_bm25_results = len([r for r in results if r.bm25_score > 0])
+        num_backfilled = len(results) - num_bm25_results
+        logger.debug(f"Cascade fusion: included {num_bm25_results} BM25 results, backfilled with {num_backfilled} vector results")
 
         return results[:limit]
 
