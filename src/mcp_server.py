@@ -137,6 +137,27 @@ async def list_tools() -> List[Tool]:
             },
         ),
         Tool(
+            name="delete_memories_by_query",
+            description="Delete memories matching query filters. SAFETY: defaults to dry_run=True (preview only). Set dry_run=false to actually delete.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "category": {"type": "string", "description": "Filter by category (preference, fact, event, workflow, context, code)"},
+                    "project_name": {"type": "string", "description": "Filter by project (use to clear entire project index)"},
+                    "tags": {"type": "array", "items": {"type": "string"}, "description": "Filter by tags (matches ANY)"},
+                    "date_from": {"type": "string", "description": "Delete memories created after this date (ISO format)"},
+                    "date_to": {"type": "string", "description": "Delete memories created before this date (ISO format)"},
+                    "min_importance": {"type": "number", "minimum": 0.0, "maximum": 1.0, "description": "Minimum importance threshold"},
+                    "max_importance": {"type": "number", "minimum": 0.0, "maximum": 1.0, "description": "Maximum importance threshold"},
+                    "lifecycle_state": {"type": "string", "description": "Filter by lifecycle state"},
+                    "scope": {"type": "string", "description": "Filter by scope (global, project, session)"},
+                    "context_level": {"type": "string", "description": "Filter by context level"},
+                    "dry_run": {"type": "boolean", "description": "If true, preview only (default: true)", "default": True},
+                    "max_count": {"type": "number", "minimum": 1, "maximum": 1000, "description": "Maximum memories to delete (default: 1000)"},
+                },
+            },
+        ),
+        Tool(
             name="export_memories",
             description="Export memories to JSON or Markdown format",
             inputSchema={
@@ -888,6 +909,50 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
                 return [TextContent(type="text", text=f"✅ Memory deleted: {result['memory_id']}")]
             else:
                 return [TextContent(type="text", text=f"❌ Memory not found: {result['memory_id']}")]
+
+        elif name == "delete_memories_by_query":
+            result = await memory_server.delete_memories_by_query(
+                category=arguments.get("category"),
+                project_name=arguments.get("project_name"),
+                tags=arguments.get("tags"),
+                date_from=arguments.get("date_from"),
+                date_to=arguments.get("date_to"),
+                min_importance=arguments.get("min_importance", 0.0),
+                max_importance=arguments.get("max_importance", 1.0),
+                lifecycle_state=arguments.get("lifecycle_state"),
+                scope=arguments.get("scope"),
+                context_level=arguments.get("context_level"),
+                dry_run=arguments.get("dry_run", True),
+                max_count=arguments.get("max_count", 1000),
+            )
+
+            # Format output
+            if result["preview"]:
+                output = f"🔍 PREVIEW MODE (dry_run=True)\n\n"
+                output += f"Total matches: {result['total_matches']}\n"
+                output += f"Will delete: {result['total_matches']} memories\n\n"
+            else:
+                output = f"✅ DELETION COMPLETE\n\n"
+                output += f"Deleted: {result['deleted_count']} memories\n\n"
+
+            output += "Breakdown by category:\n"
+            for cat, count in result["breakdown_by_category"].items():
+                output += f"  - {cat}: {count}\n"
+
+            output += "\nBreakdown by project:\n"
+            for proj, count in result["breakdown_by_project"].items():
+                output += f"  - {proj}: {count}\n"
+
+            if result["warnings"]:
+                output += "\n⚠️  Warnings:\n"
+                for warning in result["warnings"]:
+                    output += f"  - {warning}\n"
+
+            if result["preview"] and result["requires_confirmation"]:
+                output += "\n⚠️  This operation requires confirmation due to the number of memories.\n"
+                output += "Set dry_run=false to proceed with deletion.\n"
+
+            return [TextContent(type="text", text=output)]
 
         elif name == "export_memories":
             result = await memory_server.export_memories(**arguments)

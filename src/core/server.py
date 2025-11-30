@@ -857,6 +857,188 @@ class MemoryRAGServer(StructuralQueryMixin):
             logger.error(f"Failed to delete memory: {e}", exc_info=True)
             raise StorageError(f"Failed to delete memory: {e}")
 
+    async def delete_memories_by_query(
+        self,
+        category: Optional[str] = None,
+        project_name: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
+        min_importance: float = 0.0,
+        max_importance: float = 1.0,
+        lifecycle_state: Optional[str] = None,
+        scope: Optional[str] = None,
+        context_level: Optional[str] = None,
+        dry_run: bool = True,
+        max_count: int = 1000,
+    ) -> Dict[str, Any]:
+        """
+        Delete memories matching query filters.
+
+        **PROACTIVE USE:**
+        - Clear entire project indexes when project is archived/deleted
+        - Bulk delete low-importance memories to free storage
+        - Clean up old memories by date range
+        - Remove memories by category or tags
+        - Delete all memories for a specific lifecycle state
+
+        **SAFETY:** Defaults to dry_run=True. You MUST set dry_run=False to actually delete.
+
+        Args:
+            category: Filter by category (preference, fact, event, workflow, context, code)
+            project_name: Filter by project (use to clear entire project index)
+            tags: Filter by tags (matches ANY of the tags)
+            date_from: Delete memories created after this date (ISO format)
+            date_to: Delete memories created before this date (ISO format)
+            min_importance: Minimum importance threshold (0.0-1.0)
+            max_importance: Maximum importance threshold (0.0-1.0)
+            lifecycle_state: Filter by lifecycle state
+            scope: Filter by scope (global, project, session)
+            context_level: Filter by context level
+            dry_run: If True, preview only without deleting (default: True for safety)
+            max_count: Maximum memories to delete (1-1000, default: 1000)
+
+        Returns:
+            Dict with:
+            - preview: True if dry_run, False if executed
+            - total_matches: Number of matching memories
+            - deleted_count: Number actually deleted (0 if dry_run)
+            - breakdown_by_category: Count by category
+            - breakdown_by_project: Count by project
+            - breakdown_by_lifecycle: Count by lifecycle state
+            - warnings: List of warnings
+            - requires_confirmation: Whether confirmation is recommended
+
+        Examples:
+            # Preview deletion (safe, no actual deletion)
+            result = await delete_memories_by_query(
+                project_name="my-project",
+                category="code",
+                dry_run=True
+            )
+
+            # Actually delete (requires dry_run=False)
+            result = await delete_memories_by_query(
+                project_name="my-project",
+                category="code",
+                dry_run=False
+            )
+
+            # Delete old low-importance memories
+            result = await delete_memories_by_query(
+                date_to="2024-01-01",
+                max_importance=0.3,
+                dry_run=False
+            )
+        """
+        # Start new operation with unique ID for tracing
+        op_id = new_operation()
+        logger.info(f"Delete by query (dry_run={dry_run}): category={category}, project={project_name}, tags={tags}")
+
+        if self.config.advanced.read_only_mode:
+            raise ReadOnlyError("Cannot delete memories in read-only mode")
+
+        try:
+            # Build SearchFilters from parameters
+            filters = SearchFilters(
+                category=category,
+                project_name=project_name,
+                tags=tags or [],
+                date_from=date_from,
+                date_to=date_to,
+                min_importance=min_importance,
+                max_importance=max_importance,
+                lifecycle_state=lifecycle_state,
+                scope=scope,
+                context_level=context_level,
+            )
+
+            if dry_run:
+                # Preview mode: use list_memories to get matches
+                # Use a high limit to get accurate count (up to max_count)
+                memories = await self.store.list_memories(
+                    filters=filters,
+                    limit=max_count,
+                    offset=0
+                )
+
+                # Calculate statistics
+                category_breakdown = {}
+                project_breakdown = {}
+                lifecycle_breakdown = {}
+
+                for memory in memories:
+                    cat = memory.category.value if hasattr(memory.category, 'value') else memory.category
+                    proj = memory.project_name or "unassigned"
+                    life = memory.lifecycle_state.value if hasattr(memory.lifecycle_state, 'value') else (memory.lifecycle_state or "active")
+
+                    category_breakdown[cat] = category_breakdown.get(cat, 0) + 1
+                    project_breakdown[proj] = project_breakdown.get(proj, 0) + 1
+                    lifecycle_breakdown[life] = lifecycle_breakdown.get(life, 0) + 1
+
+                # Generate warnings
+                warnings = []
+                total_count = len(memories)
+
+                if total_count > 100:
+                    warnings.append(f"This will delete {total_count} memories")
+                elif total_count > 0:
+                    warnings.append(f"This will delete {total_count} memory(ies)")
+
+                high_importance_count = sum(1 for m in memories if m.importance and m.importance > 0.7)
+                if high_importance_count > 0:
+                    warnings.append(f"Includes {high_importance_count} high-importance memories (>0.7)")
+
+                if not project_name:
+                    projects = set(m.project_name for m in memories if m.project_name)
+                    if len(projects) > 1:
+                        warnings.append(f"Affects {len(projects)} projects: {', '.join(sorted(projects)[:3])}")
+
+                if total_count >= max_count:
+                    warnings.append(f"Operation limited to {max_count} memories (safety limit)")
+
+                return {
+                    "preview": True,
+                    "total_matches": total_count,
+                    "deleted_count": 0,
+                    "breakdown_by_category": category_breakdown,
+                    "breakdown_by_project": project_breakdown,
+                    "breakdown_by_lifecycle": lifecycle_breakdown,
+                    "warnings": warnings,
+                    "requires_confirmation": total_count > 10,
+                }
+            else:
+                # Actual deletion mode
+                result = await self.store.delete_by_filter(filters, max_count=max_count)
+
+                # Update server statistics
+                deleted_count = result["deleted_count"]
+                self.stats["memories_deleted"] += deleted_count
+
+                # Generate warnings for the result
+                warnings = []
+                if deleted_count > 100:
+                    warnings.append(f"Deleted {deleted_count} memories")
+                elif deleted_count > 0:
+                    warnings.append(f"Deleted {deleted_count} memory(ies)")
+
+                logger.info(f"Deleted {deleted_count} memories using query-based deletion")
+
+                return {
+                    "preview": False,
+                    "total_matches": deleted_count,
+                    "deleted_count": deleted_count,
+                    "breakdown_by_category": result["breakdown_by_category"],
+                    "breakdown_by_project": result["breakdown_by_project"],
+                    "breakdown_by_lifecycle": result["breakdown_by_lifecycle"],
+                    "warnings": warnings,
+                    "requires_confirmation": False,  # Already executed
+                }
+
+        except Exception as e:
+            logger.error(f"Failed to delete memories by query: {e}", exc_info=True)
+            raise StorageError(f"Failed to delete memories by query: {e}") from e
+
     async def get_memory_by_id(self, memory_id: str) -> Dict[str, Any]:
         """
         Retrieve a specific memory by its ID.

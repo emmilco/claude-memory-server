@@ -318,6 +318,180 @@ class QdrantMemoryStore(MemoryStore):
             if client is not None:
                 await self._release_client(client)
 
+    async def delete_by_filter(
+        self,
+        filters: SearchFilters,
+        max_count: int = 1000
+    ) -> Dict[str, Any]:
+        """
+        Delete memories matching filter criteria.
+
+        Args:
+            filters: Filter criteria (category, project, tags, dates, etc.)
+            max_count: Maximum memories to delete (safety limit: 1-1000)
+
+        Returns:
+            Dict with:
+            - deleted_count: Number of memories deleted
+            - breakdown_by_category: Count by category
+            - breakdown_by_project: Count by project
+            - breakdown_by_lifecycle: Count by lifecycle state
+
+        Raises:
+            StorageError: If deletion fails
+            ValidationError: If max_count is invalid
+        """
+        if not 1 <= max_count <= 1000:
+            raise ValidationError("max_count must be between 1 and 1000")
+
+        client = None
+        try:
+            client = await self._get_client()
+
+            # Build filter conditions from SearchFilters
+            must_conditions = []
+
+            if filters.category:
+                must_conditions.append(
+                    FieldCondition(
+                        key="category",
+                        match=MatchValue(value=filters.category)
+                    )
+                )
+
+            if filters.project_name:
+                must_conditions.append(
+                    FieldCondition(
+                        key="project_name",
+                        match=MatchValue(value=filters.project_name)
+                    )
+                )
+
+            if filters.scope:
+                must_conditions.append(
+                    FieldCondition(
+                        key="scope",
+                        match=MatchValue(value=filters.scope)
+                    )
+                )
+
+            if filters.context_level:
+                must_conditions.append(
+                    FieldCondition(
+                        key="context_level",
+                        match=MatchValue(value=filters.context_level)
+                    )
+                )
+
+            if filters.lifecycle_state:
+                must_conditions.append(
+                    FieldCondition(
+                        key="lifecycle_state",
+                        match=MatchValue(value=filters.lifecycle_state)
+                    )
+                )
+
+            if filters.tags:
+                from qdrant_client.models import MatchAny
+                must_conditions.append(
+                    FieldCondition(
+                        key="tags",
+                        match=MatchAny(any=filters.tags)
+                    )
+                )
+
+            if filters.min_importance > 0.0:
+                must_conditions.append(
+                    FieldCondition(
+                        key="importance",
+                        range=Range(gte=filters.min_importance)
+                    )
+                )
+
+            if filters.max_importance < 1.0:
+                must_conditions.append(
+                    FieldCondition(
+                        key="importance",
+                        range=Range(lte=filters.max_importance)
+                    )
+                )
+
+            if filters.date_from:
+                must_conditions.append(
+                    FieldCondition(
+                        key="created_at",
+                        range=Range(gte=filters.date_from)
+                    )
+                )
+
+            if filters.date_to:
+                must_conditions.append(
+                    FieldCondition(
+                        key="created_at",
+                        range=Range(lte=filters.date_to)
+                    )
+                )
+
+            # Create filter (empty filter matches all if no conditions)
+            filter_conditions = Filter(must=must_conditions) if must_conditions else None
+
+            # Scroll to collect matching memory IDs and gather statistics
+            offset = None
+            memories_to_delete = []
+            category_breakdown = {}
+            project_breakdown = {}
+            lifecycle_breakdown = {}
+
+            while len(memories_to_delete) < max_count:
+                results, offset = client.scroll(
+                    collection_name=self.collection_name,
+                    scroll_filter=filter_conditions,
+                    limit=min(100, max_count - len(memories_to_delete)),
+                    offset=offset,
+                    with_payload=True,
+                    with_vectors=False,
+                )
+
+                for point in results:
+                    memories_to_delete.append(point.id)
+
+                    # Gather statistics from payload
+                    payload = point.payload or {}
+                    category = payload.get("category", "unknown")
+                    project = payload.get("project_name", "unassigned")
+                    lifecycle = payload.get("lifecycle_state", "active")
+
+                    category_breakdown[category] = category_breakdown.get(category, 0) + 1
+                    project_breakdown[project] = project_breakdown.get(project, 0) + 1
+                    lifecycle_breakdown[lifecycle] = lifecycle_breakdown.get(lifecycle, 0) + 1
+
+                if offset is None:
+                    break
+
+            # Delete the collected memories
+            deleted_count = 0
+            if memories_to_delete:
+                client.delete(
+                    collection_name=self.collection_name,
+                    points_selector=memories_to_delete,
+                )
+                deleted_count = len(memories_to_delete)
+                logger.info(f"Deleted {deleted_count} memories using filter-based deletion")
+
+            return {
+                "deleted_count": deleted_count,
+                "breakdown_by_category": category_breakdown,
+                "breakdown_by_project": project_breakdown,
+                "breakdown_by_lifecycle": lifecycle_breakdown,
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to delete memories by filter: {e}", exc_info=True)
+            raise StorageError(f"Failed to delete memories by filter: {e}") from e
+        finally:
+            if client is not None:
+                await self._release_client(client)
+
     async def batch_store(
         self,
         items: List[Tuple[str, List[float], Dict[str, Any]]],
