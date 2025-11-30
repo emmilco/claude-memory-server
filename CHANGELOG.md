@@ -79,7 +79,7 @@ Organize entries under these headers in chronological order (newest first):
 - **BUG-163: Metadata Dictionary Mutation via Shallow Copy**
   - Fixed metadata mutation bug where nested dictionaries/lists were shared between memories
   - Replaced shallow copy pattern `{**existing_metadata, **new_metadata}` with `copy.deepcopy()` to prevent shared references
-  - Updated two metadata merge locations in update path to use deep copy
+  - Updated all three metadata merge locations in update path to use deep copy (lines 660, 663, 691, 718, 720)
   - Files: src/store/qdrant_store.py
 
 - **BUG-066: Integration Test Suite Hangs**

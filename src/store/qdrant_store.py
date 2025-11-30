@@ -688,7 +688,7 @@ class QdrantMemoryStore(MemoryStore):
                 }
 
                 # Flatten metadata into payload (matches _build_payload behavior)
-                merged_payload = {**base_payload, **merged_metadata}
+                merged_payload = {**base_payload, **copy.deepcopy(merged_metadata)}
 
                 # Handle provenance
                 if existing.provenance:
