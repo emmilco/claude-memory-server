@@ -8,6 +8,7 @@ PERF-007: Connection Pooling for Qdrant
 
 import asyncio
 import logging
+import threading
 import time
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict
@@ -128,6 +129,7 @@ class QdrantConnectionPool:
         self._active_connections: int = 0
         self._created_count: int = 0
         self._lock = asyncio.Lock()
+        self._counter_lock = threading.Lock()  # REF-030: Atomic counter operations
         # BUG-037: Track client -> PooledConnection mapping for proper release()
         self._client_map: Dict[int, PooledConnection] = {}
 
@@ -295,7 +297,8 @@ class QdrantConnectionPool:
 
             # Track metrics
             async with self._lock:
-                self._active_connections += 1
+                with self._counter_lock:  # REF-030: Atomic counter increment
+                    self._active_connections += 1
                 self._stats.total_acquires += 1
                 self._stats.active_connections = self._active_connections
                 self._stats.idle_connections = self._pool.qsize()
@@ -358,7 +361,8 @@ class QdrantConnectionPool:
 
             # Update metrics
             async with self._lock:
-                self._active_connections = max(0, self._active_connections - 1)
+                with self._counter_lock:  # REF-030: Atomic counter decrement
+                    self._active_connections = max(0, self._active_connections - 1)
                 self._stats.total_releases += 1
                 self._stats.active_connections = self._active_connections
                 self._stats.idle_connections = self._pool.qsize()
@@ -518,7 +522,8 @@ class QdrantConnectionPool:
 
             # Update metrics
             async with self._lock:
-                self._created_count += 1
+                with self._counter_lock:  # REF-030: Atomic counter increment
+                    self._created_count += 1
                 self._stats.connections_created += 1
                 self._stats.pool_size = self._created_count
 

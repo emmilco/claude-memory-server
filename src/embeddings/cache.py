@@ -47,6 +47,9 @@ class EmbeddingCache:
         # Thread lock for SQLite operations (required for check_same_thread=False)
         self._db_lock = threading.RLock()
 
+        # REF-030: Separate lock for atomic counter operations
+        self._counter_lock = threading.Lock()
+
         # Statistics
         self.hits = 0
         self.misses = 0
@@ -143,7 +146,8 @@ class EmbeddingCache:
                 row = cursor.fetchone()
 
                 if row is None:
-                    self.misses += 1
+                    with self._counter_lock:  # REF-030: Atomic counter increment
+                        self.misses += 1
                     return None
 
                 embedding_json, created_at_str, access_count = row
@@ -154,7 +158,8 @@ class EmbeddingCache:
                     # Expired, delete it
                     self.conn.execute("DELETE FROM embeddings WHERE cache_key = ?", (cache_key,))
                     self.conn.commit()
-                    self.misses += 1
+                    with self._counter_lock:  # REF-030: Atomic counter increment
+                        self.misses += 1
                     return None
 
                 # Update access statistics
@@ -175,13 +180,15 @@ class EmbeddingCache:
                 # Fresh embeddings from generator are normalized via Rust bridge
                 normalized = RustBridge.batch_normalize([embedding])[0]
 
-                self.hits += 1
+                with self._counter_lock:  # REF-030: Atomic counter increment
+                    self.hits += 1
                 logger.debug(f"Cache hit for key: {cache_key[:16]}...")
                 return normalized
 
         except Exception as e:
             logger.error(f"Cache get error: {e}")
-            self.misses += 1
+            with self._counter_lock:  # REF-030: Atomic counter increment
+                self.misses += 1
             return None
 
     async def set(self, text: str, model_name: str, embedding: List[float]) -> None:
@@ -338,10 +345,12 @@ class EmbeddingCache:
                 for cache_key in cache_keys:
                     if cache_key in embeddings_by_key:
                         results.append(embeddings_by_key[cache_key])
-                        self.hits += 1
+                        with self._counter_lock:  # REF-030: Atomic counter increment
+                            self.hits += 1
                     else:
                         results.append(None)
-                        self.misses += 1
+                        with self._counter_lock:  # REF-030: Atomic counter increment
+                            self.misses += 1
 
                 logger.debug(f"Batch cache lookup: {len(cache_keys)} keys, {len(embeddings_by_key)} hits")
                 return results

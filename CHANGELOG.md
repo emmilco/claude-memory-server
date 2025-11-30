@@ -62,12 +62,27 @@ Organize entries under these headers in chronological order (newest first):
   - Files: src/config.py
 
 ### Fixed - 2025-11-30
+- **REF-030: Fix non-atomic counter increments with threading.Lock**
+  - Added atomic counter protection for 16 counter increment instances across 6 files
+  - Prevents race conditions in concurrent contexts by wrapping increments with `threading.Lock`
+  - Files modified: src/store/connection_pool.py (2 counters), src/store/connection_health_checker.py (3 counters), src/store/connection_pool_monitor.py (2 counters), src/embeddings/cache.py (6 counters), src/memory/usage_tracker.py (2 counters), src/cli/validate_setup_command.py (2 counters)
+  - Affected counters: _active_connections, _created_count, total_checks, total_failures, total_collections, total_alerts, hits, misses, use_count, checks_passed, checks_failed
+  - Ensures thread-safe updates in high-concurrency scenarios
+
+### Fixed - 2025-11-30
 - **BUG-058: Fix lowercase `callable` type annotations**
   - Changed `Optional[callable]` to `Optional[Callable[..., Any]]` in 4 locations
   - Added `Callable` import to `src/services/code_indexing_service.py`, `src/memory/incremental_indexer.py`, `src/core/server.py`
   - Fixes type checker warnings: `callable` is a builtin function, not a proper type annotation
 
 ### Changed - 2025-11-30
+- **REF-031: Move Inline Standard Library Imports to Module Top**
+  - Consolidated 41 inline standard library imports to module-level imports
+  - Removed inline imports of `time`, `re`, `fnmatch`, `json`, `statistics`, `hashlib`, `uuid`, `math` from function bodies
+  - Preserved intentional lazy imports (torch, numpy) as inline imports
+  - Files modified: src/core/server.py (16 instances), src/monitoring/performance_tracker.py (4 instances), src/store/qdrant_store.py (4 instances), src/memory/incremental_indexer.py (3 instances), src/search/reranker.py (2 instances)
+  - Improves code maintainability and follows PEP 8 import style guidelines
+
 - **DOC: Optimize CLAUDE.md for AI agent context efficiency**
   - Reduced CLAUDE.md from 617 lines to 92 lines (85% reduction)
   - Added scope calibration section (quick fix vs tracked task vs investigation)

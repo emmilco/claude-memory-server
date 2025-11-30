@@ -7,6 +7,8 @@ detects anomalies, and provides actionable recommendations.
 
 import logging
 import sqlite3
+import json
+import statistics
 from dataclasses import dataclass
 from datetime import datetime, timedelta, UTC
 from typing import Optional, List, Dict, Any, Tuple
@@ -219,8 +221,6 @@ class PerformanceTracker:
             value: Measured value
             metadata: Optional context (project, collection size, etc.)
         """
-        import json
-
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute(
@@ -273,8 +273,6 @@ class PerformanceTracker:
                 return None
 
             # Calculate statistics
-            import statistics
-
             mean = statistics.mean(values)
             stddev = statistics.stdev(values) if len(values) > 1 else 0.0
             min_value = min(values)
@@ -523,8 +521,6 @@ class PerformanceTracker:
 
     def _store_regression(self, regression: PerformanceRegression) -> None:
         """Store regression in database."""
-        import json
-
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute(
@@ -643,8 +639,6 @@ class PerformanceTracker:
         Returns:
             List of PerformanceRegression
         """
-        import json
-
         cutoff = (datetime.now(UTC) - timedelta(days=days)).isoformat()
 
         with sqlite3.connect(self.db_path) as conn:
