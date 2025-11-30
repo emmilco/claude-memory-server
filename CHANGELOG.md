@@ -62,6 +62,14 @@ Organize entries under these headers in chronological order (newest first):
   - Files: CLAUDE.md, scripts/journal.sh, .claude/hooks/observe.sh
 
 ### Fixed - 2025-11-30
+- **BUG-040: Fix unreachable code and undefined variable in exception handlers**
+  - Fixed two `StorageError` exception handlers with unreachable code in `src/store/qdrant_store.py`
+  - Changed `except StorageError:` to `except StorageError as e:` to capture exception
+  - Moved logging before raise to ensure it executes (was unreachable after bare raise statement)
+  - Removed duplicate raise statements to follow proper exception handling pattern
+  - Locations: `migrate_memory_scope()` (line 2236), `merge_memories()` (line 2512)
+  - Files: src/store/qdrant_store.py
+
 - **BUG-057: Fix lowercase `any` type annotations replaced with `Any`**
   - Replaced 5 instances of lowercase `any` with uppercase `Any` in type hints
   - Added `Any` to typing imports in affected files

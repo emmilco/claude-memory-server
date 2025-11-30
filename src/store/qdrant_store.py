@@ -2233,10 +2233,9 @@ class QdrantMemoryStore(MemoryStore):
             logger.info(f"Migrated memory {memory_id} to scope: {scope}")
             return True
 
-        except StorageError:
-            raise
+        except StorageError as e:
             logger.error(f"Error migrating memory {memory_id}: {e}", exc_info=True)
-            raise StorageError(f"Failed to migrate memory scope: {e}")
+            raise
 
     async def bulk_update_context_level(
         self,
@@ -2509,10 +2508,9 @@ class QdrantMemoryStore(MemoryStore):
             logger.info(f"Merged {len(memory_ids)} memories into {target_id}")
             return target_id
 
-        except StorageError:
-            raise
+        except StorageError as e:
             logger.error(f"Error merging memories: {e}", exc_info=True)
-            raise StorageError(f"Failed to merge memories: {e}")
+            raise
 
     async def get_recent_activity(
         self,
