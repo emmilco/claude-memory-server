@@ -331,7 +331,7 @@ class MemoryService:
             raise
         except Exception as e:
             logger.error(f"Failed to store memory: {e}", exc_info=True)
-            raise StorageError(f"Failed to store memory: {e}")
+            raise StorageError(f"Failed to store memory: {e}") from e
 
     async def retrieve_memories(
         self,
@@ -524,7 +524,7 @@ class MemoryService:
 
         except Exception as e:
             logger.error(f"Failed to retrieve memories: {e}", exc_info=True)
-            raise RetrievalError(f"Failed to retrieve memories: {e}")
+            raise RetrievalError(f"Failed to retrieve memories: {e}") from e
 
     async def delete_memory(self, memory_id: str) -> Dict[str, Any]:
         """
@@ -560,7 +560,7 @@ class MemoryService:
 
         except Exception as e:
             logger.error(f"Failed to delete memory: {e}", exc_info=True)
-            raise StorageError(f"Failed to delete memory: {e}")
+            raise StorageError(f"Failed to delete memory: {e}") from e
 
     async def get_memory_by_id(self, memory_id: str) -> Dict[str, Any]:
         """
@@ -607,7 +607,7 @@ class MemoryService:
 
         except Exception as e:
             logger.error(f"Failed to get memory by ID: {e}", exc_info=True)
-            raise StorageError(f"Failed to get memory by ID: {e}")
+            raise StorageError(f"Failed to get memory by ID: {e}") from e
 
     async def update_memory(
         self,
@@ -722,7 +722,7 @@ class MemoryService:
             raise
         except Exception as e:
             logger.error(f"Failed to update memory {memory_id}: {e}", exc_info=True)
-            raise StorageError(f"Failed to update memory: {e}")
+            raise StorageError(f"Failed to update memory: {e}") from e
 
     async def list_memories(
         self,
@@ -837,7 +837,7 @@ class MemoryService:
             raise
         except Exception as e:
             logger.error(f"Failed to list memories: {e}", exc_info=True)
-            raise StorageError(f"Failed to list memories: {e}")
+            raise StorageError(f"Failed to list memories: {e}") from e
 
     async def migrate_memory_scope(
         self,
@@ -879,7 +879,7 @@ class MemoryService:
 
         except Exception as e:
             logger.error(f"Failed to migrate memory scope: {e}", exc_info=True)
-            raise StorageError(f"Failed to migrate memory scope: {e}")
+            raise StorageError(f"Failed to migrate memory scope: {e}") from e
 
     async def bulk_reclassify(
         self,
@@ -932,7 +932,7 @@ class MemoryService:
 
         except Exception as e:
             logger.error(f"Failed to bulk reclassify memories: {e}", exc_info=True)
-            raise StorageError(f"Failed to bulk reclassify memories: {e}")
+            raise StorageError(f"Failed to bulk reclassify memories: {e}") from e
 
     async def find_duplicate_memories(
         self,
@@ -971,7 +971,7 @@ class MemoryService:
 
         except Exception as e:
             logger.error(f"Failed to find duplicate memories: {e}", exc_info=True)
-            raise StorageError(f"Failed to find duplicate memories: {e}")
+            raise StorageError(f"Failed to find duplicate memories: {e}") from e
 
     async def merge_memories(
         self,
@@ -1015,7 +1015,7 @@ class MemoryService:
 
         except Exception as e:
             logger.error(f"Failed to merge memories: {e}", exc_info=True)
-            raise StorageError(f"Failed to merge memories: {e}")
+            raise StorageError(f"Failed to merge memories: {e}") from e
 
     async def export_memories(
         self,
@@ -1171,7 +1171,7 @@ class MemoryService:
             raise
         except Exception as e:
             logger.error(f"Failed to export memories: {e}", exc_info=True)
-            raise StorageError(f"Failed to export memories: {e}")
+            raise StorageError(f"Failed to export memories: {e}") from e
 
     async def import_memories(
         self,
@@ -1226,7 +1226,7 @@ class MemoryService:
             try:
                 data = json.loads(import_content)
             except json.JSONDecodeError as e:
-                raise ValidationError(f"Invalid JSON format: {e}")
+                raise ValidationError(f"Invalid JSON format: {e}") from e
 
             if "memories" not in data:
                 raise ValidationError("Import file must contain 'memories' key")
@@ -1376,7 +1376,7 @@ class MemoryService:
             raise
         except Exception as e:
             logger.error(f"Failed to import memories: {e}", exc_info=True)
-            raise StorageError(f"Failed to import memories: {e}")
+            raise StorageError(f"Failed to import memories: {e}") from e
 
     async def retrieve_preferences(
         self,
@@ -1528,7 +1528,7 @@ class MemoryService:
 
         except Exception as e:
             logger.error(f"Failed to retrieve dashboard stats: {e}", exc_info=True)
-            raise StorageError(f"Failed to retrieve dashboard stats: {e}")
+            raise StorageError(f"Failed to retrieve dashboard stats: {e}") from e
 
     async def get_recent_activity(
         self,
@@ -1568,4 +1568,4 @@ class MemoryService:
 
         except Exception as e:
             logger.error(f"Failed to retrieve recent activity: {e}", exc_info=True)
-            raise StorageError(f"Failed to retrieve recent activity: {e}")
+            raise StorageError(f"Failed to retrieve recent activity: {e}") from e

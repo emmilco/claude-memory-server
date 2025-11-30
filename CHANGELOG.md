@@ -52,6 +52,15 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **REF-028-C: Add Exception Chain Preservation (from e)**
+  - Added `from e` to 41 raise statements lacking exception chain preservation
+  - Ensures original exception tracebacks are preserved for debugging
+  - src/services/memory_service.py: 16 instances fixed
+  - src/services/code_indexing_service.py: 12 instances fixed
+  - src/services/health_service.py: 7 instances fixed
+  - src/services/analytics_service.py: 6 instances fixed
+  - Prevents loss of original exception context in exception hierarchies
+
 - **REF-027: Add Missing Timeout Handling for Async Operations**
   - Added `asyncio.timeout(30.0)` wrappers around all store operations in services layer (34 calls total)
   - Prevents hung database operations from blocking service operations indefinitely
