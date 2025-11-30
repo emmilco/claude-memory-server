@@ -149,10 +149,12 @@ Organize entries under these headers in chronological order (newest first):
   - Added `from e` to 41 raise statements lacking exception chain preservation
   - Ensures original exception tracebacks are preserved for debugging
   - src/services/memory_service.py: 16 instances fixed
-  - src/services/code_indexing_service.py: 12 instances fixed
-  - src/services/health_service.py: 7 instances fixed
-  - src/services/analytics_service.py: 6 instances fixed
-  - Prevents loss of original exception context in exception hierarchies
+
+- **BUG-164: Search Filter Validation Bypass Allows Invalid Enums to Reach Qdrant**
+  - Fixed SearchFilters built from raw dict without Pydantic validation allowing invalid enum values (e.g., "INVALID_STATE" in lifecycle_states) to pass through to Qdrant
+  - Replaced 3 instances of direct SearchFilters() instantiation with SearchFilters.model_validate() for proper validation
+  - Invalid filter values now raise ValidationError at filter construction time instead of cryptic Qdrant errors
+  - Files: src/services/memory_service.py (lines 414-422, 1065-1074, 1511)
 
 - **REF-028-B: Add Exception Chain Preservation with `from e`**
   - Preserved original exception tracebacks by adding `from e` clause to 40 exception re-raises
