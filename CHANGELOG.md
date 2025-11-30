@@ -118,6 +118,14 @@ Organize entries under these headers in chronological order (newest first):
   - Cache now stores normalized vectors, eliminating double-normalization on cache hits
   - Same text now returns identical vectors regardless of cache state
   - Files: src/embeddings/cache.py
+
+- **BUG-166: UsageTracker TOCTOU Between Batch Check and Flush**
+  - Fixed time-of-check-time-of-use (TOCTOU) race condition in `record_usage()` method
+  - Moved batch size check `if len(self._pending_updates) >= batch_size` inside `async with self._lock:` block
+  - Previously, lock was released after updating `_pending_updates` but before checking batch size, allowing concurrent flush to trigger between check and flush
+  - Prevents empty dict flush and ensures batch size check is atomic with pending updates modification
+  - Files: src/memory/usage_tracker.py
+
 - **BUG-066: Integration Test Suite Hangs**
   - Fixed integration tests hanging indefinitely (16+ minutes) in pytest-asyncio contexts
   - Wrapped synchronous QdrantClient.get_collections() in run_in_executor() to prevent event loop blocking
