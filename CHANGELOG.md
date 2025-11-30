@@ -103,6 +103,12 @@ Organize entries under these headers in chronological order (newest first):
   - Cache now stores normalized vectors, eliminating double-normalization on cache hits
   - Same text now returns identical vectors regardless of cache state
   - Files: src/embeddings/cache.py
+- **BUG-063: Missing Client Release on Early Return in Multiple Methods**
+  - Fixed missing client releases in `migrate_memory_scope()` and `merge_memories()` methods
+  - Added finally blocks to ensure clients are released to connection pool even when exceptions occur
+  - Prevents connection pool exhaustion during memory migration and merge operations
+  - Files: src/store/qdrant_store.py (migrate_memory_scope, merge_memories)
+
 - **BUG-066: Integration Test Suite Hangs**
   - Fixed integration tests hanging indefinitely (16+ minutes) in pytest-asyncio contexts
   - Wrapped synchronous QdrantClient.get_collections() in run_in_executor() to prevent event loop blocking
