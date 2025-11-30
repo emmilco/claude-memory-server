@@ -121,6 +121,8 @@ Query pattern:
    - Added completion entry to CHANGELOG.md
    - Verified README already lists Ruby in supported languages
 
+**Note on Language Count**: The codebase currently supports 12 programming languages in the Rust parser (Python, JavaScript, TypeScript, Java, Go, Rust, Ruby, C, C++, C#, SQL, PHP) plus 3 config formats (JSON, YAML, TOML) = 15 total file formats. The README claims 14 programming languages including Swift and Kotlin, but these are not present in rust_core/src/parsing.rs enum - this is a pre-existing documentation discrepancy not introduced by FEAT-007.
+
 **Test Results:**
 - All 18 Ruby parsing tests passing (100% pass rate)
 - Test coverage includes:
