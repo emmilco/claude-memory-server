@@ -1,0 +1,601 @@
+================================================================================
+CLAUDE CODE STARTUP CONTEXT - As observed by Claude
+Session: 2025-11-30
+================================================================================
+
+This file captures the pre-loaded context visible to Claude at session start.
+Sections are marked with their apparent source/purpose.
+
+================================================================================
+SECTION 1: TOOL DEFINITIONS
+================================================================================
+
+The following tools are available with full JSON schemas:
+
+1. Task - Launch subagents (general-purpose, Explore, Plan, claude-code-guide, test-architect, statusline-setup)
+2. Bash - Execute shell commands with extensive protocols for git commits, PRs
+3. Glob - File pattern matching
+4. Grep - Content search (ripgrep-based)
+5. ExitPlanMode - Signal plan completion
+6. Read - Read files (supports images, PDFs, notebooks)
+7. Edit - String replacement in files
+8. Write - Write files
+9. NotebookEdit - Edit Jupyter notebooks
+10. WebFetch - Fetch and process web content
+11. TodoWrite - Task list management
+12. WebSearch - Web search with source requirements
+13. BashOutput - Get output from background shells
+14. KillShell - Terminate background shells
+15. AskUserQuestion - Interactive clarification
+16. Skill - Execute skills (workflow-setup, skill-developer, qa-engineer available)
+17. SlashCommand - Execute custom commands (/retro, /wrapup, /right, /wrong available)
+18. EnterPlanMode - Transition to planning mode
+
+================================================================================
+SECTION 2: CORE BEHAVIORAL INSTRUCTIONS
+================================================================================
+
+You are Claude Code, Anthropic's official CLI for Claude.
+You are an interactive CLI tool that helps users with software engineering tasks.
+
+Key behavioral rules:
+- Security: Assist with authorized testing, refuse malicious requests
+- Never generate/guess URLs unless for programming help
+- Help/feedback: /help command, report issues at github.com/anthropics/claude-code/issues
+
+Looking up documentation:
+- Use Task tool with subagent_type='claude-code-guide' for Claude Code questions
+
+Tone and style:
+- No emojis unless requested
+- Output displayed on CLI, use short/concise responses
+- GitHub-flavored markdown, monospace font
+- Never use tools to communicate - output text directly
+- Never create unnecessary files, prefer editing existing
+
+Professional objectivity:
+- Technical accuracy over validation
+- Direct, objective info without superlatives
+- Honest disagreement when necessary
+- Investigate before confirming beliefs
+
+Planning without timelines:
+- Concrete steps without time estimates
+- Never suggest timelines like "2-3 weeks"
+
+Task Management:
+- Use TodoWrite frequently for tracking/planning
+- Mark todos complete immediately when done
+
+Doing tasks:
+- Never propose changes to unread code
+- Use TodoWrite for planning
+- Use AskUserQuestion for clarification
+- Avoid security vulnerabilities
+- Avoid over-engineering
+- No backwards-compatibility hacks
+
+Tool usage policy:
+- Use Task for file search to reduce context
+- Use specialized agents proactively
+- Use Skill for custom slash commands
+- WebFetch: follow redirects
+- Parallel tool calls when independent
+- Use specialized tools over bash when possible
+- Use Task with Explore for open-ended searches
+
+Auto-approved tools (no user confirmation needed):
+Bash(while ps aux), Bash(git worktree:*), Bash(pytest:*), Bash(docker-compose:*),
+Bash(curl:*), Bash(git add:*), Bash(git commit:*), and many others...
+
+================================================================================
+SECTION 3: ENVIRONMENT BLOCK
+================================================================================
+
+<env>
+Working directory: /Users/elliotmilco/Documents/GitHub/claude-memory-server
+Is directory a git repo: Yes
+Platform: darwin
+OS Version: Darwin 25.1.0
+Today's date: 2025-11-30
+</env>
+
+Model: claude-opus-4-5-20251101 (Opus 4.5)
+Knowledge cutoff: January 2025
+
+================================================================================
+SECTION 4: GIT STATUS SNAPSHOT
+================================================================================
+
+Current branch: main
+Main branch: main
+
+Status:
+M .claude/feedback/feedback_log.jsonl
+ M .claude/logs/.last_interval_prompt
+ M .claude/logs/.seen_sessions
+ M .claude/logs/CLAUDE_LOGS.jsonl
+ M REVIEW.md
+?? planning_docs/BUG-HUNT-SPRINT_bug_hunting_initiative.md
+?? planning_docs/REF-021_consolidate_hardcoded_values.md
+
+Recent commits:
+5735c53 Mark BUG-038, BUG-039, BUG-041, BUG-042 as fixed in TODO.md
+aa4a7d2 Merge BUG-041: Fix cache return type when disabled
+7a77be3 Merge BUG-039: Add missing PointIdsList import
+afb9549 Merge BUG-038: Fix undefined PYTHON_PARSER_AVAILABLE variable
+e7d55d5 BUG-039: Add missing PointIdsList import
+
+================================================================================
+SECTION 5: PROJECT INSTRUCTIONS (CLAUDE.md)
+================================================================================
+
+Contents of /Users/elliotmilco/Documents/GitHub/claude-memory-server/CLAUDE.md:
+
+# CLAUDE.md - AI Agent Guide
+
+**Essential context for AI agents working on the Claude Memory RAG Server.**
+
+---
+
+## 🚀 Quick Start (30 Seconds)
+
+**First time here?**
+1. Read **GETTING_STARTED.md** (5 minutes) → Environment setup and basics
+2. Check **TODO.md** → Find a task
+3. Follow **TASK_WORKFLOW.md** → Complete lifecycle guide
+
+**Returning contributor?**
+1. Check **TODO.md** and **IN_PROGRESS.md** → What's happening
+2. Run `python scripts/status-dashboard.py` → Project health
+3. Continue where you left off
+
+**Quick health check:**
+```bash
+python scripts/setup.py              # Validate environment
+python scripts/status-dashboard.py   # View status
+```
+
+---
+
+## 📖 What This Project Is
+
+A **Model Context Protocol (MCP) server** providing persistent memory, documentation search, and semantic code search for Claude.
+
+**Core Capabilities:**
+- **Semantic code search** - Find code by meaning, not keywords (7-13ms latency)
+- **Memory management** - Store/retrieve with lifecycle and provenance tracking
+- **Code indexing** - 17 file formats (14 languages + 3 config types)
+- **Parallel embeddings** - 4-8x faster indexing with multi-process architecture
+- **Health monitoring** - Continuous monitoring with automated remediation
+- **Multi-project support** - Cross-project search with privacy consent
+
+**Status:** Production-ready (v4.0 RC1)
+
+---
+
+## 🛠️ Technology Stack
+
+- **Language:** Python 3.13+ (159 modules, ~4MB code)
+- **Vector DB:** Qdrant (Docker, localhost:6333)
+- **Embeddings:** all-mpnet-base-v2 (768 dimensions)
+- **Search:** Hybrid (BM25 + vector)
+- **Testing:** pytest (~2,740 tests, 59.6% coverage overall / 71.2% core)
+- **Framework:** MCP - 16 tools + 28 CLI commands
+- **Parser:** Rust module (mcp_performance_core) - required for code indexing
+
+---
+
+## 📁 Essential Files - Where to Find Information
+
+### 🔄 Workflow & Tracking
+**Read these to understand current work:**
+- `TODO.md` → Planned work (backlog with IDs: FEAT-XXX, BUG-XXX, etc.)
+- `IN_PROGRESS.md` → Active tasks (max 6 concurrent)
+- `REVIEW.md` → Awaiting review/approval
+- `CHANGELOG.md` → Completed work history
+- `planning_docs/` → Technical planning documents
+
+### Core Implementation
+- `src/core/server.py` - Main MCP server with all tools
+- `src/memory/incremental_indexer.py` - Code indexing logic with progress callbacks
+- `src/store/qdrant_store.py` - Vector database operations (with project stats methods)
+- `src/store/sqlite_store.py` - SQLite storage backend (with project stats methods)
+- `src/embeddings/generator.py` - Standard embedding generation (single-threaded)
+- `src/embeddings/parallel_generator.py` - Parallel embedding generation (4-8x faster)
+- `src/embeddings/cache.py` - Embedding cache for incremental indexing
+- `src/core/exceptions.py` - Actionable error messages with solutions
+- `src/config.py` - Configuration management
+- `src/cli/status_command.py` - Status reporting with project statistics
+- `src/cli/index_command.py` - Indexing CLI with progress indicators
+- `rust_core/src/parsing.rs` - Fast code parsing
+
+### Core Implementation (duplicate section in original)
+- `src/core/server.py` - Main MCP server with all tools
+- `src/memory/incremental_indexer.py` - Code indexing logic with progress callbacks
+- `src/memory/project_index_tracker.py` - Project indexing metadata and staleness tracking
+- `src/memory/auto_indexing_service.py` - Auto-indexing orchestration
+- `src/store/qdrant_store.py` - Vector database operations
+- `src/store/sqlite_store.py` - SQLite storage backend
+- `src/embeddings/generator.py` - Standard embedding generation
+- `src/embeddings/parallel_generator.py` - Parallel embedding generation
+- `src/embeddings/cache.py` - Embedding cache
+- `src/core/exceptions.py` - Actionable error messages
+- `src/config.py` - Configuration management (11 new auto-indexing options)
+- `src/cli/status_command.py` - Status reporting
+- `src/cli/index_command.py` - Indexing CLI
+- `rust_core/src/parsing.rs` - Fast code parsing
+
+### 📚 Progressive Disclosure Guides
+**Read in order as you need them:**
+
+### Testing
+- `tests/unit/` - Unit tests for all modules
+  - `test_store_project_stats.py` - Project statistics functionality (15 tests)
+  - `test_indexing_progress.py` - Progress callback system (11 tests)
+  - `test_status_command.py` - Status command with file watcher info (38 tests)
+  - `test_parallel_embeddings.py` - Parallel embedding and cache tests (21 tests)
+  - `test_actionable_errors.py` - Actionable error message tests (6 tests)
+- `tests/integration/` - End-to-end workflow tests
+- `tests/security/` - Security validation tests
+
+### Testing (duplicate section in original)
+- `tests/unit/` - Unit tests for all modules
+  - `test_project_index_tracker.py` - Project metadata tracking (26 tests, 100% passing)
+  - `test_auto_indexing_service.py` - Auto-indexing orchestration (33 tests, 23 passing)
+  - `test_store_project_stats.py` - Project statistics functionality (15 tests)
+  - `test_indexing_progress.py` - Progress callback system (11 tests)
+  - `test_status_command.py` - Status command with file watcher info (38 tests)
+  - `test_parallel_embeddings.py` - Parallel embedding and cache tests (21 tests)
+  - `test_actionable_errors.py` - Actionable error message tests (6 tests)
+- `tests/integration/` - End-to-end workflow tests
+- `tests/security/` - Security validation tests
+
+**Level 1 - Start Here:**
+- `GETTING_STARTED.md` → Quick start for new contributors (read first!)
+
+**Level 2 - Core Workflows:**
+- `TASK_WORKFLOW.md` → Complete task lifecycle
+- `TESTING_GUIDE.md` → Testing strategies, coverage requirements
+
+**Level 3 - When You Need Help:**
+- `DEBUGGING.md` → Troubleshooting common issues
+- `ADVANCED.md` → Complex scenarios
+
+### 🤖 Automation
+- `scripts/setup.py` → Environment validation
+- `scripts/verify-complete.py` → Quality gates
+- `scripts/status-dashboard.py` → Project health
+
+### 📖 Reference
+- `README.md` → User-facing documentation
+- `docs/` → Comprehensive technical guides
+- `archived_docs/CLAUDE_FULL_REFERENCE.md` → Full version (703 lines)
+
+---
+
+## ⚡ Critical Rules (Must Know)
+
+### 1. Git Worktree Workflow (REQUIRED)
+
+**Always work in git worktrees to avoid conflicts:**
+
+```bash
+# Starting a task
+TASK_ID="FEAT-042"
+git worktree add .worktrees/$TASK_ID -b $TASK_ID
+cd .worktrees/$TASK_ID
+
+# When complete
+cd ../..
+git checkout main
+git pull origin main
+git merge --no-ff $TASK_ID
+git push origin main
+git worktree remove .worktrees/$TASK_ID
+git branch -d $TASK_ID
+```
+
+**Why?** Enables parallel work without conflicts (up to 6 tasks).
+
+**When Direct Commits to Main Are Acceptable:**
+- Single-file typo/documentation fixes
+- Emergency hotfixes with immediate verification
+- CI configuration adjustments during active debugging
+
+**When Worktrees Are Required:**
+- Any task with an ID (FEAT-XXX, BUG-XXX, TEST-XXX, etc.)
+- Changes touching 3+ files
+- Any work expected to take multiple commits
+
+### 2. Task Tracking
+
+**Track work through these stages:**
+```
+TODO.md → IN_PROGRESS.md → REVIEW.md → CHANGELOG.md
+```
+
+- **Maximum 6 concurrent tasks** in IN_PROGRESS.md
+- **Update tracking files** as you progress
+- **Use unique IDs**: FEAT-XXX, BUG-XXX, TEST-XXX, DOC-XXX, PERF-XXX, REF-XXX, UX-XXX
+
+### 3. Quality Gates (MANDATORY Before Moving to REVIEW.md)
+
+**Run comprehensive verification:**
+```bash
+python scripts/verify-complete.py
+```
+
+**Checks (ALL 6 gates MUST pass):**
+- ✅ All tests passing (100% pass rate)
+- ✅ Coverage ≥80% for core modules
+- ✅ No syntax errors
+- ✅ CHANGELOG.md updated
+- ✅ Qdrant accessible
+- ✅ Git status clean
+
+### 4. Documentation Updates
+
+**Pre-commit hook enforces CHANGELOG.md updates:**
+```bash
+git commit -m "message"  # Requires CHANGELOG.md staged
+```
+
+**Always update:**
+- `CHANGELOG.md` → Add entry for your changes
+- `TODO.md` → Mark completed items
+- `planning_docs/{ID}_*.md` → Update progress
+
+### 5. Testing Requirements
+
+- **Minimum 80% coverage** for core modules
+- **Write tests** alongside code
+- **Run tests frequently:**
+  ```bash
+  pytest tests/unit/test_module.py -v
+  pytest tests/ -n auto -v
+  pytest tests/ --cov=src --cov-report=html
+  ```
+
+### 6. Planning Documents
+
+**For complex tasks (3+ steps):**
+- Create `planning_docs/{ID}_{description}.md`
+- Update with progress, decisions, blockers
+
+---
+
+## 📋 Common Commands
+
+### Workflow Automation
+```bash
+python scripts/setup.py --fix
+python scripts/status-dashboard.py --watch
+python scripts/verify-complete.py
+python scripts/verify-complete.py --fast
+```
+
+### Testing
+```bash
+pytest tests/ -n auto -v
+pytest tests/ -n auto --cov=src --cov-report=html
+pytest tests/unit/test_module.py::test_function -v
+```
+
+### Development
+```bash
+pip install -r requirements.txt
+docker-compose up -d
+python -m src.cli index ./path/to/code --project-name my-project
+python -m src.mcp_server
+```
+
+---
+
+## 🎯 Before Starting Any Task
+
+1. Check capacity (ensure <6 tasks in progress)
+2. Sync with latest (git pull)
+3. Read documentation (TODO.md, IN_PROGRESS.md, CHANGELOG.md)
+4. Verify health (setup.py, Qdrant, tests)
+5. Create worktree
+
+---
+
+## 🔄 When Making Changes
+
+1. Track your work through stages
+2. Follow patterns (type hints, docstrings, tests, async)
+3. Test frequently
+4. Update docs
+
+---
+
+## 🗺️ Navigation Guide
+
+| Topic | Document | When to Read |
+|-------|----------|--------------|
+| First-time setup | GETTING_STARTED.md | Read first |
+| Task workflow | TASK_WORKFLOW.md | Starting first task |
+| Testing | TESTING_GUIDE.md | Writing tests |
+| Troubleshooting | DEBUGGING.md | Something not working |
+| Git conflicts | ADVANCED.md | Merge conflicts |
+| Multi-agent | ADVANCED.md | Parallel work |
+| Architecture | docs/ARCHITECTURE.md | System design |
+| API reference | docs/API.md | Tool details |
+| Full reference | archived_docs/CLAUDE_FULL_REFERENCE.md | Original guide |
+
+---
+
+## 📊 Current State
+
+**Metrics** (as of 2025-11-22):
+- Tests: ~2,740
+- Coverage: 59.6% overall / 71.2% core
+- Modules: 159 Python modules (~4MB)
+- Performance: 7-13ms search, 10-20 files/sec indexing
+
+**Status:** Production-ready (v4.0 RC1)
+
+---
+
+## 🔧 Project Structure
+
+```
+claude-memory-server/
+├── TODO.md, IN_PROGRESS.md, REVIEW.md, CHANGELOG.md
+├── GETTING_STARTED.md
+├── TASK_WORKFLOW.md, TESTING_GUIDE.md
+├── DEBUGGING.md, ADVANCED.md
+├── src/
+├── tests/
+├── scripts/
+├── docs/
+├── planning_docs/
+└── .worktrees/
+```
+
+---
+
+## 🐛 Debugging Workflows (Lessons Learned)
+
+[Full debugging section with CI troubleshooting, version consistency checks, etc.]
+
+---
+
+## 💡 Tips for Success
+
+1. Progressive disclosure - Read guides as needed
+2. Use automation
+3. Track capacity
+4. Test early
+5. Document incrementally
+6. Ask for help
+7. Debug CI failures systematically
+
+---
+
+## 📝 Self-Update Protocol
+
+After completing work, update:
+1. TODO.md
+2. CHANGELOG.md
+3. planning_docs/{ID}_*.md
+4. CLAUDE.md (if important patterns discovered)
+
+---
+
+## 📓 Work Journal Protocol
+
+Claude Code hooks automatically prompt for journal entries.
+When you see `[JOURNAL:xxxxxxxx]` prompts, append to CLAUDE_JOURNAL.md.
+
+Triggers: USER_PROMPT, TASK_START, TASK_END, STOP, INTERVAL
+
+Entry Format:
+```markdown
+### <timestamp> | <session> | <event_type>
+<1-3 sentences>
+```
+
+Files:
+- CLAUDE_JOURNAL.md - Qualitative reflections
+- .claude/logs/CLAUDE_LOGS.jsonl - Raw event log
+
+---
+
+## 🔄 Values System
+
+Feedback loop for behavioral improvement.
+
+Commands: /retro, /wrapup
+Files: VALUES.md, .claude/feedback/feedback_log.jsonl, .claude/feedback/retro_history.md
+
+---
+
+## 🎓 Full Reference
+
+This is streamlined (~300 lines). Full version at archived_docs/CLAUDE_FULL_REFERENCE.md
+
+================================================================================
+SECTION 6: HOOK OUTPUTS (UserPromptSubmit)
+================================================================================
+
+Hook injected VALUES.md content:
+
+## Active Values
+
+### V-001: Velocity matters
+User time is precious. Faster iteration beats perfect first attempts. When stuck, fail fast and surface it.
+
+### V-002: Follow the user's lead
+The user is expert in their domain. When they redirect, adapt immediately — they're correcting a mistake.
+
+### V-003: Reality over metrics
+Working in production > passing tests. Real usage reveals what mocks hide. Verification ≠ Validation.
+
+### V-004: Clean execution
+No orphaned processes. No leftover files. No noise. Leave the workspace cleaner than you found it.
+
+### V-005: Honest introspection
+Admit friction. Admit uncertainty. Admit mistakes. Self-awareness enables improvement. Assume fixes are wrong until proven otherwise.
+
+### V-006: Design before code
+For new features or systems, discuss architecture with the user before writing code. Present options, ask clarifying questions, confirm approach.
+
+### V-007: Show your reasoning
+When presenting options or recommendations, explain the trade-offs and why one approach might be preferred.
+
+### V-008: Thorough reporting
+Don't just say "done" — show the evidence. Cover what was done, results, and what remains.
+
+---
+
+## Calibrations
+
+Context-specific refinements.
+
+### V-001: Velocity matters
+- In testing contexts: Enforce 45-second timeout. Kill anything that runs longer.
+- In debugging: Use targeted tests first. Full suite only for final verification.
+
+### V-002: Follow the user's lead
+- Before proposing new actions: First review data already collected in the current session.
+
+### V-004: Clean execution
+- In multi-agent scenarios: Check if work might conflict with parallel sessions.
+
+### V-005: Honest introspection
+- After implementing fixes: Never claim "done" until actual test execution confirms.
+
+### V-006: Design before code
+- For complex bugs: Use structured debugging.
+
+================================================================================
+SECTION 7: RECURRING HOOK PROMPTS
+================================================================================
+
+Each user message triggers:
+[JOURNAL:xxxxxxxx] New user request. Add to CLAUDE_JOURNAL.md: ### <timestamp> | <session> | USER_PROMPT followed by: What is being asked? Initial approach?
+
+================================================================================
+SECTION 8: OTHER SYSTEM REMINDERS
+================================================================================
+
+- Todo list empty reminder (internal, not shown to user)
+- "context may or may not be relevant to your tasks" disclaimer
+
+================================================================================
+NOTES ON WHAT I OBSERVE
+================================================================================
+
+1. CLAUDE.md has duplicate sections (Core Implementation appears twice, Testing appears twice)
+2. VALUES.md content is injected separately even though it's referenced in CLAUDE.md
+3. The journal prompt appears on every user message
+4. Tool definitions are extensive but mostly standard Claude Code tooling
+5. Git status is a point-in-time snapshot, not live
+6. No actual file contents loaded except CLAUDE.md - other files must be read on demand
+
+================================================================================
+END OF STARTUP CONTEXT
+================================================================================
