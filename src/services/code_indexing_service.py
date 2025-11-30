@@ -13,7 +13,7 @@ Responsibilities:
 import logging
 import time
 from pathlib import Path
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Callable
 
 from src.config import ServerConfig, DEFAULT_EMBEDDING_DIM
 from src.store import MemoryStore
@@ -624,7 +624,7 @@ class CodeIndexingService:
         clear_existing: bool = False,
         bypass_cache: bool = False,
         recursive: bool = True,
-        progress_callback: Optional[callable] = None,
+        progress_callback: Optional[Callable[..., Any]] = None,
     ) -> Dict[str, Any]:
         """
         Force re-indexing of a project.

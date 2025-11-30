@@ -4,7 +4,7 @@ import logging
 import asyncio
 import json
 import os
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Callable
 from datetime import datetime, UTC
 from pathlib import Path
 import subprocess
@@ -3370,7 +3370,7 @@ class MemoryRAGServer(StructuralQueryMixin):
         clear_existing: bool = False,
         bypass_cache: bool = False,
         recursive: bool = True,
-        progress_callback: Optional[callable] = None,
+        progress_callback: Optional[Callable[..., Any]] = None,
     ) -> Dict[str, Any]:
         """
         Force re-indexing of a project from scratch.
