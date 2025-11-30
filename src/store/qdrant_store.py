@@ -38,6 +38,11 @@ MAX_SCROLL_ITERATIONS = 1000
 MIN_UNIX_TIMESTAMP = -(2**31)
 MAX_UNIX_TIMESTAMP = 2**31 - 1
 
+# Maximum points allowed for duplicate memory scan to prevent memory exhaustion
+# With 768-dim vectors, each point consumes ~3KB+ in memory
+# 10K points * 3KB = ~30MB; 100K points = ~300MB; 1M+ points causes memory issues
+MAX_DUPLICATE_SCAN_POINTS = 10000
+
 
 def _validate_timestamp(timestamp: float, field_name: str = "timestamp") -> None:
     """
@@ -65,7 +70,6 @@ def _validate_timestamp(timestamp: float, field_name: str = "timestamp") -> None
             f"Timestamp {timestamp} exceeds maximum supported value {MAX_UNIX_TIMESTAMP} "
             f"(~2038-01-19). Please use an earlier date."
         )
-
 
 class QdrantMemoryStore(MemoryStore):
     """Qdrant implementation of the MemoryStore interface."""
@@ -2532,11 +2536,13 @@ class QdrantMemoryStore(MemoryStore):
             List of memory ID groups (each group is potential duplicates)
 
         Raises:
+            ValidationError: If collection has too many points (memory exhaustion risk)
             StorageError: If search fails
         """
         client = None
         try:
             client = await self._get_client()
+
             # Get all memories matching criteria
             filter_obj = None
             if project_name:
@@ -2548,6 +2554,33 @@ class QdrantMemoryStore(MemoryStore):
                         )
                     ]
                 )
+
+            # Check total points count to prevent memory exhaustion
+            # This is done upfront before loading all vectors into memory
+            try:
+                collection_info = await self._run_async(
+                    lambda: client.get_collection(self.collection_name)
+                )
+                total_points = collection_info.points_count
+
+                # If no filter is applied, check against total collection size
+                # If filter is applied (project_name), the scroll operation will only load filtered results
+                if not project_name and total_points > MAX_DUPLICATE_SCAN_POINTS:
+                    raise ValidationError(
+                        f"Collection has {total_points} points, exceeds maximum for duplicate scan "
+                        f"({MAX_DUPLICATE_SCAN_POINTS}). Loading all vectors would exhaust memory. "
+                        f"Consider filtering by project_name to reduce scope."
+                    )
+
+                if project_name:
+                    logger.info(f"Duplicate scan: filtering by project_name='{project_name}' (collection total: {total_points} points)")
+                else:
+                    logger.info(f"Duplicate scan: {total_points} points in collection (within limit of {MAX_DUPLICATE_SCAN_POINTS})")
+            except ValidationError:
+                raise
+            except Exception as e:
+                logger.warning(f"Could not validate collection size: {e}. Proceeding with scan.")
+
 
             offset = None
             memories = []
