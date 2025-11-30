@@ -120,9 +120,10 @@ Organize entries under these headers in chronological order (newest first):
   - Files: src/embeddings/cache.py
 
 - **BUG-167: Payload Metadata Spread Allows Field Injection**
-  - Fixed security vulnerability where `**metadata.get("metadata", {})` spread operator allowed users to inject arbitrary values and override reserved fields
+  - Fixed security vulnerability where `**metadata` spread operator allowed users to inject arbitrary values and override reserved fields in both store and update paths
   - Added RESERVED_FIELDS set to filter user metadata before spreading, preventing injection of id, importance, category, lifecycle_state and other controlled fields
-  - Implemented field filtering in `_build_payload()` to only include non-reserved keys from user metadata dictionary
+  - Implemented field filtering in `_build_payload()` and `_update_memory()` to only include non-reserved keys from user metadata dictionaries
+  - Both create (store) and update (upsert) operations now properly filter user-provided metadata
   - Files: src/store/qdrant_store.py
 - **BUG-066: Integration Test Suite Hangs**
   - Fixed integration tests hanging indefinitely (16+ minutes) in pytest-asyncio contexts
