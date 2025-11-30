@@ -716,7 +716,7 @@ These investigations will help surface additional bugs by examining specific pat
     3. Accept inaccuracy (document as known limitation)
   - **Discovered:** 2025-11-29 INVEST-003 audit
 
-- [ ] **REF-030**: Non-Atomic Counter Attribute Increments - 16 Instances 🔥
+- [x] **REF-030**: Non-Atomic Counter Attribute Increments - 16 Instances 🔥
   - **Pattern:** `self.counter += 1` is not atomic
   - **Locations:**
     - `src/store/connection_pool.py:298, 521` - `_active_connections`, `_created_count`
@@ -752,7 +752,7 @@ These investigations will help surface additional bugs by examining specific pat
 
 **Finding:** 41 standard library imports inside functions (should be at module top)
 
-- [ ] **REF-031**: Move Inline Standard Library Imports to Module Top - 41 Instances
+- [x] **REF-031**: Move Inline Standard Library Imports to Module Top - 41 Instances
   - **Locations:** Major concentrations:
     - `src/core/server.py` - 16 instances (`time`, `re`, `fnmatch`)
     - `src/monitoring/performance_tracker.py` - 4 instances (`json`, `statistics`)
@@ -809,7 +809,7 @@ These investigations will help surface additional bugs by examining specific pat
 
 **Finding:** Only 3 field validators in config.py; many numeric fields lack range validation
 
-- [ ] **REF-033**: Add Missing Config Range Validators 🔥
+- [x] **REF-033**: Add Missing Config Range Validators 🔥
   - **Location:** `src/config.py`
   - **Missing Validators:**
     - `gpu_memory_fraction` (line 46) - Should be 0.0-1.0, comment says so but no validator
