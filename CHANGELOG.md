@@ -60,6 +60,8 @@ Organize entries under these headers in chronological order (newest first):
   - Returns deletion statistics with breakdown by category, project, and lifecycle state
   - Enhanced SearchFilters model with lifecycle_state, date_from, date_to, max_importance fields
   - Proper enum handling: string parameters converted to uppercase enums, .value extracted for Qdrant filters
+  - Added LifecycleState import to server.py (bug fix)
+  - Enhanced MCP tool schema with explicit enum values and case-insensitive documentation
   - Files: src/store/qdrant_store.py, src/core/server.py, src/mcp_server.py, src/core/models.py
   - Tests: tests/unit/test_query_based_deletion.py (19 tests including enum conversion test)
 

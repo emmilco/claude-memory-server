@@ -25,6 +25,7 @@ from src.core.models import (
     ContextLevel,
     MemoryCategory,
     MemoryScope,
+    LifecycleState,
     GetUsageStatisticsRequest,
     GetUsageStatisticsResponse,
     GetTopQueriesRequest,
