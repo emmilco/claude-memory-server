@@ -941,10 +941,25 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         try:
             # Convert string parameters to enum types if provided
-            category_enum = MemoryCategory(category.upper()) if category else None
-            lifecycle_enum = LifecycleState(lifecycle_state.upper()) if lifecycle_state else None
-            scope_enum = MemoryScope(scope.upper()) if scope else None
-            context_level_enum = ContextLevel(context_level.upper()) if context_level else None
+            try:
+                category_enum = MemoryCategory(category.upper()) if category else None
+            except ValueError:
+                raise ValidationError(f"Invalid category: {category}. Valid values: preference, fact, event, workflow, context, code")
+
+            try:
+                lifecycle_enum = LifecycleState(lifecycle_state.upper()) if lifecycle_state else None
+            except ValueError:
+                raise ValidationError(f"Invalid lifecycle_state: {lifecycle_state}. Valid values: active, recent, archived, stale")
+
+            try:
+                scope_enum = MemoryScope(scope.upper()) if scope else None
+            except ValueError:
+                raise ValidationError(f"Invalid scope: {scope}. Valid values: global, project, session")
+
+            try:
+                context_level_enum = ContextLevel(context_level.upper()) if context_level else None
+            except ValueError:
+                raise ValidationError(f"Invalid context_level: {context_level}. Valid values: user_preference, project_context, session_state")
 
             # Build SearchFilters from parameters
             filters = SearchFilters(

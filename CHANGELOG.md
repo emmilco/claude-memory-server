@@ -62,8 +62,9 @@ Organize entries under these headers in chronological order (newest first):
   - Proper enum handling: string parameters converted to uppercase enums, .value extracted for Qdrant filters
   - Added LifecycleState import to server.py (bug fix)
   - Enhanced MCP tool schema with explicit enum values and case-insensitive documentation
+  - Comprehensive error handling for invalid enum values with helpful error messages
   - Files: src/store/qdrant_store.py, src/core/server.py, src/mcp_server.py, src/core/models.py
-  - Tests: tests/unit/test_query_based_deletion.py (19 tests including enum conversion test)
+  - Tests: tests/unit/test_query_based_deletion.py (20 tests including enum validation)
 
 ### Changed - 2025-11-29
 - **REF-011: Integrate ProjectArchivalManager with metrics (COMPLETE)**
