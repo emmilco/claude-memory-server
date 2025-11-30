@@ -52,6 +52,13 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **BUG-050: Add null check for executor after failed initialize**
+  - Added executor null check in `_generate_parallel()` method after `await self.initialize()` call
+  - If initialization fails (exception raised), executor remains None and subsequent code would crash with AttributeError
+  - Now raises explicit EmbeddingError with helpful message directing user to check logs
+  - Prevents `'NoneType' object has no attribute...` AttributeError
+  - Files: src/embeddings/parallel_generator.py
+
 - **BUG-052: Fix incorrect median calculation in ImportanceScorer**
   - Fixed `get_summary_statistics()` method to properly calculate median for even-length lists
   - Now averages the two middle elements for even-length sorted lists, consistent with statistical definition
