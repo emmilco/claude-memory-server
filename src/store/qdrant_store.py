@@ -355,7 +355,7 @@ class QdrantMemoryStore(MemoryStore):
                 must_conditions.append(
                     FieldCondition(
                         key="category",
-                        match=MatchValue(value=filters.category)
+                        match=MatchValue(value=filters.category.value)
                     )
                 )
 
@@ -371,7 +371,7 @@ class QdrantMemoryStore(MemoryStore):
                 must_conditions.append(
                     FieldCondition(
                         key="scope",
-                        match=MatchValue(value=filters.scope)
+                        match=MatchValue(value=filters.scope.value)
                     )
                 )
 
@@ -379,7 +379,7 @@ class QdrantMemoryStore(MemoryStore):
                 must_conditions.append(
                     FieldCondition(
                         key="context_level",
-                        match=MatchValue(value=filters.context_level)
+                        match=MatchValue(value=filters.context_level.value)
                     )
                 )
 
@@ -387,7 +387,7 @@ class QdrantMemoryStore(MemoryStore):
                 must_conditions.append(
                     FieldCondition(
                         key="lifecycle_state",
-                        match=MatchValue(value=filters.lifecycle_state)
+                        match=MatchValue(value=filters.lifecycle_state.value)
                     )
                 )
 

@@ -134,7 +134,7 @@ class TestQdrantStoreDeleteByFilter:
         with patch.object(store, '_get_client', return_value=mock_client), \
              patch.object(store, '_release_client'):
 
-            filters = SearchFilters(category="code")
+            filters = SearchFilters(category=MemoryCategory.CODE)
             result = await store.delete_by_filter(filters, max_count=1000)
 
             assert result["deleted_count"] == 1
@@ -160,7 +160,7 @@ class TestQdrantStoreDeleteByFilter:
         with patch.object(store, '_get_client', return_value=mock_client), \
              patch.object(store, '_release_client'):
 
-            filters = SearchFilters(category="code")
+            filters = SearchFilters(category=MemoryCategory.CODE)
             result = await store.delete_by_filter(filters, max_count=3)
 
             # Should only delete 3 memories
@@ -171,7 +171,7 @@ class TestQdrantStoreDeleteByFilter:
         """Test that invalid max_count raises ValidationError."""
         store = QdrantMemoryStore(config=mock_config, use_pool=False)
 
-        filters = SearchFilters(category="code")
+        filters = SearchFilters(category=MemoryCategory.CODE)
 
         # Test max_count < 1
         with pytest.raises(ValidationError, match="max_count must be between 1 and 1000"):
@@ -261,7 +261,7 @@ class TestQdrantStoreDeleteByFilter:
         with patch.object(store, '_get_client', return_value=mock_client), \
              patch.object(store, '_release_client'):
 
-            filters = SearchFilters(category="code")
+            filters = SearchFilters(category=MemoryCategory.CODE)
 
             with pytest.raises(StorageError, match="Failed to delete memories by filter"):
                 await store.delete_by_filter(filters, max_count=1000)
@@ -474,3 +474,33 @@ class TestServerDeleteMemoriesByQuery:
 
             assert result["total_matches"] == 5
             assert result["deleted_count"] == 0
+
+    @pytest.mark.asyncio
+    async def test_string_enum_conversion(self, mock_config):
+        """Test that string parameters are properly converted to enums."""
+        server = MemoryRAGServer(config=mock_config)
+
+        mock_result = {
+            "deleted_count": 1,
+            "breakdown_by_category": {"code": 1},
+            "breakdown_by_project": {"project1": 1},
+            "breakdown_by_lifecycle": {"active": 1}
+        }
+
+        with patch.object(server.store, 'delete_by_filter', return_value=mock_result) as mock_delete:
+            # Test lowercase string values (as would come from MCP tool)
+            result = await server.delete_memories_by_query(
+                category="code",
+                lifecycle_state="active",
+                scope="project",
+                context_level="project_context",
+                dry_run=False
+            )
+
+            # Verify the call was made with properly converted enums
+            call_args = mock_delete.call_args
+            filters = call_args[0][0]  # First positional argument
+            assert filters.category == MemoryCategory.CODE
+            assert filters.lifecycle_state == LifecycleState.ACTIVE
+            assert filters.scope == MemoryScope.PROJECT
+            assert filters.context_level == ContextLevel.PROJECT_CONTEXT

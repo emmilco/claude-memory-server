@@ -59,8 +59,9 @@ Organize entries under these headers in chronological order (newest first):
   - Safety features: dry_run mode (default: true), max_count limit (1-1000), confirmation warnings for large deletions
   - Returns deletion statistics with breakdown by category, project, and lifecycle state
   - Enhanced SearchFilters model with lifecycle_state, date_from, date_to, max_importance fields
+  - Proper enum handling: string parameters converted to uppercase enums, .value extracted for Qdrant filters
   - Files: src/store/qdrant_store.py, src/core/server.py, src/mcp_server.py, src/core/models.py
-  - Tests: tests/unit/test_query_based_deletion.py (18 tests)
+  - Tests: tests/unit/test_query_based_deletion.py (19 tests including enum conversion test)
 
 ### Changed - 2025-11-29
 - **REF-011: Integrate ProjectArchivalManager with metrics (COMPLETE)**

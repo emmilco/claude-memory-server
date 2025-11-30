@@ -939,18 +939,24 @@ class MemoryRAGServer(StructuralQueryMixin):
             raise ReadOnlyError("Cannot delete memories in read-only mode")
 
         try:
+            # Convert string parameters to enum types if provided
+            category_enum = MemoryCategory(category.upper()) if category else None
+            lifecycle_enum = LifecycleState(lifecycle_state.upper()) if lifecycle_state else None
+            scope_enum = MemoryScope(scope.upper()) if scope else None
+            context_level_enum = ContextLevel(context_level.upper()) if context_level else None
+
             # Build SearchFilters from parameters
             filters = SearchFilters(
-                category=category,
+                category=category_enum,
                 project_name=project_name,
                 tags=tags or [],
                 date_from=date_from,
                 date_to=date_to,
                 min_importance=min_importance,
                 max_importance=max_importance,
-                lifecycle_state=lifecycle_state,
-                scope=scope,
-                context_level=context_level,
+                lifecycle_state=lifecycle_enum,
+                scope=scope_enum,
+                context_level=context_level_enum,
             )
 
             if dry_run:
