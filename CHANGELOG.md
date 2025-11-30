@@ -51,6 +51,19 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Changed - 2025-11-30
+- **REF-021: Move Hardcoded Thresholds to Configuration**
+  - Created new `QualityThresholds` configuration class to centralize all quality analysis and duplicate detection parameters
+  - Moved duplicate detection similarity thresholds (0.95, 0.85, 0.75) from hardcoded values to `config.quality.duplicate_*_threshold`
+  - Moved incremental indexer limit (10000) to `config.quality.incremental_indexer_limit`
+  - Moved stale memory usage threshold (5) to `config.quality.stale_memory_usage_threshold`
+  - Moved reranker content length bounds (100, 500, 1000) to `config.quality.reranker_min/max_content_length` and `reranker_length_penalty_max`
+  - Moved complexity thresholds (10, 20, 100, 4, 5) to individual `config.quality.complexity_*` fields
+  - Moved maintainability index thresholds (85, 65, 50) to `config.quality.maintainability_*` fields
+  - Updated 5 modules to read from config instead of hardcoded values: `src/memory/duplicate_detector.py`, `src/memory/incremental_indexer.py`, `src/memory/health_jobs.py`, `src/search/reranker.py`, `src/analysis/quality_analyzer.py`
+  - All thresholds include validators to ensure proper ranges and data types
+  - Backward-compatible: hardcoded defaults are used if not overridden in config
+
 ### Fixed - 2025-11-30
 - **REF-028-C: Add Exception Chain Preservation (from e)**
   - Added `from e` to 41 raise statements lacking exception chain preservation
