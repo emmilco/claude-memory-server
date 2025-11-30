@@ -59,6 +59,15 @@ Organize entries under these headers in chronological order (newest first):
   - Improved error visibility: exceptions now logged with `exc_info=True` for full traceback
   - Files: src/mcp_server.py
 
+- **BUG-055: Add error handling for fire-and-forget flush task in usage tracker**
+  - Fixed `asyncio.create_task(self._flush())` call at line 143 in `UsageTracker.record_usage()`
+  - Added `_background_tasks` set initialization in `__init__()` to track fire-and-forget tasks
+  - Now stores task reference and adds error callback: `task.add_done_callback(self._handle_background_task_done)`
+  - Implemented `_handle_background_task_done()` callback to log exceptions and clean up task references
+  - Ensures exceptions during batch flush operations are properly logged instead of silently lost
+  - Prevents usage data loss when storage backend operations fail
+  - Files: src/memory/usage_tracker.py
+
 - **BUG-053: Accept ISO 8601 date formats in query DSL parser**
   - Enhanced `_validate_date()` method to accept ISO 8601 formats beyond strict YYYY-MM-DD
   - Now supports formats: YYYY-MM-DDTHH:MM:SS, YYYY-MM-DDTHH:MM:SSZ, YYYY-MM-DDTHH:MM:SS+HH:MM
