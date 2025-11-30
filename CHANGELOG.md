@@ -90,6 +90,13 @@ Organize entries under these headers in chronological order (newest first):
   - Tests: tests/unit/test_query_based_deletion.py (20 tests including enum validation)
 
 ### Fixed - 2025-11-30
+- **BUG-048: Fix Cascade Fusion Dropping Valid BM25 Results**
+  - Changed cascade fusion to only include BM25 results with non-zero scores, preventing zero-score results from blocking vector backfill
+  - When query doesn't match any documents well (all BM25 scores are 0), cascade now properly backfills with vector results
+  - Improved debug logging to track BM25 results included vs vector backfilling
+  - Fixes case where cascade strategy would return empty or low-quality results when BM25 doesn't match but vector search would
+  - Files: src/search/hybrid_search.py
+
 - **BUG-047: Refactor RRF Fusion Logic for Clarity**
   - Extracted memory lookup into separate `_find_memory_in_results()` helper function
   - Replaced confusing if/not/else control flow with explicit calls to find memory in both result sets
@@ -97,7 +104,6 @@ Organize entries under these headers in chronological order (newest first):
   - Improved readability: uses simple `vector_memory or bm25_memory` pattern instead of inverted conditionals
   - No functional changes; same behavior with much clearer intent
   - Files: src/search/hybrid_search.py
-
 - **BUG-044: Fix undefined since_dt and until_dt variables on date parsing error**
   - Added explicit `since_dt = None` after failed date parsing in lines 62-71
   - Added explicit `until_dt = None` after failed date parsing in lines 80-89
