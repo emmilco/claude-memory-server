@@ -1,11 +1,20 @@
 """Test configuration and shared fixtures."""
 
+import os
 import pytest
 import hashlib
 from pathlib import Path
 from typing import Dict, List, Any, Callable
 import asyncio
 from itertools import cycle
+
+
+# =============================================================================
+# TEST CONFIGURATION CONSTANTS
+# =============================================================================
+# These constants allow tests to work with both default and isolated Qdrant instances.
+# The isolated test runner sets CLAUDE_RAG_QDRANT_URL to use an ephemeral test instance.
+TEST_QDRANT_URL = os.environ.get("CLAUDE_RAG_QDRANT_URL", "http://localhost:6333")
 
 
 # =============================================================================
