@@ -737,9 +737,9 @@ Format: `{TYPE}-{NUMBER}` where TYPE = FEAT|BUG|TEST|DOC|PERF|REF|UX
 
 ### 🌐 Tier 4: Language Support Extensions
 
-- [ ] **FEAT-007**: Add support for Ruby (~3 days)
-  - [ ] tree-sitter-ruby integration
-  - [ ] Method, class, module extraction
+- [x] **FEAT-007**: Add support for Ruby ✅ **COMPLETE**
+  - [x] tree-sitter-ruby integration
+  - [x] Method, class, module extraction
 
 - [x] **FEAT-008**: Add support for PHP ✅ **COMPLETE**
   - [x] tree-sitter-php integration

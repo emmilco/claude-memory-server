@@ -51,6 +51,13 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Planning - 2025-11-29
+- **FEAT-007: Ruby Language Support Documentation Update**
+  - Marked FEAT-007 as complete in TODO.md (Ruby support was already fully implemented)
+  - Ruby support includes: tree-sitter-ruby integration, method extraction, class extraction, module extraction
+  - Comprehensive test suite with 18 passing tests in tests/unit/test_ruby_parsing.py
+  - Ruby (.rb files) is one of 17 supported file formats (14 programming languages + 3 config formats)
+
 ### Changed - 2025-11-29
 - **REF-011: Integrate ProjectArchivalManager with metrics (COMPLETE)**
   - Added `archival_manager` parameter to `MetricsCollector.__init__()`
