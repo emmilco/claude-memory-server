@@ -51,6 +51,16 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Changed - 2025-11-30
+- **DOC: Optimize CLAUDE.md for AI agent context efficiency**
+  - Reduced CLAUDE.md from 617 lines to 92 lines (85% reduction)
+  - Added scope calibration section (quick fix vs tracked task vs investigation)
+  - Added safer merge protocol (merge main into feature branch before merging back)
+  - Created scripts/journal.sh for low-friction journal entries
+  - Updated hook prompts to use journal script
+  - Archived GETTING_STARTED.md (content redundant with CLAUDE.md)
+  - Files: CLAUDE.md, scripts/journal.sh, .claude/hooks/observe.sh
+
 ### Fixed - 2025-11-30
 - **BUG-056: Track and handle MCP server initialization task properly**
   - Fixed fire-and-forget task issue: background initialization task reference is now stored
