@@ -57,11 +57,17 @@ Organize entries under these headers in chronological order (newest first):
   - Fixed `NameError` in `merge_memories()` method at line 2331
   - Files: src/store/qdrant_store.py
 
-### Fixed - 2025-11-29
-- **REF-012: Fix port hardcoding in tests**
+### Fixed - 2025-11-30
+- **REF-012: Fix environment variable handling in Qdrant test fixtures**
+  - Updated `test_backup_export.py` temp_store fixture to respect `CLAUDE_RAG_QDRANT_URL` environment variable
+  - Updated `test_backup_import.py` temp_store fixture to respect `CLAUDE_RAG_QDRANT_URL` environment variable
+  - Added retry logic to `conftest.py` qdrant_client fixture to wait for Qdrant server readiness
+  - Fixes test failures when running with isolated Qdrant on non-default ports (test-isolated.sh)
+  - Files: tests/unit/test_backup_export.py, tests/unit/test_backup_import.py, tests/conftest.py
+
+- **REF-012: Fix port hardcoding in tests (previous)**
   - Updated `test_config_defaults` to respect `CLAUDE_RAG_QDRANT_URL` environment variable
   - Added `mock_call_graph_store` fixture to `test_indexing_progress.py` to avoid Qdrant connection attempts
-  - Fixes test failures when running with isolated Qdrant on non-default port (test-isolated.sh)
   - Files: tests/unit/test_config.py, tests/unit/test_indexing_progress.py
 
 - **BUG-042: Fix incorrect method name in StatusCommand.print_active_project()**
