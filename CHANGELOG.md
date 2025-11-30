@@ -51,6 +51,17 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Added - 2025-11-30
+- **REF-025: Complete Stub Implementations**
+  - Implemented JavaScript/TypeScript call extraction using tree-sitter parser
+  - Extracts function calls, method calls, and constructor calls from JS/TS code
+  - Extracts class implementations and inheritance relationships (ES6 extends)
+  - Handles function context tracking and call type classification
+  - Files: src/analysis/call_extractors.py (JavaScriptCallExtractor class)
+  - Marked as unsupported (with clear documentation): health score database persistence and contradiction rate semantic analysis
+  - Health score persistence deferred pending database schema design
+  - Contradiction rate detection deferred (requires expensive semantic similarity analysis at scale)
+
 ### Changed - 2025-11-30
 - **REF-021: Move Hardcoded Thresholds to Configuration**
   - Created new `QualityThresholds` configuration class to centralize all quality analysis and duplicate detection parameters
@@ -63,7 +74,6 @@ Organize entries under these headers in chronological order (newest first):
   - Updated 5 modules to read from config instead of hardcoded values: `src/memory/duplicate_detector.py`, `src/memory/incremental_indexer.py`, `src/memory/health_jobs.py`, `src/search/reranker.py`, `src/analysis/quality_analyzer.py`
   - All thresholds include validators to ensure proper ranges and data types
   - Backward-compatible: hardcoded defaults are used if not overridden in config
-
 ### Fixed - 2025-11-30
 - **REF-023: Remove Defensive hasattr() Patterns for Enums**
   - Identified root cause: `_build_payload()` stored enum values inconsistently (sometimes as enums, sometimes as strings) based on metadata input type
