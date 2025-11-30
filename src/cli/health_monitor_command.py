@@ -20,6 +20,7 @@ from src.monitoring.metrics_collector import MetricsCollector
 from src.monitoring.alert_engine import AlertEngine, AlertSeverity
 from src.monitoring.health_reporter import HealthReporter, HealthStatus
 from src.monitoring.remediation import RemediationEngine, RemediationTrigger
+from src.memory.project_archival import ProjectArchivalManager
 
 
 console = Console()
@@ -68,7 +69,16 @@ class HealthMonitorCommand:
         try:
             # Initialize components
             store = await create_store(self.config)
-            collector = MetricsCollector(self.db_path, store)
+
+            # Initialize archival manager (REF-011)
+            config_dir = os.path.dirname(self.db_path)
+            archival_file = os.path.join(config_dir, "project_states.json")
+            archival_manager = ProjectArchivalManager(
+                state_file_path=archival_file,
+                inactivity_threshold_days=self.config.memory.archival_threshold_days
+            )
+
+            collector = MetricsCollector(self.db_path, store, archival_manager)
             alert_engine = AlertEngine(self.db_path)
             reporter = HealthReporter()
 
@@ -124,7 +134,16 @@ class HealthMonitorCommand:
         try:
             # Initialize components
             store = await create_store(self.config)
-            collector = MetricsCollector(self.db_path, store)
+
+            # Initialize archival manager (REF-011)
+            config_dir = os.path.dirname(self.db_path)
+            archival_file = os.path.join(config_dir, "project_states.json")
+            archival_manager = ProjectArchivalManager(
+                state_file_path=archival_file,
+                inactivity_threshold_days=self.config.memory.archival_threshold_days
+            )
+
+            collector = MetricsCollector(self.db_path, store, archival_manager)
             alert_engine = AlertEngine(self.db_path)
             reporter = HealthReporter()
 
@@ -249,7 +268,16 @@ class HealthMonitorCommand:
         try:
             # Initialize components
             store = await create_store(self.config)
-            collector = MetricsCollector(self.db_path, store)
+
+            # Initialize archival manager (REF-011)
+            config_dir = os.path.dirname(self.db_path)
+            archival_file = os.path.join(config_dir, "project_states.json")
+            archival_manager = ProjectArchivalManager(
+                state_file_path=archival_file,
+                inactivity_threshold_days=self.config.memory.archival_threshold_days
+            )
+
+            collector = MetricsCollector(self.db_path, store, archival_manager)
 
             days = getattr(args, "days", 30)
 

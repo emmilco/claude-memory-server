@@ -51,6 +51,14 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Changed - 2025-11-29
+- **REF-011: Integrate ProjectArchivalManager with metrics (COMPLETE)**
+  - Added `archival_manager` parameter to `MetricsCollector.__init__()`
+  - Connected metrics_collector to ProjectArchivalManager for accurate active vs archived project counts
+  - Updated `collect_metrics()` to use archival manager when available, fallback to counting all as active
+  - Wired up archival_manager in `src/core/server.py` and `src/cli/health_monitor_command.py`
+  - Files: src/monitoring/metrics_collector.py, src/core/server.py, src/cli/health_monitor_command.py
+
 ### Planning - 2025-11-29
 - **REF-007: Server Consolidation Analysis (CLOSED AS N/A)**
   - Completed analysis of mcp_server.py and src/core/server.py architecture
@@ -58,7 +66,6 @@ Organize entries under these headers in chronological order (newest first):
   - mcp_server.py = MCP protocol adapter, server.py = business logic
   - No consolidation needed - current design is correct
   - Planning document: planning_docs/REF-007_server_consolidation_plan.md
-
 ### Added - 2025-11-29
 - **TEST-007-F: Add test coverage for retrieval_predictor.py (0% → 100%)**
   - Created comprehensive test suite for `src/router/retrieval_predictor.py`
