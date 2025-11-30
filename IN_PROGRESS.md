@@ -75,6 +75,6 @@ When at 6/6 capacity:
 ## Workflow
 
 ```
-TODO.md → IN_PROGRESS.md → REVIEW.md → CHANGELOG.md
-           (start work)      (ready)     (merged)
+TODO.md → IN_PROGRESS.md → REVIEW.md → TESTING.md → CHANGELOG.md
+           (implement)     (code review)  (test+merge)   (done)
 ```
