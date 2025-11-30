@@ -9,6 +9,7 @@ from datetime import datetime, UTC
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
     PointStruct,
+    PointIdsList,
     Filter,
     FieldCondition,
     MatchValue,
