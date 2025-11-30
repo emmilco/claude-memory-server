@@ -85,13 +85,19 @@ Organize entries under these headers in chronological order (newest first):
   - Maintains backward compatibility with YYYY-MM-DD format via fallback to `strptime()`
   - Files: src/search/query_dsl_parser.py
 
+- **BUG-051: Fix MPS generator thread leak by adding cleanup in close()**
+  - Added `_mps_generator` cleanup to the `close()` method in ParallelEmbeddingGenerator
+  - Prevents thread pool executor leak when using MPS (Apple Silicon) fallback for large models
+  - Properly awaits `self._mps_generator.close()` and sets instance to None
+  - Includes exception handling to log warnings if cleanup fails
+  - Files: src/embeddings/parallel_generator.py
+
 - **BUG-050: Add null check for executor after failed initialize**
   - Added executor null check in `_generate_parallel()` method after `await self.initialize()` call
   - If initialization fails (exception raised), executor remains None and subsequent code would crash with AttributeError
   - Now raises explicit EmbeddingError with helpful message directing user to check logs
   - Prevents `'NoneType' object has no attribute...` AttributeError
   - Files: src/embeddings/parallel_generator.py
-
 - **BUG-052: Fix incorrect median calculation in ImportanceScorer**
   - Fixed `get_summary_statistics()` method to properly calculate median for even-length lists
   - Now averages the two middle elements for even-length sorted lists, consistent with statistical definition
