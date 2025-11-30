@@ -142,6 +142,13 @@ Organize entries under these headers in chronological order (newest first):
   - Memories appearing in both BM25 and vector results now correctly show their actual vector scores instead of 0.0
   - Files: src/search/hybrid_search.py
 
+- **BUG-152: Silent Embedding Cache Failure Falls Back Without Warning**
+  - Upgraded cache operation exception handlers from debug/error to WARNING level logging
+  - All cache failures (get, set, batch_get, clean_old, clear, get_stats) now log at WARNING level with consistent message format
+  - Performance degradation from cache failures is now immediately visible in logs instead of silently failing at debug level
+  - Prevents undetected cache corruption or database connection issues from silently degrading system performance
+  - Files: src/embeddings/cache.py (8 exception handlers updated)
+
 - **BUG-162: Embedding Cache Normalization Asymmetry**
   - Fixed inconsistent vector normalization causing search result discrepancies between cache hits and misses
   - Moved normalization to storage time (_set_sync) instead of retrieval time (_get_sync, _batch_get_sync)
