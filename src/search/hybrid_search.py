@@ -333,6 +333,14 @@ class HybridSearcher:
         # Log results included and backfilled
         logger.debug(f"Cascade fusion: included {len(results)} BM25 results")
 
+        # Update vector_score for BM25 results that also appear in vector results
+        vector_scores_by_id = {memory.id: (score, rank) for rank, (memory, score) in enumerate(vector_results)}
+        for result in results:
+            if result.memory.id in vector_scores_by_id:
+                vector_score, rank_vector = vector_scores_by_id[result.memory.id]
+                result.vector_score = vector_score
+                result.rank_vector = rank_vector
+
         # Backfill with vector results if needed
         for rank, (memory, score) in enumerate(vector_results):
             if len(results) >= limit:
