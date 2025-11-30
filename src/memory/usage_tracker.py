@@ -147,6 +147,7 @@ class UsageTracker:
                 self.stats["total_tracked"] += 1
 
             # Check if we should flush (schedule as task to avoid deadlock)
+            # BUG-166: Keep batch size check inside lock to prevent TOCTOU race
             if len(self._pending_updates) >= self.config.usage_batch_size:
                 task = asyncio.create_task(self._flush())
                 self._background_tasks.add(task)
