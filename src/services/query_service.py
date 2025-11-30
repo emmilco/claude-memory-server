@@ -78,12 +78,12 @@ class QueryService:
 
         Returns:
             Dict with session_id and status
+
+        Raises:
+            StorageError: If conversation tracking is disabled or session creation fails
         """
         if not self.conversation_tracker:
-            return {
-                "error": "Conversation tracking is disabled",
-                "status": "disabled"
-            }
+            raise StorageError("Conversation tracking is disabled")
 
         try:
             session_id = self.conversation_tracker.create_session(description)
@@ -100,10 +100,7 @@ class QueryService:
 
         except Exception as e:
             logger.error(f"Failed to start conversation session: {e}", exc_info=True)
-            return {
-                "error": str(e),
-                "status": "failed"
-            }
+            raise StorageError(f"Failed to start conversation session: {e}") from e
 
     async def end_conversation_session(
         self,
@@ -117,12 +114,12 @@ class QueryService:
 
         Returns:
             Dict with session summary
+
+        Raises:
+            StorageError: If conversation tracking is disabled or session end fails
         """
         if not self.conversation_tracker:
-            return {
-                "error": "Conversation tracking is disabled",
-                "status": "disabled"
-            }
+            raise StorageError("Conversation tracking is disabled")
 
         try:
             summary = self.conversation_tracker.end_session(session_id)
@@ -139,10 +136,7 @@ class QueryService:
 
         except Exception as e:
             logger.error(f"Failed to end conversation session: {e}", exc_info=True)
-            return {
-                "error": str(e),
-                "status": "failed"
-            }
+            raise StorageError(f"Failed to end conversation session: {e}") from e
 
     async def list_conversation_sessions(self) -> Dict[str, Any]:
         """
@@ -150,12 +144,12 @@ class QueryService:
 
         Returns:
             Dict with sessions list
+
+        Raises:
+            StorageError: If conversation tracking is disabled or listing fails
         """
         if not self.conversation_tracker:
-            return {
-                "error": "Conversation tracking is disabled",
-                "status": "disabled"
-            }
+            raise StorageError("Conversation tracking is disabled")
 
         try:
             sessions = self.conversation_tracker.list_sessions()
@@ -168,10 +162,7 @@ class QueryService:
 
         except Exception as e:
             logger.error(f"Failed to list conversation sessions: {e}", exc_info=True)
-            return {
-                "error": str(e),
-                "status": "failed"
-            }
+            raise StorageError(f"Failed to list conversation sessions: {e}") from e
 
     async def analyze_conversation(
         self,
@@ -187,12 +178,12 @@ class QueryService:
 
         Returns:
             Dict with analysis results and suggestions
+
+        Raises:
+            StorageError: If suggestion engine is disabled or analysis fails
         """
         if not self.suggestion_engine:
-            return {
-                "error": "Suggestion engine is disabled",
-                "status": "disabled"
-            }
+            raise StorageError("Suggestion engine is disabled")
 
         try:
             analysis = self.suggestion_engine.analyze(
@@ -212,10 +203,7 @@ class QueryService:
 
         except Exception as e:
             logger.error(f"Failed to analyze conversation: {e}", exc_info=True)
-            return {
-                "error": str(e),
-                "status": "failed"
-            }
+            raise StorageError(f"Failed to analyze conversation: {e}") from e
 
     async def get_suggestion_stats(self) -> Dict[str, Any]:
         """
@@ -223,12 +211,12 @@ class QueryService:
 
         Returns:
             Dict with suggestion stats
+
+        Raises:
+            StorageError: If suggestion engine is disabled or retrieval fails
         """
         if not self.suggestion_engine:
-            return {
-                "error": "Suggestion engine is disabled",
-                "status": "disabled"
-            }
+            raise StorageError("Suggestion engine is disabled")
 
         try:
             stats = self.suggestion_engine.get_statistics()
@@ -240,10 +228,7 @@ class QueryService:
 
         except Exception as e:
             logger.error(f"Failed to get suggestion stats: {e}", exc_info=True)
-            return {
-                "error": str(e),
-                "status": "failed"
-            }
+            raise StorageError(f"Failed to get suggestion stats: {e}") from e
 
     async def provide_suggestion_feedback(
         self,
@@ -261,12 +246,12 @@ class QueryService:
 
         Returns:
             Dict with status
+
+        Raises:
+            StorageError: If suggestion engine is disabled or recording fails
         """
         if not self.suggestion_engine:
-            return {
-                "error": "Suggestion engine is disabled",
-                "status": "disabled"
-            }
+            raise StorageError("Suggestion engine is disabled")
 
         try:
             self.suggestion_engine.record_feedback(
@@ -286,10 +271,7 @@ class QueryService:
 
         except Exception as e:
             logger.error(f"Failed to record suggestion feedback: {e}", exc_info=True)
-            return {
-                "error": str(e),
-                "status": "failed"
-            }
+            raise StorageError(f"Failed to record suggestion feedback: {e}") from e
 
     async def set_suggestion_mode(
         self,
@@ -305,20 +287,17 @@ class QueryService:
 
         Returns:
             Dict with status
+
+        Raises:
+            StorageError: If suggestion engine is disabled, mode is invalid, or operation fails
         """
         if not self.suggestion_engine:
-            return {
-                "error": "Suggestion engine is disabled",
-                "status": "disabled"
-            }
+            raise StorageError("Suggestion engine is disabled")
+
+        if mode not in ["aggressive", "balanced", "conservative"]:
+            raise StorageError(f"Invalid suggestion mode: {mode}")
 
         try:
-            if mode not in ["aggressive", "balanced", "conservative"]:
-                return {
-                    "error": f"Invalid mode: {mode}",
-                    "status": "failed"
-                }
-
             self.suggestion_engine.set_mode(
                 mode=mode,
                 confidence_threshold=confidence_threshold
@@ -332,10 +311,7 @@ class QueryService:
 
         except Exception as e:
             logger.error(f"Failed to set suggestion mode: {e}", exc_info=True)
-            return {
-                "error": str(e),
-                "status": "failed"
-            }
+            raise StorageError(f"Failed to set suggestion mode: {e}") from e
 
     async def expand_query(
         self,
@@ -351,14 +327,12 @@ class QueryService:
 
         Returns:
             Dict with original and expanded query
+
+        Raises:
+            StorageError: If query expansion fails
         """
         if not self.query_expander:
-            return {
-                "original_query": query,
-                "expanded_query": query,
-                "expansion_applied": False,
-                "status": "disabled"
-            }
+            raise StorageError("Query expander is disabled")
 
         try:
             expanded = await self.query_expander.expand_query(query, context or [])
@@ -377,10 +351,4 @@ class QueryService:
 
         except Exception as e:
             logger.error(f"Failed to expand query: {e}", exc_info=True)
-            return {
-                "original_query": query,
-                "expanded_query": query,
-                "expansion_applied": False,
-                "error": str(e),
-                "status": "failed"
-            }
+            raise StorageError(f"Failed to expand query: {e}") from e

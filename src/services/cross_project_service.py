@@ -119,6 +119,7 @@ class CrossProjectService:
 
             all_results = []
             projects_searched = []
+            failed_projects = []
 
             for project in opted_in:
                 try:
@@ -153,7 +154,8 @@ class CrossProjectService:
                     projects_searched.append(project)
 
                 except Exception as e:
-                    logger.warning(f"Failed to search project {project}: {e}")
+                    logger.error(f"Failed to search project {project}: {e}", exc_info=True)
+                    failed_projects.append({"project": project, "error": str(e)})
                     continue
 
             # Sort by relevance and limit
@@ -178,7 +180,7 @@ class CrossProjectService:
                 f"across {len(projects_searched)} projects in {query_time_ms:.2f}ms"
             )
 
-            return {
+            response = {
                 "results": all_results,
                 "total_found": len(all_results),
                 "projects_searched": projects_searched,
@@ -186,6 +188,12 @@ class CrossProjectService:
                 "search_mode": search_mode,
                 "query_time_ms": query_time_ms,
             }
+
+            if failed_projects:
+                response["failed_projects"] = failed_projects
+                logger.warning(f"Cross-project search had {len(failed_projects)} project failures")
+
+            return response
 
         except Exception as e:
             logger.error(f"Failed to search all projects: {e}", exc_info=True)
