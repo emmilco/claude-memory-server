@@ -255,7 +255,12 @@ class ImportanceScorer:
                           (0.2 * self.usage_weight) + \
                           (0.3 * self.criticality_weight)
 
-            final_score = raw_score / baseline_max
+            # Handle edge case: if all weights are 0, baseline_max = 0
+            # In this case, return 0.0 to avoid division by zero
+            if baseline_max == 0.0:
+                final_score = 0.0
+            else:
+                final_score = raw_score / baseline_max
 
             # Ensure within valid range (0.0-1.0)
             final_score = max(0.0, min(1.0, final_score))
