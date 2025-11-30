@@ -621,7 +621,7 @@ class IncrementalIndexer(BaseCodeIndexer):
                     points, _ = client.scroll(
                         collection_name=self.store.collection_name,
                         scroll_filter=file_filter,
-                        limit=10000,  # Max units per file
+                        limit=self.config.quality.incremental_indexer_limit,  # Max units per file (REF-021)
                         with_payload=False,
                         with_vectors=False,
                     )
@@ -657,7 +657,7 @@ class IncrementalIndexer(BaseCodeIndexer):
                 results = await self.store.retrieve(
                     query_embedding=dummy_embedding,
                     filters=filters,
-                    limit=10000,
+                    limit=self.config.quality.incremental_indexer_limit,  # REF-021
                 )
 
                 # Filter by file_path in metadata
@@ -801,7 +801,7 @@ class IncrementalIndexer(BaseCodeIndexer):
                 results = await self.store.retrieve(
                     query_embedding=dummy_embedding,
                     filters=filters,
-                    limit=10000,
+                    limit=self.config.quality.incremental_indexer_limit,  # REF-021
                 )
 
                 # Extract unique file paths
