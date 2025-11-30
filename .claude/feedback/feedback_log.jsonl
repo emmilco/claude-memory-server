@@ -551,3 +551,15 @@
   "sentiment": "negative",
   "user_message": "You need to figure out what's causing the tests to hang. it may be disguising a more important issue."
 }
+{
+  "timestamp": "2025-11-30T21:29:03Z",
+  "session_id": "ba07c53e-04d1-449a-a6cb-0c5487f6fba2",
+  "sentiment": "corrective",
+  "user_message": "I would like to establish a system where tasks are deleted from the file when they are completed, and moved to change log. I also want to ensure that an ID is never recycled, even after it has been deleted from the file."
+}
+{
+  "timestamp": "2025-11-30T21:55:39Z",
+  "session_id": "3b540d4e-32f9-41d1-892f-9c8272bda1bc",
+  "sentiment": "negative",
+  "user_message": "I'm trying to explore a concept. Claude Code agents functionally have short term memory loss. One way we work around this is by using hooks and project files (CLAUDE.md, etc.) to provide reminders and clues about who they are and what they're doing. But maybe this is the wrong way to think about this. I'm thinking of the movie Memento and the way the guy in that movie had tattoos all over his body reminding him of what he was doing and what had happened to him. The problem with these tattoos in the movie is that they end up being misleading—he keeps trying to do something that doesn't make sense.  This is potentially like our project files and hooks. They can fall out of sync and become misleading over time. How do we marry Claude's awareness of the code to the state of the code itself? How would we go about building a system that achieved that goal?"
+}

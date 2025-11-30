@@ -10,7 +10,7 @@ Tasks that are implementation-complete and awaiting review before merging.
 - **Documentation Updated**: CHANGELOG.md, README.md, docs/ updated as needed
 - **Verification Passed**: `python scripts/verify-complete.py` passes
 - **Review Criteria**: Code quality, test coverage, documentation, breaking changes
-- **Approval**: After review approval, move to CHANGELOG.md
+- **Approval**: After review approval, move to TESTING.md for merge queue
 
 ## Awaiting Review
 
@@ -42,9 +42,10 @@ The following entries were removed because their worktrees no longer exist:
 
 ## Review Process
 
-1. **Reviewer Agent**: Run full test suite in worktree
-2. **Fix Issues**: If tests fail, fix before merging
-3. **Evaluate Completion**: Verify task requirements met
-4. **Merge**: `git merge --no-ff <branch>`
-5. **Cleanup**: Remove worktree, delete branch
-6. **Update CHANGELOG.md**: Move entry after merge
+1. **Reviewer Agent**: Navigate to worktree, review changes
+2. **Check**: Code quality, patterns, edge cases
+3. **Fix**: Minor issues (style, small logic fixes)
+4. **Evaluate**: Does it solve the problem correctly?
+5. **Approve/Reject**: If approved, Orchestrator moves to TESTING.md
+
+**Note**: Reviewers do NOT run tests or merge. Testing happens in TESTING.md.
