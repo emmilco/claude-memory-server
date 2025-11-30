@@ -6,6 +6,97 @@ Work session entries from Claude agents. See [Work Journal Protocol](CLAUDE.md#-
 
 ---
 
+### 2025-11-30 02:15 | 263a4a1e | PROCESS_DOCUMENTATION
+
+**Topic:** Refined Multi-Agent Hardening Sprint Workflow
+
+**Context:** This refines the original workflow from session 856cca22, based on lessons learned during sessions ea488dfd and 263a4a1e.
+
+## Pipeline Overview
+
+```
+TODO.md → TASK AGENTS → REVIEW.md → TESTERS → CHANGELOG.md (merged)
+            (implement)              (test + merge)
+```
+
+## Roles & Responsibilities
+
+### 1. Orchestrator (Me)
+- Pick tasks from TODO.md based on priority
+- Spawn up to **6 agents in parallel** (shared pool for Task Agents + Testers)
+- Update tracking files (IN_PROGRESS.md, REVIEW.md)
+- Monitor progress, launch new agents as capacity opens
+
+### 2. Task Agents
+- Create git worktree for assigned task
+- Implement the fix
+- Update CHANGELOG.md
+- Commit changes
+- **DO NOT run tests** (Tester's job)
+- **DO NOT merge** (Tester's job)
+- Report: what was found, what was fixed, files changed
+
+### 3. Testers
+- Pull latest from main into worktree
+- Run tests with `./scripts/test-isolated.sh`
+- Fix any failures (own it now!)
+- Merge to main with `--no-ff`
+- Push to origin
+- Cleanup worktree and branch
+- Report: tests passed/failed, merge status
+
+## Key Rules
+
+1. **Task Agents don't run tests** - Speeds up implementation, reduces context
+2. **Testers own the merge** - Ensures tests pass before code reaches main
+3. **6 total agents** - Shared pool between Task Agents and Testers
+4. **15-minute timeout** - Kill agents that run longer
+5. **Use haiku model** - Faster completion, focused prompts
+6. **Hardening sprint mandate** - Leave NO failing tests, NO tech debt
+
+## Agent Prompt Templates
+
+**Task Agent:**
+```
+**ROLE: TASK AGENT** (15 min max)
+**TASK: BUG-XXX** - Description
+**Location:** file:line
+
+**HARDENING SPRINT:** Leave NO tech debt.
+
+1. Create worktree
+2. Read file, understand issue
+3. Fix it
+4. Update CHANGELOG.md
+5. Commit
+6. DO NOT run tests, DO NOT merge
+7. Report: what found, what fixed, files changed
+```
+
+**Tester:**
+```
+**ROLE: TESTER** (15 min max)
+**TASK: BUG-XXX** - Description
+**WORKTREE:** path
+
+**HARDENING SPRINT:** Leave NO failing tests.
+
+1. Pull latest from main
+2. Run tests with test-isolated.sh
+3. Fix any failures
+4. Merge to main, push
+5. Cleanup worktree
+6. Report: tests passed/failed, merge status
+```
+
+## Results
+
+This workflow successfully merged 23 bugs in two sessions:
+- Session ea488dfd: BUG-038 through BUG-049, BUG-052 (16 bugs)
+- Session 263a4a1e: BUG-050, BUG-051, BUG-053 through BUG-057 (7 bugs)
+
+---
+
 ### 2025-11-30 01:45 | 263a4a1e | SESSION_SUMMARY
 
 **Duration:** ~45 minutes
