@@ -52,6 +52,16 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Changed - 2025-11-30
+- **TODO.md Rebuild: Deduplicate, Prioritize, and Add ID Registry**
+  - Reduced from 11,388 lines to 4,517 lines (60% reduction)
+  - Deduplicated 647 task occurrences down to 575 unique tasks
+  - Resolved 102 ID conflicts where same ID was used for different tasks
+  - Re-sorted each category by priority (Critical → High → Medium → Low)
+  - Added ID Registry system at top of file to prevent future ID collisions
+  - Established workflow: completed tasks removed from TODO.md, moved to CHANGELOG.md
+  - IDs are permanent and never recycled
+  - Archived old version to docs/archive/TODO_OLD_2025-11-30.md
+
 - **REF-106: Hardcoded 384-Dimension Embedding Vectors in Tests**
   - Added `TEST_EMBEDDING_DIM` constant to `tests/conftest.py` (defaults to 768 from `src.config.DEFAULT_EMBEDDING_DIM`)
   - Added `mock_embedding(dim=None, value=0.1)` helper function for creating test embedding vectors
