@@ -2744,14 +2744,14 @@ class QdrantMemoryStore(MemoryStore):
                 generator = EmbeddingGenerator(self.config)
                 query_embedding = await generator.generate(query)
 
-                search_results = client.search(
+                search_results = client.query_points(
                     collection_name=self.collection_name,
-                    query_vector=query_embedding,
+                    query=query_embedding,
                     query_filter=search_filter,
                     limit=limit,
                     with_payload=True,
                     with_vectors=True,  # Include vectors for message_embedding
-                )
+                ).points
 
                 for result in search_results:
                     payload = result.payload

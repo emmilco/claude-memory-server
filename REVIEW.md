@@ -14,68 +14,67 @@ Tasks that are implementation-complete and awaiting review before merging.
 
 ## Awaiting Review
 
-*No tasks currently awaiting review.*
+### [REF-008]: Update Deprecated Qdrant API Usage
+**Completed**: 2025-11-29
+**Author**: Task Agent
+**Branch**: REF-008
+**Worktree**: `.worktrees/REF-008`
+**Type**: Refactoring
+
+**Changes**:
+- Updated `client.search()` to `client.query_points()` in `src/store/qdrant_store.py`
+- Renamed parameter `query_vector=` to `query=`
+- Added `.points` accessor for QueryResponse
 
 ---
 
-## Review Template
-
-```markdown
-### [TASK-XXX]: Task Title
-**Completed**: YYYY-MM-DD
-**Author**: Agent/Developer name
-**Branch**: worktrees/TASK-XXX
-**Type**: Feature | Bug Fix | Refactoring | Performance | Documentation
+### [TEST-007-C]: Add Web Server Test Coverage
+**Completed**: 2025-11-29
+**Author**: Task Agent
+**Branch**: TEST-007-C
+**Worktree**: `.worktrees/TEST-007-C`
+**Type**: Testing
 
 **Changes**:
-- Brief description of what was implemented
-- Key files modified
-- Impact on existing functionality
+- Added 28 new tests to `tests/unit/test_web_server.py`
+- Covers DashboardServer class, routes, API endpoints
+- Total tests: 68 (40 existing + 28 new)
 
-**Testing**:
-- [ ] Unit tests added (XX tests)
-- [ ] Integration tests added (XX tests)
-- [ ] All tests passing (X,XXX/X,XXX)
-- [ ] Coverage maintained/improved (XX% → XX%)
+---
 
-**Verification**:
-- [ ] `python scripts/verify-complete.py` passes
-- [ ] Manual testing completed
-- [ ] Documentation updated
-- [ ] No breaking changes (or documented if unavoidable)
+### [TEST-007-D]: Add Duplicate Detector Test Coverage
+**Completed**: 2025-11-29
+**Author**: Task Agent
+**Branch**: TEST-007-D
+**Worktree**: `.worktrees/TEST-007-D`
+**Type**: Testing
 
-**Review Checklist**:
-- [ ] Code quality acceptable
-- [ ] Test coverage adequate (>80% for new code)
-- [ ] Documentation clear and complete
-- [ ] No security vulnerabilities
-- [ ] Performance impact acceptable
-- [ ] Follows existing patterns
+**Changes**:
+- Created `tests/unit/test_duplicate_detector.py` (865 lines, 44 tests)
+- Covers initialization, similarity classification, duplicate detection
+- Target: 80%+ coverage for `src/memory/duplicate_detector.py`
 
-**See**: planning_docs/TASK-XXX_*.md
-```
+---
+
+### [TEST-007-E]: Add Retrieval Predictor Test Coverage
+**Completed**: 2025-11-29
+**Author**: Task Agent
+**Branch**: TEST-007-E
+**Worktree**: `.worktrees/TEST-007-E`
+**Type**: Testing
+
+**Changes**:
+- Created `tests/unit/test_retrieval_predictor.py` (738 lines, 57 tests)
+- Covers all public/private methods, edge cases, real-world scenarios
+- Target: 80%+ coverage for `src/router/retrieval_predictor.py`
 
 ---
 
 ## Review Process
 
-1. **Self-Review**: Author reviews own changes
-2. **Verification**: Run `python scripts/verify-complete.py`
-3. **Move to REVIEW.md**: Add entry when ready
-4. **Peer Review**: Another agent/developer reviews (if team)
-5. **Approval**: Resolve comments, get approval
-6. **Merge**: Merge to main branch
-7. **Update CHANGELOG.md**: Move entry from REVIEW.md to CHANGELOG.md
-
-## Quality Standards
-
-**Must Pass:**
-- All tests passing (100% pass rate)
-- Coverage ≥80% for new code
-- No critical security issues
-- Documentation updated
-
-**Should Have:**
-- Performance benchmarks (if applicable)
-- Integration tests for new features
-- Migration guide (if breaking changes)
+1. **Reviewer Agent**: Run full test suite in worktree
+2. **Fix Issues**: If tests fail, fix before merging
+3. **Evaluate Completion**: Verify task requirements met
+4. **Merge**: `git merge --no-ff <branch>`
+5. **Cleanup**: Remove worktree, delete branch
+6. **Update CHANGELOG.md**: Move entry after merge

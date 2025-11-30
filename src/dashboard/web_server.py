@@ -529,7 +529,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         """Get daily aggregated metrics from collector."""
         if not self.rag_server.metrics_collector:
             return []
-        return self.rag_server.metrics_collector.get_daily_aggregate(days=days)
+        return await self.rag_server.metrics_collector.get_daily_aggregate(days=days)
 
     def _handle_create_memory(self):
         """Handle POST /api/memories - create new memory."""

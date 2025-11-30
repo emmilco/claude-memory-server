@@ -14,6 +14,7 @@ from pathlib import Path
 
 from src.core.models import ContextLevel, LifecycleState
 from src.store.base import MemoryStore
+from src.memory.project_archival import ProjectArchivalManager, ProjectState
 
 logger = logging.getLogger(__name__)
 
@@ -78,16 +79,23 @@ class MetricsCollector:
     - Calculate derived metrics (ratios, averages)
     """
 
-    def __init__(self, db_path: str, store: Optional[MemoryStore] = None):
+    def __init__(
+        self,
+        db_path: str,
+        store: Optional[MemoryStore] = None,
+        archival_manager: Optional[ProjectArchivalManager] = None
+    ):
         """
         Initialize metrics collector.
 
         Args:
             db_path: Path to SQLite database for storing metrics
             store: Vector store to query for metrics
+            archival_manager: Project archival manager for tracking project states
         """
         self.db_path = db_path
         self.store = store
+        self.archival_manager = archival_manager
         self._init_db()
 
     def _init_db(self) -> None:
@@ -195,12 +203,17 @@ class MetricsCollector:
             )
 
             # Collect project metrics
-            projects = await self._get_all_projects()
-            # Note: get_all_projects() returns List[str] (project names only)
-            # Without ProjectArchivalManager access, we count all as active
-            # TODO: Integrate with ProjectArchivalManager for accurate state tracking
-            metrics.active_projects = len(projects)
-            metrics.archived_projects = 0  # Requires archival manager integration
+            if self.archival_manager:
+                # Get counts from archival manager
+                active_projects = self.archival_manager.get_projects_by_state(ProjectState.ACTIVE)
+                archived_projects = self.archival_manager.get_projects_by_state(ProjectState.ARCHIVED)
+                metrics.active_projects = len(active_projects)
+                metrics.archived_projects = len(archived_projects)
+            else:
+                # Fallback: count all projects from store as active
+                projects = await self._get_all_projects()
+                metrics.active_projects = len(projects)
+                metrics.archived_projects = 0
 
             # Collect quality metrics
             metrics.noise_ratio = await self._calculate_noise_ratio()
