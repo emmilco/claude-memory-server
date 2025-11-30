@@ -51,6 +51,15 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Changed - 2025-11-30
+- **REF-106: Hardcoded 384-Dimension Embedding Vectors in Tests**
+  - Added `TEST_EMBEDDING_DIM` constant to `tests/conftest.py` (defaults to 768 from `src.config.DEFAULT_EMBEDDING_DIM`)
+  - Added `mock_embedding(dim=None, value=0.1)` helper function for creating test embedding vectors
+  - Replaced 156+ hardcoded `[0.1] * 384` patterns across 25+ test files with `mock_embedding()` calls
+  - Updated comments referencing "384 dimensions" or "MiniLM-L6" to reflect current default model (all-mpnet-base-v2, 768-dim)
+  - Tests now automatically adapt to embedding dimension changes in config
+  - Files: tests/conftest.py, 23 test files in tests/unit/ and tests/integration/
+
 ### Added - 2025-11-30
 - **REF-025: Complete Stub Implementations**
   - Implemented JavaScript/TypeScript call extraction using tree-sitter parser
@@ -76,13 +85,18 @@ Organize entries under these headers in chronological order (newest first):
   - Backward-compatible: hardcoded defaults are used if not overridden in config
 
 ### Fixed - 2025-11-30
-- **BUG-068: Keyword Boost Uses Substring Matching Instead of Word Boundaries**
-  - Fixed keyword boost calculation using substring matching instead of word boundary matching
-  - Changed `kw in content_lower` to `re.search(rf'\b{re.escape(kw)}\b', content_lower)` to match whole words only
-  - Prevents false positives where "auth" matched "author", "authenticate", "unauthorized", etc.
-  - Ensures keyword boost scores accurately reflect query-relevant terms
-  - Files: src/search/reranker.py
+- **BUG-067: Normalization Returns Max Score for All-Zero Results**
+  - Fixed `_normalize_scores()` returning [1.0] for all-zero score vectors, giving maximum normalized score to zero-relevance results
+  - Added explicit check for `max_score == 0.0` to return [0.0] instead of [1.0]
+  - Correctly distinguishes between all-zero results (no relevance) and identical non-zero results
+  - Files: src/search/hybrid_search.py
 
+- **BUG-162: Embedding Cache Normalization Asymmetry**
+  - Fixed inconsistent vector normalization causing search result discrepancies between cache hits and misses
+  - Moved normalization to storage time (_set_sync) instead of retrieval time (_get_sync, _batch_get_sync)
+  - Cache now stores normalized vectors, eliminating double-normalization on cache hits
+  - Same text now returns identical vectors regardless of cache state
+  - Files: src/embeddings/cache.py
 - **BUG-066: Integration Test Suite Hangs**
   - Fixed integration tests hanging indefinitely (16+ minutes) in pytest-asyncio contexts
   - Wrapped synchronous QdrantClient.get_collections() in run_in_executor() to prevent event loop blocking

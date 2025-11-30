@@ -10,6 +10,7 @@ from src.core.server import MemoryRAGServer
 from src.config import ServerConfig
 from src.memory.incremental_indexer import IncrementalIndexer
 from src.embeddings.parallel_generator import ParallelEmbeddingGenerator
+from conftest import mock_embedding
 
 
 @pytest.fixture
@@ -250,8 +251,8 @@ class TestIndexCodebaseInitialization:
 def mock_embeddings(monkeypatch):
     """Mock embedding generation for faster tests."""
     async def mock_batch_generate(self, texts, **kwargs):
-        # Return dummy 384-dim embeddings
-        return [[0.1] * 384 for _ in texts]
+        # Return dummy embeddings (dimension matches TEST_EMBEDDING_DIM)
+        return [mock_embedding(value=0.1) for _ in texts]
 
     # Patch both generators
     monkeypatch.setattr(
