@@ -406,7 +406,7 @@ class StatusCommand:
                     from datetime import datetime
                     try:
                         last_activity = datetime.fromisoformat(project_info["last_activity"])
-                        activity_str = self._format_relative_time(last_activity)
+                        activity_str = self._format_time_ago(last_activity)
                         self.console.print(f"  Last Activity: {activity_str}")
                     except Exception as e:
                         logger.debug(f"Failed to format last activity time for project {project_info.get('name', 'unknown')}: {e}")
