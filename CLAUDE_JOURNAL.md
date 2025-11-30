@@ -6,6 +6,34 @@ Work session entries from Claude agents. See [Work Journal Protocol](CLAUDE.md#-
 
 ---
 
+### 2025-11-30 18:45 | e266ad24 | SESSION_SUMMARY
+
+**Duration:** ~3 hours
+**Main work:** Executed 3-stage orchestration workflow (Task Agents → Reviewers → Testers) across 3+ batches, merging 18 bug fixes to main. Created ORCHESTRATION.md documenting the workflow.
+
+**What went well:**
+- Successfully orchestrated 3 complete batches of 6 tickets each (18 total merged)
+- User caught that I skipped the Reviewer stage - led to creating ORCHESTRATION.md with full 3-stage workflow documentation
+- Reviewers found real issues: BUG-062 had a critical deadlock (fixed), BUG-167 missed a second injection point (fixed), BUG-154 had wrong enum values in error messages (fixed), BUG-065 had overly restrictive validation (fixed)
+- Serial Tester approach prevented merge conflicts effectively
+- All test suites passed for merged tickets
+- Good use of haiku model for fast reviewer/tester completion
+
+**What went poorly or was difficult:**
+- Initially tried to skip Reviewers and go straight to Testers (user corrected this)
+- Some background bash processes lingered (BUG-167 test runner kept showing "running" long after merge)
+- One Tester for BUG-162 timed out mid-test, required spawning completion agent
+- Many tickets in TODO.md still show as unchecked even though they were merged (file not being updated)
+
+**Open threads:**
+- Batch 4 in progress: BUG-064, BUG-065, BUG-152, BUG-153, BUG-154, BUG-155 (reviewed, awaiting test+merge)
+- 6 worktrees exist for batch 4 tickets
+- TODO.md needs cleanup - completed tickets still showing unchecked
+- REVIEW.md needs update with batch 2 and 3 completions
+- ~150+ BUG/REF tickets still remain in TODO.md
+
+---
+
 ### 2025-11-30 14:45 | opus-audit | SESSION_SUMMARY
 
 **Duration:** ~3 hours
@@ -1334,3 +1362,31 @@ Hardening sprint continuation - merged 12 worktrees, fixed all recent BUG/REF ti
 - Integration test passes but shows vector dimension error (stale Qdrant collection) - separate from hang fix
 - TODO.md has duplicate BUG-066 entries (lines 24, 140, 2054) - only line 24 was the test hang issue, others are unrelated bugs with same ID
 - Full test suite still needs verification run with new BUG-066 fix on main
+
+---
+
+### 2025-11-30 16:45 | todo-cleanup | SESSION_SUMMARY
+
+**Duration:** ~2.5 hours
+**Main work:** Complete TODO.md rebuild - deduplicated, organized by priority, added ID registry system
+
+**What went well:**
+- Systematic approach: parallel task agents extracted tasks from different file sections efficiently
+- Identified massive duplication problem: 647 task occurrences → 214 unique IDs (3x average duplication)
+- Successfully resolved 102 ID conflicts where different bugs shared same ID (e.g., BUG-066 used for 3 completely different issues)
+- Created clear ID Registry system with workflow rules to prevent future collisions
+- User collaboration was excellent: they questioned the 161 completed items count (legitimate skepticism), asked for strategy explanation before proceeding, and provided clear direction on ID uniqueness requirements
+- Final result: 60% reduction (11,388 → 4,517 lines), 575 unique tasks, priority-sorted
+
+**What went poorly or was difficult:**
+- Initial deduplication strategy was unclear - had to explain approach to user before they approved
+- Some bash commands failed due to shell escaping issues (multi-line commands with loops)
+- File had grown through multiple audit sessions where entire sections were duplicated, not just individual tasks
+- The true duplicates vs ID conflicts distinction required careful analysis - couldn't just blindly merge by ID
+- Pre-commit hook blocked first commit attempt (missing CHANGELOG entry)
+
+**Open threads:**
+- 575 open tasks remain - significant backlog to work through
+- Several planning_docs from audit sessions left untracked (user may want to clean up or archive)
+- New ID system needs to be followed consistently - next session should verify agents use the registry when creating tasks
+- Some SEC-* tasks may have been lost in consolidation (registry shows SEC: 001 but no SEC tasks in file)
