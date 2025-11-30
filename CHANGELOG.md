@@ -52,6 +52,13 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **BUG-055: Add error handling for fire-and-forget flush task in usage tracker**
+  - Fixed `asyncio.create_task(self._flush())` call at line 143 in `UsageTracker.record_usage()`
+  - Now stores task reference and adds error callback: `task.add_done_callback(self._handle_background_task_done)`
+  - Ensures exceptions during batch flush operations are properly logged instead of silently lost
+  - Prevents usage data loss when storage backend operations fail
+  - Files: src/memory/usage_tracker.py
+
 - **BUG-052: Fix incorrect median calculation in ImportanceScorer**
   - Fixed `get_summary_statistics()` method to properly calculate median for even-length lists
   - Now averages the two middle elements for even-length sorted lists, consistent with statistical definition

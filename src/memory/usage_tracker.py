@@ -140,7 +140,9 @@ class UsageTracker:
 
             # Check if we should flush (schedule as task to avoid deadlock)
             if len(self._pending_updates) >= self.config.usage_batch_size:
-                asyncio.create_task(self._flush())
+                task = asyncio.create_task(self._flush())
+                self._background_tasks.add(task)
+                task.add_done_callback(self._handle_background_task_done)
 
     async def record_batch(
         self, memory_ids: List[str], scores: Optional[List[float]] = None
