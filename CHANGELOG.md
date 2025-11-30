@@ -59,6 +59,26 @@ Organize entries under these headers in chronological order (newest first):
   - Applied validation at 4 locations in `src/store/qdrant_store.py` where timestamps are converted for Qdrant range filters
   - Timestamps outside the valid range now raise `ValidationError` with clear user-facing messages indicating whether date is too far in past or future
 
+- **BUG-065: Memory Leak in find_duplicate_memories with Large Collections**
+  - Added `MAX_DUPLICATE_SCAN_POINTS = 10000` constant to limit memory usage
+  - Added validation before scroll operation to prevent loading all vectors into memory
+  - Allows filtered scans with project_name parameter regardless of collection size
+  - File: src/store/qdrant_store.py
+
+- **BUG-152: Silent Embedding Cache Failure Falls Back Without Warning**
+  - Upgraded cache operation exception handlers from ERROR/DEBUG to WARNING level
+  - Users now see warnings when cache fails and falls back to direct embedding generation
+  - File: src/embeddings/cache.py
+
+- **BUG-153: Connection Pool Errors Don't Distinguish Exhaustion from Health Check Failure**
+  - Replaced generic `ConnectionPoolExhaustedError` with three specific exception types: `PoolExhaustedError` (E016), `HealthCheckFailedError` (E017), `ConnectionCreationFailedError` (E018)
+  - Each exception provides distinct error message, actionable solution guidance, and error code
+  - Updated `QdrantConnectionPool.acquire()` to raise `PoolExhaustedError` when max connections reached and timeout expires
+  - Updated `QdrantConnectionPool.acquire()` to raise `HealthCheckFailedError` when connection health checks fail even after retry
+  - Fixed f-string formatting in `ConnectionCreationFailedError` solution text to properly interpolate URL
+  - Added backward-compatible alias for legacy code using `ConnectionPoolExhaustedError`
+  - File: src/store/connection_pool.py
+
 ### Changed - 2025-11-30
 - **TODO.md Rebuild: Deduplicate, Prioritize, and Add ID Registry**
   - Reduced from 11,388 lines to 4,517 lines (60% reduction)
