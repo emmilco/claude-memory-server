@@ -92,6 +92,14 @@ Organize entries under these headers in chronological order (newest first):
   - Files: tests/conftest.py, 23 test files in tests/unit/ and tests/integration/
 
 ### Added - 2025-11-30
+- **Multi-Agent Orchestration Workflow**
+  - Added ORCHESTRATION.md: pipeline, roles (Orchestrator, Task Agents, Reviewers, Testers), prompt templates
+  - Added TESTING.md: merge queue stage with targeted testing process
+  - Added failure paths: retry once in place, then escalate to Orchestrator
+  - Added pre-flight validation: Qdrant up, git clean, capacity check
+  - Added explicit state transitions with TESTING.md between REVIEW.md and CHANGELOG.md
+  - Files: ORCHESTRATION.md, TESTING.md, IN_PROGRESS.md, REVIEW.md
+
 - **REF-025: Complete Stub Implementations**
   - Implemented JavaScript/TypeScript call extraction using tree-sitter parser
   - Extracts function calls, method calls, and constructor calls from JS/TS code
