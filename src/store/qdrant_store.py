@@ -621,9 +621,11 @@ class QdrantMemoryStore(MemoryStore):
             )
 
             if not result:
-                return None
+                memory = None
+            else:
+                memory = self._payload_to_memory_unit(result[0].payload)
 
-            return self._payload_to_memory_unit(result[0].payload)
+            return memory
 
         except Exception as e:
             logger.error(f"Failed to get memory by ID: {e}", exc_info=True)
