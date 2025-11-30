@@ -5,13 +5,14 @@ from unittest.mock import Mock, AsyncMock
 
 from src.review.pattern_matcher import PatternMatcher, PatternMatch
 from src.review.patterns import CodeSmellPattern
+from conftest import mock_embedding
 
 
 @pytest.fixture
 def mock_embedding_generator():
     """Mock embedding generator."""
     generator = Mock()
-    generator.generate_embedding = AsyncMock(return_value=[0.1] * 384)  # Mock 384-dim embedding
+    generator.generate_embedding = AsyncMock(return_value=mock_embedding(value=0.1))  # Mock embedding (768-dim)
     return generator
 
 
@@ -41,8 +42,8 @@ class TestPatternMatcher:
         # Mock similar embeddings
         async def mock_generate(code):
             if "bad_code" in code:
-                return [0.9] * 384  # Very similar to pattern
-            return [0.1] * 384
+                return mock_embedding(value=0.9)  # Very similar to pattern
+            return mock_embedding(value=0.1)
 
         mock_embedding_generator.generate_embedding.side_effect = mock_generate
 
@@ -125,15 +126,15 @@ class TestPatternMatcher:
 
         # Mock different similarities
         embeddings = {
-            "code1": [0.8] * 384,  # Lower similarity
-            "code2": [0.95] * 384,  # Higher similarity
+            "code1": mock_embedding(value=0.8),  # Lower similarity
+            "code2": mock_embedding(value=0.95),  # Higher similarity
         }
 
         async def mock_generate(code):
             for key, embedding in embeddings.items():
                 if key in code:
                     return embedding
-            return [0.1] * 384
+            return mock_embedding(value=0.1)
 
         mock_embedding_generator.generate_embedding.side_effect = mock_generate
 
@@ -160,7 +161,7 @@ class TestPatternMatcher:
 
         async def mock_high_similarity(code):
             # Return identical vectors for high similarity
-            return [1.0] * 384
+            return mock_embedding(value=1.0)
 
         mock_embedding_generator.generate_embedding.side_effect = mock_high_similarity
 

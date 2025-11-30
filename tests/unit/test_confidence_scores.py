@@ -8,6 +8,7 @@ from src.core.server import MemoryRAGServer
 from src.core.models import MemoryUnit, ContextLevel, MemoryCategory, MemoryScope
 from src.config import ServerConfig
 from src.analysis.quality_analyzer import CodeQualityMetrics
+from conftest import mock_embedding
 
 
 class TestConfidenceLabels:
@@ -127,7 +128,7 @@ class TestSearchCodeConfidenceDisplay:
             (mock_memory, 0.92),  # Excellent score
         ])
 
-        mock_server.embedding_generator.generate = AsyncMock(return_value=[0.1] * 384)
+        mock_server.embedding_generator.generate = AsyncMock(return_value=mock_embedding(value=0.1))
 
         # Execute search
         result = await mock_server.search_code(query="authentication logic", limit=5)
@@ -170,7 +171,7 @@ class TestSearchCodeConfidenceDisplay:
             (mock_memory, 0.72),  # Good score
         ])
 
-        mock_server.embedding_generator.generate = AsyncMock(return_value=[0.1] * 384)
+        mock_server.embedding_generator.generate = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(query="login function", limit=5)
 
@@ -203,7 +204,7 @@ class TestSearchCodeConfidenceDisplay:
             (mock_memory, 0.45),  # Weak score
         ])
 
-        mock_server.embedding_generator.generate = AsyncMock(return_value=[0.1] * 384)
+        mock_server.embedding_generator.generate = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(query="authentication", limit=5)
 
@@ -241,7 +242,7 @@ class TestSearchCodeConfidenceDisplay:
             (mock_memories[i], scores[i]) for i in range(3)
         ])
 
-        mock_server.embedding_generator.generate = AsyncMock(return_value=[0.1] * 384)
+        mock_server.embedding_generator.generate = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(query="test query", limit=5)
 
@@ -288,7 +289,7 @@ class TestFindSimilarCodeConfidenceDisplay:
             (mock_memory, 0.88),  # Excellent similarity
         ])
 
-        mock_server.embedding_generator.generate = AsyncMock(return_value=[0.1] * 384)
+        mock_server.embedding_generator.generate = AsyncMock(return_value=mock_embedding(value=0.1))
 
         code_snippet = "def auth(u, p):\n    return verify(u, p)"
         result = await mock_server.find_similar_code(code_snippet=code_snippet, limit=10)
@@ -336,7 +337,7 @@ class TestFindSimilarCodeConfidenceDisplay:
             (mock_memories[i], scores[i]) for i in range(3)
         ])
 
-        mock_server.embedding_generator.generate = AsyncMock(return_value=[0.1] * 384)
+        mock_server.embedding_generator.generate = AsyncMock(return_value=mock_embedding(value=0.1))
 
         code_snippet = "def test():\n    pass"
         result = await mock_server.find_similar_code(code_snippet=code_snippet, limit=10)

@@ -16,6 +16,29 @@ from itertools import cycle
 # The isolated test runner sets CLAUDE_RAG_QDRANT_URL to use an ephemeral test instance.
 TEST_QDRANT_URL = os.environ.get("CLAUDE_RAG_QDRANT_URL", "http://localhost:6333")
 
+# Test embedding dimension (matches DEFAULT_EMBEDDING_DIM from src.config)
+# Use 768-dim for all-mpnet-base-v2 (current default model)
+from src.config import DEFAULT_EMBEDDING_DIM
+TEST_EMBEDDING_DIM = DEFAULT_EMBEDDING_DIM
+
+
+def mock_embedding(dim=None, value=0.1):
+    """Create a mock embedding vector for testing.
+
+    Args:
+        dim: Vector dimension (defaults to TEST_EMBEDDING_DIM = 768)
+        value: Fill value for the vector (defaults to 0.1)
+
+    Returns:
+        List of floats representing the embedding vector
+
+    Example:
+        emb = mock_embedding()  # [0.1] * 768
+        emb = mock_embedding(384)  # [0.1] * 384 (legacy tests)
+        emb = mock_embedding(value=0.2)  # [0.2] * 768
+    """
+    return [value] * (dim or TEST_EMBEDDING_DIM)
+
 
 # =============================================================================
 # CRITICAL: Apply embedding mocks at module import time
