@@ -51,6 +51,14 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Fixed - 2025-11-30
+- **REF-028-B: Add Exception Chain Preservation with `from e`**
+  - Preserved original exception tracebacks by adding `from e` clause to 40 exception re-raises
+  - Prevents loss of stack traces when converting between exception types
+  - Improves debugging and error diagnostics by maintaining the full exception chain
+  - Files modified: src/core/server.py
+  - Fixed exceptions in: store_memory, retrieve_memories, delete_memory, update_memory, list_memories, import_memories, get_memory_by_id, delete_memories_by_query, export_memories, all analytics and git-related operations
+
 ### Changed - 2025-11-30
 - **REF-033: Add Missing Config Range Validators**
   - Added `@field_validator` decorators for configuration fields that lacked range validation
