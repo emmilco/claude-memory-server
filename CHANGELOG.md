@@ -51,6 +51,14 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Fixed - 2025-11-30
+- **BUG-154: Validation Errors Don't Include Field Name in Error Message**
+  - Added field name and valid value list to all enum validation errors in `src/services/memory_service.py`
+  - Enhanced error messages in `store_memory()`, `query()`, `update_memory()`, and `list_memories()` methods
+  - Wrapped enum conversions (MemoryCategory, LifecycleState, MemoryScope, ContextLevel) with try-except blocks
+  - Error format now includes: `Invalid value 'X' for parameter 'field_name'. Valid values: ...`
+  - Files: src/services/memory_service.py
+
 ### Changed - 2025-11-30
 - **TODO.md Rebuild: Deduplicate, Prioritize, and Add ID Registry**
   - Reduced from 11,388 lines to 4,517 lines (60% reduction)
