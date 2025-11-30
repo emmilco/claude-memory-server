@@ -343,10 +343,7 @@ class HealthReporter:
 
             # Calculate change
             change = current_value - previous_value
-            if previous_value == 0:
-                change_percent = 0.0
-            else:
-                change_percent = (change / previous_value) * 100
+            change_percent = (change / previous_value) * 100
 
             # Determine direction
             if higher_is_better is None:

@@ -441,10 +441,7 @@ class HealthScorer:
         # Check distribution imbalance
         total = sum(distribution.values())
         if total > 0:
-            if total == 0:
-                stale_pct = 0.0
-            else:
-                stale_pct = distribution.get(LifecycleState.STALE, 0) / total
+            stale_pct = distribution.get(LifecycleState.STALE, 0) / total
             if stale_pct > 0.15:  # >15% stale
                 recommendations.append(
                     f"ℹ {distribution.get(LifecycleState.STALE, 0)} STALE memories "

@@ -54,11 +54,11 @@ Organize entries under these headers in chronological order (newest first):
 ### Fixed - 2025-11-30
 - **BUG-083: Division by Zero Risk in Health Score Calculations**
   - Added zero-denominator checks before all percentage calculations across health monitoring modules
-  - Fixed 8 locations where division could fail: health_reporter.py (1), capacity_planner.py (3), health_scorer.py (4)
-  - health_reporter.py line 346: Added check before `change_percent = (change / previous_value) * 100`
-  - capacity_planner.py lines 235-236, 304-305, 371-372: Added checks before growth rate divisions
-  - health_scorer.py lines 256, 379, 438, 472: Added checks before total divisions
-  - All divisions now safely handle zero denominators by returning 0.0 or float('inf') as appropriate
+  - Fixed 5 locations where division could fail: health_scorer.py (3), capacity_planner.py (0 after review)
+  - health_scorer.py lines 256, 382, 481: Added checks before `noise_count / total`, `actual_count / total`, and `stale / total * 100`
+  - capacity_planner.py: Removed redundant checks (outer `if rate > 0` already prevents division by zero)
+  - health_reporter.py: Leveraged existing `if previous_value == 0: continue` guard (redundant check removed)
+  - All critical divisions now safely handle zero denominators by returning 0.0 as appropriate
   - Files: src/monitoring/health_reporter.py, src/monitoring/capacity_planner.py, src/memory/health_scorer.py
 
 ### Fixed - 2025-11-30

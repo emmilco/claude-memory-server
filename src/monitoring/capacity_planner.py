@@ -232,12 +232,8 @@ class CapacityPlanner:
         status = "HEALTHY"
 
         if growth_rate > 0:
-            if growth_rate == 0:
-                days_to_warning = float('inf')
-                days_to_critical = float('inf')
-            else:
-                days_to_warning = (self.DB_SIZE_WARNING_MB - current_size) / growth_rate
-                days_to_critical = (self.DB_SIZE_CRITICAL_MB - current_size) / growth_rate
+            days_to_warning = (self.DB_SIZE_WARNING_MB - current_size) / growth_rate
+            days_to_critical = (self.DB_SIZE_CRITICAL_MB - current_size) / growth_rate
 
             if days_to_critical <= days_ahead:
                 status = "CRITICAL"
@@ -305,12 +301,8 @@ class CapacityPlanner:
         status = "HEALTHY"
 
         if creation_rate > 0:
-            if creation_rate == 0:
-                days_to_warning = float('inf')
-                days_to_critical = float('inf')
-            else:
-                days_to_warning = (self.MEMORY_COUNT_WARNING - current_count) / creation_rate
-                days_to_critical = (self.MEMORY_COUNT_CRITICAL - current_count) / creation_rate
+            days_to_warning = (self.MEMORY_COUNT_WARNING - current_count) / creation_rate
+            days_to_critical = (self.MEMORY_COUNT_CRITICAL - current_count) / creation_rate
 
             if days_to_critical <= days_ahead:
                 status = "CRITICAL"
@@ -376,12 +368,8 @@ class CapacityPlanner:
         status = "HEALTHY"
 
         if addition_rate_per_day > 0:
-            if addition_rate_per_day == 0:
-                days_to_warning = float('inf')
-                days_to_critical = float('inf')
-            else:
-                days_to_warning = (self.PROJECT_COUNT_WARNING - current_active) / addition_rate_per_day
-                days_to_critical = (self.PROJECT_COUNT_CRITICAL - current_active) / addition_rate_per_day
+            days_to_warning = (self.PROJECT_COUNT_WARNING - current_active) / addition_rate_per_day
+            days_to_critical = (self.PROJECT_COUNT_CRITICAL - current_active) / addition_rate_per_day
 
             if days_to_critical <= days_ahead:
                 status = "CRITICAL"
