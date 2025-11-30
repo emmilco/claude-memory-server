@@ -76,6 +76,9 @@ class UsageTracker:
         self._flush_task: Optional[asyncio.Task] = None
         self._running = False
 
+        # Background tasks tracking
+        self._background_tasks: set = set()
+
         # Statistics
         self.stats = {
             "total_tracked": 0,
@@ -205,6 +208,20 @@ class UsageTracker:
             except Exception as e:
                 logger.error(f"Failed to flush usage updates: {e}")
                 # Keep updates in memory for next flush attempt
+
+    def _handle_background_task_done(self, task: asyncio.Task) -> None:
+        """Handle completion of background flush task."""
+        try:
+            # Remove from tracking set
+            self._background_tasks.discard(task)
+
+            # Check for exceptions
+            if task.done() and not task.cancelled():
+                exc = task.exception()
+                if exc:
+                    logger.error(f"Background flush task failed: {exc}")
+        except Exception as e:
+            logger.error(f"Error in background task callback: {e}")
 
     def calculate_composite_score(
         self,
