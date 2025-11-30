@@ -4,7 +4,7 @@ import json
 import logging
 from datetime import datetime, UTC
 from pathlib import Path
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Any
 from enum import Enum
 
 logger = logging.getLogger(__name__)
@@ -164,7 +164,7 @@ class ProjectArchivalManager:
             logger.warning(f"Failed to calculate days since activity for {project_name}: {e}")
             return 0.0
 
-    def archive_project(self, project_name: str) -> Dict[str, any]:
+    def archive_project(self, project_name: str) -> Dict[str, Any]:
         """
         Archive a project.
 
@@ -201,7 +201,7 @@ class ProjectArchivalManager:
             "archived_at": self.project_states[project_name]["archived_at"]
         }
 
-    def reactivate_project(self, project_name: str) -> Dict[str, any]:
+    def reactivate_project(self, project_name: str) -> Dict[str, Any]:
         """
         Reactivate an archived project.
 

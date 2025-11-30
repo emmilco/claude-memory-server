@@ -3,7 +3,7 @@
 import logging
 import difflib
 import hashlib
-from typing import List, Dict, Set, Tuple, Optional
+from typing import List, Dict, Set, Tuple, Optional, Any
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -277,7 +277,7 @@ class ChangeDetector:
         file_change: FileChange,
         old_units: List[SemanticUnit],
         new_units: List[SemanticUnit],
-    ) -> Dict[str, any]:
+    ) -> Dict[str, Any]:
         """
         Create an incremental indexing plan for a changed file.
 
