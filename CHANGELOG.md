@@ -78,6 +78,12 @@ Organize entries under these headers in chronological order (newest first):
   - Prevents usage data loss when storage backend operations fail
   - Files: src/memory/usage_tracker.py
 
+- **BUG-054: Replace bare except:pass with specific exception handling**
+  - Replaced bare `except:` clause with `except Exception:` in code smell pattern example
+  - Bare except catches all exceptions including SystemExit and KeyboardInterrupt, preventing debugging
+  - Example code in patterns.py now demonstrates proper exception handling
+  - Files: src/review/patterns.py
+
 - **BUG-053: Accept ISO 8601 date formats in query DSL parser**
   - Enhanced `_validate_date()` method to accept ISO 8601 formats beyond strict YYYY-MM-DD
   - Now supports formats: YYYY-MM-DDTHH:MM:SS, YYYY-MM-DDTHH:MM:SSZ, YYYY-MM-DDTHH:MM:SS+HH:MM
