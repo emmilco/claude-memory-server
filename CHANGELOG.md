@@ -112,6 +112,12 @@ Organize entries under these headers in chronological order (newest first):
   - Correctly distinguishes between all-zero results (no relevance) and identical non-zero results
   - Files: src/search/hybrid_search.py
 
+- **BUG-069: Cascade Fusion Loses Vector Scores for Dual-Appearing Results**
+  - Fixed cascade fusion including BM25 results with hardcoded `vector_score=0.0` without updating them when also in vector results
+  - Added post-processing step after BM25 inclusion to populate `vector_score` and `rank_vector` from vector results for dual-appearing memories
+  - Memories appearing in both BM25 and vector results now correctly show their actual vector scores instead of 0.0
+  - Files: src/search/hybrid_search.py
+
 - **BUG-162: Embedding Cache Normalization Asymmetry**
   - Fixed inconsistent vector normalization causing search result discrepancies between cache hits and misses
   - Moved normalization to storage time (_set_sync) instead of retrieval time (_get_sync, _batch_get_sync)
@@ -125,6 +131,13 @@ Organize entries under these headers in chronological order (newest first):
   - Correctly assigns line number to the previous offset boundary when match falls between boundaries
   - Pattern matches now report accurate line numbers for regex search results
   - Files: src/search/pattern_matcher.py
+
+- **BUG-166: UsageTracker TOCTOU Between Batch Check and Flush**
+  - Fixed time-of-check-time-of-use (TOCTOU) race condition in `record_usage()` method
+  - Moved batch size check `if len(self._pending_updates) >= batch_size` inside `async with self._lock:` block
+  - Previously, lock was released after updating `_pending_updates` but before checking batch size, allowing concurrent flush to trigger between check and flush
+  - Prevents empty dict flush and ensures batch size check is atomic with pending updates modification
+  - Files: src/memory/usage_tracker.py
 
 - **BUG-066: Integration Test Suite Hangs**
   - Fixed integration tests hanging indefinitely (16+ minutes) in pytest-asyncio contexts
