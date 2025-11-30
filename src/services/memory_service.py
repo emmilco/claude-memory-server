@@ -604,7 +604,7 @@ class MemoryService:
                         "project_name": memory.project_name,
                         "created_at": memory.created_at.isoformat(),
                         "updated_at": memory.updated_at.isoformat(),
-                        "last_accessed": memory.last_accessed.isoformat() if memory.last_accessed else memory.last_accessed,
+                        "last_accessed": memory.last_accessed.isoformat() if memory.last_accessed else None,
                     }
                 }
             else:
@@ -1103,7 +1103,7 @@ class MemoryService:
                     "project_name": mem.project_name,
                     "created_at": mem.created_at.isoformat(),
                     "updated_at": mem.updated_at.isoformat(),
-                    "last_accessed": mem.last_accessed.isoformat() if mem.last_accessed else mem.last_accessed,
+                    "last_accessed": mem.last_accessed.isoformat() if mem.last_accessed else None,
                 })
 
             total_count = len(memories)
@@ -1340,9 +1340,9 @@ class MemoryService:
 
                         store_metadata = {
                             "id": mem_id,
-                            "category": request.category.value,
-                            "context_level": request.context_level.value,
-                            "scope": request.scope.value,
+                            "category": request.category,
+                            "context_level": request.context_level,
+                            "scope": request.scope,
                             "importance": request.importance,
                             "tags": request.tags,
                             "metadata": request.metadata,

@@ -660,20 +660,29 @@ class QdrantMemoryStore(MemoryStore):
                     new_metadata = updates["metadata"] or {}
                     merged_metadata = {**merged_metadata, **new_metadata}
 
+                # Normalize enum values to strings
+                def _normalize_enum(value, default=None):
+                    """Convert enum to string value, or return value as-is if already string."""
+                    if value is None:
+                        return default
+                    if isinstance(value, Enum):
+                        return value.value
+                    return value
+
                 # Build base payload without metadata (we'll flatten it separately)
                 base_payload = {
                     "id": memory_id,
                     "content": updates.get("content", existing.content),
-                    "category": updates.get("category", existing.category.value),
-                    "context_level": updates.get("context_level", existing.context_level.value),
-                    "scope": updates.get("scope", existing.scope.value),
+                    "category": _normalize_enum(updates.get("category"), existing.category.value),
+                    "context_level": _normalize_enum(updates.get("context_level"), existing.context_level.value),
+                    "scope": _normalize_enum(updates.get("scope"), existing.scope.value),
                     "project_name": updates.get("project_name", existing.project_name),
                     "importance": updates.get("importance", existing.importance),
                     "tags": updates.get("tags", existing.tags),
                     "created_at": existing.created_at.isoformat(),
                     "updated_at": updates["updated_at"],
                     "last_accessed": existing.last_accessed.isoformat() if existing.last_accessed else None,
-                    "lifecycle_state": updates.get("lifecycle_state", existing.lifecycle_state.value),
+                    "lifecycle_state": _normalize_enum(updates.get("lifecycle_state"), existing.lifecycle_state.value),
                 }
 
                 # Flatten metadata into payload (matches _build_payload behavior)
@@ -765,29 +774,26 @@ class QdrantMemoryStore(MemoryStore):
             must_conditions = []
 
             if "category" in filters:
-                category = filters["category"]
                 must_conditions.append(
                     FieldCondition(
                         key="category",
-                        match=MatchValue(value=category.value)
+                        match=MatchValue(value=filters["category"])
                     )
                 )
 
             if "context_level" in filters:
-                context_level = filters["context_level"]
                 must_conditions.append(
                     FieldCondition(
                         key="context_level",
-                        match=MatchValue(value=context_level.value)
+                        match=MatchValue(value=filters["context_level"])
                     )
                 )
 
             if "scope" in filters:
-                scope = filters["scope"]
                 must_conditions.append(
                     FieldCondition(
                         key="scope",
-                        match=MatchValue(value=scope.value)
+                        match=MatchValue(value=filters["scope"])
                     )
                 )
 
@@ -1205,22 +1211,31 @@ class QdrantMemoryStore(MemoryStore):
         if provenance_last_confirmed and isinstance(provenance_last_confirmed, datetime):
             provenance_last_confirmed = provenance_last_confirmed.isoformat()
 
+        # Normalize enum values to strings
+        def _normalize_enum(value, default=None):
+            """Convert enum to string value, or return value as-is if already string."""
+            if value is None:
+                return default
+            if isinstance(value, Enum):
+                return value.value
+            return value
+
         payload = {
             "id": memory_id,
             "content": content,
-            "category": metadata.get("category"),
-            "context_level": metadata.get("context_level"),
-            "scope": metadata.get("scope", "global"),
+            "category": _normalize_enum(metadata.get("category")),
+            "context_level": _normalize_enum(metadata.get("context_level")),
+            "scope": _normalize_enum(metadata.get("scope"), "global"),
             "project_name": metadata.get("project_name"),
             "importance": metadata.get("importance", 0.5),
             "embedding_model": metadata.get("embedding_model", "all-MiniLM-L6-v2"),
             "created_at": created_at,
             "updated_at": now.isoformat(),
             "last_accessed": last_accessed,
-            "lifecycle_state": metadata.get("lifecycle_state", "ACTIVE"),
+            "lifecycle_state": _normalize_enum(metadata.get("lifecycle_state"), "ACTIVE"),
             "tags": metadata.get("tags", []),
             # Provenance fields
-            "provenance_source": provenance.get("source", "user_explicit"),
+            "provenance_source": _normalize_enum(provenance.get("source"), "user_explicit"),
             "provenance_created_by": provenance.get("created_by", "user_statement"),
             "provenance_last_confirmed": provenance_last_confirmed,
             "provenance_confidence": provenance.get("confidence", 0.8),
@@ -1395,6 +1410,11 @@ class QdrantMemoryStore(MemoryStore):
                 if tag_none_conditions:
                     conditions.append(Filter(must_not=tag_none_conditions))
 
+            # Helper to extract enum value
+            def _enum_value(val):
+                """Get string value from enum or pass through string."""
+                return val.value if isinstance(val, Enum) else val
+
             # Lifecycle filtering
             if adv.lifecycle_states:
                 lifecycle_conditions = []
@@ -1402,7 +1422,7 @@ class QdrantMemoryStore(MemoryStore):
                     lifecycle_conditions.append(
                         FieldCondition(
                             key="lifecycle_state",
-                            match=MatchValue(value=state.value)
+                            match=MatchValue(value=_enum_value(state))
                         )
                     )
                 if lifecycle_conditions:
@@ -1415,7 +1435,7 @@ class QdrantMemoryStore(MemoryStore):
                     exclude_cat_conditions.append(
                         FieldCondition(
                             key="category",
-                            match=MatchValue(value=cat.value)
+                            match=MatchValue(value=_enum_value(cat))
                         )
                     )
                 if exclude_cat_conditions:
@@ -1445,7 +1465,7 @@ class QdrantMemoryStore(MemoryStore):
                 conditions.append(
                     FieldCondition(
                         key="provenance.source",
-                        match=MatchValue(value=adv.source.value)
+                        match=MatchValue(value=_enum_value(adv.source))
                     )
                 )
 

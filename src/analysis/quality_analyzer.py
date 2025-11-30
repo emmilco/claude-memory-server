@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from src.analysis.complexity_analyzer import ComplexityAnalyzer, ComplexityMetrics
+from src.config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +103,7 @@ class QualityAnalyzer:
     to provide comprehensive quality assessment.
     """
 
-    # Quality thresholds (configurable)
+    # Default thresholds (used if config not available)
     COMPLEXITY_HIGH = 10
     COMPLEXITY_CRITICAL = 20
     LONG_FUNCTION_LINES = 100
@@ -117,33 +118,39 @@ class QualityAnalyzer:
     def __init__(
         self,
         complexity_analyzer: Optional[ComplexityAnalyzer] = None,
-        complexity_high: int = COMPLEXITY_HIGH,
-        complexity_critical: int = COMPLEXITY_CRITICAL,
-        long_function_lines: int = LONG_FUNCTION_LINES,
-        deep_nesting: int = DEEP_NESTING,
-        many_parameters: int = MANY_PARAMETERS,
+        complexity_high: Optional[int] = None,
+        complexity_critical: Optional[int] = None,
+        long_function_lines: Optional[int] = None,
+        deep_nesting: Optional[int] = None,
+        many_parameters: Optional[int] = None,
     ):
         """
         Initialize quality analyzer.
 
         Args:
             complexity_analyzer: Optional analyzer (creates default if None)
-            complexity_high: Threshold for high complexity warning
-            complexity_critical: Threshold for critical complexity alert
-            long_function_lines: Threshold for long function warning
-            deep_nesting: Threshold for deep nesting warning
-            many_parameters: Threshold for parameter count warning
+            complexity_high: Threshold for high complexity warning (uses config if None)
+            complexity_critical: Threshold for critical complexity alert (uses config if None)
+            long_function_lines: Threshold for long function warning (uses config if None)
+            deep_nesting: Threshold for deep nesting warning (uses config if None)
+            many_parameters: Threshold for parameter count warning (uses config if None)
         """
+        # Load defaults from config (REF-021)
+        config = get_config()
+        self.complexity_high = complexity_high if complexity_high is not None else config.quality.complexity_high
+        self.complexity_critical = complexity_critical if complexity_critical is not None else config.quality.complexity_critical
+        self.long_function_lines = long_function_lines if long_function_lines is not None else config.quality.long_function_lines
+        self.deep_nesting = deep_nesting if deep_nesting is not None else config.quality.deep_nesting
+        self.many_parameters = many_parameters if many_parameters is not None else config.quality.many_parameters
+        self.mi_excellent = config.quality.maintainability_excellent
+        self.mi_good = config.quality.maintainability_good
+        self.mi_poor = config.quality.maintainability_poor
+
         self.complexity_analyzer = complexity_analyzer or ComplexityAnalyzer()
-        self.complexity_high = complexity_high
-        self.complexity_critical = complexity_critical
-        self.long_function_lines = long_function_lines
-        self.deep_nesting = deep_nesting
-        self.many_parameters = many_parameters
 
         logger.info(
-            f"QualityAnalyzer initialized (complexity_high={complexity_high}, "
-            f"complexity_critical={complexity_critical}, long_function_lines={long_function_lines})"
+            f"QualityAnalyzer initialized (complexity_high={self.complexity_high}, "
+            f"complexity_critical={self.complexity_critical}, long_function_lines={self.long_function_lines}) (REF-021)"
         )
 
     def calculate_quality_metrics(
@@ -262,11 +269,11 @@ class QualityAnalyzer:
         Returns:
             Tuple of (severity, description)
         """
-        if mi >= self.MI_EXCELLENT:
+        if mi >= self.mi_excellent:
             return QualitySeverity.LOW, "Highly maintainable"
-        elif mi >= self.MI_GOOD:
+        elif mi >= self.mi_good:
             return QualitySeverity.MEDIUM, "Moderately maintainable"
-        elif mi >= self.MI_POOR:
+        elif mi >= self.mi_poor:
             return QualitySeverity.HIGH, "Difficult to maintain"
         else:
             return QualitySeverity.CRITICAL, "Very difficult to maintain"

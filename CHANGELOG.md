@@ -51,16 +51,54 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
-### Fixed - 2025-11-30
-- **REF-032: Fix Inconsistent Enum/String Handling**
-  - Removed 35 defensive `hasattr()` checks for enum fields by normalizing on retrieval
-  - All memory objects from store now have proper enum objects for category, context_level, scope, and lifecycle_state
-  - Enum-to-string conversion only happens when serializing to JSON responses
-  - Files modified: src/services/memory_service.py (6 instances), src/store/qdrant_store.py (5 instances), src/core/server.py (7 instances), src/cli/memory_browser.py (3 instances)
-  - Root cause: `_payload_to_memory_unit()` already converts Qdrant string fields to enums, making defensive checks redundant
-  - Approach: Normalize on retrieval layer - strings from Qdrant are converted to enum objects by the store layer before returning to services
+### Added - 2025-11-30
+- **REF-025: Complete Stub Implementations**
+  - Implemented JavaScript/TypeScript call extraction using tree-sitter parser
+  - Extracts function calls, method calls, and constructor calls from JS/TS code
+  - Extracts class implementations and inheritance relationships (ES6 extends)
+  - Handles function context tracking and call type classification
+  - Files: src/analysis/call_extractors.py (JavaScriptCallExtractor class)
+  - Marked as unsupported (with clear documentation): health score database persistence and contradiction rate semantic analysis
+  - Health score persistence deferred pending database schema design
+  - Contradiction rate detection deferred (requires expensive semantic similarity analysis at scale)
+
+### Changed - 2025-11-30
+- **REF-021: Move Hardcoded Thresholds to Configuration**
+  - Created new `QualityThresholds` configuration class to centralize all quality analysis and duplicate detection parameters
+  - Moved duplicate detection similarity thresholds (0.95, 0.85, 0.75) from hardcoded values to `config.quality.duplicate_*_threshold`
+  - Moved incremental indexer limit (10000) to `config.quality.incremental_indexer_limit`
+  - Moved stale memory usage threshold (5) to `config.quality.stale_memory_usage_threshold`
+  - Moved reranker content length bounds (100, 500, 1000) to `config.quality.reranker_min/max_content_length` and `reranker_length_penalty_max`
+  - Moved complexity thresholds (10, 20, 100, 4, 5) to individual `config.quality.complexity_*` fields
+  - Moved maintainability index thresholds (85, 65, 50) to `config.quality.maintainability_*` fields
+  - Updated 5 modules to read from config instead of hardcoded values: `src/memory/duplicate_detector.py`, `src/memory/incremental_indexer.py`, `src/memory/health_jobs.py`, `src/search/reranker.py`, `src/analysis/quality_analyzer.py`
+  - All thresholds include validators to ensure proper ranges and data types
+  - Backward-compatible: hardcoded defaults are used if not overridden in config
 
 ### Fixed - 2025-11-30
+- **REF-026: Fix Memory Leak Risks in Large Dataset Operations**
+  - Added configurable memory limits to prevent unbounded allocation in large dataset operations
+  - **health_scorer.py**: Added pagination support with MAX_MEMORIES_PER_OPERATION (50,000) and PAGINATION_PAGE_SIZE (5,000)
+    - `_get_lifecycle_distribution()` now processes memories in batches instead of loading all at once
+    - `_calculate_duplicate_rate()` now skips processing if dataset exceeds MAX_DUPLICATE_CHECK_MEMORIES (10,000) to avoid O(N²) memory overhead
+    - Added WARN_THRESHOLD_MEMORIES (25,000) to alert on large datasets
+  - **code_duplicate_detector.py**: Added size validation for O(N²) matrix allocation
+    - `calculate_similarity_matrix()` raises ValueError if dataset exceeds MAX_UNITS_FOR_SIMILARITY_MATRIX (10,000)
+    - `cluster_duplicates()` raises ValueError if dataset exceeds MAX_UNITS_FOR_CLUSTERING (10,000)
+    - Added WARN_THRESHOLD_UNITS (5,000) with memory allocation estimates in warning messages
+    - Prevents O(N²) matrix allocation (e.g., 360 GB for 50,000 units, 14.4 GB for 10,000 units)
+  - Configuration limits are documented with memory cost calculations and recommendations for batch processing
+  - Files: src/memory/health_scorer.py, src/analysis/code_duplicate_detector.py
+
+- **REF-023: Remove Defensive hasattr() Patterns for Enums**
+  - Identified root cause: `_build_payload()` stored enum values inconsistently (sometimes as enums, sometimes as strings) based on metadata input type
+  - Fixed at source by adding enum normalization in payload building: `_normalize_enum()` helper converts enums to string values before storage
+  - `_payload_to_memory_unit()` now reliably reconstructs enums from stored string values
+  - Removed defensive `hasattr(x, 'value')` checks in service layer response builders (3 locations in memory_service.py)
+  - Removed defensive checks in store update operations (1 location in qdrant_store.py)
+  - Simplified filter building by relying on `SearchFilters.to_dict()` which guarantees string values
+  - Replaced `hasattr()` checks with clean `isinstance(val, Enum)` pattern for advanced filter enums
+  - Files: src/store/qdrant_store.py (payload normalization, filter simplification), src/services/memory_service.py (removed defensive checks in response building)
 - **REF-028-C: Add Exception Chain Preservation (from e)**
   - Added `from e` to 41 raise statements lacking exception chain preservation
   - Ensures original exception tracebacks are preserved for debugging
