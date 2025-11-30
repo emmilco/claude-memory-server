@@ -52,6 +52,11 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **BUG-059: SQLite Connection Not Closed in Cache Error Paths**
+  - Fixed connection leak when cache database initialization fails after connection is created
+  - Refactored `_initialize_db()` to use local variable for connection, only assigning to `self.conn` after successful initialization
+  - Ensures connection is always closed in exception handler, preventing file locks on startup failure
+  - File: src/embeddings/cache.py
 - **BUG-064: Integer Overflow in Unix Timestamp Conversion**
   - Added validation for Unix timestamps to prevent overflow/underflow in extreme dates
   - Added `_validate_timestamp()` helper function to check timestamps against 32-bit signed integer range [-2^31, 2^31-1]
