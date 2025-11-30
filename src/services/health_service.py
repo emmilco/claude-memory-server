@@ -11,6 +11,7 @@ Responsibilities:
 """
 
 import logging
+import threading
 from typing import Optional, Dict, Any
 
 from src.config import ServerConfig
@@ -62,6 +63,7 @@ class HealthService:
             "alerts_generated": 0,
             "metrics_collected": 0,
         }
+        self._stats_lock = threading.Lock()
 
     def get_stats(self) -> Dict[str, Any]:
         """Get health service statistics."""
@@ -105,7 +107,8 @@ class HealthService:
             Dict with performance metrics
         """
         try:
-            self.stats["health_checks"] += 1
+            with self._stats_lock:
+                self.stats["health_checks"] += 1
 
             if not self.metrics_collector:
                 return {
@@ -137,7 +140,8 @@ class HealthService:
             Dict with health score and component breakdown
         """
         try:
-            self.stats["health_checks"] += 1
+            with self._stats_lock:
+                self.stats["health_checks"] += 1
 
             # Check store health
             store_healthy = await self.store.health_check()
@@ -353,4 +357,5 @@ class HealthService:
         """Collect and store current metrics."""
         if self.metrics_collector:
             self.metrics_collector.collect_snapshot()
-            self.stats["metrics_collected"] += 1
+            with self._stats_lock:
+                self.stats["metrics_collected"] += 1
