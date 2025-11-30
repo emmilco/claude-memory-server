@@ -51,6 +51,14 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Fixed - 2025-11-29
+- **PERF-009: Fix Virtual Memory Leak (Address Space Fragmentation)**
+  - Set bounded default executor (max 8 workers) for `asyncio.to_thread()` calls in mcp_server.py
+  - Added proper cleanup for ProcessPoolExecutor with `cancel_futures=True` in parallel_generator.py
+  - Fixed MPS generator and cache cleanup in `ParallelEmbeddingGenerator.close()`
+  - Eliminated duplicate `IncrementalIndexer` creation by passing existing indexer to `IndexingService`
+  - Files: src/mcp_server.py, src/embeddings/parallel_generator.py, src/memory/indexing_service.py, src/memory/auto_indexing_service.py
+
 ### Planning - 2025-11-29
 - **FEAT-007: Ruby Language Support Documentation Update**
   - Marked FEAT-007 as complete in TODO.md (Ruby support was already fully implemented)

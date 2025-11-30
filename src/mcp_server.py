@@ -1543,6 +1543,15 @@ async def main():
 
     logger.info("Starting Claude Memory RAG MCP Server")
 
+    # PERF-009: Set bounded default executor for asyncio.to_thread() calls
+    # Without this, the default ThreadPoolExecutor grows unbounded, causing
+    # virtual memory to balloon (each thread reserves ~8MB stack space on macOS).
+    # Limit to 8 workers to cap memory usage while allowing reasonable concurrency.
+    from concurrent.futures import ThreadPoolExecutor
+    default_executor = ThreadPoolExecutor(max_workers=8, thread_name_prefix="mcp_async_")
+    asyncio.get_event_loop().set_default_executor(default_executor)
+    logger.info("PERF-009: Set bounded default executor (max_workers=8)")
+
     # Initialize the modern server
     config = get_config()
     memory_server = MemoryRAGServer(config)
@@ -1601,6 +1610,8 @@ async def main():
     finally:
         # Cleanup
         await memory_server.close()
+        # PERF-009: Shutdown the bounded default executor to release threads
+        default_executor.shutdown(wait=False)
         logger.info("Server shutdown complete")
 
 

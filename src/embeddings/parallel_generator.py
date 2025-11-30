@@ -503,19 +503,59 @@ class ParallelEmbeddingGenerator:
         return self.embedding_dim
 
     async def close(self) -> None:
-        """Shutdown the process pool executor."""
+        """Shutdown the process pool executor and all related resources.
+
+        PERF-009: Ensures proper cleanup of:
+        - ProcessPoolExecutor workers (with model memory)
+        - MPS generator (if using Apple Silicon fallback)
+        - Embedding cache (SQLite connection)
+        """
+        # Close MPS generator if it was used (BUG-051 fix)
+        if self._mps_generator:
+            try:
+                await self._mps_generator.close()
+                logger.info("MPS generator closed")
+            except Exception as e:
+                logger.warning(f"Error closing MPS generator: {e}")
+            self._mps_generator = None
+
+        # Close process pool executor
         if self.executor:
             # Run blocking shutdown in thread pool to avoid blocking event loop
             await asyncio.to_thread(self._close_sync)
 
+        # Close cache (SQLite connection)
+        if self.cache:
+            try:
+                self.cache.close()
+                logger.info("Embedding cache closed")
+            except Exception as e:
+                logger.warning(f"Error closing cache: {e}")
+
     def _close_sync(self) -> None:
         """Synchronous implementation of close() for thread pool execution."""
         logger.info("Shutting down process pool executor")
-        self.executor.shutdown(wait=True)
+        # PERF-009: Use wait=True to ensure worker processes fully terminate
+        # and release their memory (including loaded models)
+        self.executor.shutdown(wait=True, cancel_futures=True)
         self.executor = None
         logger.info("Process pool shut down successfully")
 
     def __del__(self):
-        """Cleanup on destruction."""
+        """Cleanup on destruction - fallback if close() wasn't called."""
         if hasattr(self, 'executor') and self.executor:
-            self.executor.shutdown(wait=False)
+            # PERF-009: Still use wait=False in __del__ to avoid blocking
+            # but this is a fallback - close() should be called explicitly
+            self.executor.shutdown(wait=False, cancel_futures=True)
+        if hasattr(self, '_mps_generator') and self._mps_generator:
+            # Can't await in __del__, so just try sync cleanup
+            try:
+                if hasattr(self._mps_generator, 'executor'):
+                    self._mps_generator.executor.shutdown(wait=False)
+            except Exception:
+                pass
+        if hasattr(self, 'cache') and self.cache:
+            try:
+                self.cache.close()
+            except Exception:
+                pass
