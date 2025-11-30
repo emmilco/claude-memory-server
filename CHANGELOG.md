@@ -118,6 +118,12 @@ Organize entries under these headers in chronological order (newest first):
   - Cache now stores normalized vectors, eliminating double-normalization on cache hits
   - Same text now returns identical vectors regardless of cache state
   - Files: src/embeddings/cache.py
+
+- **BUG-167: Payload Metadata Spread Allows Field Injection**
+  - Fixed security vulnerability where `**metadata.get("metadata", {})` spread operator allowed users to inject arbitrary values and override reserved fields
+  - Added RESERVED_FIELDS set to filter user metadata before spreading, preventing injection of id, importance, category, lifecycle_state and other controlled fields
+  - Implemented field filtering in `_build_payload()` to only include non-reserved keys from user metadata dictionary
+  - Files: src/store/qdrant_store.py
 - **BUG-066: Integration Test Suite Hangs**
   - Fixed integration tests hanging indefinitely (16+ minutes) in pytest-asyncio contexts
   - Wrapped synchronous QdrantClient.get_collections() in run_in_executor() to prevent event loop blocking
