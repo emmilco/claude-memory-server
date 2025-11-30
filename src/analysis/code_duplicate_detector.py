@@ -30,6 +30,13 @@ from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
+# Configurable limits for large dataset operations
+# O(N²) matrix memory: 384 bytes/float * N² bytes
+# For 10,000 units: ~14.4 GB; for 50,000 units: ~360 GB (infeasible)
+MAX_UNITS_FOR_SIMILARITY_MATRIX = 10000  # Safe limit for O(N²) similarity matrix
+WARN_THRESHOLD_UNITS = 5000  # Warn if approaching memory-intensive operations
+MAX_UNITS_FOR_CLUSTERING = 10000  # Same as similarity matrix due to transitive closure
+
 
 @dataclass
 class DuplicateCluster:
@@ -130,6 +137,8 @@ class CodeDuplicateDetector:
         Normalizes embeddings to unit length, then computes dot product to get
         cosine similarity.
 
+        Includes size checks to prevent O(N²) memory exhaustion on large datasets.
+
         Args:
             embeddings: Array of shape (N, dim) where N is number of units
 
@@ -140,10 +149,12 @@ class CodeDuplicateDetector:
 
         Raises:
             ValueError: If embeddings is empty or not 2D
+            ValueError: If dataset exceeds safe memory limits
 
         Performance:
             - 8,807 units (38M comparisons): ~20 seconds
             - 1,000 units (500K comparisons): ~2.3 seconds
+            - O(N²) memory required: ~14.4 GB for 10,000 units, ~360 GB for 50,000
         """
         if embeddings.size == 0:
             raise ValueError("Embeddings array is empty")
@@ -152,6 +163,24 @@ class CodeDuplicateDetector:
             raise ValueError(f"Embeddings must be 2D array, got shape {embeddings.shape}")
 
         n_units = embeddings.shape[0]
+
+        # Warn if approaching memory-intensive operations
+        if n_units > WARN_THRESHOLD_UNITS:
+            logger.warning(
+                f"Large dataset for duplicate detection: {n_units} units "
+                f"(warn threshold: {WARN_THRESHOLD_UNITS}). "
+                f"This will allocate ~{n_units**2 * 8 / 1e9:.1f} GB for similarity matrix."
+            )
+
+        # Hard limit to prevent memory exhaustion
+        if n_units > MAX_UNITS_FOR_SIMILARITY_MATRIX:
+            raise ValueError(
+                f"Dataset too large for similarity matrix calculation: {n_units} units "
+                f"(max: {MAX_UNITS_FOR_SIMILARITY_MATRIX}). "
+                f"This would require ~{n_units**2 * 8 / 1e9:.1f} GB of memory. "
+                f"Consider batch processing or sampling strategies."
+            )
+
         logger.debug(f"Calculating similarity matrix for {n_units} units")
 
         # Normalize embeddings to unit length
@@ -248,6 +277,8 @@ class CodeDuplicateDetector:
         - If A is similar to B, and B is similar to C, then A, B, C form a cluster
         - Computes average similarity within each cluster
 
+        Includes size checks to prevent O(N²) memory exhaustion on clustering.
+
         Args:
             similarity_matrix: Pairwise similarity matrix (N x N)
             unit_ids: List of unit IDs corresponding to matrix rows/columns
@@ -259,6 +290,7 @@ class CodeDuplicateDetector:
         Raises:
             ValueError: If matrix dimensions don't match unit_ids length
             ValueError: If threshold is not in [0.0, 1.0]
+            ValueError: If dataset exceeds safe memory limits
 
         Complexity:
             - Time: O(N²) for similarity checks + O(N α(N)) for Union-Find
@@ -287,6 +319,23 @@ class CodeDuplicateDetector:
             raise ValueError(f"Threshold must be in [0.0, 1.0], got {threshold}")
 
         n = len(unit_ids)
+
+        # Size check: Warn if approaching large clustering operations
+        if n > WARN_THRESHOLD_UNITS:
+            logger.warning(
+                f"Large dataset for clustering: {n} units "
+                f"(warn threshold: {WARN_THRESHOLD_UNITS}). "
+                f"Clustering will perform O(N²) similarity checks."
+            )
+
+        # Hard limit to prevent unbounded operations
+        if n > MAX_UNITS_FOR_CLUSTERING:
+            raise ValueError(
+                f"Dataset too large for duplicate clustering: {n} units "
+                f"(max: {MAX_UNITS_FOR_CLUSTERING}). "
+                f"This would require {n * (n-1) / 2:,.0f} pairwise comparisons. "
+                f"Consider batch processing strategies for large codebases."
+            )
 
         # Union-Find data structure
         parent = list(range(n))  # Each node is its own parent initially

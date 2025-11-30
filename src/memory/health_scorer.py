@@ -14,6 +14,12 @@ from src.store import MemoryStore
 
 logger = logging.getLogger(__name__)
 
+# Configurable limits for large dataset operations
+MAX_MEMORIES_PER_OPERATION = 50000  # Prevent memory exhaustion on huge datasets
+PAGINATION_PAGE_SIZE = 5000  # Process memories in batches to avoid loading all at once
+MAX_DUPLICATE_CHECK_MEMORIES = 10000  # Sample cap for duplicate detection
+WARN_THRESHOLD_MEMORIES = 25000  # Warn if dataset exceeds this
+
 
 @dataclass
 class HealthScore:
@@ -154,7 +160,12 @@ class HealthScorer:
         return score
 
     async def _get_lifecycle_distribution(self) -> Dict[LifecycleState, int]:
-        """Get count of memories in each lifecycle state."""
+        """
+        Get count of memories in each lifecycle state.
+
+        Uses pagination to prevent memory exhaustion on large datasets.
+        Warns and limits processing if dataset exceeds configured thresholds.
+        """
         distribution = {
             LifecycleState.ACTIVE: 0,
             LifecycleState.RECENT: 0,
@@ -162,30 +173,51 @@ class HealthScorer:
             LifecycleState.STALE: 0,
         }
 
-        # Query all memories (this is a simplified version)
-        # In production, we'd query counts directly from database
         try:
-            # Get all memories with lifecycle_state
-            # For now, use a sample query approach
+            # Get all memories with pagination to avoid loading entire dataset at once
             all_memories = await self.store.get_all_memories()
+            total_memories = len(all_memories)
 
-            for memory in all_memories:
-                # Support both dict and object (MemoryUnit) access patterns
-                if hasattr(memory, 'lifecycle_state'):
-                    state = memory.lifecycle_state
-                elif isinstance(memory, dict):
-                    state = memory.get('lifecycle_state', LifecycleState.ACTIVE)
-                else:
-                    state = getattr(memory, 'lifecycle_state', LifecycleState.ACTIVE)
+            # Warn if dataset is large
+            if total_memories > WARN_THRESHOLD_MEMORIES:
+                logger.warning(
+                    f"Large dataset detected: {total_memories} memories "
+                    f"(warn threshold: {WARN_THRESHOLD_MEMORIES}). "
+                    f"Processing with pagination."
+                )
 
-                if isinstance(state, str):
-                    # Convert string to LifecycleState enum
-                    try:
-                        state = LifecycleState(state)
-                    except ValueError:
-                        state = LifecycleState.ACTIVE
-                if state in distribution:
-                    distribution[state] += 1
+            # Hard limit to prevent unbounded memory growth
+            if total_memories > MAX_MEMORIES_PER_OPERATION:
+                logger.error(
+                    f"Dataset too large: {total_memories} memories "
+                    f"(max: {MAX_MEMORIES_PER_OPERATION}). Aborting operation to prevent memory exhaustion."
+                )
+                return distribution
+
+            # Process memories in batches (pagination)
+            for batch_start in range(0, total_memories, PAGINATION_PAGE_SIZE):
+                batch_end = min(batch_start + PAGINATION_PAGE_SIZE, total_memories)
+                batch = all_memories[batch_start:batch_end]
+
+                logger.debug(f"Processing lifecycle distribution batch {batch_start}-{batch_end}/{total_memories}")
+
+                for memory in batch:
+                    # Support both dict and object (MemoryUnit) access patterns
+                    if hasattr(memory, 'lifecycle_state'):
+                        state = memory.lifecycle_state
+                    elif isinstance(memory, dict):
+                        state = memory.get('lifecycle_state', LifecycleState.ACTIVE)
+                    else:
+                        state = getattr(memory, 'lifecycle_state', LifecycleState.ACTIVE)
+
+                    if isinstance(state, str):
+                        # Convert string to LifecycleState enum
+                        try:
+                            state = LifecycleState(state)
+                        except ValueError:
+                            state = LifecycleState.ACTIVE
+                    if state in distribution:
+                        distribution[state] += 1
 
         except Exception as e:
             logger.error(f"Error getting lifecycle distribution: {e}")
@@ -233,7 +265,7 @@ class HealthScorer:
         2. Calculate pairwise similarity
         3. Count pairs with >0.95 similarity
 
-        For now, returns a conservative estimate.
+        For now, returns a conservative estimate and skips large datasets.
 
         Returns:
             Duplicate rate (0-1)
@@ -243,6 +275,16 @@ class HealthScorer:
         try:
             all_memories = await self.store.get_all_memories()
             if len(all_memories) < 2:
+                return 0.0
+
+            # Size check: Skip duplicate detection for very large datasets
+            # to avoid O(N²) memory/time complexity
+            if len(all_memories) > MAX_DUPLICATE_CHECK_MEMORIES:
+                logger.warning(
+                    f"Dataset too large for duplicate detection: {len(all_memories)} memories "
+                    f"(max: {MAX_DUPLICATE_CHECK_MEMORIES}). "
+                    f"Skipping duplicate rate calculation to prevent memory exhaustion."
+                )
                 return 0.0
 
             # Sample approach: Check for exact duplicate content
