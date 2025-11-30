@@ -65,6 +65,16 @@ Organize entries under these headers in chronological order (newest first):
   - Backward-compatible: hardcoded defaults are used if not overridden in config
 
 ### Fixed - 2025-11-30
+- **REF-023: Remove Defensive hasattr() Patterns for Enums**
+  - Identified root cause: `_build_payload()` stored enum values inconsistently (sometimes as enums, sometimes as strings) based on metadata input type
+  - Fixed at source by adding enum normalization in payload building: `_normalize_enum()` helper converts enums to string values before storage
+  - `_payload_to_memory_unit()` now reliably reconstructs enums from stored string values
+  - Removed defensive `hasattr(x, 'value')` checks in service layer response builders (3 locations in memory_service.py)
+  - Removed defensive checks in store update operations (1 location in qdrant_store.py)
+  - Simplified filter building by relying on `SearchFilters.to_dict()` which guarantees string values
+  - Replaced `hasattr()` checks with clean `isinstance(val, Enum)` pattern for advanced filter enums
+  - Files: src/store/qdrant_store.py (payload normalization, filter simplification), src/services/memory_service.py (removed defensive checks in response building)
+
 - **REF-028-C: Add Exception Chain Preservation (from e)**
   - Added `from e` to 41 raise statements lacking exception chain preservation
   - Ensures original exception tracebacks are preserved for debugging
