@@ -118,12 +118,12 @@ class ConnectionCreationFailedError(StorageError):
 
         message = f"Failed to create connection to Qdrant at {url}: {reason}"
         solution = (
-            "Steps to fix:\n"
-            "1. Verify Qdrant is running: docker ps | grep qdrant\n"
-            "2. Start Qdrant if needed: docker-compose up -d\n"
-            "3. Check Qdrant health: curl http://localhost:6333/health\n"
-            "4. Verify URL is correct in config: {url}\n"
-            "5. Check Docker logs: docker logs qdrant"
+            f"Steps to fix:\n"
+            f"1. Verify Qdrant is running: docker ps | grep qdrant\n"
+            f"2. Start Qdrant if needed: docker-compose up -d\n"
+            f"3. Check Qdrant health: curl http://localhost:6333/health\n"
+            f"4. Verify URL is correct in config: {url}\n"
+            f"5. Check Docker logs: docker logs qdrant"
         )
 
         super().__init__(message, solution)

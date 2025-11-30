@@ -57,6 +57,7 @@ Organize entries under these headers in chronological order (newest first):
   - Each exception provides distinct error message, actionable solution guidance, and error code
   - Updated `QdrantConnectionPool.acquire()` to raise `PoolExhaustedError` when max connections reached and timeout expires
   - Updated `QdrantConnectionPool.acquire()` to raise `HealthCheckFailedError` when connection health checks fail even after retry
+  - Fixed f-string formatting in `ConnectionCreationFailedError` solution text to properly interpolate URL
   - Added backward-compatible alias for legacy code using `ConnectionPoolExhaustedError`
   - File: src/store/connection_pool.py
 
