@@ -1,0 +1,561 @@
+"""Tests for indexing progress indicators."""
+
+import pytest
+from pathlib import Path
+from unittest.mock import Mock, AsyncMock, MagicMock, patch
+from src.memory.incremental_indexer import IncrementalIndexer
+
+
+class TestIndexingProgressCallback:
+    """Test progress callback functionality during indexing."""
+
+    @pytest.mark.asyncio
+    async def test_progress_callback_called_with_total(self, tmp_path):
+        """Test that progress callback receives total file count."""
+        # Create test files
+        (tmp_path / "file1.py").write_text("def foo(): pass")
+        (tmp_path / "file2.py").write_text("def bar(): pass")
+
+        # Mock store and embedding generator
+        mock_store = MagicMock()
+        mock_store.initialize = AsyncMock()
+        mock_store.batch_store = AsyncMock(return_value=["id1", "id2"])
+        mock_store.client = MagicMock()
+        mock_store.client.scroll = MagicMock(return_value=([], None))
+        mock_store.collection_name = "test"
+        mock_store.close = AsyncMock()
+
+        mock_embeddings = MagicMock()
+        mock_embeddings.initialize = AsyncMock()
+        mock_embeddings.batch_generate = AsyncMock(return_value=[[0.1] * 384, [0.2] * 384])
+        mock_embeddings.close = AsyncMock()
+
+        # Mock call graph store to avoid Qdrant connection
+        with patch('src.store.call_graph_store.QdrantCallGraphStore') as MockCallGraphStore:
+            mock_call_graph = AsyncMock()
+            mock_call_graph.initialize = AsyncMock()
+            MockCallGraphStore.return_value = mock_call_graph
+
+            indexer = IncrementalIndexer(
+                store=mock_store,
+                embedding_generator=mock_embeddings,
+                project_name="test-project"
+            )
+            await indexer.initialize()
+
+            # Track progress callbacks
+            callback_calls = []
+
+            def progress_callback(current, total, current_file, error_info):
+                callback_calls.append({
+                    "current": current,
+                    "total": total,
+                    "current_file": current_file,
+                    "error_info": error_info,
+                })
+
+            # Index directory with callback
+            result = await indexer.index_directory(
+                tmp_path,
+                recursive=False,
+                show_progress=False,
+                progress_callback=progress_callback,
+            )
+
+            # Verify callbacks were made
+            assert len(callback_calls) > 0
+
+            # First callback should have total count
+            first_call = callback_calls[0]
+            assert first_call["total"] == 2
+            assert first_call["current"] == 0
+            assert first_call["current_file"] is None
+            assert first_call["error_info"] is None
+
+            # Subsequent callbacks should have file names
+            file_callbacks = [c for c in callback_calls if c["current_file"] is not None]
+            assert len(file_callbacks) > 0
+
+            # Check that file names were provided
+            file_names = {c["current_file"] for c in file_callbacks}
+            assert "file1.py" in file_names or "file2.py" in file_names
+
+            await indexer.close()
+
+    @pytest.mark.asyncio
+    async def test_progress_callback_tracks_completion(self, tmp_path):
+        """Test that progress callback tracks completion count."""
+        # Create test files
+        (tmp_path / "file1.py").write_text("def foo(): pass")
+        (tmp_path / "file2.py").write_text("def bar(): pass")
+        (tmp_path / "file3.py").write_text("def baz(): pass")
+
+        # Mock store and embedding generator
+        mock_store = MagicMock()
+        mock_store.initialize = AsyncMock()
+        mock_store.batch_store = AsyncMock(return_value=["id1"])
+        mock_store.client = MagicMock()
+        mock_store.client.scroll = MagicMock(return_value=([], None))
+        mock_store.collection_name = "test"
+        mock_store.close = AsyncMock()
+
+        mock_embeddings = MagicMock()
+        mock_embeddings.initialize = AsyncMock()
+        mock_embeddings.batch_generate = AsyncMock(return_value=[[0.1] * 384])
+        mock_embeddings.close = AsyncMock()
+
+        with patch('src.store.call_graph_store.QdrantCallGraphStore'):
+            indexer = IncrementalIndexer(
+                store=mock_store,
+                embedding_generator=mock_embeddings,
+                project_name="test-project"
+            )
+            await indexer.initialize()
+
+            callback_calls = []
+
+            def progress_callback(current, total, current_file, error_info):
+                callback_calls.append({"current": current, "total": total})
+
+            await indexer.index_directory(
+                tmp_path,
+                recursive=False,
+                show_progress=False,
+                progress_callback=progress_callback,
+            )
+
+            # Verify completion count increases
+            current_values = [c["current"] for c in callback_calls]
+
+            # Should start at 0 and increase
+            assert 0 in current_values
+            assert max(current_values) >= 1
+
+            # Should eventually reach total
+            final_current = current_values[-1]
+            final_total = callback_calls[-1]["total"]
+            assert final_current <= final_total
+
+            await indexer.close()
+
+    @pytest.mark.asyncio
+    async def test_progress_callback_reports_errors(self, tmp_path):
+        """Test that progress callback reports errors."""
+        # Create test file that will cause an error
+        (tmp_path / "bad.py").write_text("def foo(): pass")
+
+        # Mock store and embedding generator
+        mock_store = MagicMock()
+        mock_store.initialize = AsyncMock()
+        mock_store.batch_store = AsyncMock(side_effect=Exception("Storage error"))
+        mock_store.client = MagicMock()
+        mock_store.client.scroll = MagicMock(return_value=([], None))
+        mock_store.collection_name = "test"
+        mock_store.close = AsyncMock()
+
+        mock_embeddings = MagicMock()
+        mock_embeddings.initialize = AsyncMock()
+        mock_embeddings.batch_generate = AsyncMock(return_value=[[0.1] * 384])
+        mock_embeddings.close = AsyncMock()
+
+        with patch('src.store.call_graph_store.QdrantCallGraphStore'):
+            indexer = IncrementalIndexer(
+                store=mock_store,
+                embedding_generator=mock_embeddings,
+                project_name="test-project"
+            )
+            await indexer.initialize()
+
+            error_callbacks = []
+
+            def progress_callback(current, total, current_file, error_info):
+                if error_info:
+                    error_callbacks.append(error_info)
+
+            await indexer.index_directory(
+                tmp_path,
+                recursive=False,
+                show_progress=False,
+                progress_callback=progress_callback,
+            )
+
+            # Verify at least one error was reported
+            assert len(error_callbacks) > 0
+
+            # Check error info structure
+            error_info = error_callbacks[0]
+            assert "file" in error_info
+            assert "error" in error_info
+            assert "bad.py" in error_info["file"]
+
+            await indexer.close()
+
+    @pytest.mark.asyncio
+    async def test_progress_callback_empty_directory(self, tmp_path):
+        """Test progress callback with empty directory."""
+        # Create empty directory
+        empty_dir = tmp_path / "empty"
+        empty_dir.mkdir()
+
+        mock_store = MagicMock()
+        mock_store.initialize = AsyncMock()
+        mock_store.close = AsyncMock()
+
+        mock_embeddings = MagicMock()
+        mock_embeddings.initialize = AsyncMock()
+        mock_embeddings.close = AsyncMock()
+
+        with patch('src.store.call_graph_store.QdrantCallGraphStore'):
+            indexer = IncrementalIndexer(
+                store=mock_store,
+                embedding_generator=mock_embeddings,
+                project_name="test-project"
+            )
+            await indexer.initialize()
+
+            callback_calls = []
+
+            def progress_callback(current, total, current_file, error_info):
+                callback_calls.append({"current": current, "total": total})
+
+            result = await indexer.index_directory(
+                empty_dir,
+                recursive=False,
+                show_progress=False,
+                progress_callback=progress_callback,
+            )
+
+            # Should call callback once with 0 total to initialize progress bar
+            assert result["total_files"] == 0
+            assert len(callback_calls) == 1
+            assert callback_calls[0]["total"] == 0
+            assert callback_calls[0]["current"] == 0
+
+            await indexer.close()
+
+    @pytest.mark.asyncio
+    async def test_indexing_without_callback(self, tmp_path):
+        """Test that indexing works without progress callback."""
+        # Create test file
+        (tmp_path / "file1.py").write_text("def foo(): pass")
+
+        mock_store = MagicMock()
+        mock_store.initialize = AsyncMock()
+        mock_store.batch_store = AsyncMock(return_value=["id1"])
+        mock_store.client = MagicMock()
+        mock_store.client.scroll = MagicMock(return_value=([], None))
+        mock_store.collection_name = "test"
+        mock_store.close = AsyncMock()
+
+        mock_embeddings = MagicMock()
+        mock_embeddings.initialize = AsyncMock()
+        mock_embeddings.batch_generate = AsyncMock(return_value=[[0.1] * 384])
+        mock_embeddings.close = AsyncMock()
+
+        with patch('src.store.call_graph_store.QdrantCallGraphStore'):
+            indexer = IncrementalIndexer(
+                store=mock_store,
+                embedding_generator=mock_embeddings,
+                project_name="test-project"
+            )
+            await indexer.initialize()
+
+            # Index without callback - should not raise error
+            result = await indexer.index_directory(
+                tmp_path,
+                recursive=False,
+                show_progress=False,
+                progress_callback=None,
+            )
+
+            assert result["total_files"] == 1
+            await indexer.close()
+
+    @pytest.mark.asyncio
+    async def test_progress_callback_concurrent_processing(self, tmp_path):
+        """Test that progress callback handles concurrent file processing."""
+        # Create multiple files
+        for i in range(10):
+            (tmp_path / f"file{i}.py").write_text(f"def func{i}(): pass")
+
+        mock_store = MagicMock()
+        mock_store.initialize = AsyncMock()
+        mock_store.batch_store = AsyncMock(return_value=["id1"])
+        mock_store.client = MagicMock()
+        mock_store.client.scroll = MagicMock(return_value=([], None))
+        mock_store.collection_name = "test"
+        mock_store.close = AsyncMock()
+
+        mock_embeddings = MagicMock()
+        mock_embeddings.initialize = AsyncMock()
+        mock_embeddings.batch_generate = AsyncMock(return_value=[[0.1] * 384])
+        mock_embeddings.close = AsyncMock()
+
+        with patch('src.store.call_graph_store.QdrantCallGraphStore'):
+            indexer = IncrementalIndexer(
+                store=mock_store,
+                embedding_generator=mock_embeddings,
+                project_name="test-project"
+            )
+            await indexer.initialize()
+
+            callback_calls = []
+
+            def progress_callback(current, total, current_file, error_info):
+                callback_calls.append({
+                    "current": current,
+                    "total": total,
+                    "file": current_file,
+                })
+
+            result = await indexer.index_directory(
+                tmp_path,
+                recursive=False,
+                show_progress=False,
+                max_concurrent=4,
+                progress_callback=progress_callback,
+            )
+
+            # Verify we got callbacks for all files
+            assert len(callback_calls) > 10  # At least one per file (start + completion)
+
+            # Verify total was set
+            assert callback_calls[0]["total"] == 10
+
+            # Verify all files were processed
+            file_names = {c["file"] for c in callback_calls if c["file"]}
+            expected_files = {f"file{i}.py" for i in range(10)}
+            assert file_names == expected_files
+
+            await indexer.close()
+
+    @pytest.mark.asyncio
+    async def test_progress_callback_signature(self, tmp_path):
+        """Test that progress callback receives correct parameter types."""
+        (tmp_path / "test.py").write_text("def test(): pass")
+
+        mock_store = MagicMock()
+        mock_store.initialize = AsyncMock()
+        mock_store.batch_store = AsyncMock(return_value=["id1"])
+        mock_store.client = MagicMock()
+        mock_store.client.scroll = MagicMock(return_value=([], None))
+        mock_store.collection_name = "test"
+        mock_store.close = AsyncMock()
+
+        mock_embeddings = MagicMock()
+        mock_embeddings.initialize = AsyncMock()
+        mock_embeddings.batch_generate = AsyncMock(return_value=[[0.1] * 384])
+        mock_embeddings.close = AsyncMock()
+
+        with patch('src.store.call_graph_store.QdrantCallGraphStore'):
+            indexer = IncrementalIndexer(
+                store=mock_store,
+                embedding_generator=mock_embeddings,
+                project_name="test-project"
+            )
+            await indexer.initialize()
+
+            callback_calls = []
+
+            def progress_callback(current, total, current_file, error_info):
+                # Verify types
+                assert isinstance(current, int)
+                assert isinstance(total, int)
+                assert current_file is None or isinstance(current_file, str)
+                assert error_info is None or isinstance(error_info, dict)
+                callback_calls.append(True)
+
+            await indexer.index_directory(
+                tmp_path,
+                recursive=False,
+                show_progress=False,
+                progress_callback=progress_callback,
+            )
+
+            # Verify callback was called with correct types
+            assert len(callback_calls) > 0
+
+            await indexer.close()
+
+
+class TestIndexCommandProgressDisplay:
+    """Test progress display in IndexCommand."""
+
+    @pytest.mark.asyncio
+    async def test_index_directory_without_rich(self, tmp_path):
+        """Test indexing directory without rich library available."""
+        from src.cli.index_command import IndexCommand
+        from unittest.mock import patch, AsyncMock, MagicMock
+        from argparse import Namespace
+
+        # Create test files
+        (tmp_path / "file1.py").write_text("def foo(): pass")
+
+        # Mock out rich to simulate it not being available
+        with patch("src.cli.index_command.RICH_AVAILABLE", False):
+            command = IndexCommand()
+
+            # Mock the indexer
+            with patch("src.cli.index_command.IncrementalIndexer") as mock_indexer_class:
+                mock_indexer = AsyncMock()
+                mock_indexer_class.return_value = mock_indexer
+                mock_indexer.index_directory.return_value = {
+                    "total_files": 1,
+                    "indexed_files": 1,
+                    "skipped_files": 0,
+                    "total_units": 2,
+                    "failed_files": []
+                }
+
+                args = Namespace(
+                    path=str(tmp_path),
+                    project_name="test-project",
+                    recursive=True
+                )
+
+                # Should complete without error even without rich
+                await command.run(args)
+
+                # Verify show_progress=True when rich not available
+                mock_indexer.index_directory.assert_called_once()
+                call_kwargs = mock_indexer.index_directory.call_args[1]
+                assert call_kwargs["show_progress"] is True
+                # progress_callback not passed when rich unavailable
+                assert "progress_callback" not in call_kwargs
+
+    @pytest.mark.asyncio
+    async def test_index_directory_with_rich(self, tmp_path):
+        """Test indexing directory with rich library."""
+        from src.cli.index_command import IndexCommand
+        from unittest.mock import patch, AsyncMock, MagicMock, ANY
+        from argparse import Namespace
+
+        # Create test files
+        (tmp_path / "file1.py").write_text("def foo(): pass")
+
+        # Ensure rich is available
+        with patch("src.cli.index_command.RICH_AVAILABLE", True):
+            command = IndexCommand()
+
+            # Mock the indexer
+            with patch("src.cli.index_command.IncrementalIndexer") as mock_indexer_class:
+                mock_indexer = AsyncMock()
+                mock_indexer_class.return_value = mock_indexer
+                mock_indexer.index_directory.return_value = {
+                    "total_files": 1,
+                    "indexed_files": 1,
+                    "skipped_files": 0,
+                    "total_units": 2,
+                    "failed_files": []
+                }
+
+                args = Namespace(
+                    path=str(tmp_path),
+                    project_name="test-project",
+                    recursive=True
+                )
+
+                await command.run(args)
+
+                # Verify progress_callback was passed
+                mock_indexer.index_directory.assert_called_once()
+                call_kwargs = mock_indexer.index_directory.call_args[1]
+                assert call_kwargs["show_progress"] is False
+                assert call_kwargs["progress_callback"] is not None
+
+    @pytest.mark.asyncio
+    async def test_progress_callback_integration(self, tmp_path):
+        """Test progress callback integration with rich progress bar."""
+        from src.cli.index_command import IndexCommand
+        from unittest.mock import patch, AsyncMock, MagicMock, call
+        from argparse import Namespace
+
+        # Create test files
+        (tmp_path / "file1.py").write_text("def foo(): pass")
+        (tmp_path / "file2.py").write_text("def bar(): pass")
+
+        with patch("src.cli.index_command.RICH_AVAILABLE", True):
+            command = IndexCommand()
+
+            # Track progress callback calls
+            progress_calls = []
+
+            def mock_index_directory(path, recursive, show_progress, progress_callback):
+                # Simulate progress callbacks
+                if progress_callback:
+                    # Initial callback with total
+                    progress_callback(0, 2, None, None)
+                    # File processing callbacks
+                    progress_callback(0, 2, "file1.py", None)
+                    progress_callback(1, 2, "file1.py", None)
+                    progress_callback(1, 2, "file2.py", None)
+                    progress_callback(2, 2, "file2.py", None)
+
+                return {
+                    "total_files": 2,
+                    "indexed_files": 2,
+                    "skipped_files": 0,
+                    "total_units": 4,
+                    "failed_files": []
+                }
+
+            with patch("src.cli.index_command.IncrementalIndexer") as mock_indexer_class:
+                mock_indexer = AsyncMock()
+                mock_indexer_class.return_value = mock_indexer
+                mock_indexer.index_directory.side_effect = mock_index_directory
+
+                args = Namespace(
+                    path=str(tmp_path),
+                    project_name="test-project",
+                    recursive=True
+                )
+
+                # Should complete and show progress
+                await command.run(args)
+
+                # Verify callback was passed
+                assert mock_indexer.index_directory.called
+
+    @pytest.mark.asyncio
+    async def test_progress_callback_with_errors(self, tmp_path):
+        """Test progress callback displays errors correctly."""
+        from src.cli.index_command import IndexCommand
+        from unittest.mock import patch, AsyncMock
+        from argparse import Namespace
+
+        # Create test file
+        (tmp_path / "file1.py").write_text("def foo(): pass")
+
+        with patch("src.cli.index_command.RICH_AVAILABLE", True):
+            command = IndexCommand()
+
+            def mock_index_directory(path, recursive, show_progress, progress_callback):
+                if progress_callback:
+                    # Simulate error
+                    progress_callback(0, 1, None, None)
+                    progress_callback(0, 1, "file1.py", {"file": "file1.py", "error": "Parse error"})
+                    progress_callback(1, 1, "file1.py", None)
+
+                return {
+                    "total_files": 1,
+                    "indexed_files": 0,
+                    "skipped_files": 0,
+                    "total_units": 0,
+                    "failed_files": ["file1.py"]
+                }
+
+            with patch("src.cli.index_command.IncrementalIndexer") as mock_indexer_class:
+                mock_indexer = AsyncMock()
+                mock_indexer_class.return_value = mock_indexer
+                mock_indexer.index_directory.side_effect = mock_index_directory
+
+                args = Namespace(
+                    path=str(tmp_path),
+                    project_name="test-project",
+                    recursive=False
+                )
+
+                # Should complete and show errors
+                await command.run(args)
+
+                assert mock_indexer.index_directory.called

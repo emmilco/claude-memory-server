@@ -35,6 +35,8 @@ async def temp_store(qdrant_client, unique_qdrant_collection):
     fixtures from conftest.py to leverage collection pooling and prevent
     Qdrant deadlocks during parallel test execution.
     """
+    from qdrant_client.models import PointIdsList
+
     config = ServerConfig(
         storage_backend="qdrant",
         qdrant_url="http://localhost:6333",
@@ -44,9 +46,40 @@ async def temp_store(qdrant_client, unique_qdrant_collection):
     await store.initialize()
     yield store
 
-    # Cleanup
-    await store.close()
-    # Collection cleanup handled by unique_qdrant_collection autouse fixture
+    # Cleanup: close store first to flush any pending writes
+    try:
+        await store.close()
+    except Exception:
+        pass
+
+    # Then explicitly purge collection to prevent cross-test contamination
+    try:
+        # Delete all points in collection with retries
+        for attempt in range(3):
+            try:
+                while True:
+                    points, _ = qdrant_client.scroll(
+                        collection_name=unique_qdrant_collection,
+                        limit=1000,
+                        with_payload=False,
+                        with_vectors=False
+                    )
+                    if not points:
+                        break
+                    point_ids = [p.id for p in points]
+                    qdrant_client.delete(
+                        collection_name=unique_qdrant_collection,
+                        points_selector=PointIdsList(points=point_ids)
+                    )
+                break  # Success, exit retry loop
+            except Exception:
+                if attempt < 2:
+                    import time
+                    time.sleep(0.05)
+                else:
+                    raise
+    except Exception:
+        pass  # If cleanup fails, don't fail the test
 
 
 @pytest.mark.asyncio

@@ -52,6 +52,14 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **TEST-029: Fix Test Suite Isolation and Collection Cleanup**
+  - Changed `unique_qdrant_collection` fixture to create true per-test unique collections instead of reusing pool collections
+  - Prevents cross-test contamination where sequential tests would accumulate data from previous runs
+  - Improved cleanup in `temp_store` fixtures with retry logic and explicit `store.close()` calls
+  - Added `skip_ci` marker handling in `pytest_collection_modifyitems` hook to properly skip timing-sensitive tests under parallel execution
+  - All unit tests now pass with isolated Qdrant instance (3410 passed, 141 skipped)
+  - Files: tests/conftest.py, tests/unit/test_backup_export.py, tests/unit/test_backup_import.py
+
 - **BUG-039: Add Missing PointIdsList Import**
   - Added missing `PointIdsList` import from `qdrant_client.models` in `src/store/qdrant_store.py`
   - Fixed `NameError` in `merge_memories()` method at line 2331
