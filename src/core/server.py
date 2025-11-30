@@ -4,6 +4,9 @@ import logging
 import asyncio
 import json
 import os
+import re
+import time
+import fnmatch
 from typing import Optional, Dict, Any, List, Callable
 from datetime import datetime, UTC
 from pathlib import Path
@@ -651,7 +654,6 @@ class MemoryRAGServer(StructuralQueryMixin):
         logger.info(f"Retrieving memories: query='{query[:50]}', limit={limit}")
 
         try:
-            import time
             start_time = time.time()
 
             # Construct advanced_filters if provided
@@ -2628,7 +2630,6 @@ class MemoryRAGServer(StructuralQueryMixin):
             relevance_score, quality assessment, quality_metrics, and matched keywords
         """
         try:
-            import time
             start_time = time.time()
 
             # Validate search mode
@@ -2909,7 +2910,6 @@ class MemoryRAGServer(StructuralQueryMixin):
             raise ValidationError("code_snippet cannot be empty")
 
         try:
-            import time
             start_time = time.time()
 
             # Use current project if not specified
@@ -3070,7 +3070,6 @@ class MemoryRAGServer(StructuralQueryMixin):
             )
 
         try:
-            import time
             start_time = time.time()
 
             # Determine which projects to search
@@ -3309,7 +3308,6 @@ class MemoryRAGServer(StructuralQueryMixin):
         try:
             from pathlib import Path
             from src.memory.incremental_indexer import IncrementalIndexer
-            import time
 
             start_time = time.time()
             dir_path = Path(directory_path).resolve()
@@ -3408,7 +3406,6 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         from pathlib import Path
         from src.memory.incremental_indexer import IncrementalIndexer
-        import time
 
         # Validate inputs first (don't wrap these errors)
         dir_path = Path(directory_path).resolve()
@@ -3881,8 +3878,6 @@ class MemoryRAGServer(StructuralQueryMixin):
         """
         try:
             from datetime import datetime, timedelta, UTC
-            import re
-            import time
             start_time = time.time()
 
             logger.info(f"Searching git history: '{query}' (project: {project_name})")
@@ -3995,7 +3990,6 @@ class MemoryRAGServer(StructuralQueryMixin):
         try:
             from src.memory.git_indexer import GitIndexer
             from pathlib import Path
-            import time
 
             start_time = time.time()
             repo_path = Path(repository_path).resolve()
@@ -4231,7 +4225,6 @@ class MemoryRAGServer(StructuralQueryMixin):
         """
         try:
             from datetime import datetime, UTC
-            import time
             start_time = time.time()
 
             logger.info(f"Calculating change frequency for: {file_or_function}")
@@ -4374,7 +4367,6 @@ class MemoryRAGServer(StructuralQueryMixin):
         try:
             from datetime import datetime, timedelta, UTC
             from collections import defaultdict
-            import time
             start_time = time.time()
 
             logger.info(f"Finding churn hotspots (last {days} days)")
@@ -4461,8 +4453,6 @@ class MemoryRAGServer(StructuralQueryMixin):
         """
         try:
             from datetime import datetime, timedelta, UTC
-            import fnmatch
-            import time
             start_time = time.time()
 
             logger.info(f"Getting recent changes (last {days} days)")
@@ -4557,7 +4547,6 @@ class MemoryRAGServer(StructuralQueryMixin):
                 - total_matches: int
         """
         try:
-            import time
             start_time = time.time()
 
             logger.info(f"Searching blame for pattern: '{pattern}'")
@@ -4624,7 +4613,6 @@ class MemoryRAGServer(StructuralQueryMixin):
         """
         try:
             from collections import defaultdict
-            import time
             start_time = time.time()
 
             logger.info(f"Getting code authors for: {file_path}")
@@ -4709,7 +4697,6 @@ class MemoryRAGServer(StructuralQueryMixin):
             Parsed datetime
         """
         from datetime import datetime, timedelta, UTC
-        import re
 
         date_str = date_str.lower().strip()
 

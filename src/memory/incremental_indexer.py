@@ -2,6 +2,8 @@
 
 import asyncio
 import logging
+import hashlib
+import re
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple, Callable
@@ -967,7 +969,6 @@ class IncrementalIndexer(BaseCodeIndexer):
 
             # Generate deterministic ID for this code unit
             # Format: hash(project_name + file_path + start_line + unit_name)
-            import hashlib
             id_string = f"{self.project_name}:{str(file_path.resolve())}:{unit.start_line}:{unit.name}"
             deterministic_id = hashlib.sha256(id_string.encode()).hexdigest()[:32]
 
@@ -1140,8 +1141,6 @@ class IncrementalIndexer(BaseCodeIndexer):
         Returns:
             Clean function name (e.g., "add", "foo", "MyClass")
         """
-        import re
-
         # Handle class definitions
         if signature.startswith('class '):
             signature = signature.replace('class ', '').strip(':')
@@ -1173,8 +1172,6 @@ class IncrementalIndexer(BaseCodeIndexer):
         Returns:
             List of parameter names
         """
-        import re
-
         # Simple regex to extract parameters from signature
         # Handles: def func(a, b, c=1, *args, **kwargs)
         match = re.search(r'\((.*?)\)', signature)
