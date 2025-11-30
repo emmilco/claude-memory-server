@@ -68,6 +68,7 @@ class GitSearchCommand:
                             except Exception as e2:
                                 logger.warning(f"Failed to parse 'since' date '{since}' in any format: {e2}")
                                 console.print(f"[yellow]Warning: Could not parse 'since' date: {since}[/yellow]")
+                                since_dt = None
 
                 if until:
                     from datetime import datetime, timedelta, UTC
@@ -85,6 +86,7 @@ class GitSearchCommand:
                             except Exception as e2:
                                 logger.warning(f"Failed to parse 'until' date '{until}' in any format: {e2}")
                                 console.print(f"[yellow]Warning: Could not parse 'until' date: {until}[/yellow]")
+                                until_dt = None
 
                 # Search commits
                 commits = await store.search_git_commits(
