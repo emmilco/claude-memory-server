@@ -2337,6 +2337,9 @@ class QdrantMemoryStore(MemoryStore):
         except StorageError as e:
             logger.error(f"Error migrating memory {memory_id}: {e}", exc_info=True)
             raise
+        finally:
+            if client is not None:
+                await self._release_client(client)
 
     async def bulk_update_context_level(
         self,
@@ -2624,6 +2627,9 @@ class QdrantMemoryStore(MemoryStore):
         except StorageError as e:
             logger.error(f"Error merging memories: {e}", exc_info=True)
             raise
+        finally:
+            if client is not None:
+                await self._release_client(client)
 
     async def get_recent_activity(
         self,

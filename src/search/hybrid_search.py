@@ -76,6 +76,9 @@ class HybridSearcher:
         """
         Index documents for BM25 search.
 
+        Uses copy-on-write pattern to ensure atomic updates when concurrent
+        access occurs during hybrid_search() operations.
+
         Args:
             documents: Text content of documents
             memory_units: Corresponding memory units
@@ -83,11 +86,18 @@ class HybridSearcher:
         if len(documents) != len(memory_units):
             raise ValueError("Documents and memory units must have same length")
 
-        self.documents = documents
-        self.memory_units = memory_units
+        # Build new BM25 index (new structure)
+        new_bm25 = BM25(k1=self.bm25.k1, b=self.bm25.b)
+        new_bm25.fit(documents)
 
-        # Build BM25 index
-        self.bm25.fit(documents)
+        # Create copies of input lists to avoid external modifications
+        new_documents = list(documents)
+        new_memory_units = list(memory_units)
+
+        # Atomic swap: replace all components together
+        self.bm25 = new_bm25
+        self.documents = new_documents
+        self.memory_units = new_memory_units
 
         logger.info(f"Indexed {len(documents)} documents for hybrid search")
 

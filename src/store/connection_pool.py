@@ -425,21 +425,28 @@ class QdrantConnectionPool:
         (e.g., after Qdrant restart, network issues, or connection leaks).
 
         This closes all existing connections and reinitializes the pool.
+
+        BUG-062: Wrap state reset sequence in lock to prevent race condition where
+        acquire() could interleave with state reset after close() but before _closed = False.
+        Note: Lock is released before initialize() to prevent deadlock (initialize() calls
+        _create_connection() which needs to acquire the lock).
         """
         logger.warning("Resetting connection pool to recover from corrupted state")
 
-        # Close existing pool
-        was_initialized = self._initialized
-        await self.close()
+        # Reset state atomically under lock
+        async with self._lock:
+            # Close existing pool
+            was_initialized = self._initialized
+            await self.close()
 
-        # Reset closed flag to allow reinitialization
-        self._closed = False
+            # Reset closed flag to allow reinitialization
+            self._closed = False
 
-        # Clear any stale state
-        self._client_map.clear()
-        self._pool = asyncio.Queue(maxsize=self.max_size)
+            # Clear any stale state
+            self._client_map.clear()
+            self._pool = asyncio.Queue(maxsize=self.max_size)
 
-        # Reinitialize if pool was previously initialized
+        # Reinitialize outside lock to prevent deadlock with _create_connection()
         if was_initialized:
             await self.initialize()
             logger.info("Connection pool reset and reinitialized successfully")
