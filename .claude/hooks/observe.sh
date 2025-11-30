@@ -22,6 +22,9 @@ NOW_EPOCH=$(date "+%s")
 # Shorten session ID for readability (first 8 chars)
 SHORT_SESSION=$(echo "$SESSION_ID" | cut -c1-8)
 
+# Write current session to file for journal.sh to read
+echo "$SESSION_ID" > "${LOGS_DIR}/.current_session" 2>/dev/null || true
+
 # Human-readable timestamp for journal entries
 HUMAN_TS=$(date '+%Y-%m-%d %H:%M')
 
@@ -197,21 +200,21 @@ JOURNAL_PROMPT=""
 
 case "$EVENT_TYPE" in
   user_prompt)
-    JOURNAL_PROMPT="[JOURNAL:$SHORT_SESSION] New user request. Add to CLAUDE_JOURNAL.md: ### $HUMAN_TS | $SHORT_SESSION | USER_PROMPT followed by: What is being asked? Initial approach?"
+    JOURNAL_PROMPT="[JOURNAL] ./scripts/journal.sh USER_PROMPT \"<what is being asked? initial approach?>\""
     ;;
 
   task_start)
     AGENT_TYPE=$(echo "$INPUT" | jq -r '.tool_input.subagent_type // "unknown"' 2>/dev/null) || AGENT_TYPE="unknown"
-    JOURNAL_PROMPT="[JOURNAL:$SHORT_SESSION] Spawning subagent. Add to CLAUDE_JOURNAL.md: ### $HUMAN_TS | $SHORT_SESSION | TASK_START ($AGENT_TYPE) followed by: Why delegate? What should it accomplish?"
+    JOURNAL_PROMPT="[JOURNAL] ./scripts/journal.sh TASK_START \"<why delegating to $AGENT_TYPE? what should it accomplish?>\""
     ;;
 
   task_end)
     AGENT_TYPE=$(echo "$INPUT" | jq -r '.tool_input.subagent_type // "unknown"' 2>/dev/null) || AGENT_TYPE="unknown"
-    JOURNAL_PROMPT="[JOURNAL:$SHORT_SESSION] Subagent finished. Add to CLAUDE_JOURNAL.md: ### $HUMAN_TS | $SHORT_SESSION | TASK_END ($AGENT_TYPE) followed by: Did it succeed? What did you learn?"
+    JOURNAL_PROMPT="[JOURNAL] ./scripts/journal.sh TASK_END \"<did $AGENT_TYPE succeed? what was learned?>\""
     ;;
 
   stop)
-    JOURNAL_PROMPT="[JOURNAL:$SHORT_SESSION] Response complete. Add to CLAUDE_JOURNAL.md: ### $HUMAN_TS | $SHORT_SESSION | STOP followed by: What was accomplished? Any concerns?"
+    JOURNAL_PROMPT="[JOURNAL] ./scripts/journal.sh STOP \"<what was accomplished? any concerns?>\""
     ;;
 esac
 
@@ -228,7 +231,7 @@ if [[ -f "$LAST_INTERVAL_FILE" ]]; then
 {"ts":"$TIMESTAMP","event":"INTERVAL_PROMPT","session":"$SESSION_ID","elapsed_mins":$ELAPSED_MINS}
 EOF
     echo "$NOW_EPOCH" > "$LAST_INTERVAL_FILE"
-    JOURNAL_PROMPT="[JOURNAL:$SHORT_SESSION] 10-minute checkpoint. Add to CLAUDE_JOURNAL.md: ### $HUMAN_TS | $SHORT_SESSION | INTERVAL followed by: What progress? Stuck anywhere? Approach working?"
+    JOURNAL_PROMPT="[JOURNAL] ./scripts/journal.sh INTERVAL \"<progress update - stuck anywhere?>\""
   fi
 fi
 

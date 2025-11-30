@@ -445,6 +445,13 @@ class ParallelEmbeddingGenerator:
         if self.executor is None:
             await self.initialize()
 
+        # Verify executor is available after initialization
+        if self.executor is None:
+            raise EmbeddingError(
+                "Process pool executor failed to initialize. "
+                "Check logs for initialization errors."
+            )
+
         # Split texts into chunks for workers
         # Each worker gets approximately equal number of texts
         chunk_size = max(1, len(texts) // self.max_workers)

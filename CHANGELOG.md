@@ -51,13 +51,59 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+### Changed - 2025-11-30
+- **DOC: Optimize CLAUDE.md for AI agent context efficiency**
+  - Reduced CLAUDE.md from 617 lines to 92 lines (85% reduction)
+  - Added scope calibration section (quick fix vs tracked task vs investigation)
+  - Added safer merge protocol (merge main into feature branch before merging back)
+  - Created scripts/journal.sh for low-friction journal entries
+  - Updated hook prompts to use journal script
+  - Archived GETTING_STARTED.md (content redundant with CLAUDE.md)
+  - Files: CLAUDE.md, scripts/journal.sh, .claude/hooks/observe.sh
+
 ### Fixed - 2025-11-30
+- **BUG-056: Track and handle MCP server initialization task properly**
+  - Fixed fire-and-forget task issue: background initialization task reference is now stored
+  - Added error callback to `_init_task` to properly log exceptions from background initialization
+  - Added cleanup logic in shutdown to cancel pending tasks and prevent resource leaks
+  - Improved error visibility: exceptions now logged with `exc_info=True` for full traceback
+  - Files: src/mcp_server.py
+
+- **BUG-055: Add error handling for fire-and-forget flush task in usage tracker**
+  - Fixed `asyncio.create_task(self._flush())` call at line 143 in `UsageTracker.record_usage()`
+  - Added `_background_tasks` set initialization in `__init__()` to track fire-and-forget tasks
+  - Now stores task reference and adds error callback: `task.add_done_callback(self._handle_background_task_done)`
+  - Implemented `_handle_background_task_done()` callback to log exceptions and clean up task references
+  - Ensures exceptions during batch flush operations are properly logged instead of silently lost
+  - Prevents usage data loss when storage backend operations fail
+  - Files: src/memory/usage_tracker.py
+
 - **BUG-054: Replace bare except:pass with specific exception handling**
   - Replaced bare `except:` clause with `except Exception:` in code smell pattern example
   - Bare except catches all exceptions including SystemExit and KeyboardInterrupt, preventing debugging
   - Example code in patterns.py now demonstrates proper exception handling
   - Files: src/review/patterns.py
 
+- **BUG-053: Accept ISO 8601 date formats in query DSL parser**
+  - Enhanced `_validate_date()` method to accept ISO 8601 formats beyond strict YYYY-MM-DD
+  - Now supports formats: YYYY-MM-DDTHH:MM:SS, YYYY-MM-DDTHH:MM:SSZ, YYYY-MM-DDTHH:MM:SS+HH:MM
+  - Handles 'Z' timezone suffix by normalizing to '+00:00' before parsing with `datetime.fromisoformat()`
+  - Maintains backward compatibility with YYYY-MM-DD format via fallback to `strptime()`
+  - Files: src/search/query_dsl_parser.py
+
+- **BUG-051: Fix MPS generator thread leak by adding cleanup in close()**
+  - Added `_mps_generator` cleanup to the `close()` method in ParallelEmbeddingGenerator
+  - Prevents thread pool executor leak when using MPS (Apple Silicon) fallback for large models
+  - Properly awaits `self._mps_generator.close()` and sets instance to None
+  - Includes exception handling to log warnings if cleanup fails
+  - Files: src/embeddings/parallel_generator.py
+
+- **BUG-050: Add null check for executor after failed initialize**
+  - Added executor null check in `_generate_parallel()` method after `await self.initialize()` call
+  - If initialization fails (exception raised), executor remains None and subsequent code would crash with AttributeError
+  - Now raises explicit EmbeddingError with helpful message directing user to check logs
+  - Prevents `'NoneType' object has no attribute...` AttributeError
+  - Files: src/embeddings/parallel_generator.py
 - **BUG-052: Fix incorrect median calculation in ImportanceScorer**
   - Fixed `get_summary_statistics()` method to properly calculate median for even-length lists
   - Now averages the two middle elements for even-length sorted lists, consistent with statistical definition
