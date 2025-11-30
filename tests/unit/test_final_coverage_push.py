@@ -10,6 +10,7 @@ from src.memory.incremental_indexer import IncrementalIndexer
 from src.embeddings.generator import EmbeddingGenerator
 from src.embeddings.cache import EmbeddingCache
 from src.config import ServerConfig, get_config
+from conftest import mock_embedding
 
 
 class TestIncrementalIndexerAdditional:
@@ -98,8 +99,8 @@ class TestCacheAdditional:
         cache = EmbeddingCache(config)
 
         text = "test"
-        emb1 = [0.1] * 384
-        emb2 = [0.2] * 384
+        emb1 = mock_embedding(value=0.1)
+        emb2 = mock_embedding(value=0.2)
 
         # Cache for different models
         await cache.set(text, "model1", emb1)
@@ -126,8 +127,8 @@ class TestCacheAdditional:
         cache = EmbeddingCache(config)
 
         # Perform operations
-        await cache.set("text1", "model", [0.1] * 384)
-        await cache.set("text2", "model", [0.2] * 384)
+        await cache.set("text1", "model", mock_embedding(value=0.1))
+        await cache.set("text2", "model", mock_embedding(value=0.2))
 
         await cache.get("text1", "model")  # Hit
         await cache.get("text1", "model")  # Hit

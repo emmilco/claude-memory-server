@@ -13,6 +13,7 @@ from src.memory.git_indexer import (
 )
 from src.config import ServerConfig
 from src.embeddings.generator import EmbeddingGenerator
+from conftest import mock_embedding
 
 # Git storage feature implemented in FEAT-055
 # Tests enabled as of 2025-11-22
@@ -36,7 +37,7 @@ def config():
 def embedding_generator():
     """Create mock embedding generator."""
     gen = Mock(spec=EmbeddingGenerator)
-    gen.generate = AsyncMock(return_value=[0.1] * 384)
+    gen.generate = AsyncMock(return_value=mock_embedding(value=0.1))
     return gen
 
 
@@ -582,7 +583,7 @@ class TestDataClasses:
             committer_name="Test Committer",
             committer_date=datetime.now(UTC),
             message="Test message",
-            message_embedding=[0.1] * 384,
+            message_embedding=mock_embedding(value=0.1),
             branch_names=["main"],
             tags=["v1.0"],
             parent_hashes=["parent123"],
@@ -603,7 +604,7 @@ class TestDataClasses:
             lines_added=5,
             lines_deleted=2,
             diff_content="diff content",
-            diff_embedding=[0.1] * 384,
+            diff_embedding=mock_embedding(value=0.1),
         )
 
         assert data.id == "abc123:file.py"
