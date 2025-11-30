@@ -52,6 +52,13 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **BUG-075: Importance Score Normalization Breaks with High Weights**
+  - Fixed hardcoded baseline_max = 1.2 to calculate dynamically based on actual weights
+  - Dynamic formula: baseline_max = (0.7 * complexity_weight) + (0.2 * usage_weight) + (0.3 * criticality_weight)
+  - Prevents all high-scoring code from being clamped to 1.0 when using custom weights like (2.0, 2.0, 2.0)
+  - Updated module docstring to reflect dynamic baseline_max calculation
+  - File: src/analysis/importance_scorer.py
+
 - **BUG-064: Integer Overflow in Unix Timestamp Conversion**
   - Added validation for Unix timestamps to prevent overflow/underflow in extreme dates
   - Added `_validate_timestamp()` helper function to check timestamps against 32-bit signed integer range [-2^31, 2^31-1]

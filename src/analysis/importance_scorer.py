@@ -21,9 +21,11 @@ Final Formula:
                 (usage_boost * usage_weight) +
                 (criticality_boost * criticality_weight)
 
-    importance = clamp(raw_score / baseline_max, 0.0, 1.0)
+    baseline_max = (0.7 * complexity_weight) +
+                   (0.2 * usage_weight) +
+                   (0.3 * criticality_weight)
 
-    Where baseline_max = 1.2 (max with all weights = 1.0)
+    importance = clamp(raw_score / baseline_max, 0.0, 1.0)
 
 Weight System:
 - Default weights: (1.0, 1.0, 1.0) - balanced scoring
@@ -245,9 +247,13 @@ class ImportanceScorer:
             #   - Max possible: 0.7 + 0.2 + 0.3 = 1.2
             # With custom weights, range expands/contracts proportionally
             #
-            # We normalize by comparing against the baseline max (1.2) to keep
-            # default behavior unchanged, then cap at 1.0
-            baseline_max = 1.2  # Max with weights (1.0, 1.0, 1.0)
+            # Calculate dynamic baseline_max based on actual weights
+            # baseline_max = (max_complexity * complexity_weight) +
+            #                (max_usage * usage_weight) +
+            #                (max_criticality * criticality_weight)
+            baseline_max = (0.7 * self.complexity_weight) + \
+                          (0.2 * self.usage_weight) + \
+                          (0.3 * self.criticality_weight)
 
             final_score = raw_score / baseline_max
 
