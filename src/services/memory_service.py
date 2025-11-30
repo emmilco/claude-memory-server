@@ -410,16 +410,16 @@ class MemoryService:
             # Generate query embedding (use expanded query)
             query_embedding = await self._get_embedding(expanded_query)
 
-            # Build filters
-            filters = SearchFilters(
-                context_level=request.context_level,
-                scope=request.scope,
-                project_name=request.project_name,
-                category=request.category,
-                min_importance=request.min_importance,
-                tags=request.tags,
-                advanced_filters=request.advanced_filters,
-            )
+            # Build filters with Pydantic validation
+            filters = SearchFilters.model_validate({
+                "context_level": request.context_level,
+                "scope": request.scope,
+                "project_name": request.project_name,
+                "category": request.category,
+                "min_importance": request.min_importance,
+                "tags": request.tags,
+                "advanced_filters": request.advanced_filters,
+            })
 
             # Determine fetch limit (with deduplication multiplier if needed)
             fetch_limit = request.limit
@@ -1062,16 +1062,16 @@ class MemoryService:
             raise ValidationError(f"Invalid export format: {format}. Must be 'json' or 'markdown'")
 
         try:
-            filters = SearchFilters(
-                category=MemoryCategory(category) if category else None,
-                context_level=ContextLevel(context_level) if context_level else None,
-                scope=MemoryScope(scope) if scope else None,
-                tags=tags or [],
-                min_importance=min_importance,
-                max_importance=max_importance,
-                date_from=date_from,
-                date_to=date_to,
-            )
+            filters = SearchFilters.model_validate({
+                "category": MemoryCategory(category) if category else None,
+                "context_level": ContextLevel(context_level) if context_level else None,
+                "scope": MemoryScope(scope) if scope else None,
+                "tags": tags or [],
+                "min_importance": min_importance,
+                "max_importance": max_importance,
+                "date_from": date_from,
+                "date_to": date_to,
+            })
 
             filters_dict = filters.to_dict() if filters else {}
             if project_name:
@@ -1508,7 +1508,7 @@ class MemoryService:
                 from src.core.models import SearchFilters, MemoryScope
 
                 # Create a filter for global-scoped memories only
-                global_filters = SearchFilters(scope=MemoryScope.GLOBAL)
+                global_filters = SearchFilters.model_validate({"scope": MemoryScope.GLOBAL})
                 try:
                     async with asyncio.timeout(30.0):
                         global_count = await self.store.count(filters=global_filters)
