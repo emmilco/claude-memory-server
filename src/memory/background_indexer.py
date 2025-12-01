@@ -252,8 +252,8 @@ class BackgroundIndexer:
                 self._active_tasks[job_id].cancel()
 
             # Check again in case the task completed during wait
-            if job_id in self._active_tasks:
-                del self._active_tasks[job_id]
+            # Use pop() to safely remove even if already deleted by finally block
+            self._active_tasks.pop(job_id, None)
 
         # Notify
         total_files = job.total_files or 0
@@ -487,7 +487,7 @@ class BackgroundIndexer:
 
         finally:
             # Clean up
-            if job_id in self._active_tasks:
-                del self._active_tasks[job_id]
+            # Use pop() to safely remove even if already deleted by cancel_job()
+            self._active_tasks.pop(job_id, None)
 
             # Keep cancel event for potential resume
