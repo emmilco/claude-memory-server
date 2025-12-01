@@ -140,7 +140,8 @@ class SetupWizard:
                 timeout=5,
             )
             if result.returncode == 0:
-                version = result.stdout.strip().split()[1]
+                parts = result.stdout.strip().split()
+                version = parts[1] if len(parts) > 1 else "unknown"
                 return True, version
             else:
                 return False, "Not found"

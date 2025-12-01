@@ -55,8 +55,9 @@ Organize entries under these headers in chronological order (newest first):
 - **BUG-286: String Split Without Length Validation**
   - Added validation checks before accessing split results in `src/core/system_check.py` (pip version extraction)
   - Added validation checks before accessing split results in `src/cli/health_command.py` (memory size parsing)
+  - Added validation checks before accessing split results in `setup.py` (rustc version extraction)
   - Prevents IndexError when subprocess output format is unexpected or malformed
-  - Files: src/core/system_check.py, src/cli/health_command.py
+  - Files: src/core/system_check.py, src/cli/health_command.py, setup.py
 
 - **BUG-274: MemoryStore.update() Abstract Method Signature Mismatch - Breaking LSP**
   - Added `new_embedding: Optional[List[float]] = None` parameter to abstract method signature
