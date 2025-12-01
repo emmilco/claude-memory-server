@@ -52,6 +52,14 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **BUG-282: Verified Client Release Pattern in retrieve() and Similar Methods**
+  - Reviewed client acquisition and release patterns across all async methods in QdrantStore
+  - Confirmed that finally blocks execute correctly even with early returns (Python language guarantee)
+  - Verified: Client initialization before try, acquisition inside try, release in finally with single-release guard
+  - All methods follow correct pattern: `client = None` → `try: client = await self._get_client()` → `finally: if client is not None: await self._release_client(client)`
+  - This pattern is safe even with early returns and prevents connection pool corruption
+  - Files: src/store/qdrant_store.py (verified patterns in retrieve(), store(), count(), list_memories(), get_by_id(), and 20+ other methods)
+
 - **BUG-274: MemoryStore.update() Abstract Method Signature Mismatch - Breaking LSP**
   - Added `new_embedding: Optional[List[float]] = None` parameter to abstract method signature
   - Files: src/store/base.py, src/store/readonly_wrapper.py
