@@ -55,7 +55,7 @@ Organize entries under these headers in chronological order (newest first):
 - **BUG-156: Index Out of Range Errors in Result Processing Lost in Generic Catch**
   - Added detailed error logging with field name and full payload when KeyError occurs in payload parsing
   - Split generic exception handler into separate KeyError and ValueError handlers for better diagnostics
-  - Enhanced `_payload_to_memory_unit()` to log missing required fields ('id', 'content') with complete payload
+  - Enhanced `_payload_to_memory_unit()` to validate required fields ('id', 'content') BEFORE any processing to ensure errors are caught early
   - Enhanced `_deserialize_commit()` to validate and log all required fields before access
   - File: src/store/qdrant_store.py
 

@@ -1608,6 +1608,19 @@ class QdrantMemoryStore(MemoryStore):
         """
         from src.core.models import LifecycleState, MemoryProvenance, ProvenanceSource
 
+        # Validate required fields FIRST before any processing
+        try:
+            memory_id = payload["id"]
+        except KeyError:
+            logger.error(f"Missing required field 'id' in payload: {payload}")
+            raise
+
+        try:
+            memory_content = payload["content"]
+        except KeyError:
+            logger.error(f"Missing required field 'content' in payload: {payload}")
+            raise
+
         # Parse datetime strings
         created_at = payload.get("created_at")
         if isinstance(created_at, str):
@@ -1683,19 +1696,6 @@ class QdrantMemoryStore(MemoryStore):
         for key, value in payload.items():
             if key not in standard_fields:
                 metadata[key] = value
-
-        # Validate required fields with detailed error logging
-        try:
-            memory_id = payload["id"]
-        except KeyError:
-            logger.error(f"Missing required field 'id' in payload: {payload}")
-            raise
-
-        try:
-            memory_content = payload["content"]
-        except KeyError:
-            logger.error(f"Missing required field 'content' in payload: {payload}")
-            raise
 
         return MemoryUnit(
             id=memory_id,
