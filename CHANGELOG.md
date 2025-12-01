@@ -52,6 +52,14 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **BUG-281: IndexError on Empty Results List Access - Guards Already Present**
+  - Verified existing guards protect all identified list access locations from IndexError crashes
+  - `src/store/qdrant_store.py:629`: Guard `if not result:` protects `result[0].payload`
+  - `src/services/code_indexing_service.py:537`: Guard `if not code_results:` protects lines 543, 546
+  - `src/monitoring/metrics_collector.py:356`: Guard `if not latencies:` protects line 360
+  - All three locations have proper defensive checks; no additional fixes required
+  - Files: src/store/qdrant_store.py, src/services/code_indexing_service.py, src/monitoring/metrics_collector.py
+
 - **BUG-274: MemoryStore.update() Abstract Method Signature Mismatch - Breaking LSP**
   - Added `new_embedding: Optional[List[float]] = None` parameter to abstract method signature
   - Files: src/store/base.py, src/store/readonly_wrapper.py
