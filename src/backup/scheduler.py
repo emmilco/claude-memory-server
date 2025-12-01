@@ -106,10 +106,10 @@ class BackupScheduler:
 
         # Validate time format for non-hourly frequencies
         if self.config.frequency in ("daily", "weekly", "monthly"):
-            if not re.match(r'^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$', self.config.time):
+            if not re.match(r'^([0-1][0-9]|2[0-3]):[0-5][0-9]$', self.config.time):
                 raise ValueError(
                     f"Invalid time format: '{self.config.time}'. "
-                    f"Expected HH:MM format (00:00-23:59)"
+                    f"Expected HH:MM format with zero-padding (00:00-23:59)"
                 )
 
         if self.config.frequency == "daily":
