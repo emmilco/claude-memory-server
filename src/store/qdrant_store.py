@@ -1013,6 +1013,8 @@ class QdrantMemoryStore(MemoryStore):
         # Validate and cap limit
         limit = min(max(1, limit), 500)
         offset = max(0, offset)
+        if offset > 0:
+            logger.debug(f"Pagination offset {offset} may exceed available data")
 
         client = None
         try:
@@ -1132,6 +1134,8 @@ class QdrantMemoryStore(MemoryStore):
         # Validate and cap limit
         limit = min(max(1, limit), 500)
         offset = max(0, offset)
+        if offset > 0:
+            logger.debug(f"Pagination offset {offset} may exceed available data")
 
         client = None
         try:
