@@ -62,6 +62,13 @@ Organize entries under these headers in chronological order (newest first):
   - Changed `latencies[p95_index]` to use `min(p95_index, len(latencies) - 1)` guard
   - File: src/monitoring/metrics_collector.py
 
+### Verified - 2025-12-01
+- **BUG-282: Client Release Patterns in QdrantStore are Safe**
+  - Verified client acquisition and release patterns are correct
+  - Finally blocks guarantee client release in all code paths
+  - File: src/store/qdrant_store.py (verification only, no code changes)
+
+### Fixed - 2025-11-30
 - **BUG-274: MemoryStore.update() Abstract Method Signature Mismatch - Breaking LSP**
   - Added `new_embedding: Optional[List[float]] = None` parameter to abstract method signature
   - Files: src/store/base.py, src/store/readonly_wrapper.py
