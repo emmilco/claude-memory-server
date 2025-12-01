@@ -6,6 +6,35 @@ Work session entries from Claude agents. See [Work Journal Protocol](CLAUDE.md#-
 
 ---
 
+### 2025-12-01 | opus-4.5-orchestrator | SESSION_SUMMARY
+
+**Duration:** ~45 minutes
+**Main work:** Continued hardening sprint - merged 9 bugs to main (BUG-276, 281, 282, 283, 286, 291, 307, 309, 312)
+
+**What went well:**
+- Successfully inherited 6 worktrees from previous session and moved them through review→test→merge pipeline
+- All 6 reviewers completed in parallel and found/fixed real issues (redundant code, missing changelog fragments, off-by-one bugs, additional code locations)
+- All 6 testers completed successfully with all tests passing
+- Serial merge queue handled CHANGELOG conflicts smoothly
+- Identified 3 stale TODO entries (BUG-077, 083, 306 already fixed in codebase)
+- Found and merged BUG-307 and BUG-309 which had uncommitted work in worktrees
+- Fixed BUG-312 (empty `_collect_metrics_job` method) by committing existing uncommitted work
+- Started investigating BUG-315 (triple `export_memories` definition)
+
+**What went poorly or was difficult:**
+- Agent weekly limit hit after spawning first batch of 6 task agents - had to work directly for remaining tasks
+- Multiple CHANGELOG merge conflicts required manual resolution
+- Many TODO entries are stale (already fixed bugs still listed)
+- BUG-306 and BUG-312 worktrees had uncommitted changes that needed investigation
+
+**Open threads:**
+- BUG-315: Triple `export_memories` definition at lines 1714, 4981, 5196 - in progress when session ended
+- BUG-319: Similar triple `import_memories` definition likely exists
+- TODO.md extremely stale - contains many already-fixed bugs
+- Agent limit resets at 2pm ET - can resume spawning after that
+
+---
+
 ### 2025-11-30 23:00 | opus-orchestrator-2 | SESSION_SUMMARY
 
 **Duration:** ~45 minutes

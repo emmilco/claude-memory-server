@@ -4954,6 +4954,30 @@ class MemoryRAGServer(StructuralQueryMixin):
 
     async def _collect_metrics_job(self) -> None:
         """Background job to collect and store health metrics."""
+        try:
+            logger.info("Running metrics collection job")
+
+            if not self.metrics_collector:
+                logger.warning("Metrics collector not initialized, skipping metrics collection")
+                return
+
+            # Collect current metrics
+            metrics = await self.metrics_collector.collect_metrics()
+
+            # Calculate health score (simplified version)
+            metrics.health_score = self._calculate_simple_health_score(metrics)
+
+            # Store metrics in database
+            self.metrics_collector.store_metrics(metrics)
+
+            logger.info(
+                f"Metrics collected: {metrics.total_memories} memories, "
+                f"{metrics.avg_search_latency_ms:.2f}ms avg latency, "
+                f"health score: {metrics.health_score}/100"
+            )
+
+        except Exception as e:
+            logger.error(f"Metrics collection job failed: {e}", exc_info=True)
     async def export_memories(
         self,
         output_path: str,

@@ -64,7 +64,8 @@ class CrossProjectService:
 
     def get_stats(self) -> Dict[str, Any]:
         """Get cross-project service statistics."""
-        return self.stats.copy()
+        with self._stats_lock:
+            return self.stats.copy()
 
     async def search_all_projects(
         self,
