@@ -175,6 +175,9 @@ class QueryDSLParser:
         if remaining:
             semantic_terms.append(remaining)
 
+        # Validate date ranges for consistency
+        self._validate_date_ranges(filters)
+
         return filters, exclusions, semantic_terms
 
     def _parse_filter_value(self, filter_key: str, value: str) -> Any:
@@ -268,6 +271,64 @@ class QueryDSLParser:
                     f"Invalid date format: '{date_str}'. "
                     f"Use ISO 8601 format (e.g., YYYY-MM-DD, YYYY-MM-DDTHH:MM:SSZ)."
                 )
+
+    def _validate_date_ranges(self, filters: Dict[str, Any]) -> None:
+        """
+        Validate date range filters for logical consistency.
+
+        Ensures that range start (gte/gt) is not after range end (lte/lt).
+
+        Args:
+            filters: Filters dictionary containing date filters
+
+        Raises:
+            ValueError: If date range is impossible (start > end)
+        """
+        for filter_key in ('created', 'modified'):
+            if filter_key not in filters:
+                continue
+
+            date_filter = filters[filter_key]
+            if not isinstance(date_filter, dict):
+                continue
+
+            # Extract range boundaries
+            start_date = None
+            end_date = None
+
+            # Get start boundary (gte or gt)
+            if 'gte' in date_filter:
+                start_date = date_filter['gte']
+            elif 'gt' in date_filter:
+                start_date = date_filter['gt']
+
+            # Get end boundary (lte or lt)
+            if 'lte' in date_filter:
+                end_date = date_filter['lte']
+            elif 'lt' in date_filter:
+                end_date = date_filter['lt']
+
+            # Validate range if both boundaries exist
+            if start_date and end_date:
+                # Normalize dates for comparison
+                start_normalized = start_date.replace('Z', '+00:00') if start_date.endswith('Z') else start_date
+                end_normalized = end_date.replace('Z', '+00:00') if end_date.endswith('Z') else end_date
+
+                try:
+                    start_dt = datetime.fromisoformat(start_normalized)
+                except ValueError:
+                    start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+
+                try:
+                    end_dt = datetime.fromisoformat(end_normalized)
+                except ValueError:
+                    end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+
+                if start_dt > end_dt:
+                    raise ValueError(
+                        f"Invalid {filter_key} date range: start date '{start_date}' "
+                        f"is after end date '{end_date}'. Date range must have start <= end."
+                    )
 
     def get_filter_help(self) -> str:
         """

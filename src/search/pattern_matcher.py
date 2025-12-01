@@ -174,7 +174,7 @@ class PatternMatcher:
             line_num = 0
             for i, offset in enumerate(line_offsets):
                 if offset > start_pos:
-                    line_num = i - 1
+                    line_num = i
                     break
 
             # Find column (offset within line)
