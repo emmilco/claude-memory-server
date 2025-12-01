@@ -56,6 +56,7 @@ Organize entries under these headers in chronological order (newest first):
   - Fixed race condition in `acquire()` where multiple coroutines could simultaneously check `_created_count < max_size`, all pass the check, and create connections exceeding max_size by 2-3x under high concurrency
   - Moved atomic `_created_count` increment to execute INSIDE the lock BEFORE connection creation in all paths (empty pool, recycle, health-check retry)
   - Refactored `_create_connection()` to remove duplicate counter increment; counter management now happens at call sites
+  - Added try/except blocks around all `_create_connection()` calls in `acquire()` to decrement counter on failure, preventing slot leaks when connection creation fails
   - Added atomic counter increments for initialization path and all dynamic creation paths to prevent double-counting
   - Files: src/store/connection_pool.py
 
