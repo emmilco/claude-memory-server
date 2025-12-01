@@ -52,6 +52,14 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **BUG-273: Race Condition in Check-Then-Act Pattern (dict initialization)**
+  - Replaced check-then-act pattern with atomic `dict.setdefault()` operations to prevent TOCTOU vulnerabilities
+  - Fixed in `src/mcp_server.py` (line 1033): suggestions_by_cat dictionary initialization
+  - Fixed in `src/backup/exporter.py` (line 555): nested project/category dictionary initialization
+  - Fixed in `src/core/server.py` (line 3199): projects_with_results counter using dict.get() with default
+  - Fixed in `src/store/qdrant_store.py` (line 1065): file_data dictionary initialization
+  - Prevents potential race conditions in concurrent environments where multiple threads could check and initialize the same dictionary key simultaneously
+
 - **BUG-101: Backup Cleanup Race Condition with Scheduler**
   - Added file-based locking mechanism to prevent concurrent cleanup operations
   - Created `src/backup/file_lock.py` with `FileLock` class for atomic lock acquisition using O_CREAT | O_EXCL

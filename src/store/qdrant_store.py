@@ -1062,13 +1062,12 @@ class QdrantMemoryStore(MemoryStore):
                     file_path = payload.get("file_path")
 
                     if file_path:
-                        if file_path not in file_data:
-                            file_data[file_path] = {
-                                "file_path": file_path,
-                                "language": payload.get("language", "unknown"),
-                                "last_indexed": payload.get("updated_at", payload.get("created_at")),
-                                "unit_count": 0
-                            }
+                        file_data.setdefault(file_path, {
+                            "file_path": file_path,
+                            "language": payload.get("language", "unknown"),
+                            "last_indexed": payload.get("updated_at", payload.get("created_at")),
+                            "unit_count": 0
+                        })
 
                         file_data[file_path]["unit_count"] += 1
 
