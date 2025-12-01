@@ -226,16 +226,33 @@ class CriticalityAnalyzer:
         """
         score = 0.0
 
-        # Validate file_path type early
-        if not isinstance(file_path, Path):
+        # Validate file_path type early and convert PathLike objects to Path
+        if file_path is None:
             logger.warning(
-                f"Expected Path object for proximity calculation, got {type(file_path).__name__}: {file_path}"
+                "Expected Path object for proximity calculation, got None"
             )
             # Can only score function name, skip file-based scoring
             func_name = function_name.lower()
             if func_name in self.ENTRY_POINT_NAMES:
                 score += 0.3
             return min(score, 1.0)
+
+        # Convert PathLike objects (including PurePosixPath, PureWindowsPath, str) to Path
+        if not isinstance(file_path, Path):
+            logger.warning(
+                f"Expected Path object for proximity calculation, got {type(file_path).__name__}"
+            )
+            try:
+                file_path = Path(file_path)
+            except (TypeError, ValueError) as e:
+                logger.warning(
+                    f"Could not convert {type(file_path).__name__} to Path: {file_path}. Error: {e}"
+                )
+                # Can only score function name, skip file-based scoring
+                func_name = function_name.lower()
+                if func_name in self.ENTRY_POINT_NAMES:
+                    score += 0.3
+                return min(score, 1.0)
 
         # Check file name
         try:
