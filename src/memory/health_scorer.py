@@ -174,9 +174,12 @@ class HealthScorer:
         }
 
         try:
-            # Get all memories with pagination to avoid loading entire dataset at once
-            all_memories = await self.store.get_all_memories()
-            total_memories = len(all_memories)
+            # Check count BEFORE fetching to prevent OOM on large datasets
+            total_memories = await self.store.count()
+
+            # Early return if no memories
+            if total_memories == 0:
+                return distribution
 
             # Warn if dataset is large
             if total_memories > WARN_THRESHOLD_MEMORIES:
@@ -193,6 +196,9 @@ class HealthScorer:
                     f"(max: {MAX_MEMORIES_PER_OPERATION}). Aborting operation to prevent memory exhaustion."
                 )
                 return distribution
+
+            # Now it's safe to fetch all memories
+            all_memories = await self.store.get_all_memories()
 
             # Process memories in batches (pagination)
             for batch_start in range(0, total_memories, PAGINATION_PAGE_SIZE):

@@ -1749,7 +1749,7 @@ async def main():
             )
     finally:
         # Cleanup background initialization task (BUG-056)
-        global _init_task
+        # Note: _init_task already declared global above
         if _init_task and not _init_task.done():
             logger.info("Cancelling background initialization task...")
             _init_task.cancel()

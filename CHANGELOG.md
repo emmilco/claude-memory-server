@@ -62,6 +62,21 @@ Organize entries under these headers in chronological order (newest first):
   - Prevents race conditions where scheduler and manual CLI cleanup could delete files simultaneously
   - Files: src/backup/file_lock.py, src/backup/scheduler.py, src/cli/backup_command.py
 
+- **BUG-156: Index Out of Range Errors in Result Processing Lost in Generic Catch**
+  - Added detailed error logging with field name when KeyError occurs in payload parsing
+  - Split generic exception handler into separate KeyError and ValueError handlers for better diagnostics
+  - Enhanced `_payload_to_memory_unit()` to validate required fields ('id', 'content') BEFORE any processing to ensure errors are caught early
+  - Enhanced `_deserialize_commit()` to validate and log all required fields before access
+  - Security: Error logs now show payload keys only (not values) to prevent logging sensitive data like code or credentials
+  - File: src/store/qdrant_store.py
+
+- **BUG-103: Export JSON Missing Schema Version Validation**
+  - Added schema version validation during import to prevent silent data corruption from schema drift
+  - Validates `schema_version: "3.0.0"` in both JSON and archive imports
+  - Added `_validate_memory_schema()` to check all required fields in each memory record
+  - Added `_validate_manifest()` to check archive manifest structure
+  - Files: src/backup/importer.py
+
 - **BUG-084: Alert Penalty Can Produce Negative Health Scores**
   - Capped alert penalty at 30% of the score to prevent excessive reduction
   - Added `max_penalty` calculation to ensure component scores remain meaningful even with many alerts
