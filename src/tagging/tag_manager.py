@@ -467,3 +467,26 @@ class TagManager:
 
         # Return final tag
         return self.get_tag_by_path(full_path)  # type: ignore
+
+    def cleanup_memory_tags(self, memory_id: str) -> None:
+        """
+        Remove all tag associations for a deleted memory.
+
+        This should be called after a memory is successfully deleted from the store
+        to clean up orphaned entries in the memory_tags table.
+
+        Args:
+            memory_id: Memory ID whose tag associations should be removed
+
+        Raises:
+            StorageError: If database error occurs
+        """
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.execute(
+                    "DELETE FROM memory_tags WHERE memory_id = ?",
+                    (memory_id,),
+                )
+                conn.commit()
+        except sqlite3.Error as e:
+            raise StorageError(f"Failed to cleanup memory tags: {e}") from e
