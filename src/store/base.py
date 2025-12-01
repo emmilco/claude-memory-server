@@ -149,13 +149,19 @@ class MemoryStore(ABC):
         pass
 
     @abstractmethod
-    async def update(self, memory_id: str, updates: Dict[str, Any]) -> bool:
+    async def update(
+        self,
+        memory_id: str,
+        updates: Dict[str, Any],
+        new_embedding: Optional[List[float]] = None
+    ) -> bool:
         """
-        Update a memory's metadata.
+        Update a memory's metadata and optionally its embedding.
 
         Args:
             memory_id: The unique ID of the memory to update.
             updates: Dictionary of fields to update.
+            new_embedding: Optional new embedding vector (for content updates).
 
         Returns:
             bool: True if updated, False if not found.

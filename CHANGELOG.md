@@ -52,20 +52,16 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **BUG-274: MemoryStore.update() Abstract Method Signature Mismatch - Breaking LSP**
+  - Added `new_embedding: Optional[List[float]] = None` parameter to abstract method signature
+  - Files: src/store/base.py, src/store/readonly_wrapper.py
+
 - **BUG-273: Race Condition in Check-Then-Act Pattern (dict initialization)**
-  - Replaced check-then-act pattern with atomic `dict.setdefault()` operations to prevent TOCTOU vulnerabilities
-  - Fixed in `src/mcp_server.py` (line 1033): suggestions_by_cat dictionary initialization
-  - Fixed in `src/backup/exporter.py` (line 555): nested project/category dictionary initialization
-  - Fixed in `src/core/server.py` (line 3199): projects_with_results counter using dict.get() with default
-  - Fixed in `src/store/qdrant_store.py` (line 1065): file_data dictionary initialization
+  - Replaced check-then-act with atomic `dict.setdefault()` and `dict.get()` operations
+  - Files: src/mcp_server.py, src/backup/exporter.py, src/core/server.py, src/store/qdrant_store.py
 
 - **BUG-271: Division by Zero in Multiple Average Calculations**
   - Added guards to prevent ZeroDivisionError when calculating averages with empty lists
-  - Fixed `connection_pool.py:683` - acquire time averaging when `_acquire_times` is empty
-  - Fixed `code_indexing_service.py:141` - score averaging when `scores` list is empty
-  - Fixed `proactive_suggester.py:379` - keyword match ratio when `keywords` list is empty
-  - Fixed `reranker.py:271` - keyword match ratio when `keywords` list is empty
-  - Fixed `importance_scorer.py:367` - mean calculation when `importances` list is empty
   - Files: src/store/connection_pool.py, src/services/code_indexing_service.py, src/memory/proactive_suggester.py, src/search/reranker.py, src/analysis/importance_scorer.py
 
 - **BUG-101: Backup Cleanup Race Condition with Scheduler**
