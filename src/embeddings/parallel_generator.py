@@ -1,12 +1,9 @@
 """Parallel embedding generation using multiprocessing for improved throughput."""
 
 import asyncio
-import atexit
 import logging
 import os
 import multiprocessing
-import signal
-import weakref
 from concurrent.futures import ProcessPoolExecutor
 from functools import lru_cache
 from typing import List, Optional, Dict, Any
@@ -17,73 +14,6 @@ from src.core.exceptions import EmbeddingError
 from src.embeddings.cache import EmbeddingCache
 
 logger = logging.getLogger(__name__)
-
-# BUG-272: Module-level registry using WeakSet to avoid circular references
-# This allows atexit and signal handlers to cleanup all instances without
-# holding strong references that would prevent garbage collection
-_instances: weakref.WeakSet = weakref.WeakSet()
-
-
-def _cleanup_all_instances() -> None:
-    """
-    Module-level cleanup handler for atexit.
-
-    BUG-272: This function is registered with atexit instead of bound methods,
-    avoiding circular references. It iterates through the weak set and cleans
-    up any remaining instances.
-    """
-    # Create a list to avoid issues with set changing during iteration
-    instances_to_cleanup = list(_instances)
-    if instances_to_cleanup:
-        logger.info(f"Cleaning up {len(instances_to_cleanup)} ParallelEmbeddingGenerator instance(s)")
-        for instance in instances_to_cleanup:
-            try:
-                instance._cleanup_sync_fallback()
-            except Exception as e:
-                logger.warning(f"Error during instance cleanup: {e}")
-
-
-def _signal_handler_module(signum: int, frame) -> None:
-    """
-    Module-level signal handler.
-
-    BUG-272: This function is registered with signal handlers instead of bound methods,
-    avoiding circular references. It cleans up all instances and then re-raises the signal.
-    """
-    logger.info(f"Received signal {signum}, cleaning up all instances...")
-    _cleanup_all_instances()
-    # Re-raise the signal to allow normal termination
-    signal.signal(signum, signal.SIG_DFL)
-    os.kill(os.getpid(), signum)
-
-
-# BUG-272: Register module-level handlers once at import time
-# This prevents memory leaks from registering bound methods
-_cleanup_handlers_registered = False
-
-
-def _register_module_cleanup_handlers() -> None:
-    """Register module-level cleanup handlers once at import time."""
-    global _cleanup_handlers_registered
-    if _cleanup_handlers_registered:
-        return
-
-    # Register atexit handler
-    atexit.register(_cleanup_all_instances)
-
-    # Register signal handlers
-    try:
-        signal.signal(signal.SIGTERM, _signal_handler_module)
-        signal.signal(signal.SIGINT, _signal_handler_module)
-        logger.debug("Registered module-level cleanup handlers")
-    except (ValueError, OSError) as e:
-        logger.debug(f"Could not register signal handlers: {e}")
-
-    _cleanup_handlers_registered = True
-
-
-# Register handlers at module import time
-_register_module_cleanup_handlers()
 
 # Set multiprocessing start method to 'spawn' to avoid fork issues with transformers/tokenizers
 # 'spawn' creates fresh processes without copying memory, preventing tokenizers fork conflicts
@@ -234,16 +164,18 @@ class ParallelEmbeddingGenerator:
     - Model caching per worker process
     - Configurable worker count
     - Graceful fallback to single-threaded mode
-    - Automatic cleanup on shutdown via signal handlers and atexit
 
     Performance:
     - 4-8x faster than single-threaded on multi-core systems
     - Target: 10-20 files/sec indexing throughput
 
-    Important:
+    IMPORTANT - Cleanup Requirements (BUG-272):
     - The close() method MUST be called explicitly for proper cleanup
-    - Signal handlers (SIGTERM/SIGINT) and atexit are registered as fallback
-    - __del__() uses wait=False to avoid blocking, so close() is preferred
+    - The __del__() method serves as a last-resort fallback (uses wait=False)
+    - Automatic cleanup handlers (atexit, signal) have been removed as they
+      interfere with test frameworks and can cause race conditions
+    - Best practice: Use async context manager or ensure close() is called
+      in finally blocks
     """
 
     # Supported models and their dimensions
@@ -306,46 +238,12 @@ class ParallelEmbeddingGenerator:
         # Threshold for using parallel processing (avoid overhead for small batches)
         self.parallel_threshold = 10
 
-        # BUG-272: Add this instance to the module-level weak set
-        # This allows module-level cleanup handlers to find and clean up instances
-        # without creating circular references that prevent garbage collection
-        _instances.add(self)
-
         logger.info(
             f"Parallel embedding generator initialized: "
             f"model={self.model_name}, workers={self.max_workers}"
         )
         if self.cache and self.cache.enabled:
             logger.info("Embedding cache enabled for parallel generator")
-
-    def _cleanup_sync_fallback(self) -> None:
-        """
-        Synchronous cleanup fallback for atexit and signal handlers.
-
-        This is a best-effort cleanup when close() hasn't been called.
-        Uses wait=True to ensure workers terminate properly.
-        """
-        if hasattr(self, 'executor') and self.executor:
-            try:
-                logger.info("Running cleanup fallback for ProcessPoolExecutor")
-                self.executor.shutdown(wait=True, cancel_futures=True)
-                self.executor = None
-                logger.info("ProcessPoolExecutor cleanup completed")
-            except Exception as e:
-                logger.warning(f"Error during cleanup fallback: {e}")
-
-        if hasattr(self, '_mps_generator') and self._mps_generator:
-            try:
-                if hasattr(self._mps_generator, 'executor'):
-                    self._mps_generator.executor.shutdown(wait=True)
-            except Exception as e:
-                logger.warning(f"Error during MPS cleanup fallback: {e}")
-
-        if hasattr(self, 'cache') and self.cache:
-            try:
-                self.cache.close()
-            except Exception as e:
-                logger.warning(f"Error during cache cleanup fallback: {e}")
 
     async def initialize(self) -> None:
         """
@@ -623,8 +521,12 @@ class ParallelEmbeddingGenerator:
         """Shutdown the process pool executor and all related resources.
 
         IMPORTANT: This method MUST be called explicitly for proper cleanup.
-        While atexit and signal handlers provide fallback cleanup (BUG-272),
-        calling close() explicitly ensures timely resource release.
+        There are no automatic cleanup handlers (atexit, signal) - you must
+        call this method explicitly or use proper exception handling.
+
+        BUG-272: Automatic cleanup handlers have been removed as they interfere
+        with test frameworks and can cause race conditions. The __del__() method
+        serves as a last-resort fallback only.
 
         PERF-009: Ensures proper cleanup of:
         - ProcessPoolExecutor workers (with model memory)
@@ -666,14 +568,14 @@ class ParallelEmbeddingGenerator:
         logger.info("Process pool shut down successfully")
 
     def __del__(self):
-        """Cleanup on destruction - final fallback if close() and handlers didn't run.
+        """Cleanup on destruction - last-resort fallback if close() wasn't called.
 
         BUG-272: Uses wait=False to avoid blocking in __del__.
-        Proper cleanup is handled by:
-        1. Explicit close() call (preferred)
-        2. Atexit handler (normal program termination)
-        3. Signal handlers (SIGTERM/SIGINT)
-        4. This __del__ method (final fallback)
+        This is a best-effort cleanup that should NOT be relied upon.
+
+        Proper cleanup requires explicitly calling close() in your code.
+        Automatic cleanup handlers (atexit, signal) have been removed as they
+        interfere with test frameworks and can cause race conditions.
         """
         if hasattr(self, 'executor') and self.executor:
             # PERF-009: Still use wait=False in __del__ to avoid blocking
