@@ -14,6 +14,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 from src.backup.exporter import DataExporter
+from src.backup.file_lock import FileLock
 from src.store.factory import create_store
 from src.config import get_config
 
@@ -207,19 +208,31 @@ class BackupScheduler:
 
     async def _run_cleanup_job(self):
         """Execute backup cleanup based on retention policies."""
+        # Determine backup directory
+        if self.config.backup_dir:
+            backup_dir = Path(self.config.backup_dir).expanduser()
+        else:
+            config = get_config()
+            backup_dir = config.data_dir / "backups"
+
+        # Check if backup directory exists before proceeding
+        if not backup_dir.exists():
+            logger.info("Backup directory doesn't exist, skipping cleanup")
+            return
+
+        # Create lock file in backup directory
+        lock_file = backup_dir / ".backup_cleanup.lock"
+        lock = FileLock(lock_file, timeout=300.0)
+
         try:
-            logger.info("Starting backup cleanup...")
-
-            # Determine backup directory
-            if self.config.backup_dir:
-                backup_dir = Path(self.config.backup_dir).expanduser()
-            else:
-                config = get_config()
-                backup_dir = config.data_dir / "backups"
-
-            if not backup_dir.exists():
-                logger.info("Backup directory doesn't exist, skipping cleanup")
+            # Try to acquire lock
+            if not await lock.acquire():
+                logger.warning(
+                    "Could not acquire cleanup lock - another cleanup is running. Skipping."
+                )
                 return
+
+            logger.info("Starting backup cleanup...")
 
             # Get all backup files
             backup_files = []
@@ -270,6 +283,10 @@ class BackupScheduler:
 
         except Exception as e:
             logger.error(f"Backup cleanup failed: {e}", exc_info=True)
+
+        finally:
+            # Always release lock
+            await lock.release()
 
     async def trigger_backup_now(self) -> Dict[str, Any]:
         """Manually trigger a backup immediately."""

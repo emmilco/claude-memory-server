@@ -52,6 +52,16 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **BUG-101: Backup Cleanup Race Condition with Scheduler**
+  - Added file-based locking mechanism to prevent concurrent cleanup operations
+  - Created `src/backup/file_lock.py` with `FileLock` class for atomic lock acquisition using O_CREAT | O_EXCL
+  - Both scheduler's `_run_cleanup_job()` and CLI's `backup_cleanup()` now acquire `.backup_cleanup.lock` before scanning/deleting files
+  - Lock includes 5-minute timeout and stale lock detection (auto-removes locks older than timeout)
+  - PID tracking prevents processes from accidentally releasing other processes' locks
+  - File descriptor leak protection with try/finally around lock file writes
+  - Prevents race conditions where scheduler and manual CLI cleanup could delete files simultaneously
+  - Files: src/backup/file_lock.py, src/backup/scheduler.py, src/cli/backup_command.py
+
 - **BUG-156: Index Out of Range Errors in Result Processing Lost in Generic Catch**
   - Added detailed error logging with field name when KeyError occurs in payload parsing
   - Split generic exception handler into separate KeyError and ValueError handlers for better diagnostics
@@ -74,21 +84,6 @@ Organize entries under these headers in chronological order (newest first):
   - Added `_validate_memory_schema()` to check all required fields in each memory record
   - Added `_validate_manifest()` to check archive manifest structure
   - Files: src/backup/importer.py
-
-- **BUG-092: Orphaned Tag Associations After Memory Deletion**
-  - Added `cleanup_memory_tags()` method to `TagManager` to remove orphaned entries in the `memory_tags` table
-  - Added `tag_manager` parameter to `MemoryService.__init__()` to enable tag cleanup during memory deletion
-  - Updated `MemoryService.delete_memory()` to call `tag_manager.cleanup_memory_tags()` after successful deletion
-  - Wired up `TagManager` in `MemoryRAGServer` initialization and passed to `MemoryService`
-  - Tag cleanup failures are logged as warnings without failing the delete operation
-  - Files: src/tagging/tag_manager.py, src/services/memory_service.py, src/core/server.py
-
-- **BUG-086: Health Scorer Distribution Calculation Can Hit Memory Limit**
-  - Added count-only query before fetching all memories to prevent OOM on large datasets (100K+ memories)
-  - Changed `_get_lifecycle_distribution()` to call `store.count()` first, then abort if count exceeds `MAX_MEMORIES_PER_OPERATION`
-  - Prevents memory exhaustion by checking limit before loading data instead of after
-  - Added early return when count is 0 to avoid unnecessary DB query
-  - File: src/memory/health_scorer.py
 
 - **BUG-084: Alert Penalty Can Produce Negative Health Scores**
   - Capped alert penalty at 30% of the score to prevent excessive reduction
