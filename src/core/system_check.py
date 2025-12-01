@@ -70,8 +70,8 @@ class SystemChecker:
 
             if installed:
                 # Extract version from output like "pip 23.0.1 from ..."
-                version_line = result.stdout.split()[1]
-                version = version_line
+                parts = result.stdout.split()
+                version = parts[1] if len(parts) > 1 else "unknown"
             else:
                 version = None
         except (FileNotFoundError, subprocess.TimeoutExpired):
