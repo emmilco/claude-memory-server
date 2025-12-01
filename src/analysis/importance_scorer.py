@@ -363,8 +363,8 @@ class ImportanceScorer:
 
         importances = [s.importance for s in scores]
 
-        # Basic statistics
-        mean = sum(importances) / len(importances)
+        # Basic statistics (guard against division by zero)
+        mean = sum(importances) / len(importances) if importances else 0.0
         sorted_scores = sorted(importances)
 
         # Calculate median: average of middle two for even-length lists

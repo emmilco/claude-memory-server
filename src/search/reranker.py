@@ -267,8 +267,8 @@ class ResultReranker:
             if re.search(rf'\b{re.escape(kw)}\b', content_lower)
         )
 
-        # Boost based on match percentage
-        match_ratio = matches / len(keywords)
+        # Boost based on match percentage (guard against division by zero)
+        match_ratio = matches / len(keywords) if keywords else 0.0
         return match_ratio
 
     def _apply_diversity(

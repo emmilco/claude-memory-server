@@ -375,8 +375,8 @@ class ProactiveSuggester:
         content_lower = content.lower()
         matches = sum(1 for keyword in keywords if keyword.lower() in content_lower)
 
-        # Score based on proportion of keywords matched
-        return min(matches / len(keywords), 1.0)
+        # Score based on proportion of keywords matched (guard against division by zero)
+        return min(matches / len(keywords), 1.0) if keywords else 0.0
 
     def _generate_reason(
         self,
