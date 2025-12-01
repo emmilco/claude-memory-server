@@ -175,7 +175,7 @@ class IndexingFeatures(BaseModel):
     # Git indexing
     git_indexing: bool = True  # Index git history
     git_index_commit_count: int = 1000
-    git_index_branches: str = "current"  # "current" or "all"
+    git_index_branches: Literal["current", "all"] = "current"
     git_index_tags: bool = True
     git_index_diffs: bool = True
 
