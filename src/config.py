@@ -304,6 +304,30 @@ class ServerConfig(BaseSettings):
             )
         return v
 
+    @field_validator('qdrant_pool_timeout')
+    @classmethod
+    def validate_qdrant_pool_timeout(cls, v: float) -> float:
+        """Ensure qdrant_pool_timeout is > 0."""
+        if v <= 0:
+            raise ValueError("qdrant_pool_timeout must be > 0")
+        return v
+
+    @field_validator('qdrant_pool_recycle')
+    @classmethod
+    def validate_qdrant_pool_recycle(cls, v: int) -> int:
+        """Ensure qdrant_pool_recycle is > 0."""
+        if v <= 0:
+            raise ValueError("qdrant_pool_recycle must be > 0")
+        return v
+
+    @field_validator('qdrant_health_check_interval')
+    @classmethod
+    def validate_qdrant_health_check_interval(cls, v: int) -> int:
+        """Ensure qdrant_health_check_interval is > 0."""
+        if v <= 0:
+            raise ValueError("qdrant_health_check_interval must be > 0")
+        return v
+
     # Performance tuning
     embedding_batch_size: int = 128  # Larger batches for MPS GPU acceleration
     max_query_context_tokens: int = 8000
