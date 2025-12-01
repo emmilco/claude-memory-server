@@ -776,14 +776,6 @@ async def list_tools() -> List[Tool]:
                 "required": ["file_path"],
             },
         ),
-        Tool(
-            name="list_opted_in_projects",
-            description="List all projects that are opted in for cross-project search.",
-            inputSchema={
-                "type": "object",
-                "properties": {}
-            }
-        ),
         # FEAT-020: Usage Pattern Analytics Tools
         Tool(
             name="get_usage_statistics",
