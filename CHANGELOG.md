@@ -52,6 +52,13 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **BUG-103: Export JSON Missing Schema Version Validation**
+  - Added schema version validation during import to prevent silent data corruption from schema drift
+  - Validates `schema_version: "3.0.0"` in both JSON and archive imports
+  - Added `_validate_memory_schema()` to check all required fields in each memory record
+  - Added `_validate_manifest()` to check archive manifest structure
+  - Files: src/backup/importer.py
+
 - **BUG-084: Alert Penalty Can Produce Negative Health Scores**
   - Capped alert penalty at 30% of the score to prevent excessive reduction
   - Added `max_penalty` calculation to ensure component scores remain meaningful even with many alerts

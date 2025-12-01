@@ -151,6 +151,9 @@ class DataImporter:
                 with open(manifest_path, 'r') as f:
                     manifest = json.load(f)
 
+                # Validate manifest schema
+                self._validate_manifest(manifest)
+
                 logger.info(f"Archive manifest: {manifest}")
 
                 # Load memories
@@ -368,6 +371,9 @@ class DataImporter:
         if "version" not in data:
             raise StorageError("Import data missing version field")
 
+        if "schema_version" not in data:
+            raise StorageError("Import data missing schema_version field")
+
         if "memories" not in data:
             raise StorageError("Import data missing memories field")
 
@@ -376,7 +382,87 @@ class DataImporter:
         if not version.startswith("1."):
             raise StorageError(f"Unsupported import format version: {version}")
 
-        logger.info(f"Import data validated: version {version}, {len(data['memories'])} memories")
+        # Check schema version compatibility
+        schema_version = data.get("schema_version")
+        if schema_version != "3.0.0":
+            raise StorageError(f"Unsupported schema version: {schema_version}. Expected 3.0.0")
+
+        # Validate schema 3.0.0 required top-level fields
+        required_fields = ["export_date", "export_type", "memory_count"]
+        for field in required_fields:
+            if field not in data:
+                raise StorageError(f"Import data missing required field: {field}")
+
+        # Validate each memory conforms to schema 3.0.0 structure
+        self._validate_memory_schema(data["memories"])
+
+        logger.info(f"Import data validated: version {version}, schema {schema_version}, {len(data['memories'])} memories")
+
+    def _validate_memory_schema(self, memories: List[Dict[str, Any]]) -> None:
+        """
+        Validate that each memory conforms to schema 3.0.0 structure.
+
+        Args:
+            memories: List of memory dictionaries
+
+        Raises:
+            StorageError: If any memory doesn't conform to schema
+        """
+        # Schema 3.0.0 required fields for each memory
+        required_fields = [
+            "id", "content", "category", "context_level", "scope",
+            "importance", "embedding_model", "embedding",
+            "created_at", "updated_at", "last_accessed", "lifecycle_state"
+        ]
+
+        for idx, memory in enumerate(memories):
+            for field in required_fields:
+                if field not in memory:
+                    raise StorageError(
+                        f"Memory at index {idx} (id: {memory.get('id', 'unknown')}) "
+                        f"missing required field: {field}"
+                    )
+
+            # Validate embedding is a list
+            if not isinstance(memory.get("embedding"), list):
+                raise StorageError(
+                    f"Memory {memory.get('id', 'unknown')} has invalid embedding type: "
+                    f"expected list, got {type(memory.get('embedding')).__name__}"
+                )
+
+            # Validate tags and metadata fields exist (can be empty)
+            if "tags" not in memory:
+                raise StorageError(f"Memory {memory.get('id', 'unknown')} missing tags field")
+            if "metadata" not in memory:
+                raise StorageError(f"Memory {memory.get('id', 'unknown')} missing metadata field")
+
+    def _validate_manifest(self, manifest: Dict[str, Any]) -> None:
+        """
+        Validate archive manifest schema.
+
+        Args:
+            manifest: Manifest dictionary from archive
+
+        Raises:
+            StorageError: If manifest doesn't conform to expected schema
+        """
+        # Check required manifest fields
+        required_fields = ["version", "schema_version", "export_date", "export_type", "memory_count"]
+        for field in required_fields:
+            if field not in manifest:
+                raise StorageError(f"Manifest missing required field: {field}")
+
+        # Validate schema version
+        schema_version = manifest.get("schema_version")
+        if schema_version != "3.0.0":
+            raise StorageError(f"Unsupported manifest schema version: {schema_version}. Expected 3.0.0")
+
+        # Validate version compatibility
+        version = manifest.get("version")
+        if not version.startswith("1."):
+            raise StorageError(f"Unsupported manifest format version: {version}")
+
+        logger.info(f"Manifest validated: version {version}, schema {schema_version}")
 
     def _dict_to_memory(self, data: Dict[str, Any]) -> Tuple[MemoryUnit, List[float]]:
         """
