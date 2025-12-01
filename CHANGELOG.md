@@ -55,8 +55,12 @@ Organize entries under these headers in chronological order (newest first):
 - **BUG-276: P95 Index Out of Bounds on Empty/Single-Element List**
   - Fixed P95 calculation that incorrectly evaluated index before ternary check, causing IndexError
   - Removed redundant empty-list guard (already handled by early return on line 679)
-  - Added clarifying comment that early return guarantees non-empty list
   - File: src/store/connection_pool.py
+
+- **BUG-281: IndexError on Empty Results List Access**
+  - Fixed off-by-one error in p95 percentile calculation that could cause IndexError
+  - Changed `latencies[p95_index]` to use `min(p95_index, len(latencies) - 1)` guard
+  - File: src/monitoring/metrics_collector.py
 
 - **BUG-274: MemoryStore.update() Abstract Method Signature Mismatch - Breaking LSP**
   - Added `new_embedding: Optional[List[float]] = None` parameter to abstract method signature
