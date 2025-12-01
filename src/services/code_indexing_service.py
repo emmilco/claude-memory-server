@@ -138,7 +138,7 @@ class CodeIndexingService:
 
         scores = [r.get("relevance_score", 0) for r in results]
         max_score = max(scores)
-        avg_score = sum(scores) / len(scores)
+        avg_score = sum(scores) / len(scores) if scores else 0.0
 
         if max_score >= 0.85:
             quality = "excellent"
