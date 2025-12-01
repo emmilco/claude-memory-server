@@ -407,14 +407,16 @@ class AlertEngine:
                 SELECT * FROM alert_history
                 WHERE resolved = 0
             """
+            params = []
 
             if not include_snoozed:
                 now = datetime.now(UTC).isoformat()
-                query += f" AND (snoozed_until IS NULL OR snoozed_until < '{now}')"
+                query += " AND (snoozed_until IS NULL OR snoozed_until < ?)"
+                params.append(now)
 
             query += " ORDER BY severity DESC, timestamp DESC"
 
-            cursor.execute(query)
+            cursor.execute(query, params)
 
             return [self._row_to_alert(row) for row in cursor.fetchall()]
 
