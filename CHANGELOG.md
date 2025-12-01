@@ -52,6 +52,13 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **BUG-104: Scheduler Time Parsing Doesn't Validate Format**
+  - Added regex validation for time format in `_create_trigger()` before parsing
+  - Validates HH:MM format (00:00-23:59) for daily, weekly, and monthly frequencies
+  - Prevents ValueError crashes from malformed input like "25:99" or "abc:def"
+  - Provides clear error message with expected format
+  - File: src/backup/scheduler.py
+
 - **BUG-084: Alert Penalty Can Produce Negative Health Scores**
   - Capped alert penalty at 30% of the score to prevent excessive reduction
   - Added `max_penalty` calculation to ensure component scores remain meaningful even with many alerts
