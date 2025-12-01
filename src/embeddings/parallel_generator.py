@@ -1,9 +1,11 @@
 """Parallel embedding generation using multiprocessing for improved throughput."""
 
 import asyncio
+import atexit
 import logging
 import os
 import multiprocessing
+import signal
 from concurrent.futures import ProcessPoolExecutor
 from functools import lru_cache
 from typing import List, Optional, Dict, Any
@@ -164,10 +166,16 @@ class ParallelEmbeddingGenerator:
     - Model caching per worker process
     - Configurable worker count
     - Graceful fallback to single-threaded mode
+    - Automatic cleanup on shutdown via signal handlers and atexit
 
     Performance:
     - 4-8x faster than single-threaded on multi-core systems
     - Target: 10-20 files/sec indexing throughput
+
+    Important:
+    - The close() method MUST be called explicitly for proper cleanup
+    - Signal handlers (SIGTERM/SIGINT) and atexit are registered as fallback
+    - __del__() uses wait=False to avoid blocking, so close() is preferred
     """
 
     # Supported models and their dimensions
@@ -230,12 +238,81 @@ class ParallelEmbeddingGenerator:
         # Threshold for using parallel processing (avoid overhead for small batches)
         self.parallel_threshold = 10
 
+        # BUG-272: Register cleanup handlers to ensure proper executor shutdown
+        # This ensures workers are terminated even if close() is not called explicitly
+        self._cleanup_registered = False
+        self._register_cleanup_handlers()
+
         logger.info(
             f"Parallel embedding generator initialized: "
             f"model={self.model_name}, workers={self.max_workers}"
         )
         if self.cache and self.cache.enabled:
             logger.info("Embedding cache enabled for parallel generator")
+
+    def _register_cleanup_handlers(self) -> None:
+        """
+        Register signal handlers and atexit handler for cleanup.
+
+        BUG-272: Ensures ProcessPoolExecutor is properly shut down even if
+        close() is not called explicitly. This prevents worker processes
+        from being left running with models loaded in memory.
+        """
+        if self._cleanup_registered:
+            return
+
+        # Register atexit handler for normal program termination
+        atexit.register(self._cleanup_sync_fallback)
+
+        # Register signal handlers for SIGTERM and SIGINT
+        # Note: These may not work in all contexts (e.g., inside threads)
+        # but they provide best-effort cleanup on process termination
+        try:
+            signal.signal(signal.SIGTERM, self._signal_handler)
+            signal.signal(signal.SIGINT, self._signal_handler)
+            logger.debug("Registered cleanup signal handlers for SIGTERM/SIGINT")
+        except (ValueError, OSError) as e:
+            # Signal registration may fail in threads or on some platforms
+            logger.debug(f"Could not register signal handlers: {e}")
+
+        self._cleanup_registered = True
+
+    def _signal_handler(self, signum: int, frame) -> None:
+        """Handle termination signals by cleaning up resources."""
+        logger.info(f"Received signal {signum}, cleaning up resources...")
+        self._cleanup_sync_fallback()
+        # Re-raise the signal to allow normal termination
+        signal.signal(signum, signal.SIG_DFL)
+        os.kill(os.getpid(), signum)
+
+    def _cleanup_sync_fallback(self) -> None:
+        """
+        Synchronous cleanup fallback for atexit and signal handlers.
+
+        This is a best-effort cleanup when close() hasn't been called.
+        Uses wait=True to ensure workers terminate properly.
+        """
+        if hasattr(self, 'executor') and self.executor:
+            try:
+                logger.info("Running cleanup fallback for ProcessPoolExecutor")
+                self.executor.shutdown(wait=True, cancel_futures=True)
+                self.executor = None
+                logger.info("ProcessPoolExecutor cleanup completed")
+            except Exception as e:
+                logger.warning(f"Error during cleanup fallback: {e}")
+
+        if hasattr(self, '_mps_generator') and self._mps_generator:
+            try:
+                if hasattr(self._mps_generator, 'executor'):
+                    self._mps_generator.executor.shutdown(wait=True)
+            except Exception as e:
+                logger.warning(f"Error during MPS cleanup fallback: {e}")
+
+        if hasattr(self, 'cache') and self.cache:
+            try:
+                self.cache.close()
+            except Exception as e:
+                logger.warning(f"Error during cache cleanup fallback: {e}")
 
     async def initialize(self) -> None:
         """
@@ -512,10 +589,17 @@ class ParallelEmbeddingGenerator:
     async def close(self) -> None:
         """Shutdown the process pool executor and all related resources.
 
+        IMPORTANT: This method MUST be called explicitly for proper cleanup.
+        While atexit and signal handlers provide fallback cleanup (BUG-272),
+        calling close() explicitly ensures timely resource release.
+
         PERF-009: Ensures proper cleanup of:
         - ProcessPoolExecutor workers (with model memory)
         - MPS generator (if using Apple Silicon fallback)
         - Embedding cache (SQLite connection)
+
+        BUG-272: Uses wait=True to ensure worker processes fully terminate
+        and release model memory, preventing process leaks.
         """
         # Close MPS generator if it was used (BUG-051 fix)
         if self._mps_generator:
@@ -549,7 +633,15 @@ class ParallelEmbeddingGenerator:
         logger.info("Process pool shut down successfully")
 
     def __del__(self):
-        """Cleanup on destruction - fallback if close() wasn't called."""
+        """Cleanup on destruction - final fallback if close() and handlers didn't run.
+
+        BUG-272: Uses wait=False to avoid blocking in __del__.
+        Proper cleanup is handled by:
+        1. Explicit close() call (preferred)
+        2. Atexit handler (normal program termination)
+        3. Signal handlers (SIGTERM/SIGINT)
+        4. This __del__ method (final fallback)
+        """
         if hasattr(self, 'executor') and self.executor:
             # PERF-009: Still use wait=False in __del__ to avoid blocking
             # but this is a fallback - close() should be called explicitly
