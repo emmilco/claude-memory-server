@@ -59,6 +59,7 @@ from src.monitoring.health_reporter import HealthReporter
 from src.monitoring.capacity_planner import CapacityPlanner
 from src.memory.project_archival import ProjectArchivalManager
 from src.core.tracing import new_operation, get_operation_id, get_logger
+from src.tagging.tag_manager import TagManager
 
 # Service layer imports (REF-016: Split MemoryRAGServer God Class)
 from src.services.memory_service import MemoryService
@@ -118,6 +119,7 @@ class MemoryRAGServer(StructuralQueryMixin):
         self.scheduler = None  # APScheduler instance
         self.auto_indexing_service: Optional = None  # Auto-indexing service (FEAT-016)
         self.archival_manager: Optional[ProjectArchivalManager] = None  # Project archival tracking
+        self.tag_manager: Optional[TagManager] = None  # Tag management for memory organization
 
         # Quality analysis (FEAT-060)
         self.complexity_analyzer: Optional[ComplexityAnalyzer] = None
@@ -264,6 +266,10 @@ class MemoryRAGServer(StructuralQueryMixin):
             self.duplicate_detector = DuplicateDetector(self.store, self.embedding_generator)
             logger.info("Quality analysis components initialized")
 
+            # Initialize tag manager for memory organization (BUG-092)
+            self.tag_manager = TagManager(str(self.config.sqlite_path_expanded))
+            logger.info("Tag manager initialized")
+
             # Initialize hybrid searcher if enabled
             if self.config.search.hybrid_search:
                 fusion_method_map = {
@@ -404,6 +410,7 @@ class MemoryRAGServer(StructuralQueryMixin):
             query_expander=self.query_expander,
             metrics_collector=self.metrics_collector,
             project_name=self.project_name,
+            tag_manager=self.tag_manager,
         )
 
         # Code Indexing Service - Code search, indexing, and dependency analysis
