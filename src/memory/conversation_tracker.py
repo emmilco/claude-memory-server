@@ -251,7 +251,7 @@ class ConversationTracker:
         """Remove expired sessions."""
         expired_sessions = [
             session_id
-            for session_id, session in self.sessions.items()
+            for session_id, session in list(self.sessions.items())
             if session.is_expired(self.config.conversation_session_timeout_minutes)
         ]
 
@@ -280,5 +280,5 @@ class ConversationTracker:
                 "query_count": len(session.queries),
                 "unique_memories_shown": len(session.shown_memory_ids),
             }
-            for session in self.sessions.values()
+            for session in list(self.sessions.values())
         ]

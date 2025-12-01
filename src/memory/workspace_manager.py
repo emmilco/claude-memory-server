@@ -207,7 +207,7 @@ class WorkspaceManager:
 
         # Remove workspace from repository registry if available
         if self.repository_registry:
-            for repo_id in workspace.repository_ids:
+            for repo_id in list(workspace.repository_ids):
                 try:
                     await self.repository_registry.remove_from_workspace(repo_id, workspace_id)
                 except ValueError:
