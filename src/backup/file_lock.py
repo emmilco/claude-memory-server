@@ -74,11 +74,24 @@ class FileLock:
                     lock_age = datetime.now(UTC).timestamp() - stat.st_mtime
 
                     if lock_age > self.timeout:
-                        logger.warning(
-                            f"Removing stale lock file (age: {lock_age:.1f}s): {self.lock_file}"
-                        )
-                        self.lock_file.unlink(missing_ok=True)
-                        continue
+                        # Attempt to remove stale lock
+                        # To prevent race condition, we verify the lock is still stale after deletion
+                        try:
+                            # Get the modification time before deletion
+                            mtime_before = stat.st_mtime
+                            self.lock_file.unlink(missing_ok=True)
+
+                            # Verify we deleted a stale lock by checking that enough time hasn't passed
+                            # for the lock to have been legitimately renewed
+                            elapsed_since_check = (datetime.now(UTC).timestamp() - mtime_before)
+                            if elapsed_since_check < self.timeout:
+                                logger.warning(
+                                    f"Removed stale lock file (age: {lock_age:.1f}s): {self.lock_file}"
+                                )
+                            continue
+                        except OSError:
+                            # Lock file was already deleted by another process
+                            continue
 
                 except FileNotFoundError:
                     # Lock was released between check and stat

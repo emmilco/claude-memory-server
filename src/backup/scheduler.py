@@ -206,8 +206,12 @@ class BackupScheduler:
             config = get_config()
             backup_dir = config.data_dir / "backups"
 
+        # Check if backup directory exists before proceeding
+        if not backup_dir.exists():
+            logger.info("Backup directory doesn't exist, skipping cleanup")
+            return
+
         # Create lock file in backup directory
-        backup_dir.mkdir(parents=True, exist_ok=True)
         lock_file = backup_dir / ".backup_cleanup.lock"
         lock = FileLock(lock_file, timeout=300.0)
 
@@ -220,10 +224,6 @@ class BackupScheduler:
                 return
 
             logger.info("Starting backup cleanup...")
-
-            if not backup_dir.exists():
-                logger.info("Backup directory doesn't exist, skipping cleanup")
-                return
 
             # Get all backup files
             backup_files = []
