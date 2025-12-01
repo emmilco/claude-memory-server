@@ -60,6 +60,14 @@ Organize entries under these headers in chronological order (newest first):
   - Security: Error logs now show payload keys only (not values) to prevent logging sensitive data like code or credentials
   - File: src/store/qdrant_store.py
 
+- **BUG-104: Scheduler Time Parsing Doesn't Validate Format**
+  - Added strict regex validation for time format in `_create_trigger()` before parsing
+  - Accepts both single-digit and zero-padded hours (e.g., "9:30" and "09:30" are both valid)
+  - Rejects invalid formats including "25:99", "abc:def", "9:60" (invalid minutes)
+  - Prevents ValueError crashes from malformed input during `map(int, time.split(":"))`
+  - Provides clear error message indicating expected HH:MM format (00:00-23:59)
+  - File: src/backup/scheduler.py
+
 - **BUG-103: Export JSON Missing Schema Version Validation**
   - Added schema version validation during import to prevent silent data corruption from schema drift
   - Validates `schema_version: "3.0.0"` in both JSON and archive imports

@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import re
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 from datetime import datetime, timedelta, UTC
@@ -103,7 +104,15 @@ class BackupScheduler:
         if self.config.frequency == "hourly":
             return IntervalTrigger(hours=1)
 
-        elif self.config.frequency == "daily":
+        # Validate time format for non-hourly frequencies
+        if self.config.frequency in ("daily", "weekly", "monthly"):
+            if not re.match(r'^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$', self.config.time):
+                raise ValueError(
+                    f"Invalid time format: '{self.config.time}'. "
+                    f"Expected HH:MM format with zero-padding (00:00-23:59)"
+                )
+
+        if self.config.frequency == "daily":
             hour, minute = map(int, self.config.time.split(":"))
             return CronTrigger(hour=hour, minute=minute)
 
