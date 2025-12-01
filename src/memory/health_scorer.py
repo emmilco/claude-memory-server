@@ -253,7 +253,10 @@ class HealthScorer:
         archived_count = distribution.get(LifecycleState.ARCHIVED, 0)
         noise_count += int(archived_count * 0.5)
 
-        noise_ratio = noise_count / total
+        if total == 0:
+            noise_ratio = 0.0
+        else:
+            noise_ratio = noise_count / total
         return min(1.0, noise_ratio)  # Cap at 1.0
 
     async def _calculate_duplicate_rate(self) -> float:
@@ -376,7 +379,10 @@ class HealthScorer:
 
         for state, ideal_pct in self.IDEAL_DISTRIBUTION.items():
             actual_count = distribution.get(state, 0)
-            actual_pct = actual_count / total
+            if total == 0:
+                actual_pct = 0.0
+            else:
+                actual_pct = actual_count / total
             deviation = abs(actual_pct - ideal_pct)
             total_deviation += deviation
 
@@ -469,7 +475,7 @@ class HealthScorer:
                 "stale": distribution.get(LifecycleState.STALE, 0),
             },
             "stale_percentage": (
-                distribution.get(LifecycleState.STALE, 0) / total * 100
-                if total > 0 else 0
+                (distribution.get(LifecycleState.STALE, 0) / total * 100)
+                if total > 0 else 0.0
             ),
         }
