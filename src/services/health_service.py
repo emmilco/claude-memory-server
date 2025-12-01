@@ -68,7 +68,8 @@ class HealthService:
 
     def get_stats(self) -> Dict[str, Any]:
         """Get health service statistics."""
-        return self.stats.copy()
+        with self._stats_lock:
+            return self.stats.copy()
 
     def _calculate_simple_health_score(self, metrics) -> int:
         """Calculate 0-100 health score from metrics."""

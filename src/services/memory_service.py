@@ -111,7 +111,8 @@ class MemoryService:
 
     def get_stats(self) -> Dict[str, Any]:
         """Get memory service statistics."""
-        return self.stats.copy()
+        with self._stats_lock:
+            return self.stats.copy()
 
     async def _get_embedding(self, text: str) -> List[float]:
         """

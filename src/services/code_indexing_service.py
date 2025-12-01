@@ -94,7 +94,8 @@ class CodeIndexingService:
 
     def get_stats(self) -> Dict[str, Any]:
         """Get code indexing service statistics."""
-        return self.stats.copy()
+        with self._stats_lock:
+            return self.stats.copy()
 
     async def _get_embedding(self, text: str) -> List[float]:
         """Get embedding for text, using cache if available."""
