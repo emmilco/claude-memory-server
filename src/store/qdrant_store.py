@@ -854,6 +854,12 @@ class QdrantMemoryStore(MemoryStore):
 
         filters = filters or {}
 
+        # Validate and cap limit, validate offset
+        limit = min(max(1, limit), 100)  # list_memories uses max of 100 as default
+        offset = max(0, offset)
+        if offset > 0:
+            logger.debug(f"Pagination offset {offset} may exceed available data")
+
         client = None
         try:
             client = await self._get_client()
