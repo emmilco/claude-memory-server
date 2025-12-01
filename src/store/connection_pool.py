@@ -684,8 +684,11 @@ class QdrantConnectionPool:
 
         # Calculate P95
         sorted_times = sorted(self._acquire_times)
-        p95_idx = int(len(sorted_times) * 0.95)
-        self._stats.p95_acquire_time_ms = sorted_times[p95_idx] if sorted_times else 0.0
+        if not sorted_times:
+            self._stats.p95_acquire_time_ms = 0.0
+        else:
+            p95_idx = int(len(sorted_times) * 0.95)
+            self._stats.p95_acquire_time_ms = sorted_times[p95_idx]
 
         # Max
         self._stats.max_acquire_time_ms = max(self._acquire_times)

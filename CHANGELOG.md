@@ -52,6 +52,12 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **BUG-276: P95 Index Out of Bounds on Empty/Single-Element List**
+  - Added empty list guard before P95 index calculation to prevent IndexError
+  - Refactored calculation to check `if not sorted_times` and return 0.0 early, preventing invalid index access
+  - Prevents crash when connection pool has zero or one acquire time measurement
+  - File: src/store/connection_pool.py
+
 - **BUG-274: MemoryStore.update() Abstract Method Signature Mismatch - Breaking LSP**
   - Added `new_embedding: Optional[List[float]] = None` parameter to abstract method signature
   - Files: src/store/base.py, src/store/readonly_wrapper.py
