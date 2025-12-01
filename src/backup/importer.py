@@ -388,7 +388,7 @@ class DataImporter:
             raise StorageError(f"Unsupported schema version: {schema_version}. Expected 3.0.0")
 
         # Validate schema 3.0.0 required top-level fields
-        required_fields = ["export_date", "export_type", "memory_count"]
+        required_fields = ["export_date", "export_type", "memory_count", "filters"]
         for field in required_fields:
             if field not in data:
                 raise StorageError(f"Import data missing required field: {field}")
