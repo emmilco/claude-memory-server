@@ -52,6 +52,13 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **BUG-092: Orphaned Tag Associations After Memory Deletion**
+  - Added `cleanup_memory_tags()` method to `TagManager` to remove orphaned entries in the `memory_tags` table
+  - Added `tag_manager` parameter to `MemoryService.__init__()` to enable tag cleanup during memory deletion
+  - Updated `MemoryService.delete_memory()` to call `tag_manager.cleanup_memory_tags()` after successful deletion
+  - Tag cleanup failures are logged as warnings without failing the delete operation
+  - Files: src/tagging/tag_manager.py, src/services/memory_service.py
+
 - **BUG-084: Alert Penalty Can Produce Negative Health Scores**
   - Capped alert penalty at 30% of the score to prevent excessive reduction
   - Added `max_penalty` calculation to ensure component scores remain meaningful even with many alerts
