@@ -52,6 +52,14 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **BUG-101: Backup Cleanup Race Condition with Scheduler**
+  - Added file-based locking mechanism to prevent concurrent cleanup operations
+  - Created `src/backup/file_lock.py` with `FileLock` class for atomic lock acquisition using O_CREAT | O_EXCL
+  - Both scheduler's `_run_cleanup_job()` and CLI's `backup_cleanup()` now acquire `.backup_cleanup.lock` before scanning/deleting files
+  - Lock includes 5-minute timeout and stale lock detection (auto-removes locks older than timeout)
+  - Prevents race conditions where scheduler and manual CLI cleanup could delete files simultaneously
+  - Files: src/backup/file_lock.py, src/backup/scheduler.py, src/cli/backup_command.py
+
 - **BUG-084: Alert Penalty Can Produce Negative Health Scores**
   - Capped alert penalty at 30% of the score to prevent excessive reduction
   - Added `max_penalty` calculation to ensure component scores remain meaningful even with many alerts

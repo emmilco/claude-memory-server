@@ -15,6 +15,7 @@ from rich.prompt import Confirm
 
 from src.backup.exporter import DataExporter
 from src.backup.importer import DataImporter, ConflictStrategy
+from src.backup.file_lock import FileLock
 from src.store.factory import create_store
 from src.config import get_config
 
@@ -291,17 +292,29 @@ async def backup_cleanup(
     Returns:
         Exit code
     """
-    try:
-        # Determine backup directory
-        if destination:
-            backup_dir = Path(destination).expanduser()
-        else:
-            config = get_config()
-            backup_dir = config.data_dir / "backups"
+    # Determine backup directory
+    if destination:
+        backup_dir = Path(destination).expanduser()
+    else:
+        config = get_config()
+        backup_dir = config.data_dir / "backups"
 
-        if not backup_dir.exists():
-            console.print(f"\n[yellow]No backups found at {backup_dir}[/yellow]\n")
-            return 0
+    if not backup_dir.exists():
+        console.print(f"\n[yellow]No backups found at {backup_dir}[/yellow]\n")
+        return 0
+
+    # Create lock file in backup directory
+    lock_file = backup_dir / ".backup_cleanup.lock"
+    lock = FileLock(lock_file, timeout=300.0)
+
+    try:
+        # Try to acquire lock
+        if not await lock.acquire():
+            console.print(
+                "\n[yellow]Could not acquire cleanup lock - another cleanup is running.[/yellow]\n"
+                "[cyan]Please wait for the other operation to complete and try again.[/cyan]\n"
+            )
+            return 1
 
         # Find backup files
         backups = []
@@ -350,6 +363,10 @@ async def backup_cleanup(
         console.print(f"\n[red]Error:[/red] Cleanup failed: {e}")
         logger.error(f"Backup cleanup failed: {e}", exc_info=True)
         return 1
+
+    finally:
+        # Always release lock
+        await lock.release()
 
 
 def main():

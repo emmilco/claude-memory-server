@@ -13,6 +13,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 from src.backup.exporter import DataExporter
+from src.backup.file_lock import FileLock
 from src.store.factory import create_store
 from src.config import get_config
 
@@ -198,15 +199,27 @@ class BackupScheduler:
 
     async def _run_cleanup_job(self):
         """Execute backup cleanup based on retention policies."""
-        try:
-            logger.info("Starting backup cleanup...")
+        # Determine backup directory
+        if self.config.backup_dir:
+            backup_dir = Path(self.config.backup_dir).expanduser()
+        else:
+            config = get_config()
+            backup_dir = config.data_dir / "backups"
 
-            # Determine backup directory
-            if self.config.backup_dir:
-                backup_dir = Path(self.config.backup_dir).expanduser()
-            else:
-                config = get_config()
-                backup_dir = config.data_dir / "backups"
+        # Create lock file in backup directory
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        lock_file = backup_dir / ".backup_cleanup.lock"
+        lock = FileLock(lock_file, timeout=300.0)
+
+        try:
+            # Try to acquire lock
+            if not await lock.acquire():
+                logger.warning(
+                    "Could not acquire cleanup lock - another cleanup is running. Skipping."
+                )
+                return
+
+            logger.info("Starting backup cleanup...")
 
             if not backup_dir.exists():
                 logger.info("Backup directory doesn't exist, skipping cleanup")
@@ -261,6 +274,10 @@ class BackupScheduler:
 
         except Exception as e:
             logger.error(f"Backup cleanup failed: {e}", exc_info=True)
+
+        finally:
+            # Always release lock
+            await lock.release()
 
     async def trigger_backup_now(self) -> Dict[str, Any]:
         """Manually trigger a backup immediately."""
