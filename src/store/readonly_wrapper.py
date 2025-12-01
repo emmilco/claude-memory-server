@@ -149,9 +149,19 @@ class ReadOnlyStoreWrapper(MemoryStore):
         """
         return await self.wrapped_store.count(filters)
 
-    async def update(self, memory_id: str, updates: Dict[str, Any]) -> bool:
+    async def update(
+        self,
+        memory_id: str,
+        updates: Dict[str, Any],
+        new_embedding: Optional[List[float]] = None
+    ) -> bool:
         """
         Update operation is blocked in read-only mode.
+
+        Args:
+            memory_id: The unique ID of the memory to update.
+            updates: Dictionary of fields to update.
+            new_embedding: Optional new embedding vector (for content updates).
 
         Raises:
             ReadOnlyError: Always raised in read-only mode
