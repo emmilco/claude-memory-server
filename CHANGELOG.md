@@ -58,6 +58,24 @@ Organize entries under these headers in chronological order (newest first):
   - Prevents scores from hitting 0 when there are multiple CRITICAL alerts but other components are healthy
   - File: src/monitoring/health_reporter.py
 
+- **BUG-059: SQLite Connection Not Closed in Cache Error Paths**
+  - Fixed connection leak when cache database initialization fails after connection is created
+  - Refactored `_initialize_db()` to use local variable for connection, only assigning to `self.conn` after successful initialization
+  - Ensures connection is always closed in exception handler, preventing file locks on startup failure
+  - File: src/embeddings/cache.py
+
+- **BUG-063: Missing Client Release on Early Return in get_by_id**
+  - Refactored control flow in `get_by_id()` to avoid early return pattern
+  - Changed from early `return None` to assigning `memory = None` then returning at end of try block
+  - Ensures consistent control flow where finally block releases client properly
+  - File: src/store/qdrant_store.py
+
+- **BUG-075: Importance Score Normalization Breaks with High Weights**
+  - Fixed hardcoded baseline_max = 1.2 to calculate dynamically based on actual weights
+  - Dynamic formula: baseline_max = (0.7 * complexity_weight) + (0.2 * usage_weight) + (0.3 * criticality_weight)
+  - Prevents all high-scoring code from being clamped to 1.0 when using custom weights like (2.0, 2.0, 2.0)
+  - Added division by zero protection for edge case when all weights are 0.0
+  - File: src/analysis/importance_scorer.py
 - **BUG-064: Integer Overflow in Unix Timestamp Conversion**
   - Added validation for Unix timestamps to prevent overflow/underflow in extreme dates
   - Added `_validate_timestamp()` helper function to check timestamps against 32-bit signed integer range [-2^31, 2^31-1]
