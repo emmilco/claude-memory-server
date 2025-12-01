@@ -93,9 +93,11 @@ class HealthCommand:
                     timeout=2,
                 )
                 if result.returncode == 0:
-                    mem_bytes = int(result.stdout.split(":")[1].strip())
-                    mem_gb = mem_bytes / (1024**3)
-                    return True, f"{mem_gb:.1f} GB total"
+                    parts = result.stdout.split(":")
+                    if len(parts) > 1:
+                        mem_bytes = int(parts[1].strip())
+                        mem_gb = mem_bytes / (1024**3)
+                        return True, f"{mem_gb:.1f} GB total"
 
             # Generic fallback
             return True, "Available (exact amount unknown)"

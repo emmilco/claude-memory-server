@@ -52,6 +52,12 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **BUG-286: String Split Without Length Validation**
+  - Added validation checks before accessing split results in `src/core/system_check.py` (pip version extraction)
+  - Added validation checks before accessing split results in `src/cli/health_command.py` (memory size parsing)
+  - Prevents IndexError when subprocess output format is unexpected or malformed
+  - Files: src/core/system_check.py, src/cli/health_command.py
+
 - **BUG-274: MemoryStore.update() Abstract Method Signature Mismatch - Breaking LSP**
   - Added `new_embedding: Optional[List[float]] = None` parameter to abstract method signature
   - Files: src/store/base.py, src/store/readonly_wrapper.py
