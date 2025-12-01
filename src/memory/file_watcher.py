@@ -255,19 +255,17 @@ class DebouncedFileWatcher(FileSystemEventHandler):
         """Add file to pending queue and schedule debounced callback."""
         async with self.pending_lock:
             self.pending_files.add(file_path)
-            old_task = self.debounce_task
-        
-        # Release lock before creating/canceling tasks
-        # (these operations don't need the lock and can block other changes)
-        if old_task and not old_task.done():
-            old_task.cancel()
-            try:
-                # Wait for cancellation to complete
-                await old_task
-            except asyncio.CancelledError:
-                pass  # Expected
-        
-        async with self.pending_lock:
+
+            # Cancel old task if exists (must be inside lock to prevent race)
+            if self.debounce_task and not self.debounce_task.done():
+                self.debounce_task.cancel()
+                try:
+                    # Wait for cancellation to complete
+                    await self.debounce_task
+                except asyncio.CancelledError:
+                    pass  # Expected
+
+            # Create new debounce task (still inside lock)
             self.debounce_task = asyncio.create_task(
                 self._execute_debounced_callback()
             )
