@@ -53,9 +53,9 @@ Organize entries under these headers in chronological order (newest first):
 
 ### Fixed - 2025-11-30
 - **BUG-276: P95 Index Out of Bounds on Empty/Single-Element List**
-  - Added empty list guard before P95 index calculation to prevent IndexError
-  - Refactored calculation to check `if not sorted_times` and return 0.0 early, preventing invalid index access
-  - Prevents crash when connection pool has zero or one acquire time measurement
+  - Fixed P95 calculation that incorrectly evaluated index before ternary check, causing IndexError
+  - Removed redundant empty-list guard (already handled by early return on line 679)
+  - Added clarifying comment that early return guarantees non-empty list
   - File: src/store/connection_pool.py
 
 - **BUG-274: MemoryStore.update() Abstract Method Signature Mismatch - Breaking LSP**
