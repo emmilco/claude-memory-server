@@ -165,14 +165,6 @@ BUG-456 created → Registry shows BUG: 457
 
 
 
-- [ ] **BUG-150**: Generic Exception Catch Loses Error Context at MCP Layer
-  - **Location:** `src/mcp_server.py:1546-1548`
-  - **Problem:** Single catch-all `except Exception as e: return [TextContent(text=f"Error: {str(e)}")]` loses error codes, solution guidance, and exception type from custom exceptions
-  - **Impact:** User sees "Error: Failed to generate embedding: ..." instead of structured error with E006 code, installation instructions, and root cause
-  - **Fix:** Catch custom exception types separately (ValidationError, StorageError, RetrievalError, EmbeddingError) and preserve their error_code, solution, and docs_url fields in MCP response
-
-
-
 - [ ] **BUG-154**: Validation Errors Don't Include Field Name in Error Message
   - **Location:** `src/core/server.py:947-963` (enum validation), `src/services/memory_service.py:654-690` (update validation)
   - **Problem:** ValueError when converting string to enum gets wrapped but loses information about which parameter was invalid

@@ -1,7 +1,7 @@
 # IN_PROGRESS - Active Work
 
 **Maximum Concurrent Tasks: 6**
-**Current Active: 0/6**
+**Current Active: 5/6**
 
 ---
 
@@ -15,7 +15,30 @@
 
 ## Active Tasks
 
-*All 6 tasks moved to REVIEW.md - awaiting Reviewer agents*
+### [BUG-060]: Cache Statistics Reset Without Holding Counter Lock
+**Started**: 2025-11-30
+**Branch**: BUG-060
+**Status**: In Progress
+
+### [BUG-062]: Connection Pool Reset Race Condition
+**Started**: 2025-11-30
+**Branch**: BUG-062
+**Status**: In Progress
+
+### [BUG-271]: Division by Zero in Multiple Average Calculations
+**Started**: 2025-11-30
+**Branch**: BUG-271
+**Status**: In Progress
+
+### [BUG-273]: Race Condition in Check-Then-Act Pattern (dict initialization)
+**Started**: 2025-11-30
+**Branch**: BUG-273
+**Status**: In Progress
+
+### [BUG-274]: MemoryStore.update() Abstract Method Signature Mismatch
+**Started**: 2025-11-30
+**Branch**: BUG-274
+**Status**: In Progress
 
 ---
 
