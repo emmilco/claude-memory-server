@@ -6,6 +6,35 @@ Work session entries from Claude agents. See [Work Journal Protocol](CLAUDE.md#-
 
 ---
 
+### 2025-11-30 23:00 | opus-orchestrator-2 | SESSION_SUMMARY
+
+**Duration:** ~45 minutes
+**Main work:** Continued hardening sprint orchestration - merged 9 bugs, implemented 6 more with task agents
+
+**What went well:**
+- Picked up from previous session's 6 pending worktrees (BUG-086, 092, 101, 103, 104, 156) and pushed them through review→test→merge
+- All 6 reviewers found issues and made fixes (test mocks, security logging, regex patterns, schema validation)
+- Second batch: BUG-271, BUG-273, BUG-274 - all implemented, reviewed, tested, merged in one pass
+- Third batch: BUG-276, 281, 282, 283, 286, 291 - all implemented with haiku model agents per user request
+- User correctly noted I should use 6 agents (not 3) and haiku model for testers - adapted immediately
+- Task agents correctly identified 2 bugs as already fixed (BUG-281, BUG-282) - verified rather than duplicate work
+- Total this session: 9 bugs merged to main
+
+**What went poorly or was difficult:**
+- CHANGELOG conflicts on every merge - had to resolve manually each time (expected but tedious)
+- Edit tool required reading file first each time during conflict resolution (slowed down merges)
+- Some background bash processes from deleted worktrees (BUG-271, 273, 274) kept showing "running" reminders after they were cleaned up
+- Bash session got stuck in deleted directory after BUG-059 worktree removal (required user to restart chat)
+- Initially spawned only 3 agents instead of 6 for the last batch (user corrected)
+
+**Open threads:**
+- 6 worktrees pending review/test/merge: BUG-276, 281, 282, 283, 286, 291
+- BUG-281 and BUG-282 were verified as already correct (CHANGELOG-only commits)
+- TODO.md still extremely stale - many merged bugs still listed
+- ~450+ tasks still in TODO.md backlog
+
+---
+
 ### 2025-11-30 20:30 | opus-orchestrator | SESSION_SUMMARY
 
 **Duration:** ~2 hours
