@@ -50,17 +50,13 @@ Organize entries under these headers in chronological order (newest first):
 - `### Planning - YYYY-MM-DD` - Strategic planning, TODO updates (optional)
 
 ## [Unreleased]
-## [Unreleased]
 
 ### Fixed - 2025-11-30
-- **BUG-083: Division by Zero Risk in Health Score Calculations**
-  - Added zero-denominator checks before all percentage calculations across health monitoring modules
-  - Fixed 5 locations where division could fail: health_scorer.py (3), capacity_planner.py (0 after review)
-  - health_scorer.py lines 256, 382, 481: Added checks before `noise_count / total`, `actual_count / total`, and `stale / total * 100`
-  - capacity_planner.py: Removed redundant checks (outer `if rate > 0` already prevents division by zero)
-  - health_reporter.py: Leveraged existing `if previous_value == 0: continue` guard (redundant check removed)
-  - All critical divisions now safely handle zero denominators by returning 0.0 as appropriate
-  - Files: src/monitoring/health_reporter.py, src/monitoring/capacity_planner.py, src/memory/health_scorer.py
+- **BUG-084: Alert Penalty Can Produce Negative Health Scores**
+  - Capped alert penalty at 30% of the score to prevent excessive reduction
+  - Added `max_penalty` calculation to ensure component scores remain meaningful even with many alerts
+  - Prevents scores from hitting 0 when there are multiple CRITICAL alerts but other components are healthy
+  - File: src/monitoring/health_reporter.py
 
 - **BUG-059: SQLite Connection Not Closed in Cache Error Paths**
   - Fixed connection leak when cache database initialization fails after connection is created
@@ -80,7 +76,6 @@ Organize entries under these headers in chronological order (newest first):
   - Prevents all high-scoring code from being clamped to 1.0 when using custom weights like (2.0, 2.0, 2.0)
   - Added division by zero protection for edge case when all weights are 0.0
   - File: src/analysis/importance_scorer.py
-
 - **BUG-064: Integer Overflow in Unix Timestamp Conversion**
   - Added validation for Unix timestamps to prevent overflow/underflow in extreme dates
   - Added `_validate_timestamp()` helper function to check timestamps against 32-bit signed integer range [-2^31, 2^31-1]
