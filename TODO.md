@@ -73,13 +73,6 @@ BUG-456 created → Registry shows BUG: 457
 
 
 
-- [ ] **BUG-063**: Missing Client Release on Early Return in get_by_id
-  - **Location:** `src/store/qdrant_store.py:569-570`
-  - **Problem:** `if not result: return None` exits without releasing client from pool
-  - **Fix:** Change to `if not result: memory = None; else: memory = self._payload_to_memory_unit(...); return memory` inside try block
-
-
-
 - [ ] **BUG-064**: Potential Integer Overflow in Unix Timestamp Conversion
   - **Location:** `src/store/qdrant_store.py:2727-2732` converts datetime to timestamp for Qdrant filters
   - **Problem:** No validation that timestamp fits in Qdrant's numeric range; far-future dates could overflow
@@ -4194,9 +4187,9 @@ BUG-456 created → Registry shows BUG: 457
 
 - [ ] **DOC-012**: get_by_id() Docstring Missing Resource Leak Warning
   - **Location:** `src/store/base.py:120-133`
-  - **Problem:** Abstract method docstring says "Raises: StorageError: If retrieval operation fails" but doesn't mention that implementations MUST release clients on early returns. The Qdrant implementation at `qdrant_store.py:569-570` has a bug where `if not result: return None` leaks a client because it exits before the `finally` block. Base class should document this requirement.
+  - **Problem:** Abstract method docstring says "Raises: StorageError: If retrieval operation fails" but doesn't mention that implementations MUST release clients on early returns. The Qdrant implementation previously had this issue (fixed in BUG-063), but the base class should document this requirement to prevent future regressions.
   - **Expected:** Docstring should say "Note: Implementations must ensure proper resource cleanup even on early returns (e.g., when memory not found)"
-  - **Fix:** Update base.py docstring to include resource cleanup requirement; reference this when fixing BUG-063
+  - **Fix:** Update base.py docstring to include resource cleanup requirement
 
 
 
