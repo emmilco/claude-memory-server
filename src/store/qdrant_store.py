@@ -246,7 +246,7 @@ class QdrantMemoryStore(MemoryStore):
                     results.append((memory, score))
                 except KeyError as e:
                     logger.error(
-                        f"Missing required field {e} in payload: {hit.payload}",
+                        f"Missing required field {e} in payload with keys: {list(hit.payload.keys())}",
                         exc_info=True
                     )
                     continue
@@ -1612,13 +1612,13 @@ class QdrantMemoryStore(MemoryStore):
         try:
             memory_id = payload["id"]
         except KeyError:
-            logger.error(f"Missing required field 'id' in payload: {payload}")
+            logger.error(f"Missing required field 'id' in payload with keys: {list(payload.keys())}")
             raise
 
         try:
             memory_content = payload["content"]
         except KeyError:
-            logger.error(f"Missing required field 'content' in payload: {payload}")
+            logger.error(f"Missing required field 'content' in payload with keys: {list(payload.keys())}")
             raise
 
         # Parse datetime strings
@@ -3403,7 +3403,7 @@ class QdrantMemoryStore(MemoryStore):
                           "author_name", "author_email", "message"]
         for field in required_fields:
             if field not in payload:
-                logger.error(f"Missing required field '{field}' in commit payload: {payload}")
+                logger.error(f"Missing required field '{field}' in commit payload with keys: {list(payload.keys())}")
                 raise KeyError(field)
 
         author_date = payload["author_date"]
