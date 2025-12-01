@@ -3,7 +3,6 @@
 import asyncio
 import logging
 from pathlib import Path
-from typing import Optional
 from datetime import datetime, UTC
 import os
 
@@ -29,6 +28,7 @@ class FileLock:
         self.lock_file = lock_file
         self.timeout = timeout
         self._lock_acquired = False
+        self._lock_pid = None  # Track PID to verify ownership
 
     async def acquire(self) -> bool:
         """
@@ -43,18 +43,24 @@ class FileLock:
             try:
                 # Try to create lock file exclusively
                 # O_CREAT | O_EXCL ensures atomic creation
+                # Convert Path to str for os.open compatibility
                 fd = os.open(
-                    self.lock_file,
+                    str(self.lock_file),
                     os.O_CREAT | os.O_EXCL | os.O_WRONLY,
                     0o644
                 )
 
                 # Write timestamp and PID to lock file
-                lock_info = f"{datetime.now(UTC).isoformat()}\nPID: {os.getpid()}\n"
-                os.write(fd, lock_info.encode())
-                os.close(fd)
+                # Use try/finally to ensure fd is closed even if write fails
+                try:
+                    current_pid = os.getpid()
+                    lock_info = f"{datetime.now(UTC).isoformat()}\nPID: {current_pid}\n"
+                    os.write(fd, lock_info.encode())
+                finally:
+                    os.close(fd)
 
                 self._lock_acquired = True
+                self._lock_pid = current_pid
                 logger.debug(f"Acquired lock: {self.lock_file}")
                 return True
 
@@ -74,27 +80,21 @@ class FileLock:
                     lock_age = datetime.now(UTC).timestamp() - stat.st_mtime
 
                     if lock_age > self.timeout:
-                        # Attempt to remove stale lock
-                        # To prevent race condition, we verify the lock is still stale after deletion
+                        # Lock is stale - attempt to remove it
+                        # This is safe because we only remove files older than timeout
                         try:
-                            # Get the modification time before deletion
-                            mtime_before = stat.st_mtime
                             self.lock_file.unlink(missing_ok=True)
-
-                            # Verify we deleted a stale lock by checking that enough time hasn't passed
-                            # for the lock to have been legitimately renewed
-                            elapsed_since_check = (datetime.now(UTC).timestamp() - mtime_before)
-                            if elapsed_since_check < self.timeout:
-                                logger.warning(
-                                    f"Removed stale lock file (age: {lock_age:.1f}s): {self.lock_file}"
-                                )
+                            logger.warning(
+                                f"Removed stale lock file (age: {lock_age:.1f}s): {self.lock_file}"
+                            )
+                            # Continue to next iteration to try acquiring the lock
                             continue
                         except OSError:
-                            # Lock file was already deleted by another process
+                            # Lock file was already deleted by another process, retry
                             continue
 
                 except FileNotFoundError:
-                    # Lock was released between check and stat
+                    # Lock was released between check and stat, retry
                     continue
 
                 # Wait before retrying
@@ -106,9 +106,20 @@ class FileLock:
             return
 
         try:
-            self.lock_file.unlink(missing_ok=True)
+            # Only remove lock file if we still own it (same PID)
+            # This prevents accidentally removing another process's lock
+            # if we timed out and another process acquired it
+            if self._lock_pid == os.getpid():
+                self.lock_file.unlink(missing_ok=True)
+                logger.debug(f"Released lock: {self.lock_file}")
+            else:
+                logger.warning(
+                    f"Lock PID mismatch - not releasing lock. "
+                    f"Expected {self._lock_pid}, current {os.getpid()}"
+                )
+
             self._lock_acquired = False
-            logger.debug(f"Released lock: {self.lock_file}")
+            self._lock_pid = None
         except Exception as e:
             logger.error(f"Error releasing lock {self.lock_file}: {e}")
 

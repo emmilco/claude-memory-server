@@ -57,6 +57,8 @@ Organize entries under these headers in chronological order (newest first):
   - Created `src/backup/file_lock.py` with `FileLock` class for atomic lock acquisition using O_CREAT | O_EXCL
   - Both scheduler's `_run_cleanup_job()` and CLI's `backup_cleanup()` now acquire `.backup_cleanup.lock` before scanning/deleting files
   - Lock includes 5-minute timeout and stale lock detection (auto-removes locks older than timeout)
+  - PID tracking prevents processes from accidentally releasing other processes' locks
+  - File descriptor leak protection with try/finally around lock file writes
   - Prevents race conditions where scheduler and manual CLI cleanup could delete files simultaneously
   - Files: src/backup/file_lock.py, src/backup/scheduler.py, src/cli/backup_command.py
 
