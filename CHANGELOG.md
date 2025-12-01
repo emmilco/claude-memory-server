@@ -52,6 +52,13 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **BUG-291: Connection Pool Race Condition - Max Size Enforcement**
+  - Fixed race condition in `acquire()` where multiple coroutines could simultaneously check `_created_count < max_size`, all pass the check, and create connections exceeding max_size by 2-3x under high concurrency
+  - Moved atomic `_created_count` increment to execute INSIDE the lock BEFORE connection creation in all paths (empty pool, recycle, health-check retry)
+  - Refactored `_create_connection()` to remove duplicate counter increment; counter management now happens at call sites
+  - Added atomic counter increments for initialization path and all dynamic creation paths to prevent double-counting
+  - Files: src/store/connection_pool.py
+
 - **BUG-274: MemoryStore.update() Abstract Method Signature Mismatch - Breaking LSP**
   - Added `new_embedding: Optional[List[float]] = None` parameter to abstract method signature
   - Files: src/store/base.py, src/store/readonly_wrapper.py

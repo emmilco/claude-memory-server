@@ -242,6 +242,11 @@ class QdrantConnectionPool:
         try:
             for i in range(self.min_size):
                 pooled_conn = await self._create_connection()
+                # Increment counter for initialization-time connections
+                async with self._lock:
+                    self._created_count += 1
+                    self._stats.connections_created += 1
+                    self._stats.pool_size = self._created_count
                 await self._pool.put(pooled_conn)
                 logger.debug(f"Created initial connection {i + 1}/{self.min_size}")
 
@@ -293,19 +298,27 @@ class QdrantConnectionPool:
                     logger.debug("Connection needs recycling")
                     await self._recycle_connection(pooled_conn)
                     pooled_conn = await self._create_connection()
+                    # Re-increment counter for recycled replacement (recycle decremented it)
+                    async with self._lock:
+                        self._created_count += 1
+                        self._stats.connections_created += 1
+                        self._stats.pool_size = self._created_count
                     self._stats.connections_recycled += 1
 
             except asyncio.QueueEmpty:
                 # Pool is empty, try to create new connection if under max
+                # IMPORTANT: Increment _created_count atomically under lock BEFORE creating connection
+                # to prevent race condition where multiple coroutines all check the limit simultaneously
                 can_create = False
                 async with self._lock:
                     if self._created_count < self.max_size:
+                        self._created_count += 1
                         can_create = True
 
                 if can_create:
                     logger.debug(
                         f"Pool empty, creating new connection "
-                        f"({self._created_count + 1}/{self.max_size})"
+                        f"({self._created_count}/{self.max_size})"
                     )
                     pooled_conn = await self._create_connection()
 
@@ -322,6 +335,11 @@ class QdrantConnectionPool:
                         logger.debug("Connection needs recycling")
                         await self._recycle_connection(pooled_conn)
                         pooled_conn = await self._create_connection()
+                        # Re-increment counter for recycled replacement (recycle decremented it)
+                        async with self._lock:
+                            self._created_count += 1
+                            self._stats.connections_created += 1
+                            self._stats.pool_size = self._created_count
                         self._stats.connections_recycled += 1
 
                 except asyncio.TimeoutError:
@@ -348,6 +366,11 @@ class QdrantConnectionPool:
                     # Recycle unhealthy connection and create new one
                     await self._recycle_connection(pooled_conn)
                     pooled_conn = await self._create_connection()
+                    # Re-increment counter for health-check replacement (recycle decremented it)
+                    async with self._lock:
+                        self._created_count += 1
+                        self._stats.connections_created += 1
+                        self._stats.pool_size = self._created_count
 
                     # Re-check new connection
                     health_result = await self._health_checker.check_health(
@@ -604,14 +627,7 @@ class QdrantConnectionPool:
                     last_used=datetime.now(UTC),
                 )
 
-                # Update metrics
-                async with self._lock:
-                    with self._counter_lock:  # REF-030: Atomic counter increment
-                        self._created_count += 1
-                    self._stats.connections_created += 1
-                    self._stats.pool_size = self._created_count
-
-                logger.debug(f"Created new connection (total: {self._created_count})")
+                logger.debug(f"Created new connection")
                 return pooled_conn
 
             except (ConnectionError, Timeout) as e:
