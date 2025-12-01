@@ -177,6 +177,10 @@ class HealthScorer:
             # Check count BEFORE fetching to prevent OOM on large datasets
             total_memories = await self.store.count()
 
+            # Early return if no memories
+            if total_memories == 0:
+                return distribution
+
             # Warn if dataset is large
             if total_memories > WARN_THRESHOLD_MEMORIES:
                 logger.warning(
