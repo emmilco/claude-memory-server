@@ -227,12 +227,15 @@ class QualityAnalyzer:
         # Simplified formula
         mi = 100 - (cyclomatic_complexity * 2) - (line_count / 10)
 
+        # Clamp base score to 0-95 range before adding documentation bonus
+        mi = max(0, min(95, int(mi)))
+
         # Documentation bonus (well-documented code is more maintainable)
         if has_documentation:
             mi += 5
 
-        # Clamp to 0-100 range
-        return max(0, min(100, int(mi)))
+        # Final clamp to 0-100 range
+        return max(0, min(100, mi))
 
     def classify_complexity(
         self,
