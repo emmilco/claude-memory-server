@@ -52,6 +52,13 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **BUG-103: Export JSON Missing Schema Version Validation**
+  - Added schema version validation during import to prevent silent data corruption from schema drift
+  - Validates `schema_version: "3.0.0"` in both JSON and archive imports
+  - Added `_validate_memory_schema()` to check all required fields in each memory record
+  - Added `_validate_manifest()` to check archive manifest structure
+  - Files: src/backup/importer.py
+
 - **BUG-092: Orphaned Tag Associations After Memory Deletion**
   - Added `cleanup_memory_tags()` method to `TagManager` to remove orphaned entries in the `memory_tags` table
   - Added `tag_manager` parameter to `MemoryService.__init__()` to enable tag cleanup during memory deletion
