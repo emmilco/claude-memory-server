@@ -239,6 +239,9 @@ class CriticalityAnalyzer:
 
         # Convert PathLike objects (including PurePosixPath, PureWindowsPath, str) to Path
         if not isinstance(file_path, Path):
+            logger.warning(
+                f"Expected Path object for proximity calculation, got {type(file_path).__name__}"
+            )
             try:
                 file_path = Path(file_path)
             except (TypeError, ValueError) as e:
