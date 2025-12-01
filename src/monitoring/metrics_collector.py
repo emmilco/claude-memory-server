@@ -357,6 +357,8 @@ class MetricsCollector:
                 return 0.0
 
             p95_index = int(len(latencies) * 0.95)
+            # Guard against off-by-one error when p95_index equals len(latencies)
+            p95_index = min(p95_index, len(latencies) - 1)
             return float(latencies[p95_index])
 
     def _calculate_avg_relevance(self, days: int = 1) -> float:
