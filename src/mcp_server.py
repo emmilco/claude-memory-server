@@ -1030,9 +1030,7 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
             suggestions_by_cat = {}
             for suggestion in result["suggestions"]:
                 cat = suggestion["category"]
-                if cat not in suggestions_by_cat:
-                    suggestions_by_cat[cat] = []
-                suggestions_by_cat[cat].append(suggestion)
+                suggestions_by_cat.setdefault(cat, []).append(suggestion)
 
             # Display suggestions grouped by category
             category_names = {

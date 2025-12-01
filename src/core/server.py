@@ -3196,9 +3196,7 @@ class MemoryRAGServer(StructuralQueryMixin):
             projects_with_results = {}
             for result in final_results:
                 project = result.get("source_project")
-                if project not in projects_with_results:
-                    projects_with_results[project] = 0
-                projects_with_results[project] += 1
+                projects_with_results[project] = projects_with_results.get(project, 0) + 1
 
             query_time_ms = (time.time() - start_time) * 1000
 

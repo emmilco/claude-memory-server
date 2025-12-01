@@ -552,12 +552,7 @@ class DataExporter:
             project = memory.project_name or "Global"
             category = memory.category.value
 
-            if project not in grouped:
-                grouped[project] = {}
-            if category not in grouped[project]:
-                grouped[project][category] = []
-
-            grouped[project][category].append(memory)
+            grouped.setdefault(project, {}).setdefault(category, []).append(memory)
 
         return grouped
 
