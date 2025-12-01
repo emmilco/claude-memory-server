@@ -52,6 +52,12 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **BUG-086: Health Scorer Distribution Calculation Can Hit Memory Limit**
+  - Added count-only query before fetching all memories to prevent OOM on large datasets (100K+ memories)
+  - Changed `_get_lifecycle_distribution()` to call `store.count()` first, then abort if count exceeds `MAX_MEMORIES_PER_OPERATION`
+  - Prevents memory exhaustion by checking limit before loading data instead of after
+  - File: src/memory/health_scorer.py
+
 - **BUG-084: Alert Penalty Can Produce Negative Health Scores**
   - Capped alert penalty at 30% of the score to prevent excessive reduction
   - Added `max_penalty` calculation to ensure component scores remain meaningful even with many alerts
