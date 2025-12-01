@@ -246,7 +246,8 @@ class TestEmbeddingChecks:
 
         with patch('src.embeddings.generator.EmbeddingGenerator') as mock_gen:
             mock_instance = AsyncMock()
-            mock_instance.generate = AsyncMock(return_value=mock_embedding(value=0.1))
+            # all-MiniLM-L6-v2 has 384 dimensions
+            mock_instance.generate = AsyncMock(return_value=mock_embedding(dim=384, value=0.1))
             mock_gen.return_value = mock_instance
 
             with patch('src.config.get_config') as mock_config:
