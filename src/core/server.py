@@ -5699,7 +5699,7 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         # Stop scheduler
         if self.scheduler:
-            self.scheduler.shutdown(wait=False)
+            self.scheduler.shutdown(wait=True)
             logger.info("Pruning scheduler stopped")
 
         # Allow pending operations to complete before closing resources

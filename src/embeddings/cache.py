@@ -307,7 +307,7 @@ class EmbeddingCache:
             logger.error(f"Cache batch_get timeout for {len(texts)} items (model: {model_name})")
             return [None] * len(texts)
 
-    def _batch_get_sync(self, texts: List[str], model_name: str) -> dict[str, Optional[List[float]]]:
+    def _batch_get_sync(self, texts: List[str], model_name: str) -> List[Optional[List[float]]]:
         """Synchronous implementation of batch_get() for thread pool execution."""
         if not self.enabled or self.conn is None or not texts:
             return [None] * len(texts)
