@@ -25,6 +25,7 @@ class TestHealthScorer:
     @pytest.mark.asyncio
     async def test_calculate_overall_health_empty_database(self, scorer, mock_store):
         """Test health calculation with empty database."""
+        mock_store.count = AsyncMock(return_value=0)
         mock_store.get_all_memories = AsyncMock(return_value=[])
 
         score = await scorer.calculate_overall_health()
@@ -47,6 +48,7 @@ class TestHealthScorer:
             mem.created_at = datetime.now(UTC)
             memories.append(mem)
 
+        mock_store.count = AsyncMock(return_value=len(memories))
         mock_store.get_all_memories = AsyncMock(return_value=memories)
 
         score = await scorer.calculate_overall_health()
@@ -97,6 +99,7 @@ class TestHealthScorer:
         mem.created_at = datetime.now(UTC) - timedelta(days=200)
         memories.append(mem)
 
+        mock_store.count = AsyncMock(return_value=len(memories))
         mock_store.get_all_memories = AsyncMock(return_value=memories)
 
         score = await scorer.calculate_overall_health()
@@ -132,6 +135,7 @@ class TestHealthScorer:
             mem.created_at = datetime.now(UTC) - timedelta(days=200)
             memories.append(mem)
 
+        mock_store.count = AsyncMock(return_value=len(memories))
         mock_store.get_all_memories = AsyncMock(return_value=memories)
 
         score = await scorer.calculate_overall_health()
@@ -177,6 +181,7 @@ class TestHealthScorer:
             mem.created_at = datetime.now(UTC) - timedelta(days=200)
             memories.append(mem)
 
+        mock_store.count = AsyncMock(return_value=len(memories))
         mock_store.get_all_memories = AsyncMock(return_value=memories)
 
         score = await scorer.calculate_overall_health()
@@ -206,6 +211,7 @@ class TestHealthScorer:
         mem.created_at = datetime.now(UTC)
         memories.append(mem)
 
+        mock_store.count = AsyncMock(return_value=len(memories))
         mock_store.get_all_memories = AsyncMock(return_value=memories)
 
         score = await scorer.calculate_overall_health()
@@ -242,6 +248,7 @@ class TestHealthScorer:
         mem.created_at = datetime.now(UTC) - timedelta(days=60)
         memories.append(mem)
 
+        mock_store.count = AsyncMock(return_value=len(memories))
         mock_store.get_all_memories = AsyncMock(return_value=memories)
 
         score = await scorer.calculate_overall_health()
@@ -263,6 +270,7 @@ class TestHealthScorer:
             mem.created_at = datetime.now(UTC) - timedelta(days=200)
             memories.append(mem)
 
+        mock_store.count = AsyncMock(return_value=len(memories))
         mock_store.get_all_memories = AsyncMock(return_value=memories)
 
         score = await scorer.calculate_overall_health()
@@ -274,6 +282,7 @@ class TestHealthScorer:
     @pytest.mark.asyncio
     async def test_to_dict_serialization(self, scorer, mock_store):
         """Test HealthScore serialization to dictionary."""
+        mock_store.count = AsyncMock(return_value=0)
         mock_store.get_all_memories = AsyncMock(return_value=[])
 
         score = await scorer.calculate_overall_health()
@@ -307,6 +316,7 @@ class TestHealthScorer:
             mem.created_at = datetime.now(UTC)
             memories.append(mem)
 
+        mock_store.count = AsyncMock(return_value=len(memories))
         mock_store.get_all_memories = AsyncMock(return_value=memories)
 
         stats = await scorer.get_quick_stats()
