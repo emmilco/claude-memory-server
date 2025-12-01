@@ -52,6 +52,14 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **BUG-156: Index Out of Range Errors in Result Processing Lost in Generic Catch**
+  - Added detailed error logging with field name when KeyError occurs in payload parsing
+  - Split generic exception handler into separate KeyError and ValueError handlers for better diagnostics
+  - Enhanced `_payload_to_memory_unit()` to validate required fields ('id', 'content') BEFORE any processing to ensure errors are caught early
+  - Enhanced `_deserialize_commit()` to validate and log all required fields before access
+  - Security: Error logs now show payload keys only (not values) to prevent logging sensitive data like code or credentials
+  - File: src/store/qdrant_store.py
+
 - **BUG-103: Export JSON Missing Schema Version Validation**
   - Added schema version validation during import to prevent silent data corruption from schema drift
   - Validates `schema_version: "3.0.0"` in both JSON and archive imports

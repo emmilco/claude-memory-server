@@ -244,7 +244,13 @@ class QdrantMemoryStore(MemoryStore):
                     memory = self._payload_to_memory_unit(hit.payload)
                     score = float(hit.score)
                     results.append((memory, score))
-                except (ValueError, KeyError) as e:
+                except KeyError as e:
+                    logger.error(
+                        f"Missing required field {e} in payload with keys: {list(hit.payload.keys())}",
+                        exc_info=True
+                    )
+                    continue
+                except ValueError as e:
                     logger.warning(f"Failed to parse search result payload: {e}")
                     continue
 
@@ -1602,6 +1608,19 @@ class QdrantMemoryStore(MemoryStore):
         """
         from src.core.models import LifecycleState, MemoryProvenance, ProvenanceSource
 
+        # Validate required fields FIRST before any processing
+        try:
+            memory_id = payload["id"]
+        except KeyError:
+            logger.error(f"Missing required field 'id' in payload with keys: {list(payload.keys())}")
+            raise
+
+        try:
+            memory_content = payload["content"]
+        except KeyError:
+            logger.error(f"Missing required field 'content' in payload with keys: {list(payload.keys())}")
+            raise
+
         # Parse datetime strings
         created_at = payload.get("created_at")
         if isinstance(created_at, str):
@@ -1679,8 +1698,8 @@ class QdrantMemoryStore(MemoryStore):
                 metadata[key] = value
 
         return MemoryUnit(
-            id=payload["id"],
-            content=payload["content"],
+            id=memory_id,
+            content=memory_content,
             category=category,
             context_level=context_level,
             scope=scope,
@@ -3379,6 +3398,14 @@ class QdrantMemoryStore(MemoryStore):
             Deserialized commit dictionary
         """
         # Convert Unix timestamps back to ISO format strings
+        # Validate required fields with detailed error logging
+        required_fields = ["author_date", "commit_hash", "repository_path",
+                          "author_name", "author_email", "message"]
+        for field in required_fields:
+            if field not in payload:
+                logger.error(f"Missing required field '{field}' in commit payload with keys: {list(payload.keys())}")
+                raise KeyError(field)
+
         author_date = payload["author_date"]
         if isinstance(author_date, (int, float)):
             author_date = datetime.fromtimestamp(author_date, tz=UTC).isoformat()
