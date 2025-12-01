@@ -54,10 +54,10 @@ Organize entries under these headers in chronological order (newest first):
 ### Fixed - 2025-11-30
 - **BUG-104: Scheduler Time Parsing Doesn't Validate Format**
   - Added strict regex validation for time format in `_create_trigger()` before parsing
-  - Enforces zero-padded HH:MM format (00:00-23:59) for daily, weekly, and monthly frequencies
-  - Rejects invalid formats including "25:99", "abc:def", "9:05" (missing zero-padding)
+  - Accepts both single-digit and zero-padded hours (e.g., "9:30" and "09:30" are both valid)
+  - Rejects invalid formats including "25:99", "abc:def", "9:60" (invalid minutes)
   - Prevents ValueError crashes from malformed input during `map(int, time.split(":"))`
-  - Provides clear error message indicating expected format with zero-padding
+  - Provides clear error message indicating expected HH:MM format (00:00-23:59)
   - File: src/backup/scheduler.py
 
 - **BUG-084: Alert Penalty Can Produce Negative Health Scores**
