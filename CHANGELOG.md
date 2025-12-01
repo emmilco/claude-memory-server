@@ -52,6 +52,12 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **BUG-274: MemoryStore.update() Abstract Method Signature Mismatch - Breaking LSP**
+  - Added `new_embedding: Optional[List[float]] = None` parameter to abstract method signature in `MemoryStore.update()`
+  - Fixes Liskov Substitution Principle violation where QdrantMemoryStore implementation had incompatible signature
+  - Abstract base class now matches implementation signature allowing embedding updates during memory updates
+  - File: src/store/base.py
+
 - **BUG-101: Backup Cleanup Race Condition with Scheduler**
   - Added file-based locking mechanism to prevent concurrent cleanup operations
   - Created `src/backup/file_lock.py` with `FileLock` class for atomic lock acquisition using O_CREAT | O_EXCL
