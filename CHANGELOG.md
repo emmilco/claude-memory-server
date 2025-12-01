@@ -52,6 +52,11 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **BUG-283: Dictionary Iteration During Modification (Phantom Read Risk)**
+  - Replaced direct dictionary iteration with snapshot pattern using `list(dict.values())` and `list(dict.items())`
+  - Prevents RuntimeError when collections are modified during iteration
+  - Files: src/memory/repository_registry.py, src/memory/workspace_manager.py, src/memory/conversation_tracker.py
+
 - **BUG-274: MemoryStore.update() Abstract Method Signature Mismatch - Breaking LSP**
   - Added `new_embedding: Optional[List[float]] = None` parameter to abstract method signature
   - Files: src/store/base.py, src/store/readonly_wrapper.py

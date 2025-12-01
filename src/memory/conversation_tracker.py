@@ -280,5 +280,5 @@ class ConversationTracker:
                 "query_count": len(session.queries),
                 "unique_memories_shown": len(session.shown_memory_ids),
             }
-            for session in self.sessions.values()
+            for session in list(self.sessions.values())
         ]

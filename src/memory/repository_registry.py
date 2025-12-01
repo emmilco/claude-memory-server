@@ -225,7 +225,7 @@ class RepositoryRegistry:
         repo = self.repositories[repo_id]
 
         # Remove this repo from any dependents' depends_on lists
-        for other_repo in self.repositories.values():
+        for other_repo in list(self.repositories.values()):
             if repo_id in other_repo.depends_on:
                 other_repo.depends_on.remove(repo_id)
 
