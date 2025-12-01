@@ -14,12 +14,25 @@ Tasks that are implementation-complete and awaiting review before merging.
 
 ## Awaiting Review
 
-*No tasks currently awaiting review.*
+### [BUG-104]: Scheduler Time Parsing Doesn't Validate Format
+**Task Agent Complete**: 2025-11-30
+**Fix Applied**: 2025-11-30
+**Worktree**: .worktrees/BUG-104
+**Changed Files**: src/backup/scheduler.py
+**Status**: Awaiting Re-Review - Regex fixed to accept single-digit hours
+
+*5 tasks moved to TESTING.md (BUG-086, BUG-092, BUG-101, BUG-103, BUG-156)*
 
 ---
 
 ## Recently Merged (2025-11-30)
 
+- [x] BUG-064: Add validation for Unix timestamp overflow - MERGED ✅
+- [x] BUG-065: Add memory exhaustion protection to find_duplicate_memories - MERGED ✅
+- [x] BUG-152: Upgrade cache failure logging to WARNING level - MERGED ✅
+- [x] BUG-153: Add specific exception types for connection pool - MERGED ✅
+- [x] BUG-154: Include field name in validation error messages - MERGED ✅
+- [x] BUG-155: Add exponential backoff retry for Qdrant connection - MERGED ✅
 - [x] BUG-050: Add null check for executor after failed initialize - MERGED ✅
 - [x] BUG-051: Fix MPS generator thread leak - MERGED ✅
 - [x] BUG-053: Accept ISO 8601 date formats in query DSL - MERGED ✅

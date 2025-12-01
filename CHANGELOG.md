@@ -52,6 +52,14 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 ### Fixed - 2025-11-30
+- **BUG-156: Index Out of Range Errors in Result Processing Lost in Generic Catch**
+  - Added detailed error logging with field name when KeyError occurs in payload parsing
+  - Split generic exception handler into separate KeyError and ValueError handlers for better diagnostics
+  - Enhanced `_payload_to_memory_unit()` to validate required fields ('id', 'content') BEFORE any processing to ensure errors are caught early
+  - Enhanced `_deserialize_commit()` to validate and log all required fields before access
+  - Security: Error logs now show payload keys only (not values) to prevent logging sensitive data like code or credentials
+  - File: src/store/qdrant_store.py
+
 - **BUG-104: Scheduler Time Parsing Doesn't Validate Format**
   - Added strict regex validation for time format in `_create_trigger()` before parsing
   - Accepts both single-digit and zero-padded hours (e.g., "9:30" and "09:30" are both valid)
@@ -59,6 +67,28 @@ Organize entries under these headers in chronological order (newest first):
   - Prevents ValueError crashes from malformed input during `map(int, time.split(":"))`
   - Provides clear error message indicating expected HH:MM format (00:00-23:59)
   - File: src/backup/scheduler.py
+
+- **BUG-103: Export JSON Missing Schema Version Validation**
+  - Added schema version validation during import to prevent silent data corruption from schema drift
+  - Validates `schema_version: "3.0.0"` in both JSON and archive imports
+  - Added `_validate_memory_schema()` to check all required fields in each memory record
+  - Added `_validate_manifest()` to check archive manifest structure
+  - Files: src/backup/importer.py
+
+- **BUG-092: Orphaned Tag Associations After Memory Deletion**
+  - Added `cleanup_memory_tags()` method to `TagManager` to remove orphaned entries in the `memory_tags` table
+  - Added `tag_manager` parameter to `MemoryService.__init__()` to enable tag cleanup during memory deletion
+  - Updated `MemoryService.delete_memory()` to call `tag_manager.cleanup_memory_tags()` after successful deletion
+  - Wired up `TagManager` in `MemoryRAGServer` initialization and passed to `MemoryService`
+  - Tag cleanup failures are logged as warnings without failing the delete operation
+  - Files: src/tagging/tag_manager.py, src/services/memory_service.py, src/core/server.py
+
+- **BUG-086: Health Scorer Distribution Calculation Can Hit Memory Limit**
+  - Added count-only query before fetching all memories to prevent OOM on large datasets (100K+ memories)
+  - Changed `_get_lifecycle_distribution()` to call `store.count()` first, then abort if count exceeds `MAX_MEMORIES_PER_OPERATION`
+  - Prevents memory exhaustion by checking limit before loading data instead of after
+  - Added early return when count is 0 to avoid unnecessary DB query
+  - File: src/memory/health_scorer.py
 
 - **BUG-084: Alert Penalty Can Produce Negative Health Scores**
   - Capped alert penalty at 30% of the score to prevent excessive reduction

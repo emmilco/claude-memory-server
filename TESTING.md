@@ -13,7 +13,35 @@ Tasks that have passed code review and are awaiting testing and merge.
 
 ## Merge Queue
 
-*No tasks currently in merge queue.*
+### [BUG-086]: Health Scorer Distribution Calculation Can Hit Memory Limit
+**Review Approved**: 2025-11-30
+**Changed Files**: src/memory/health_scorer.py, tests/unit/test_health_scorer.py
+**Tests to Run**: tests/unit/test_health_scorer.py
+**Status**: Testing
+
+### [BUG-092]: Orphaned Tag Associations After Memory Deletion
+**Review Approved**: 2025-11-30
+**Changed Files**: src/services/memory_service.py, src/tagging/tag_manager.py, src/core/server.py
+**Tests to Run**: tests/unit/test_memory_service.py, tests/unit/test_tag_manager.py
+**Status**: Testing
+
+### [BUG-101]: Backup Cleanup Race Condition with Scheduler
+**Review Approved**: 2025-11-30
+**Changed Files**: src/backup/scheduler.py, src/cli/backup_command.py, src/backup/file_lock.py (new)
+**Tests to Run**: tests/unit/test_scheduler.py, tests/unit/test_backup_command.py
+**Status**: Testing
+
+### [BUG-103]: Export JSON Missing Schema Version Validation
+**Review Approved**: 2025-11-30
+**Changed Files**: src/backup/importer.py
+**Tests to Run**: tests/unit/test_importer.py
+**Status**: Testing
+
+### [BUG-156]: Index Out of Range Errors in Result Processing
+**Review Approved**: 2025-11-30
+**Changed Files**: src/store/qdrant_store.py
+**Tests to Run**: tests/unit/test_qdrant_store.py
+**Status**: Testing
 
 ---
 
