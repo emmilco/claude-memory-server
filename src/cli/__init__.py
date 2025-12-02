@@ -13,9 +13,7 @@ from src.cli.status_command import StatusCommand
 from src.cli.prune_command import prune_command
 from src.cli.git_index_command import GitIndexCommand
 from src.cli.git_search_command import GitSearchCommand
-from src.cli.analytics_command import run_analytics_command
 from src.cli.session_summary_command import run_session_summary_command
-from src.cli.health_monitor_command import HealthMonitorCommand
 from src.cli.validate_install import validate_installation
 from src.cli.validate_setup_command import ValidateSetupCommand as ValidateSetupCommand
 from src.cli.repository_command import add_repository_parser, RepositoryCommand
@@ -57,9 +55,7 @@ Command Categories:
 
   Monitoring & Health:
     health             Run health check diagnostics
-    health-monitor     Continuous health monitoring and alerts
     status             Show server and storage status
-    analytics          View token usage analytics and cost savings
     session-summary    View summary of current or recent sessions
 
   Project Management:
@@ -313,37 +309,6 @@ Examples:
         help="Maximum results (default: 10)",
     )
 
-    # Analytics command
-    analytics_parser = subparsers.add_parser(
-        "analytics",
-        help="View token usage analytics and cost savings",
-    )
-    analytics_parser.add_argument(
-        "--period-days",
-        "-d",
-        type=int,
-        default=30,
-        help="Number of days to analyze (default: 30)",
-    )
-    analytics_parser.add_argument(
-        "--session-id",
-        "-s",
-        type=str,
-        help="Filter by specific session ID",
-    )
-    analytics_parser.add_argument(
-        "--project-name",
-        "-p",
-        type=str,
-        help="Filter by specific project",
-    )
-    analytics_parser.add_argument(
-        "--top-sessions",
-        "-t",
-        action="store_true",
-        help="Show top sessions by tokens saved",
-    )
-
     # Session summary command
     session_summary_parser = subparsers.add_parser(
         "session-summary",
@@ -354,65 +319,6 @@ Examples:
         "-s",
         type=str,
         help="Specific session ID to summarize",
-    )
-
-    # Health monitor command
-    health_monitor_parser = subparsers.add_parser(
-        "health-monitor",
-        help="Continuous health monitoring and alerts",
-    )
-    health_monitor_subparsers = health_monitor_parser.add_subparsers(
-        dest="subcommand",
-        help="Health monitoring subcommands",
-    )
-
-    # Health monitor status
-    health_monitor_subparsers.add_parser(
-        "status",
-        help="Show current health status (default)",
-    )
-
-    # Health monitor report
-    report_sub = health_monitor_subparsers.add_parser(
-        "report",
-        help="Generate detailed health report",
-    )
-    report_sub.add_argument(
-        "--period-days",
-        "-d",
-        type=int,
-        default=7,
-        help="Report period in days (default: 7)",
-    )
-
-    # Health monitor fix
-    fix_sub = health_monitor_subparsers.add_parser(
-        "fix",
-        help="Apply automated remediation",
-    )
-    fix_sub.add_argument(
-        "--auto",
-        "-a",
-        action="store_true",
-        help="Automatically apply all fixes without prompts",
-    )
-    fix_sub.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Show what would be fixed without applying",
-    )
-
-    # Health monitor history
-    history_sub = health_monitor_subparsers.add_parser(
-        "history",
-        help="View historical health metrics",
-    )
-    history_sub.add_argument(
-        "--days",
-        "-d",
-        type=int,
-        default=30,
-        help="Number of days of history (default: 30)",
     )
 
     # Validate-install command
@@ -463,20 +369,10 @@ async def main_async(args):
     elif args.command == "git-search":
         cmd = GitSearchCommand()
         await cmd.run(args)
-    elif args.command == "analytics":
-        run_analytics_command(
-            period_days=args.period_days,
-            session_id=args.session_id,
-            project_name=args.project_name,
-            show_top_sessions=args.top_sessions,
-        )
     elif args.command == "session-summary":
         run_session_summary_command(
             session_id=args.session_id,
         )
-    elif args.command == "health-monitor":
-        cmd = HealthMonitorCommand()
-        await cmd.run(args)
     elif args.command == "validate-install":
         result = await validate_installation()
         sys.exit(0 if result else 1)

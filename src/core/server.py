@@ -45,14 +45,10 @@ from src.memory.duplicate_detector import DuplicateDetector
 from src.analysis.complexity_analyzer import ComplexityAnalyzer
 from src.analysis.quality_analyzer import QualityAnalyzer
 from src.search.hybrid_search import HybridSearcher, FusionMethod
-from src.analytics.usage_tracker import UsagePatternTracker
 from src.monitoring.metrics_collector import MetricsCollector
-from src.monitoring.alert_engine import AlertEngine
-from src.monitoring.health_reporter import HealthReporter
 from src.monitoring.capacity_planner import CapacityPlanner
 from src.memory.project_archival import ProjectArchivalManager
 from src.core.tracing import new_operation, get_logger
-from src.tagging.tag_manager import TagManager
 
 # Service layer imports (REF-016: Split MemoryRAGServer God Class)
 from src.services.memory_service import MemoryService
@@ -60,13 +56,11 @@ from src.services.code_indexing_service import CodeIndexingService
 from src.services.cross_project_service import CrossProjectService
 from src.services.health_service import HealthService
 from src.services.query_service import QueryService
-from src.services.analytics_service import AnalyticsService
-from src.core.structural_query_tools import StructuralQueryMixin
 
 logger = get_logger(__name__)
 
 
-class MemoryRAGServer(StructuralQueryMixin):
+class MemoryRAGServer:
     """
     MCP Server for memory and RAG operations.
 
