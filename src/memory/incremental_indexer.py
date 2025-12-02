@@ -1203,6 +1203,7 @@ class IncrementalIndexer(BaseCodeIndexer):
         """Clean up resources."""
         await self.store.close()
         await self.embedding_generator.close()
+        await self.call_graph_store.close()
         logger.info("Incremental indexer closed")
 
 

@@ -691,3 +691,14 @@ class QdrantCallGraphStore:
 
         except Exception as e:
             raise StorageError(f"Failed to delete project call graph: {e}") from e
+
+    async def close(self) -> None:
+        """Close the Qdrant client connection and release resources."""
+        if self.client is not None:
+            try:
+                self.client.close()
+                logger.info(f"Call graph store closed: {self.collection_name}")
+            except Exception as e:
+                logger.warning(f"Error closing call graph store client: {e}")
+            finally:
+                self.client = None
