@@ -51,6 +51,147 @@ Organize entries under these headers in chronological order (newest first):
 
 ## [Unreleased]
 
+
+### Added - 2025-12-01
+- **INFRA-001: Fragment-based changelog system**
+  - Created `changelog.d/` directory for changelog fragments
+  - Added `scripts/assemble-changelog.py` to merge fragments into CHANGELOG.md
+  - Updated pre-commit hook to accept fragments or CHANGELOG.md changes
+  - Updated `verify-complete.py` DocumentationGate to check for fragments
+  - Files: changelog.d/, scripts/assemble-changelog.py, scripts/verify-complete.py
+
+### Fixed - 2025-12-01
+- **BUG-059: SQLite Connection Not Closed in Cache Error Paths**
+  - Added try/except block with proper connection cleanup in _initialize_db() to ensure connection is closed on initialization failure
+  - Prevents SQLite connection leak and file lock retention when cache initialization fails
+  - Files: src/embeddings/cache.py
+- **BUG-060: Cache Statistics Reset Without Holding Counter Lock**
+  - Verified that `_clear_sync()` method in `src/embeddings/cache.py` properly acquires `_counter_lock` before resetting `hits` and `misses` counters
+  - Fix prevents race condition when cache operations run concurrently with clear()
+  - Implementation uses `with self._counter_lock:` context manager (lines 501-503)
+  - Part of REF-030 atomic counter operations improvement
+  - Files: src/embeddings/cache.py
+- **BUG-062: Connection Pool Reset Race Condition**
+  - Wrapped reset sequence in lock acquisition for atomic state transition
+  - Files: src/store/connection_pool.py
+- **BUG-070: Fix pattern matcher line number off-by-one error**
+  - Corrected line number calculation in `get_match_locations()` method
+  - Changed `line_num = i - 1` to `line_num = i` when `offset > start_pos`
+  - Ensures 1-indexed line numbers are correctly calculated from byte offsets
+  - Files: src/search/pattern_matcher.py
+- **BUG-073: Date Filter Range Validation Missing**
+  - Added validation to detect impossible date ranges (start > end) in query DSL parser
+  - Prevents queries like `created:>2024-12-31 created:<2024-01-01` from silently producing invalid filters
+  - Raises clear ValueError when date range is logically inconsistent
+  - Files: src/search/query_dsl_parser.py
+- **BUG-079: Fix maintainability index overflow with documentation bonus**
+  - Adjusted clamping order in `calculate_maintainability_index()` to prevent MI scores from exceeding 100
+  - Now clamps base score to 0-95 range before applying +5 documentation bonus, then final clamp to 100
+  - Prevents edge case where simple functions (e.g., MI=97.5) would overflow to 102.5 after bonus
+  - Files: src/analysis/quality_analyzer.py
+- **BUG-272: Simplify ProcessPoolExecutor Cleanup (3rd attempt)**
+  - Removed all automatic cleanup handlers (atexit, signal handlers, weak set)
+  - Previous approaches caused test framework interference and race conditions
+  - Kept only explicit close() method (preferred) and __del__() fallback (wait=False)
+  - Enhanced documentation emphasizing explicit cleanup requirement
+  - Simpler implementation: fewer moving parts, less complexity, more reliable
+  - Files: src/embeddings/parallel_generator.py
+- **BUG-276: P95 Index Out of Bounds on Empty/Single-Element List**
+  - Fixed P95 calculation that incorrectly evaluated index before ternary check, causing IndexError
+  - Removed redundant empty-list guard (already handled by early return on line 679)
+  - Added clarifying comment that early return guarantees non-empty list
+  - Files: src/store/connection_pool.py
+- **BUG-281: IndexError on Empty Results List Access**
+  - Fixed off-by-one error in p95 percentile calculation that could cause IndexError
+  - Changed `latencies[p95_index]` to `latencies[min(p95_index, len(latencies) - 1)]`
+  - Verified guards protect empty list access at all three identified locations
+  - `src/store/qdrant_store.py:629`: Guard `if not result:` protects `result[0].payload`
+  - `src/services/code_indexing_service.py:537`: Guard `if not code_results:` protects lines 543, 546
+  - `src/monitoring/metrics_collector.py:356`: Guard `if not latencies:` protects line 360
+  - Files: src/monitoring/metrics_collector.py, src/store/qdrant_store.py, src/services/code_indexing_service.py
+- **BUG-283: Dictionary Iteration During Modification (Phantom Read Risk)**
+  - Replaced direct dictionary iteration with snapshot pattern using `list(dict.values())` and `list(dict.items())`
+  - Prevents RuntimeError when collections are modified during iteration
+  - Critical fix in `_cleanup_expired_sessions()` where `end_session()` modifies the dictionary
+  - Files: src/memory/repository_registry.py, src/memory/workspace_manager.py, src/memory/conversation_tracker.py
+- **BUG-286: String Split Without Length Validation**
+  - Added length validation before accessing split results in pip version check
+  - Added length validation before accessing split results in memory size parsing
+  - Prevents IndexError when subprocess output is malformed or empty
+  - Files: src/core/system_check.py, src/cli/health_command.py, setup.py
+- **BUG-288: Fix task tracking dictionary race condition**
+  - Fixed race condition in background_indexer.py where _active_tasks dict could be modified concurrently
+  - Replaced unsafe `del self._active_tasks[job_id]` with `self._active_tasks.pop(job_id, None)` in two locations
+  - In cancel_job() (line 256): Prevents KeyError if task already removed by finally block
+  - In _run_job() finally block (line 491): Prevents KeyError if task already removed by cancel_job()
+  - Files: src/memory/background_indexer.py
+- **BUG-291: Connection Pool Race Condition - Max Size Enforcement**
+  - Fixed race condition where multiple coroutines could bypass max_size limit under high concurrency (100+ requests)
+  - Moved atomic _created_count increment inside lock BEFORE connection creation to ensure check-and-increment atomicity
+  - Applied fix to all code paths: empty pool acquisition, connection recycling, and health-check retry
+  - Added error handling to prevent slot leaks when connection creation fails after counter increment
+  - Files: src/store/connection_pool.py
+- **BUG-296: File Watcher Debounce Task Race Condition**
+  - Fixed race condition in `_debounce_callback()` where task cancellation and creation happened outside lock
+  - Moved entire debounce task management (cancel + await + create) inside `pending_lock` critical section
+  - Prevents concurrent debounce tasks when multiple file events arrive simultaneously
+  - Files: src/memory/file_watcher.py
+- **BUG-302: Add debug logging for large pagination offsets**
+  - Added debug logging when pagination offset > 0 to warn about potentially excessive offsets that may exceed available data
+  - Prevents silent failures when offset is extremely large (e.g., 1000000000)
+  - Applied to `list_memories()`, `get_indexed_files()`, and `list_indexed_units()` methods
+  - Also added limit validation to `list_memories()` for consistency with other pagination methods
+  - Files: src/store/qdrant_store.py
+- **BUG-303: Scheduler Shutdown Without Wait Can Leave Jobs Running**
+  - Changed `scheduler.shutdown(wait=False)` to `scheduler.shutdown(wait=True)` to ensure graceful completion of running jobs
+  - Prevents partial state in database from abruptly terminated scheduler jobs
+  - Files: src/core/server.py
+- **BUG-307: Race Condition in Service Stats Updates**
+  - Fixed race condition in `get_stats()` methods where `self.stats.copy()` was called without acquiring `self._stats_lock`
+  - Between the dict copy operation and completion, stats could be modified by another thread causing inconsistent reads
+  - Wrapped `self.stats.copy()` with `with self._stats_lock:` in all 6 affected services
+  - Files: src/services/memory_service.py, src/services/code_indexing_service.py, src/services/cross_project_service.py, src/services/health_service.py, src/services/query_service.py, src/services/analytics_service.py
+- **BUG-309: Duplicate Tool Registration for `list_opted_in_projects`**
+  - Removed duplicate tool definition at lines 773-779 in `src/mcp_server.py`
+  - Tool was registered twice in `list_tools()` decorator with identical schemas
+  - Fixed MCP protocol violation where clients could receive duplicate tool definitions
+  - Files: src/mcp_server.py
+- **BUG-312: Implement empty `_collect_metrics_job` method**
+  - Added implementation to collect and store health metrics hourly
+  - Method now calls `metrics_collector.collect_metrics()` and stores results
+  - Includes proper error handling and logging
+  - File: src/core/server.py
+- **BUG-318: Fix batch cache type annotation consistency**
+  - Fixed return type annotation of `_batch_get_sync()` method from `dict[str, Optional[List[float]]]` to `List[Optional[List[float]]]` to match the actual return value and the parent `batch_get()` method's expected return type
+  - Files: src/embeddings/cache.py
+- **BUG-326: Race Condition in Background Indexer Task Cleanup**
+  - Confirmed fix already implemented in BUG-288
+  - Uses `self._active_tasks.pop(job_id, None)` instead of `del self._active_tasks[job_id]` in finally block
+  - Prevents KeyError when cancel_job() and _run_job() cleanup happen simultaneously
+  - Files: src/memory/background_indexer.py:491
+- **BUG-328: Git Detection Has No Error Recovery for Subprocess Timeouts**
+  - Added specific `subprocess.TimeoutExpired` exception handlers to prevent silent failures
+  - Changed timeout logging from DEBUG to WARNING level for better visibility of system issues
+  - Reduced subprocess timeout from 5 seconds to 2 seconds for faster failure detection
+  - Prevents 8+ minute blocking delays when processing many files with git subprocess timeouts
+  - Files: src/memory/git_detector.py
+- **BUG-336: SQL Injection Vulnerability in Alert Engine Query**
+  - Replaced f-string interpolation with parameterized query in `get_active_alerts()` method
+  - Changed from `query += f" AND (snoozed_until IS NULL OR snoozed_until < '{now}')"` to parameterized query with `?` placeholder
+  - Prevents potential SQL injection while maintaining identical functionality
+  - Files: src/monitoring/alert_engine.py:412-415
+- **BUG-338: Add exc_info to connection pool error logs**
+  - Added `exc_info=True` to all logger.error() calls in connection_pool.py to capture full stack traces in production
+  - Fixed 6 error log calls: pool initialization, health check failures, connection acquisition, release, and creation errors
+  - Files: src/store/connection_pool.py (lines 262, 411, 446, 499, 673, 681)
+- **BUG-354: Race Condition in NotificationManager._last_progress_time Dict Access**
+  - Added `asyncio.Lock()` to protect throttle check read-check-write pattern
+  - Prevents multiple concurrent `notify_progress` calls from bypassing throttle
+  - Files: src/memory/notification_manager.py
+- **BUG-367: Missing exc_info=True in Qdrant Setup Critical Errors**
+  - Added `exc_info=True` to all logger.error() calls in qdrant_setup.py for full stack traces
+  - Affects: `collection_exists()`, `get_collection_info()`, `health_check()` methods
+  - Files: src/store/qdrant_setup.py (lines 157, 291, 309)
 ### Fixed - 2025-12-01
 - **BUG-276: P95 Index Out of Bounds on Empty/Single-Element List**
   - Fixed P95 calculation that incorrectly evaluated index before ternary check, causing IndexError
