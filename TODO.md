@@ -16,28 +16,27 @@ Last updated: 2025-11-30
 | FEAT | 063 | New features |
 | UX | 067 | User experience |
 
-**Rules:**
+**Workflow:** `TODO.md` → `IN_PROGRESS.md` → `REVIEW.md` → `TESTING.md` → `CHANGELOG.md`
 
+**Critical Rule: One File Per Task**
+- Each task exists in exactly ONE tracking file at any time
+- "Move" = DELETE from source file, ADD to destination file
+- See `ORCHESTRATION.md` for full workflow details
+
+**ID Rules:**
 1. **Creating a task:** Use the next available ID from the table above, then increment it
-2. **Completing a task:** Remove from this file, add to CHANGELOG.md with the same ID
-3. **IDs are permanent:** Never reuse an ID, even after the task is deleted
-4. **Counter only increases:** The "Next ID" values above only go UP (when creating), never down (when completing)
+2. **Starting a task:** DELETE from TODO.md, ADD to IN_PROGRESS.md (task moves, not copied)
+3. **IDs are permanent:** Never reuse an ID, even after the task is completed
+4. **Counter only increases:** The "Next ID" values only go UP when creating new tasks
 
-**Workflow Example:**
-```
-BUG-455 created → Registry shows BUG: 456
-BUG-455 completed → Move to CHANGELOG.md, registry still shows BUG: 456
-BUG-456 created → Registry shows BUG: 457
-```
+## Priority Guide
 
-## How to Use This File
+- **Critical (🔴):** Crashes, data loss, security vulnerabilities, race conditions, resource leaks
+- **High (🟡):** Incorrect behavior, validation issues, performance problems
+- **Medium (🟢):** Code quality, tech debt, documentation gaps
+- **Low:** Nice-to-haves, polish, cosmetic issues
 
-- Task IDs: BUG-XXX (bugs), REF-XXX (refactoring), FEAT-XXX (features), TEST-XXX (testing), PERF-XXX (performance), SEC-XXX (security), DOC-XXX (documentation), UX-XXX (user experience)
-- Priority: Tasks are sorted within each section by priority
-  - Critical (🔴): Crashes, data loss, security vulnerabilities, race conditions, resource leaks
-  - High (🟡): Incorrect behavior, validation issues, performance problems
-  - Medium (🟢): Code quality, tech debt, documentation gaps
-  - Low: Nice-to-haves, polish, cosmetic issues
+Task IDs: BUG-XXX (bugs), REF-XXX (refactoring), FEAT-XXX (features), TEST-XXX (testing), PERF-XXX (performance), SEC-XXX (security), DOC-XXX (documentation), UX-XXX (user experience)
 
 ---
 
