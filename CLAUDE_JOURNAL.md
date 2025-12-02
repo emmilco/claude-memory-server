@@ -6,6 +6,40 @@ Work session entries from Claude agents. See [Work Journal Protocol](CLAUDE.md#-
 
 ---
 
+### 2025-12-02 05:30 | post-SIMPLIFY-001-cleanup | SESSION_SUMMARY
+
+**Duration:** ~90 minutes
+**Main work:** Post-SIMPLIFY-001 test cleanup - fixed orphaned test references and stale embedding dimension assertions (384→768)
+
+**What went well:**
+- Diagnosed Qdrant saturation issue (200+ test collections, 5GB RAM, 801 PIDs) and wiped storage to restore responsiveness
+- Systematically fixed orphaned code references in server.py after SIMPLIFY-001 (AlertEngine, TagManager, UsagePatternTracker, AnalyticsService)
+- Fixed service files (MemoryService, HealthService) to match new simplified signatures
+- Deleted orphaned directories/files (src/cli/schedule_command.py, src/review/, src/refactoring/)
+- Deleted orphaned test files (test_code_analyzer.py, test_pattern_matcher.py, test_indexing_progress.py)
+- Fixed ~15 test assertions (ValidationError vs StorageError, 504 vs 500 for timeouts, etc.)
+- Got unit tests from failing to 2783 passed in ~40s
+
+**What went poorly or was difficult:**
+- **Major recurring issue**: Embedding dimension still had widespread 384 references despite previous session claiming to fix them
+- User frustration at finding "hundreds of references" to old 384 dimension - had to manually fix ~15 files with duplicate dict keys and hardcoded values
+- Multiple rounds of "fix one test, run, find next failure" - could have batch-searched more aggressively
+- BashOutput polling was inefficient - many empty checks while waiting for test runs
+- Ran out of time while fixing embedding dimension references across codebase
+- Skipped test investigation incomplete (FEAT-056, Kotlin/Swift, auto-indexing, dashboard tests)
+
+**Open threads:**
+- Embedding dimension cleanup IN PROGRESS: Fixed src/ files but tests/conftest.py still has some refs, tests/e2e/conftest.py needs fixing
+- Skipped tests need resolution:
+  - test_advanced_filtering.py - DELETED (FEAT-056 not implemented)
+  - test_kotlin_parsing.py, test_swift_parsing.py - DELETED (not in Rust parser)
+  - test_git_storage.py - changed from skipif(True) to slow marker, needs 768 dim fix
+  - Auto-indexing tests - still need investigation
+  - Dashboard tests - still need investigation
+- Changes not committed yet - need to run full test suite after embedding dimension fixes complete
+
+---
+
 ### 2025-12-01 22:59 | SIMPLIFY-001 | SESSION_SUMMARY
 
 **Duration:** ~45 minutes
@@ -1625,3 +1659,49 @@ Hardening sprint continuation - merged 12 worktrees, fixed all recent BUG/REF ti
 - Would likely displace current generic memory storage in favor of structured PAEO-based experience learning
 - Semantic code search would remain as complementary capability
 - Implementation estimate: 2-3 weeks for complete system
+
+### 2025-12-01 23:02 | a36b0ab8 | USER_PROMPT
+SIMPLIFY-001 handoff received. Major feature removal complete (graph, backup, tagging, analytics, health monitoring, CLI commands). 4 commits on main. 2718 tests pass, ruff enforced. Known: ~88 tests timeout from Qdrant parallel issues. Follow-up: check graph_generator.py orphan status, assemble changelog before release.
+
+### 2025-12-01 23:03 | a36b0ab8 | USER_PROMPT
+Tasks: 1) Check if graph_generator.py is orphaned, 2) Investigate 88 failing tests (Qdrant timeout issues). Starting with graph_generator orphan check via grep.
+
+### 2025-12-01 23:45 | a36b0ab8 | USER_PROMPT
+User feedback: tests must pass - fundamental norm. Systematically debug and fix all failing tests. Starting with import/syntax check, then targeted test runs.
+
+---
+
+### 2025-12-02 04:56 | a36b0ab8 | SESSION_SUMMARY
+
+**Duration:** ~2 hours
+**Main work:** Post-SIMPLIFY-001 cleanup - confirmed orphaned files, fixed Qdrant saturation, and systematically removed orphaned code from server.py and service files
+
+**What went well:**
+- Quickly confirmed graph_generator.py was orphaned (no imports, only referenced itself) and deleted it
+- Diagnosed Qdrant saturation issue: 200+ test collections accumulated causing 5GB RAM usage and 801 PIDs - wiped storage to fix
+- Systematically found and removed orphaned references in server.py:
+  - AlertEngine, HealthReporter, CapacityPlanner
+  - TagManager
+  - UsagePatternTracker, pattern_tracker
+  - AnalyticsService
+- Fixed downstream service files (MemoryService, HealthService) to match updated signatures
+- Removed orphaned source directories (src/review/, src/refactoring/, src/cli/schedule_command.py)
+- Removed orphaned test files (test_code_analyzer.py, test_pattern_matcher.py, test_indexing_progress.py)
+- Fixed test assertions for embedding dimension change (384 → 768)
+- Progress: went from collection errors to 1102+ tests passing
+
+**What went poorly or was difficult:**
+- User feedback received: "tests must pass - that's a fundamental norm" - I had been treating failing tests as acceptable
+- User feedback received: "fail fast, make every test run informative, always use -x" - I was running full suites instead of stopping on first failure
+- Initially ran tests without proper marker filters, causing real_embeddings tests to fail inappropriately
+- Spent excessive time polling background processes instead of reading output directly
+- Session ended with tests still not fully passing - work incomplete
+
+**Open threads:**
+- Unit tests were at 1102 passed, 61 skipped when interrupted - need to continue until 100% pass
+- Outstanding test issues discovered:
+  - test_config.py assertion text mismatch (fixed)
+  - test_git_indexer.py embedding dimension (fixed)
+  - test_indexing_progress.py orphaned (deleted)
+- Should commit these fixes once tests fully pass
+- Need to run `python scripts/assemble-changelog.py` before next release
