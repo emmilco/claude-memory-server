@@ -121,7 +121,12 @@ class ArchiveImporter:
                         }
                     elif conflict_resolution == "overwrite":
                         logger.info(f"Overwriting existing archive for {target_project_name}")
-                        self.compressor.delete_archive(target_project_name)
+                        delete_success = self.compressor.delete_archive(target_project_name)
+                        if not delete_success:
+                            return {
+                                "success": False,
+                                "error": f"Failed to delete existing archive for '{target_project_name}' before overwrite",
+                            }
                     elif conflict_resolution == "merge":
                         return {
                             "success": False,
