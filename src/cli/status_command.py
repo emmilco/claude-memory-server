@@ -43,7 +43,9 @@ class StatusCommand:
         now = datetime.now(dt.tzinfo) if dt.tzinfo else datetime.now()
         delta = now - dt
 
-        if delta.days > 0:
+        if delta.total_seconds() < 0:
+            return "In the future"
+        elif delta.days > 0:
             return f"{delta.days}d ago"
         elif delta.seconds > 3600:
             hours = delta.seconds // 3600
