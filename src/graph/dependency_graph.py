@@ -195,13 +195,22 @@ class DependencyGraph:
 
         Args:
             root: Root file path to start from
-            max_depth: Maximum traversal depth (0 = root only, 1 = root + direct deps, etc.)
+            max_depth: Maximum depth of nodes to include from root
+                      (0 = root only, 1 = root + direct deps, etc.)
+                      Note: Nodes AT depth max_depth are included, but their
+                      children are not explored.
 
         Returns:
             New DependencyGraph containing only nodes within max_depth from root
 
         Raises:
             ValueError: If root node doesn't exist in graph
+
+        Examples:
+            With graph A -> B -> C:
+            - max_depth=0: returns {A}
+            - max_depth=1: returns {A, B}
+            - max_depth=2: returns {A, B, C}
         """
         if root not in self.nodes:
             raise ValueError(f"Root node '{root}' not found in graph")
@@ -214,6 +223,8 @@ class DependencyGraph:
         while queue:
             node, depth = queue.pop(0)
 
+            # Explore neighbors only if current node's depth is less than max_depth
+            # This ensures we include nodes UP TO max_depth, but don't explore beyond
             if depth < max_depth:
                 for neighbor in self._adjacency_list.get(node, []):
                     if neighbor not in visited:
