@@ -22,33 +22,45 @@ Complete guide to the task lifecycle from planning to completion in the Claude M
 ┌─────────────┐
 │   TODO.md   │  ← Planned work (not started)
 └──────┬──────┘
-       │ 1. Pick task
+       │ 1. Pick task (MOVE to IN_PROGRESS)
        │ 2. Create worktree
        ▼
 ┌─────────────────┐
 │ IN_PROGRESS.md  │  ← Active work (max 6 concurrent)
 └──────┬──────────┘
        │ 3. Implement
-       │ 4. Test
-       │ 5. Verify
+       │ 4. Verify (verify-complete.py)
        ▼
 ┌─────────────┐
-│  REVIEW.md  │  ← Awaiting review
+│  REVIEW.md  │  ← Awaiting code review
 └──────┬──────┘
-       │ 6. Review
-       │ 7. Approve
-       │ 8. Merge
+       │ 5. Review & approve
+       ▼
+┌─────────────┐
+│ TESTING.md  │  ← Testing & merge queue
+└──────┬──────┘
+       │ 6. Run targeted tests
+       │ 7. Merge to main
+       │ 8. Remove from tracking
        ▼
 ┌──────────────┐
-│ CHANGELOG.md │  ← Completed work
+│ CHANGELOG.md │  ← Historical record (via changelog.d/)
 └──────────────┘
 ```
+
+**Critical Rule: One File Per Task**
+- Each task exists in exactly ONE tracking file at any time
+- "Move" means: DELETE from source file, then ADD to destination file
+- After merge: remove entry from tracking files entirely (changelog fragment handles history)
 
 **File Purposes:**
 - **TODO.md**: Backlog of planned work with priorities
 - **IN_PROGRESS.md**: Active tasks (max 6 to maintain focus)
-- **REVIEW.md**: Implementation-complete, awaiting approval
+- **REVIEW.md**: Implementation-complete, awaiting code review
+- **TESTING.md**: Review-approved, in testing/merge queue
 - **CHANGELOG.md**: Historical record of completed work
+
+See `ORCHESTRATION.md` for detailed multi-agent workflow.
 
 ---
 
@@ -424,14 +436,14 @@ git branch -d FEAT-056
 git push origin --delete FEAT-056
 ```
 
-**17. Update TODO.md**
+**17. Clean Up Tracking Files**
 
-Mark the task as complete:
-```markdown
-- [x] **FEAT-056**: Advanced Filtering & Sorting ✅ **COMPLETE**
-```
+After successful merge, remove the task from all tracking files:
+- Task should already have been removed from TODO.md when it was moved to IN_PROGRESS.md
+- Remove from TESTING.md after merge completes
+- Changelog fragment (`changelog.d/FEAT-056.md`) was assembled into CHANGELOG.md by `assemble-changelog.py`
 
-Or remove it if it's moved to CHANGELOG.md.
+**Remember**: Tasks exist in ONE file at a time. After merge, they exist in NONE (history is in CHANGELOG.md).
 
 ---
 
