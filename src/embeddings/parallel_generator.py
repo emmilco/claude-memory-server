@@ -168,6 +168,14 @@ class ParallelEmbeddingGenerator:
     Performance:
     - 4-8x faster than single-threaded on multi-core systems
     - Target: 10-20 files/sec indexing throughput
+
+    IMPORTANT - Cleanup Requirements (BUG-272):
+    - The close() method MUST be called explicitly for proper cleanup
+    - The __del__() method serves as a last-resort fallback (uses wait=False)
+    - Automatic cleanup handlers (atexit, signal) have been removed as they
+      interfere with test frameworks and can cause race conditions
+    - Best practice: Use async context manager or ensure close() is called
+      in finally blocks
     """
 
     # Supported models and their dimensions
@@ -512,10 +520,21 @@ class ParallelEmbeddingGenerator:
     async def close(self) -> None:
         """Shutdown the process pool executor and all related resources.
 
+        IMPORTANT: This method MUST be called explicitly for proper cleanup.
+        There are no automatic cleanup handlers (atexit, signal) - you must
+        call this method explicitly or use proper exception handling.
+
+        BUG-272: Automatic cleanup handlers have been removed as they interfere
+        with test frameworks and can cause race conditions. The __del__() method
+        serves as a last-resort fallback only.
+
         PERF-009: Ensures proper cleanup of:
         - ProcessPoolExecutor workers (with model memory)
         - MPS generator (if using Apple Silicon fallback)
         - Embedding cache (SQLite connection)
+
+        BUG-272: Uses wait=True to ensure worker processes fully terminate
+        and release model memory, preventing process leaks.
         """
         # Close MPS generator if it was used (BUG-051 fix)
         if self._mps_generator:
@@ -549,7 +568,15 @@ class ParallelEmbeddingGenerator:
         logger.info("Process pool shut down successfully")
 
     def __del__(self):
-        """Cleanup on destruction - fallback if close() wasn't called."""
+        """Cleanup on destruction - last-resort fallback if close() wasn't called.
+
+        BUG-272: Uses wait=False to avoid blocking in __del__.
+        This is a best-effort cleanup that should NOT be relied upon.
+
+        Proper cleanup requires explicitly calling close() in your code.
+        Automatic cleanup handlers (atexit, signal) have been removed as they
+        interfere with test frameworks and can cause race conditions.
+        """
         if hasattr(self, 'executor') and self.executor:
             # PERF-009: Still use wait=False in __del__ to avoid blocking
             # but this is a fallback - close() should be called explicitly
