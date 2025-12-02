@@ -84,7 +84,7 @@ class SearchFeatures(BaseModel):
 
     # Cross-project search
     cross_project_enabled: bool = True  # Allow searching across projects
-    cross_project_default_mode: str = "current"  # "current" or "all"
+    cross_project_default_mode: Literal["current", "all"] = "current"
 
     # Query expansion
     query_expansion_enabled: bool = True  # Expand queries with synonyms/context
