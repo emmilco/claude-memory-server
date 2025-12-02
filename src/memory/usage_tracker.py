@@ -204,10 +204,11 @@ class UsageTracker:
                 # Clear pending updates
                 self._pending_updates.clear()
 
-                # Update stats
-                self.stats["total_flushed"] += update_count
-                self.stats["flush_count"] += 1
-                self.stats["last_flush_time"] = datetime.now(UTC).isoformat()
+                # Update stats (REF-030: Atomic counter operations)
+                with self._counter_lock:
+                    self.stats["total_flushed"] += update_count
+                    self.stats["flush_count"] += 1
+                    self.stats["last_flush_time"] = datetime.now(UTC).isoformat()
 
                 logger.debug(f"Flushed {update_count} usage updates")
 
@@ -326,8 +327,12 @@ class UsageTracker:
 
         # Note: This is a sync method returning stats
         # pending_updates count requires async access, so we return what we can
+        # REF-030: Atomic counter operations - protect stats access
+        with self._counter_lock:
+            stats_copy = dict(self.stats)
+
         return {
-            **self.stats,
+            **stats_copy,
             "pending_updates": len(self._pending_updates),  # Best effort
             "running": self._running,
         }
