@@ -601,9 +601,6 @@ class ServerConfig(BaseSettings):
         if self.indexing.git_index_commit_count > 100000:
             raise ValueError("git_index_commit_count should not exceed 100000")
 
-        if self.indexing.git_index_branches not in ["current", "all"]:
-            raise ValueError("git_index_branches must be 'current' or 'all'")
-
         if self.git_auto_size_threshold_mb < 1:
             raise ValueError("git_auto_size_threshold_mb must be at least 1")
 
