@@ -420,6 +420,31 @@ class ServerConfig(BaseSettings):
 
     bm25_k1: float = 1.5
     bm25_b: float = 0.75
+
+    @field_validator('bm25_k1')
+    @classmethod
+    def validate_bm25_k1(cls, v: float) -> float:
+        """Ensure bm25_k1 is positive (typical range 1.2-2.0)."""
+        if v <= 0:
+            raise ValueError(
+                f"bm25_k1 must be > 0 (got {v}). "
+                f"This parameter controls term frequency saturation in BM25 scoring. "
+                f"Typical values range from 1.2 to 2.0."
+            )
+        return v
+
+    @field_validator('bm25_b')
+    @classmethod
+    def validate_bm25_b(cls, v: float) -> float:
+        """Ensure bm25_b is between 0.0 and 1.0."""
+        if not 0.0 <= v <= 1.0:
+            raise ValueError(
+                f"bm25_b must be between 0.0 and 1.0 (got {v}). "
+                f"This parameter controls document length normalization in BM25 scoring. "
+                f"0.0 means no normalization, 1.0 means full normalization."
+            )
+        return v
+
     cross_project_opt_in_file: str = "~/.claude-rag/cross_project_consent.json"
     repository_storage_path: str = "~/.claude-rag/repositories.json"
     workspace_storage_path: str = "~/.claude-rag/workspaces.json"
