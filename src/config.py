@@ -175,7 +175,7 @@ class IndexingFeatures(BaseModel):
     # Git indexing
     git_indexing: bool = True  # Index git history
     git_index_commit_count: int = 1000
-    git_index_branches: str = "current"  # "current" or "all"
+    git_index_branches: Literal["current", "all"] = "current"
     git_index_tags: bool = True
     git_index_diffs: bool = True
 
@@ -664,9 +664,6 @@ class ServerConfig(BaseSettings):
             raise ValueError("git_index_commit_count must be at least 1")
         if self.indexing.git_index_commit_count > 100000:
             raise ValueError("git_index_commit_count should not exceed 100000")
-
-        if self.indexing.git_index_branches not in ["current", "all"]:
-            raise ValueError("git_index_branches must be 'current' or 'all'")
 
         if self.git_auto_size_threshold_mb < 1:
             raise ValueError("git_auto_size_threshold_mb must be at least 1")
