@@ -75,7 +75,6 @@ from src.store.qdrant_store import QdrantMemoryStore
 from src.core.models import MemoryCategory, ContextLevel, MemoryScope
 from src.core.exceptions import StorageError
 from src.memory.import_extractor import ImportExtractor, build_dependency_metadata
-from src.analysis.call_extractors import get_call_extractor
 
 logger = logging.getLogger(__name__)
 
@@ -319,30 +318,6 @@ class IncrementalIndexer(BaseCodeIndexer):
             import_metadata = build_dependency_metadata(imports)
             logger.debug(f"Extracted {len(imports)} imports from {file_path.name}")
 
-            # Extract function calls for call graph (FEAT-059)
-            call_extractor = get_call_extractor(parse_result.language)
-            if call_extractor:
-                try:
-                    call_sites = call_extractor.extract_calls(
-                        str(file_path), source_code, parse_result
-                    )
-                    implementations = call_extractor.extract_implementations(
-                        str(file_path), source_code
-                    )
-                    logger.debug(
-                        f"Extracted {len(call_sites)} call sites and {len(implementations)} implementations from {file_path.name}"
-                    )
-                except Exception as e:
-                    logger.warning(
-                        f"Failed to extract calls from {file_path.name}: {e}"
-                    )
-                    call_sites = []
-                    implementations = []
-            else:
-                logger.debug(f"No call extractor available for {parse_result.language}")
-                call_sites = []
-                implementations = []
-
             if not parse_result.units:
                 logger.debug(f"No semantic units found in {file_path}")
                 return {
@@ -381,8 +356,7 @@ class IncrementalIndexer(BaseCodeIndexer):
 
             logger.info(
                 f"Indexed {len(stored_ids)} units from {file_path.name} "
-                f"({parse_result.parse_time_ms:.2f}ms parse, "
-                f"{len(call_sites)} calls extracted)"
+                f"({parse_result.parse_time_ms:.2f}ms parse)"
             )
 
             return {
@@ -393,8 +367,6 @@ class IncrementalIndexer(BaseCodeIndexer):
                 "unit_ids": stored_ids,
                 "imports_extracted": len(imports),
                 "dependencies": import_metadata.get("dependencies", []),
-                "call_sites_extracted": len(call_sites),
-                "implementations_extracted": len(implementations),
             }
 
         except Exception as e:

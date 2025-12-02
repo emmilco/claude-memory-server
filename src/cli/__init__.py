@@ -13,7 +13,6 @@ from src.cli.status_command import StatusCommand
 from src.cli.prune_command import prune_command
 from src.cli.git_index_command import GitIndexCommand
 from src.cli.git_search_command import GitSearchCommand
-from src.cli.session_summary_command import run_session_summary_command
 from src.cli.validate_install import validate_installation
 from src.cli.validate_setup_command import ValidateSetupCommand as ValidateSetupCommand
 from src.cli.repository_command import add_repository_parser, RepositoryCommand
@@ -56,7 +55,6 @@ Command Categories:
   Monitoring & Health:
     health             Run health check diagnostics
     status             Show server and storage status
-    session-summary    View summary of current or recent sessions
 
   Project Management:
     repository         Manage multi-repository operations
@@ -309,18 +307,6 @@ Examples:
         help="Maximum results (default: 10)",
     )
 
-    # Session summary command
-    session_summary_parser = subparsers.add_parser(
-        "session-summary",
-        help="View summary of current or recent sessions",
-    )
-    session_summary_parser.add_argument(
-        "--session-id",
-        "-s",
-        type=str,
-        help="Specific session ID to summarize",
-    )
-
     # Validate-install command
     subparsers.add_parser(
         "validate-install",
@@ -369,10 +355,6 @@ async def main_async(args):
     elif args.command == "git-search":
         cmd = GitSearchCommand()
         await cmd.run(args)
-    elif args.command == "session-summary":
-        run_session_summary_command(
-            session_id=args.session_id,
-        )
     elif args.command == "validate-install":
         result = await validate_installation()
         sys.exit(0 if result else 1)
