@@ -583,23 +583,23 @@ class TestServerDeleteMemoriesByQuery:
         server = MemoryRAGServer(config=mock_config)
 
         # Test invalid category
-        with pytest.raises(ValidationError, match="Invalid category"):
+        with pytest.raises(ValidationError, match="Invalid value.*category"):
             await server.delete_memories_by_query(
                 category="invalid_category", dry_run=False
             )
 
         # Test invalid lifecycle_state
-        with pytest.raises(ValidationError, match="Invalid lifecycle_state"):
+        with pytest.raises(ValidationError, match="Invalid value.*lifecycle_state"):
             await server.delete_memories_by_query(
                 lifecycle_state="invalid_state", dry_run=False
             )
 
         # Test invalid scope
-        with pytest.raises(ValidationError, match="Invalid scope"):
+        with pytest.raises(ValidationError, match="Invalid value.*scope"):
             await server.delete_memories_by_query(scope="invalid_scope", dry_run=False)
 
         # Test invalid context_level
-        with pytest.raises(ValidationError, match="Invalid context_level"):
+        with pytest.raises(ValidationError, match="Invalid value.*context_level"):
             await server.delete_memories_by_query(
                 context_level="invalid_level", dry_run=False
             )
