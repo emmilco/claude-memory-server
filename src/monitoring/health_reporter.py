@@ -63,7 +63,14 @@ class TrendAnalysis:
 
 @dataclass
 class WeeklyReport:
-    """Weekly health report with trends and recommendations."""
+    """Weekly health report with trends and recommendations.
+
+    Note:
+        previous_health is calculated from historical metrics only, without
+        historical alert data. This means previous_health.overall_score may
+        be higher than it actually was if alerts were active at that time.
+        Check the 'limitations' field for warnings about data availability.
+    """
 
     period_start: datetime
     period_end: datetime
@@ -78,6 +85,13 @@ class WeeklyReport:
 
     usage_summary: Dict[str, Any]
     alert_summary: Dict[str, int]
+
+    limitations: List[str] = None  # Warnings about missing data
+
+    def __post_init__(self):
+        """Initialize default values."""
+        if self.limitations is None:
+            self.limitations = []
 
 
 class HealthReporter:
@@ -421,9 +435,17 @@ class HealthReporter:
         # Get previous week's metrics for comparison
         previous_metrics = historical_metrics[0] if historical_metrics else None
         previous_health = None
+        limitations = []
+
         if previous_metrics:
-            # Note: We don't have previous alerts, so approximate
+            # LIMITATION: Historical alerts not available
+            # We calculate previous_health without alert data, which may
+            # overestimate the score if alerts were active at that time
             previous_health = self.calculate_health_score(previous_metrics, [])
+            limitations.append(
+                "Previous health score calculated without historical alert data. "
+                "Actual score may have been lower if alerts were active."
+            )
 
         # Analyze trends
         trends = self.analyze_trends(current_metrics, previous_metrics)
@@ -477,6 +499,7 @@ class HealthReporter:
             recommendations=recommendations,
             usage_summary=usage_summary,
             alert_summary=alert_summary,
+            limitations=limitations,
         )
 
     def _generate_recommendations(
