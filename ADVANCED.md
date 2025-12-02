@@ -292,33 +292,28 @@ git merge origin/main
 
 **Scenario**: FEAT-057 depends on FEAT-056
 
-**In TODO.md:**
-```markdown
-- [ ] **FEAT-056**: Advanced Filtering (~1 week)
-  - Status: In Progress (Agent A)
+**Critical Rule**: Each task exists in exactly ONE file at a time. See `ORCHESTRATION.md`.
 
-- [ ] **FEAT-057**: UX Discoverability (~1 week)
-  - **Blocked By**: FEAT-056
-  - Status: Waiting
-```
-
-**In IN_PROGRESS.md:**
+**FEAT-056 in IN_PROGRESS.md** (being worked on):
 ```markdown
 ### [FEAT-056]: Advanced Filtering
 **Assigned**: Agent A
 **Status**: In Progress (80% complete)
+```
 
-### [FEAT-057]: UX Discoverability
-**Assigned**: Agent B
-**Blocked By**: [FEAT-056]
-**Status**: Blocked - waiting for filtering API
+**FEAT-057 in TODO.md** (waiting, not yet started):
+```markdown
+- [ ] **FEAT-057**: UX Discoverability (~1 week)
+  - **Blocked By**: FEAT-056
 ```
 
 **When FEAT-056 completes:**
-1. Agent A merges FEAT-056 to main
-2. Agent A updates TODO.md (remove blocking note)
-3. Agent B syncs worktree: `git merge origin/main`
-4. Agent B resumes work on FEAT-057
+1. FEAT-056 moves: IN_PROGRESS → REVIEW → TESTING → merged → removed from tracking
+2. FEAT-057 is picked: DELETE from TODO.md, ADD to IN_PROGRESS.md
+3. Agent syncs worktree: `git merge origin/main`
+4. Agent works on FEAT-057
+
+**Remember**: "Move" = delete from source + add to destination. Never duplicate entries.
 
 ### Parallel Work on Different Modules
 
@@ -341,19 +336,21 @@ Agent B: src/memory/suggester.py (new file)
 3. **Resolve conflicts**: Agent B resolves any conflicts
 4. **Test thoroughly**: Ensure both features work together
 
-**Communication:**
+**Communication in IN_PROGRESS.md:**
 ```markdown
 ### [FEAT-056]: Advanced Filtering
 **Assigned**: Agent A
 **Files**: src/core/server.py (add search_code filters)
-**Status**: Ready to merge (awaiting review)
+**Status**: Moving to REVIEW.md soon
+**Note**: FEAT-057 will rebase after this merges
 
 ### [FEAT-057]: UX Discoverability
 **Assigned**: Agent B
 **Files**: src/core/server.py (add suggest_queries method)
 **Status**: Will rebase after FEAT-056 merges
-**Coordinate With**: Agent A
 ```
+
+(Both tasks shown here because both are actively being worked on - each exists only in IN_PROGRESS.md)
 
 ### Capacity Management
 
@@ -654,7 +651,8 @@ You've mastered the advanced topics! Now you can:
 4. **Extend the system** with new tools and commands
 
 **Further Reading:**
-- `CLAUDE.md` - Multi-agent orchestration rules (comprehensive reference)
+- `ORCHESTRATION.md` - Multi-agent orchestration workflow (authoritative reference)
+- `CLAUDE.md` - Quick reference and key commands
 - `planning_docs/` - Feature-specific implementation details
 - `docs/ARCHITECTURE.md` - System design deep dive
 
