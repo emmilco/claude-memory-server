@@ -12,17 +12,19 @@ MCP server for semantic code search and persistent memory. Python 3.13+, Qdrant 
 
 ## Key Files
 
-Workflow tracking: `TODO.md` → `IN_PROGRESS.md` → `REVIEW.md` → `CHANGELOG.md`
+Workflow tracking: `TODO.md` → `IN_PROGRESS.md` → `REVIEW.md` → `TESTING.md` → `CHANGELOG.md`
+
+**Critical rule**: Each task exists in exactly ONE file. "Move" = delete from source, add to destination. See `ORCHESTRATION.md` for full workflow.
 
 Entry points: `src/core/server.py` (MCP server), `src/store/` (Qdrant), `src/memory/` (indexing)
 
-Scripts: `scripts/setup.py --fix` (environment), `scripts/verify-complete.py` (pre-merge gates)
+Scripts: `scripts/setup.py --fix` (environment), `scripts/verify-complete.py` (pre-merge gates), `scripts/assemble-changelog.py` (merge changelog fragments)
 
 When to read other docs:
+- Multi-agent orchestration → `ORCHESTRATION.md`
 - Stuck/errors → `DEBUGGING.md`
-- Git conflicts, multi-agent → `ADVANCED.md`
+- Git conflicts → `ADVANCED.md`
 - Testing patterns → `TESTING_GUIDE.md`
-- CI fails differently than local → `DEBUGGING.md`
 
 ## Worktree Workflow
 
@@ -45,12 +47,13 @@ git worktree remove .worktrees/$TASK_ID && git branch -d $TASK_ID
 ## Completing a Task
 
 1. Tests pass: `./scripts/test-isolated.sh tests/ -v`
-2. Gates pass: `python scripts/verify-complete.py` (all 6 required)
-3. Move task: `IN_PROGRESS.md` → `REVIEW.md` (request code review)
-4. After review approved: merge to main, `git push origin main`
-5. Move task: `REVIEW.md` → `CHANGELOG.md` under "Unreleased"
+2. Create changelog fragment: `changelog.d/<TASK-ID>.md`
+3. Gates pass: `python scripts/verify-complete.py` (all 9 required)
+4. Move task: `IN_PROGRESS.md` → `REVIEW.md` (delete from source, add to destination)
+5. After review: move to `TESTING.md`, run targeted tests, merge to main
+6. After merge: run `python scripts/assemble-changelog.py`, remove from tracking files
 
-Gates check: tests 100%, coverage ≥80% core, no syntax errors, CHANGELOG updated, Qdrant up, git clean.
+Gates check: CI green, Qdrant up, syntax OK, deps bounded, SPEC valid, skipped tests ≤150, tests 100%, coverage ≥80% core, changelog fragment exists.
 
 ## Commands
 
