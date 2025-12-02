@@ -129,6 +129,7 @@ class NotificationManager:
         self.backends = backends
         self.throttle_seconds = throttle_seconds
         self._last_progress_time: Dict[str, float] = {}
+        self._throttle_lock = asyncio.Lock()
 
     async def notify_started(
         self,
@@ -177,14 +178,15 @@ class NotificationManager:
             total_units: Semantic units indexed so far
             current_file: Current file being indexed
         """
-        # Throttle progress notifications
-        now = datetime.now(UTC).timestamp()
-        last_time = self._last_progress_time.get(job_id, 0)
+        # Throttle progress notifications (thread-safe)
+        async with self._throttle_lock:
+            now = datetime.now(UTC).timestamp()
+            last_time = self._last_progress_time.get(job_id, 0)
 
-        if now - last_time < self.throttle_seconds:
-            return  # Skip this notification
+            if now - last_time < self.throttle_seconds:
+                return  # Skip this notification
 
-        self._last_progress_time[job_id] = now
+            self._last_progress_time[job_id] = now
 
         percent = (indexed_files / total_files * 100) if total_files > 0 else 0
         title = f"⏳ Indexing Progress: {project_name}"
