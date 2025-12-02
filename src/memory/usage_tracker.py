@@ -321,18 +321,14 @@ class UsageTracker:
 
     def get_tracker_stats(self) -> Dict[str, Any]:
         """Get tracker statistics."""
-        async def _get_pending_count():
-            async with self._lock:
-                return len(self._pending_updates)
-
         # Note: This is a sync method returning stats
-        # pending_updates count requires async access, so we return what we can
+        # pending_updates count cannot be safely accessed without async lock
         # REF-030: Atomic counter operations - protect stats access
         with self._counter_lock:
             stats_copy = dict(self.stats)
 
         return {
             **stats_copy,
-            "pending_updates": len(self._pending_updates),  # Best effort
+            "pending_updates": -1,  # Not available in sync context (requires async lock)
             "running": self._running,
         }
