@@ -14,6 +14,11 @@ from src.monitoring.metrics_collector import HealthMetrics
 from src.monitoring.alert_engine import Alert, AlertSeverity
 
 
+# Trend analysis thresholds (percentage change)
+TREND_SIGNIFICANT_CHANGE = 5.0  # % change to consider trend significant
+TREND_HIGHLY_SIGNIFICANT = 10.0  # % change to flag as highly significant
+
+
 class HealthStatus(str, Enum):
     """Overall health status categories."""
 
@@ -356,22 +361,29 @@ class HealthReporter:
             change = current_value - previous_value
             change_percent = (change / previous_value) * 100
 
-            # Determine direction
+            # Determine direction based on metric type and change
             if higher_is_better is None:
                 # Neutral metric - just report change
-                direction = "stable" if abs(change_percent) < 5 else "changed"
+                if abs(change_percent) < TREND_SIGNIFICANT_CHANGE:
+                    direction = "stable"
+                else:
+                    direction = "changed"
             elif higher_is_better:
-                direction = (
-                    "improving"
-                    if change_percent > 5
-                    else "degrading" if change_percent < -5 else "stable"
-                )
-            else:  # Lower is better
-                direction = (
-                    "improving"
-                    if change_percent < -5
-                    else "degrading" if change_percent > 5 else "stable"
-                )
+                # Higher values are better
+                if change_percent > TREND_SIGNIFICANT_CHANGE:
+                    direction = "improving"
+                elif change_percent < -TREND_SIGNIFICANT_CHANGE:
+                    direction = "degrading"
+                else:
+                    direction = "stable"
+            else:
+                # Lower values are better
+                if change_percent < -TREND_SIGNIFICANT_CHANGE:
+                    direction = "improving"
+                elif change_percent > TREND_SIGNIFICANT_CHANGE:
+                    direction = "degrading"
+                else:
+                    direction = "stable"
 
             trends.append(
                 TrendAnalysis(
@@ -380,7 +392,7 @@ class HealthReporter:
                     previous_value=previous_value,
                     change_percent=change_percent,
                     direction=direction,
-                    is_significant=abs(change_percent) > 10,
+                    is_significant=abs(change_percent) > TREND_HIGHLY_SIGNIFICANT,
                 )
             )
 
