@@ -418,7 +418,7 @@ class ServerConfig(BaseSettings):
     git_auto_size_threshold_mb: int = 500
     git_diff_size_limit_kb: int = 10
     hybrid_search_alpha: float = 0.5
-    hybrid_fusion_method: str = "weighted"
+    hybrid_fusion_method: Literal["weighted", "rrf", "cascade"] = "weighted"
 
     @field_validator('hybrid_search_alpha')
     @classmethod
