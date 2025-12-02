@@ -12,6 +12,12 @@ from urllib.parse import urlparse, parse_qs
 
 from src.core.server import MemoryRAGServer
 from src.config import get_config, ServerConfig
+from src.core.exceptions import (
+    ValidationError,
+    StorageError,
+    MemoryNotFoundError,
+    CollectionNotFoundError,
+)
 
 if TYPE_CHECKING:
     from src.services.metrics_collector import MetricsCollector
@@ -211,6 +217,53 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
 
+    def _map_exception_to_response(self, exception: Exception, context: str) -> tuple[int, str]:
+        """
+        Map exception types to HTTP status codes and sanitize error messages.
+
+        Args:
+            exception: The exception to map
+            context: Context string for logging (e.g., "handling /api/stats")
+
+        Returns:
+            Tuple of (status_code, sanitized_message)
+        """
+        # Log full exception details server-side (with stack trace for debugging)
+        logger.error(f"Error {context}: {exception}", exc_info=True)
+
+        # Map exception types to appropriate HTTP status codes and sanitized messages
+        if isinstance(exception, ValidationError):
+            # Client error - invalid input
+            status_code = 400
+            # Validation errors can safely expose the message as they contain user input feedback
+            sanitized_message = str(exception).split('\n')[0].replace('[E002] ', '')
+        elif isinstance(exception, (MemoryNotFoundError, CollectionNotFoundError)):
+            # Client error - resource not found
+            status_code = 404
+            sanitized_message = "Requested resource not found"
+        elif isinstance(exception, StorageError):
+            # Server error - storage backend unavailable
+            status_code = 503
+            sanitized_message = "Storage service temporarily unavailable"
+        elif isinstance(exception, json.JSONDecodeError):
+            # Client error - malformed JSON
+            status_code = 400
+            sanitized_message = "Invalid JSON in request body"
+        elif isinstance(exception, (ValueError, KeyError, TypeError)):
+            # Client error - invalid parameters or missing data
+            status_code = 400
+            sanitized_message = "Invalid request parameters"
+        elif isinstance(exception, asyncio.TimeoutError):
+            # Server error - operation timed out
+            status_code = 504
+            sanitized_message = "Request timed out"
+        else:
+            # Generic server error - don't expose internal details
+            status_code = 500
+            sanitized_message = "Internal server error"
+
+        return status_code, sanitized_message
+
     def _handle_api_stats(self):
         """Handle /api/stats endpoint (UX-037: added time range support)."""
         try:
@@ -233,8 +286,8 @@ class DashboardHandler(SimpleHTTPRequestHandler):
 
             self._send_json_response(result)
         except Exception as e:
-            logger.error(f"Error handling /api/stats: {e}")
-            self._send_error_response(500, str(e))
+            status_code, message = self._map_exception_to_response(e, "handling /api/stats")
+            self._send_error_response(status_code, message)
 
     def _handle_api_activity(self, query_string: str):
         """Handle /api/activity endpoint (UX-037: added time range support)."""
@@ -264,8 +317,8 @@ class DashboardHandler(SimpleHTTPRequestHandler):
 
             self._send_json_response(result)
         except Exception as e:
-            logger.error(f"Error handling /api/activity: {e}")
-            self._send_error_response(500, str(e))
+            status_code, message = self._map_exception_to_response(e, "handling /api/activity")
+            self._send_error_response(status_code, message)
 
     def _handle_api_health(self):
         """Handle /api/health endpoint - returns system health metrics."""
@@ -301,8 +354,8 @@ class DashboardHandler(SimpleHTTPRequestHandler):
 
             self._send_json_response(response)
         except Exception as e:
-            logger.error(f"Error handling /api/health: {e}")
-            self._send_error_response(500, str(e))
+            status_code, message = self._map_exception_to_response(e, "handling /api/health")
+            self._send_error_response(status_code, message)
 
     def _handle_api_insights(self):
         """Handle /api/insights endpoint - returns automated insights and recommendations."""
@@ -329,8 +382,8 @@ class DashboardHandler(SimpleHTTPRequestHandler):
 
             self._send_json_response({"insights": insights})
         except Exception as e:
-            logger.error(f"Error handling /api/insights: {e}")
-            self._send_error_response(500, str(e))
+            status_code, message = self._map_exception_to_response(e, "handling /api/insights")
+            self._send_error_response(status_code, message)
 
     def _generate_insights(self, stats: dict, health: dict) -> list:
         """Generate automated insights based on system data."""
@@ -450,8 +503,8 @@ class DashboardHandler(SimpleHTTPRequestHandler):
 
             self._send_json_response(trends)
         except Exception as e:
-            logger.error(f"Error handling /api/trends: {e}")
-            self._send_error_response(500, str(e))
+            status_code, message = self._map_exception_to_response(e, "handling /api/trends")
+            self._send_error_response(status_code, message)
 
     def _generate_trends(self, stats: dict, period: str, metric: str) -> dict:
         """Generate time-series trend data from actual historical metrics."""
@@ -569,8 +622,8 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         except json.JSONDecodeError:
             self._send_error_response(400, "Invalid JSON in request body")
         except Exception as e:
-            logger.error(f"Error handling /api/memories: {e}")
-            self._send_error_response(500, str(e))
+            status_code, message = self._map_exception_to_response(e, "handling /api/memories")
+            self._send_error_response(status_code, message)
 
     def _handle_trigger_index(self):
         """Handle POST /api/index - trigger project indexing."""
@@ -607,8 +660,8 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         except json.JSONDecodeError:
             self._send_error_response(400, "Invalid JSON in request body")
         except Exception as e:
-            logger.error(f"Error handling /api/index: {e}")
-            self._send_error_response(500, str(e))
+            status_code, message = self._map_exception_to_response(e, "handling /api/index")
+            self._send_error_response(status_code, message)
 
     def _handle_export(self):
         """Handle POST /api/export - export memories."""
@@ -654,8 +707,8 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         except json.JSONDecodeError:
             self._send_error_response(400, "Invalid JSON in request body")
         except Exception as e:
-            logger.error(f"Error handling /api/export: {e}")
-            self._send_error_response(500, str(e))
+            status_code, message = self._map_exception_to_response(e, "handling /api/export")
+            self._send_error_response(status_code, message)
 
     def _send_json_response(self, data: dict):
         """Send JSON response."""
