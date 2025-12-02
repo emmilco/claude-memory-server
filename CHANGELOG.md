@@ -52,6 +52,55 @@ Organize entries under these headers in chronological order (newest first):
 ## [Unreleased]
 
 
+
+### Fixed - 2025-12-01
+- **BUG-368: Missing Range Validators for Timeout and Pool Configuration**
+  - Added field validators for `qdrant_pool_timeout` (>0, ≤300s), `qdrant_pool_recycle` (>0, ≤86400s), and `qdrant_health_check_interval` (>0, ≤3600s)
+  - Prevents invalid negative, zero, or unreasonably large timeout/interval configurations that could cause runtime issues
+  - Files: src/config.py
+- **BUG-376: Add range validators for BM25 parameters**
+  - Added field validator for `bm25_k1` to ensure it is > 0 (typical range 1.2-2.0)
+  - Added field validator for `bm25_b` to ensure it is in [0.0, 1.0] range
+  - Validators provide clear error messages explaining parameter semantics
+  - Files: src/config.py
+- **BUG-390: Handle future timestamps in time formatting**
+  - Added check for negative time deltas (future timestamps) in `_format_time_ago`
+  - Function now returns "In the future" for timestamps ahead of current time
+  - Prevents incorrect "Just now" display when clock skew causes future timestamps
+  - Files: src/cli/status_command.py
+- **BUG-399: Add Literal type for git_index_branches validation**
+  - Changed `git_index_branches` from `str` to `Literal["current", "all"]` for proper enum validation
+  - Removed redundant manual validation (Pydantic now handles this automatically)
+  - Files: src/config.py
+- **BUG-400: Dashboard Web Server Swallows All Exceptions and Returns Generic 500**
+  - Added exception type mapping to return appropriate HTTP status codes (400 for ValidationError, 404 for NotFoundError, 503 for StorageError, etc.)
+  - Implemented message sanitization to prevent leaking sensitive server information (file paths, stack traces, database schemas) to HTTP clients
+  - Full exception details are now logged server-side with stack traces for debugging
+  - Generic client-facing error messages protect against information disclosure
+  - Files: src/dashboard/web_server.py
+- **BUG-402: Trend Analysis Direction Logic Has Edge Case Bug**
+  - Replaced confusing compound ternary operators with explicit if/elif logic for trend direction determination
+  - Added named constants `TREND_SIGNIFICANT_CHANGE` (5.0%) and `TREND_HIGHLY_SIGNIFICANT` (10.0%) for clearer threshold management
+  - Improved code readability by breaking down complex conditional logic into separate, well-commented branches
+  - Fixed threshold behavior to be more transparent and maintainable
+  - Files: src/monitoring/health_reporter.py
+- **BUG-403: UsageTracker Stats Counters Have Partial Lock Coverage**
+  - Added `self._counter_lock` protection to stats updates at lines 207-211 in `_flush()` method
+  - Added `self._counter_lock` protection to stats reads in `get_tracker_stats()` method
+  - Fixed race condition: removed unsafe `_pending_updates` access in `get_tracker_stats()` (line 336)
+  - Ensures consistent threading.Lock usage for all `self.stats` dictionary access
+  - Separates threading.Lock (for atomic counter operations per REF-030) from asyncio.Lock (for data structure access)
+  - Files: src/memory/usage_tracker.py
+- **BUG-406: No Validation for cross_project_default_mode Enum**
+  - Changed `cross_project_default_mode` from `str` to `Literal["current", "all"]` for type safety
+  - Prevents invalid values like "both" or "none" from being assigned
+  - Matches the validation pattern used in BUG-399 for `git_index_branches`
+  - Files: src/config.py
+- **BUG-415: Add validation for usage_analytics_retention_days**
+  - Added field validator to enforce reasonable bounds (1-730 days)
+  - Prevents unbounded storage growth from excessively long retention periods
+  - Consistent with other timeout validators in the codebase
+  - Files: src/config.py
 ### Added - 2025-12-01
 - **INFRA-001: Fragment-based changelog system**
   - Created `changelog.d/` directory for changelog fragments
