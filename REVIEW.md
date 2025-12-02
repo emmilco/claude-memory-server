@@ -21,7 +21,8 @@ Tasks that are implementation-complete and awaiting review before merging.
 **Changed Files**: src/backup/scheduler.py
 **Status**: Awaiting Re-Review - Regex fixed to accept single-digit hours
 
-*5 tasks moved to TESTING.md (BUG-086, BUG-092, BUG-101, BUG-103, BUG-156)*
+*6 tasks moved to TESTING.md: BUG-409, BUG-410, BUG-411, BUG-432, BUG-435, BUG-446 (2025-12-01)*
+*5 tasks previously in TESTING.md: BUG-086, BUG-092, BUG-101, BUG-103, BUG-156*
 
 ---
 

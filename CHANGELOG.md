@@ -53,6 +53,40 @@ Organize entries under these headers in chronological order (newest first):
 
 
 
+
+### Fixed - 2025-12-01
+- **BUG-409: Weekly Report Missing Alert History Comparison**
+  - Added `limitations` field to `WeeklyReport` to document data availability issues
+  - Enhanced docstring to clarify that `previous_health` is calculated without historical alerts
+  - Added warning message when previous health score is calculated without alert data
+  - Files: src/monitoring/health_reporter.py
+- **BUG-410: Call Graph Store Never Closed - Resource Leak**
+  - Added `close()` method to `QdrantCallGraphStore` to properly close Qdrant client connection
+  - Updated `IncrementalIndexer.close()` to call `call_graph_store.close()` for proper cleanup
+  - Prevents resource leak from unclosed QdrantClient connections in call graph store
+  - Files: src/store/call_graph_store.py, src/memory/incremental_indexer.py
+- **BUG-411: Add validation for hybrid_fusion_method config field**
+  - Added `Literal["weighted", "rrf", "cascade"]` type hint to `hybrid_fusion_method` field in `ServerConfig`
+  - Prevents invalid fusion method values from being set in configuration
+  - Valid values match the `FusionMethod` enum: "weighted" (default), "rrf" (Reciprocal Rank Fusion), "cascade"
+  - Files: src/config.py
+- **BUG-432: Clarified filter_by_depth Documentation**
+  - Enhanced docstring for `DependencyGraph.filter_by_depth()` to explicitly document that nodes at exactly max_depth ARE included in results, but their children are not explored
+  - Added concrete examples showing expected behavior for max_depth values 0, 1, and 2
+  - Added inline comment explaining the `depth < max_depth` condition logic
+  - Files: src/graph/dependency_graph.py
+  - Note: No code changes needed - current implementation is correct and all tests pass
+- **BUG-435: Archive Import Overwrites Conflict Without Validation**
+  - Added validation for delete_archive() return value in overwrite conflict resolution
+  - Import now fails safely if deletion of existing archive fails, preventing data corruption
+  - Files: src/memory/archive_importer.py
+- **BUG-446: Orphaned Tag Associations After Memory Deletion** (duplicate of BUG-092)
+  - Verified that fix is already implemented in codebase
+  - TagManager.cleanup_memory_tags() method exists and removes all tag associations for deleted memories
+  - MemoryService.delete_memory() calls cleanup_memory_tags() after successful deletion from Qdrant
+  - Tag cleanup failures are logged as warnings without blocking delete operation
+  - Files: src/services/memory_service.py (lines 598-607), src/tagging/tag_manager.py (lines 471-492)
+  - Original fix was implemented in commit a5a39fc (BUG-092)
 ### Fixed - 2025-12-01
 - **BUG-368: Missing Range Validators for Timeout and Pool Configuration**
   - Added field validators for `qdrant_pool_timeout` (>0, ≤300s), `qdrant_pool_recycle` (>0, ≤86400s), and `qdrant_health_check_interval` (>0, ≤3600s)

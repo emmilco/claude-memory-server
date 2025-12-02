@@ -45,9 +45,16 @@ Tasks that have passed code review and are awaiting testing and merge.
 
 ---
 
-## Recently Merged
+## Recently Merged (2025-12-01)
 
-*Moved to CHANGELOG.md after merge.*
+- [x] BUG-409: Weekly Report Missing Alert History Comparison - MERGED
+- [x] BUG-410: Call Graph Store Never Closed - Resource Leak - MERGED
+- [x] BUG-411: Add validation for hybrid_fusion_method config field - MERGED
+- [x] BUG-432: Clarified filter_by_depth Documentation - MERGED
+- [x] BUG-435: Archive Import Overwrites Conflict Without Validation - MERGED
+- [x] BUG-446: Orphaned Tag Associations (Duplicate of BUG-092) - MERGED
+
+*See CHANGELOG.md for details.*
 
 ---
 
