@@ -259,7 +259,7 @@ class QdrantConnectionPool:
                 logger.info("Pool monitoring started")
 
         except Exception as e:
-            logger.error(f"Failed to initialize connection pool: {e}")
+            logger.error(f"Failed to initialize connection pool: {e}", exc_info=True)
             # Clean up any created connections
             await self.close()
             raise QdrantConnectionError(
@@ -408,7 +408,7 @@ class QdrantConnectionPool:
 
                     if not health_result.healthy:
                         # Even new connection is unhealthy - serious issue
-                        logger.error("Newly created connection is unhealthy!")
+                        logger.error("Newly created connection is unhealthy!", exc_info=True)
                         raise HealthCheckFailedError(
                             reason="Unable to create healthy connection after retry",
                             attempt=2
@@ -443,7 +443,7 @@ class QdrantConnectionPool:
         except (PoolExhaustedError, HealthCheckFailedError, ConnectionCreationFailedError):
             raise
         except Exception as e:
-            logger.error(f"Failed to acquire connection: {e}")
+            logger.error(f"Failed to acquire connection: {e}", exc_info=True)
             raise
 
     async def release(self, client: QdrantClient) -> None:
@@ -496,7 +496,7 @@ class QdrantConnectionPool:
             )
 
         except Exception as e:
-            logger.error(f"Failed to release connection: {e}")
+            logger.error(f"Failed to release connection: {e}", exc_info=True)
             # Don't raise - connection is lost but we continue
 
     async def close(self) -> None:
@@ -670,7 +670,7 @@ class QdrantConnectionPool:
                     continue
                 else:
                     # Final attempt failed
-                    logger.error(f"Failed to create connection after {max_attempts} attempts: {e}")
+                    logger.error(f"Failed to create connection after {max_attempts} attempts: {e}", exc_info=True)
                     raise QdrantConnectionError(
                         url=self.config.qdrant_url,
                         reason=f"Failed to connect after {max_attempts} attempts: {e}"
@@ -678,7 +678,7 @@ class QdrantConnectionPool:
 
             except Exception as e:
                 # Non-connection errors - fail immediately
-                logger.error(f"Failed to create connection: {e}")
+                logger.error(f"Failed to create connection: {e}", exc_info=True)
                 raise QdrantConnectionError(
                     url=self.config.qdrant_url,
                     reason=f"Connection creation failed: {e}"

@@ -6,6 +6,39 @@ Work session entries from Claude agents. See [Work Journal Protocol](CLAUDE.md#-
 
 ---
 
+### 2025-12-01 | opus-4.5-orchestrator-2 | SESSION_SUMMARY
+
+**Duration:** ~90 minutes
+**Main work:** Continued hardening sprint - merged 18 additional bugs to main through multi-agent orchestration pipeline
+
+**What went well:**
+- Efficient pipeline execution: Task Agents → Reviewers → Testers ran smoothly with 6 agents in parallel throughout
+- **Batch 1**: Merged BUG-059, 062, 063 (changelog/cleanup branches that were ready)
+- **Batch 2**: Merged BUG-060, 070, 073, 079, 288 (all implemented, reviewed, tested)
+- **Batch 3**: Merged BUG-296, 302, 303, 318, 326 (all implemented, reviewed, tested)
+- **Batch 4**: Merged BUG-272, 328, 336, 338, 354 (all implemented, reviewed, tested)
+- BUG-272 required 3 implementation attempts: v1 had memory leak, v2 had pytest interference, v3 (simplified) worked
+- Reviewers caught real issues: BUG-302 missing list_memories() logging, BUG-272 circular references
+- Testers efficiently batch-merged 5 bugs at a time with syntax checks and cleanup
+- Several bugs found already fixed (BUG-063, 075, 104) - agents correctly verified and documented
+- Total this session: 18 bugs merged
+
+**What went poorly or was difficult:**
+- BUG-272 took 3 attempts: atexit bound method leak → module-level handlers pytest interference → simplified approach
+- Some agents created nested worktrees inside stale BUG-306 worktree (had to clean up manually)
+- Shell session got stuck after deleting directory it was in (user had to reload)
+- TESTING.md and REVIEW.md tracking files got stale - had to update manually multiple times
+- Background pytest process kept running/showing reminders even after worktree deleted
+
+**Open threads:**
+- 5 worktrees pending: BUG-367, 368, 376, 390, 399 (all implemented, 367 reviewed, others need review)
+- BUG-367: Qdrant setup exc_info - reviewed, ready for merge
+- BUG-368, 376, 390, 399: Pool validators, BM25 validators, time format, enum validation - need review
+- TODO.md still has many stale entries (bugs marked as open but already fixed)
+- ~450+ tasks remaining in TODO backlog
+
+---
+
 ### 2025-12-01 | opus-4.5-orchestrator | SESSION_SUMMARY
 
 **Duration:** ~45 minutes

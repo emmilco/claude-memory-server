@@ -32,9 +32,12 @@ def is_git_repository(path: Path) -> bool:
             cwd=str(path),
             capture_output=True,
             text=True,
-            timeout=5,
+            timeout=2,
         )
         return result.returncode == 0
+    except subprocess.TimeoutExpired:
+        logger.warning(f"Git command timed out checking if {path} is git repo")
+        return False
     except Exception as e:
         logger.debug(f"Error checking if {path} is git repo: {e}")
         return False
@@ -58,11 +61,14 @@ def get_git_root(path: Path) -> Optional[Path]:
             cwd=str(path),
             capture_output=True,
             text=True,
-            timeout=5,
+            timeout=2,
         )
 
         if result.returncode == 0:
             return Path(result.stdout.strip())
+        return None
+    except subprocess.TimeoutExpired:
+        logger.warning(f"Git command timed out getting root for {path}")
         return None
     except Exception as e:
         logger.debug(f"Error getting git root for {path}: {e}")
@@ -107,12 +113,15 @@ def get_git_metadata(path: Path) -> Optional[Dict[str, Any]]:
                 cwd=str(path),
                 capture_output=True,
                 text=True,
-                timeout=5,
+                timeout=2,
             )
             if result.returncode == 0:
                 metadata["remote_url"] = result.stdout.strip()
             else:
                 metadata["remote_url"] = None
+        except subprocess.TimeoutExpired:
+            logger.warning(f"Git command timed out getting remote URL for {path}")
+            metadata["remote_url"] = None
         except Exception as e:
             logger.debug(f"Could not get remote URL: {e}")
             metadata["remote_url"] = None
@@ -124,12 +133,15 @@ def get_git_metadata(path: Path) -> Optional[Dict[str, Any]]:
                 cwd=str(path),
                 capture_output=True,
                 text=True,
-                timeout=5,
+                timeout=2,
             )
             if result.returncode == 0:
                 metadata["current_branch"] = result.stdout.strip() or None
             else:
                 metadata["current_branch"] = None
+        except subprocess.TimeoutExpired:
+            logger.warning(f"Git command timed out getting current branch for {path}")
+            metadata["current_branch"] = None
         except Exception as e:
             logger.debug(f"Could not get current branch: {e}")
             metadata["current_branch"] = None
@@ -141,12 +153,15 @@ def get_git_metadata(path: Path) -> Optional[Dict[str, Any]]:
                 cwd=str(path),
                 capture_output=True,
                 text=True,
-                timeout=5,
+                timeout=2,
             )
             if result.returncode == 0:
                 metadata["commit_hash"] = result.stdout.strip()
             else:
                 metadata["commit_hash"] = None
+        except subprocess.TimeoutExpired:
+            logger.warning(f"Git command timed out getting commit hash for {path}")
+            metadata["commit_hash"] = None
         except Exception as e:
             logger.debug(f"Could not get commit hash: {e}")
             metadata["commit_hash"] = None
@@ -158,12 +173,15 @@ def get_git_metadata(path: Path) -> Optional[Dict[str, Any]]:
                 cwd=str(path),
                 capture_output=True,
                 text=True,
-                timeout=5,
+                timeout=2,
             )
             if result.returncode == 0:
                 metadata["is_dirty"] = bool(result.stdout.strip())
             else:
                 metadata["is_dirty"] = None
+        except subprocess.TimeoutExpired:
+            logger.warning(f"Git command timed out checking status for {path}")
+            metadata["is_dirty"] = None
         except Exception as e:
             logger.debug(f"Could not check git status: {e}")
             metadata["is_dirty"] = None
