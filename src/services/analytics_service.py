@@ -10,7 +10,6 @@ Responsibilities:
 """
 
 import asyncio
-import logging
 import threading
 from typing import Optional, Dict, Any
 
@@ -97,11 +96,7 @@ class AnalyticsService:
             logger.error(f"Failed to get usage statistics: {e}", exc_info=True)
             raise StorageError(f"Failed to get usage statistics: {e}") from e
 
-    async def get_top_queries(
-        self,
-        limit: int = 10,
-        days: int = 30
-    ) -> Dict[str, Any]:
+    async def get_top_queries(self, limit: int = 10, days: int = 30) -> Dict[str, Any]:
         """
         Get most frequently executed queries.
 
@@ -122,10 +117,7 @@ class AnalyticsService:
             raise StorageError("Usage pattern tracking is not configured")
 
         try:
-            queries = self.pattern_tracker.get_top_queries(
-                limit=limit,
-                days=days
-            )
+            queries = self.pattern_tracker.get_top_queries(limit=limit, days=days)
 
             return {
                 "status": "success",
@@ -139,9 +131,7 @@ class AnalyticsService:
             raise StorageError(f"Failed to get top queries: {e}") from e
 
     async def get_frequently_accessed_code(
-        self,
-        limit: int = 10,
-        days: int = 30
+        self, limit: int = 10, days: int = 30
     ) -> Dict[str, Any]:
         """
         Get most frequently accessed code files and functions.
@@ -164,8 +154,7 @@ class AnalyticsService:
 
         try:
             code = self.pattern_tracker.get_frequently_accessed_code(
-                limit=limit,
-                days=days
+                limit=limit, days=days
             )
 
             return {

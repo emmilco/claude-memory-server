@@ -16,7 +16,9 @@ from src.core.server import MemoryRAGServer
 from src.config import ServerConfig
 
 # Skip in parallel test runs - flaky due to Qdrant resource contention
-pytestmark = pytest.mark.skip(reason="Flaky in parallel execution - pass when run in isolation")
+pytestmark = pytest.mark.skip(
+    reason="Flaky in parallel execution - pass when run in isolation"
+)
 
 
 @pytest_asyncio.fixture
@@ -127,7 +129,7 @@ def load_environment():
 """)
 
         # Index the codebase
-        result = await server.index_codebase(
+        await server.index_codebase(
             directory_path=temp_code_dir,
             project_name="test-hybrid-search",
             recursive=False,
@@ -152,7 +154,9 @@ class TestHybridSearchIntegration:
         assert server.hybrid_searcher.alpha == 0.5
 
     @pytest.mark.asyncio
-    async def test_server_initialization_without_hybrid(self, server_without_hybrid_search):
+    async def test_server_initialization_without_hybrid(
+        self, server_without_hybrid_search
+    ):
         """Test that server doesn't initialize hybrid searcher when disabled."""
         server = server_without_hybrid_search
 
@@ -286,7 +290,9 @@ class TestHybridSearchIntegration:
 
         # Should find the DatabasePool class
         class_names = [r.get("unit_name", "") for r in results]
-        assert "DatabasePool" in class_names or any("DatabasePool" in r["code"] for r in results)
+        assert "DatabasePool" in class_names or any(
+            "DatabasePool" in r["code"] for r in results
+        )
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("fusion_method", ["weighted", "rrf", "cascade"])
@@ -315,7 +321,9 @@ class TestHybridSearchIntegration:
             code_dir = tempfile.mkdtemp()
             try:
                 test_file = Path(code_dir) / "test.py"
-                test_file.write_text("def authenticate_user(username, password):\n    pass")
+                test_file.write_text(
+                    "def authenticate_user(username, password):\n    pass"
+                )
 
                 await server.index_codebase(
                     directory_path=code_dir,
@@ -328,8 +336,12 @@ class TestHybridSearchIntegration:
                     search_mode="hybrid",
                 )
 
-                assert result["status"] == "success", f"Fusion method {fusion_method} failed with status {result.get('status')}"
-                assert result["search_mode"] == "hybrid", f"Expected hybrid mode but got {result.get('search_mode')}"
+                assert (
+                    result["status"] == "success"
+                ), f"Fusion method {fusion_method} failed with status {result.get('status')}"
+                assert (
+                    result["search_mode"] == "hybrid"
+                ), f"Expected hybrid mode but got {result.get('search_mode')}"
 
             finally:
                 shutil.rmtree(code_dir, ignore_errors=True)
@@ -427,7 +439,9 @@ class TestHybridSearchQuality:
 
         # Top result should be authentication-related
         top_content = top_result["code"].lower()
-        assert any(word in top_content for word in ["authenticat", "user", "credential"])
+        assert any(
+            word in top_content for word in ["authenticat", "user", "credential"]
+        )
 
     @pytest.mark.asyncio
     async def test_quality_indicators(self, indexed_code_server):
@@ -540,7 +554,9 @@ class TestHybridSearchConfiguration:
             server = MemoryRAGServer(config=config)
             await server.initialize()
 
-            assert server.hybrid_searcher.alpha == alpha, f"Expected alpha {alpha} but got {server.hybrid_searcher.alpha}"
+            assert (
+                server.hybrid_searcher.alpha == alpha
+            ), f"Expected alpha {alpha} but got {server.hybrid_searcher.alpha}"
 
             await server.close()
 
@@ -572,8 +588,12 @@ class TestHybridSearchConfiguration:
             server = MemoryRAGServer(config=config)
             await server.initialize()
 
-            assert server.hybrid_searcher.bm25.k1 == k1, f"Expected k1={k1} but got {server.hybrid_searcher.bm25.k1}"
-            assert server.hybrid_searcher.bm25.b == b, f"Expected b={b} but got {server.hybrid_searcher.bm25.b}"
+            assert (
+                server.hybrid_searcher.bm25.k1 == k1
+            ), f"Expected k1={k1} but got {server.hybrid_searcher.bm25.k1}"
+            assert (
+                server.hybrid_searcher.bm25.b == b
+            ), f"Expected b={b} but got {server.hybrid_searcher.bm25.b}"
 
             await server.close()
 

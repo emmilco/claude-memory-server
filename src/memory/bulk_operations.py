@@ -5,13 +5,11 @@ Provides efficient bulk operations on memories with safety features like
 dry-run previews, batch processing, progress tracking, and safety limits.
 """
 
-import asyncio
 from datetime import datetime, timedelta
 from typing import Any, Callable, Dict, List, Optional, Protocol
 from pydantic import BaseModel, Field
 
-from src.core.models import MemoryUnit, MemoryCategory, ContextLevel, LifecycleState
-from src.core.exceptions import ValidationError
+from src.core.models import MemoryUnit
 
 
 # Type alias for progress callbacks
@@ -77,9 +75,7 @@ class BulkDeleteFilters(BaseModel):
     """
 
     category: Optional[str] = Field(None, description="Filter by memory category")
-    context_level: Optional[str] = Field(
-        None, description="Filter by context level"
-    )
+    context_level: Optional[str] = Field(None, description="Filter by context level")
     scope: Optional[str] = Field(None, description="Filter by scope")
     project_name: Optional[str] = Field(None, description="Filter by project name")
     tags: Optional[List[str]] = Field(None, description="Filter by tags (match any)")
@@ -150,9 +146,7 @@ class BulkDeleteResult(BaseModel):
     success: bool = Field(description="Whether the operation succeeded")
     dry_run: bool = Field(description="Whether this was a dry-run (no actual deletion)")
     total_deleted: int = Field(description="Number of memories successfully deleted")
-    failed_deletions: List[str] = Field(
-        description="Memory IDs that failed to delete"
-    )
+    failed_deletions: List[str] = Field(description="Memory IDs that failed to delete")
     rollback_id: Optional[str] = Field(
         None, description="Rollback ID if rollback is enabled"
     )
@@ -317,7 +311,7 @@ class BulkDeleteManager:
         Returns:
             Preview with statistics and warnings
         """
-        total_count = len(memories)
+        len(memories)
 
         # Apply max_count limit
         limited_memories = memories[: filters.max_count]
@@ -334,9 +328,7 @@ class BulkDeleteManager:
         ) = self._calculate_breakdowns(limited_memories)
 
         # Estimate storage freed
-        total_size_bytes = sum(
-            self._estimate_memory_size(m) for m in limited_memories
-        )
+        total_size_bytes = sum(self._estimate_memory_size(m) for m in limited_memories)
         storage_freed_mb = total_size_bytes / (1024 * 1024)
 
         # Generate warnings
@@ -635,5 +627,9 @@ class BulkDeleteManager:
             return await self.preview_deletion(memories, filters)
         else:
             return await self.execute_deletion(
-                memories, filters, dry_run=False, enable_rollback=enable_rollback, progress_callback=progress_callback
+                memories,
+                filters,
+                dry_run=False,
+                enable_rollback=enable_rollback,
+                progress_callback=progress_callback,
             )

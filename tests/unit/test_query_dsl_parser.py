@@ -1,7 +1,7 @@
 """Tests for Query DSL Parser (FEAT-018)."""
 
 import pytest
-from src.search.query_dsl_parser import QueryDSLParser, ParsedQuery
+from src.search.query_dsl_parser import QueryDSLParser
 
 
 @pytest.fixture
@@ -81,10 +81,7 @@ class TestDateFilters:
     def test_created_date_range(self, parser):
         """Test created date range."""
         result = parser.parse("login created:2024-01-01..2024-12-31")
-        assert result.filters["created"] == {
-            "gte": "2024-01-01",
-            "lte": "2024-12-31"
-        }
+        assert result.filters["created"] == {"gte": "2024-01-01", "lte": "2024-12-31"}
 
     def test_modified_filter(self, parser):
         """Test modified date filter."""

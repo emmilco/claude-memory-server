@@ -1,14 +1,12 @@
 """Distributed tracing support using context variables."""
 
-import asyncio
 import uuid
 from contextvars import ContextVar
-from typing import Optional
 import functools
 import logging
 
 # Context variable for operation ID (propagates automatically through async/await)
-operation_id: ContextVar[str] = ContextVar('operation_id', default='')
+operation_id: ContextVar[str] = ContextVar("operation_id", default="")
 
 
 def get_operation_id() -> str:
@@ -37,7 +35,7 @@ def set_operation_id(op_id: str) -> None:
 
 def clear_operation_id() -> None:
     """Clear operation ID from current context."""
-    operation_id.set('')
+    operation_id.set("")
 
 
 def new_operation() -> str:
@@ -65,15 +63,17 @@ def traced(func):
     Returns:
         Wrapped function with operation ID management.
     """
+
     @functools.wraps(func)
     async def wrapper(*args, **kwargs):
         # Generate new operation ID for this request
-        op_id = new_operation()
+        new_operation()
         try:
             return await func(*args, **kwargs)
         finally:
             # Clean up operation ID after request completes
             clear_operation_id()
+
     return wrapper
 
 

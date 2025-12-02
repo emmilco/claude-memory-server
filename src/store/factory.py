@@ -27,6 +27,7 @@ async def create_store(config: ServerConfig) -> MemoryStore:
     if config.storage_backend == "qdrant":
         try:
             from src.store.qdrant_store import QdrantMemoryStore
+
             store = QdrantMemoryStore(config)
             await store.initialize()
             logger.info("✅ Connected to Qdrant vector store")

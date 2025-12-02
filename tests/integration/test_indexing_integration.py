@@ -12,7 +12,9 @@ from src.embeddings.generator import EmbeddingGenerator
 from src.config import ServerConfig
 
 # Skip entire module in CI - Qdrant timing sensitive under parallel execution
-pytestmark = pytest.mark.skip_ci(reason="Flaky under parallel execution - Qdrant timing sensitive")
+pytestmark = pytest.mark.skip_ci(
+    reason="Flaky under parallel execution - Qdrant timing sensitive"
+)
 
 
 # Sample code for testing
@@ -44,7 +46,7 @@ class MathUtils:
         return True
 '''
 
-SAMPLE_TYPESCRIPT_CODE = '''
+SAMPLE_TYPESCRIPT_CODE = """
 interface User {
     id: number;
     name: string;
@@ -67,7 +69,7 @@ class UserManager {
         return this.users.find(u => u.id === id);
     }
 }
-'''
+"""
 
 
 @pytest.fixture
@@ -122,15 +124,20 @@ async def test_index_python_file_end_to_end(temp_dir, config):
         assert "parse_time_ms" in result
         assert result["parse_time_ms"] < 100  # Should be fast
 
-        print(f"\nIndexed {result['units_indexed']} units in {result['parse_time_ms']:.2f}ms")
+        print(
+            f"\nIndexed {result['units_indexed']} units in {result['parse_time_ms']:.2f}ms"
+        )
 
         # Verify units are in storage
         # Try to retrieve them with a query (filter by project to avoid parallel test interference)
         from src.core.models import SearchFilters, MemoryScope
+
         query_embedding = await embedding_gen.generate("calculate fibonacci number")
         results = await store.retrieve(
             query_embedding=query_embedding,
-            filters=SearchFilters(project_name="test_math_project", scope=MemoryScope.PROJECT),
+            filters=SearchFilters(
+                project_name="test_math_project", scope=MemoryScope.PROJECT
+            ),
             limit=5,
         )
 
@@ -188,21 +195,30 @@ class Helper:
         await indexer.initialize()
 
         # Index directory
-        result = await indexer.index_directory(temp_dir, recursive=True, show_progress=True)
+        result = await indexer.index_directory(
+            temp_dir, recursive=True, show_progress=True
+        )
 
         # Verify results
         # Note: TypeScript file parsing may fail depending on tree-sitter configuration
         # Expect at least the Python files to be indexed
         assert result["total_files"] == 3  # math.py, user.ts, helpers.py
         assert result["indexed_files"] >= 2  # At least the .py files
-        assert result["total_units"] >= 3  # Multiple functions and classes from Python files
+        assert (
+            result["total_units"] >= 3
+        )  # Multiple functions and classes from Python files
 
-        print(f"\nIndexed {result['indexed_files']} files, {result['total_units']} units")
+        print(
+            f"\nIndexed {result['indexed_files']} files, {result['total_units']} units"
+        )
 
         # Verify we can search for Python code (TypeScript parsing may fail)
         # Filter by project to avoid parallel test interference
         from src.core.models import SearchFilters, MemoryScope
-        project_filter = SearchFilters(project_name="test_multi_file", scope=MemoryScope.PROJECT)
+
+        project_filter = SearchFilters(
+            project_name="test_multi_file", scope=MemoryScope.PROJECT
+        )
 
         if result["indexed_files"] >= 3:
             # If TypeScript was successfully indexed, look for email validation
@@ -285,7 +301,10 @@ class NewClass:
 
         # Filter by project to avoid parallel test interference
         from src.core.models import SearchFilters, MemoryScope
-        project_filter = SearchFilters(project_name="test_update", scope=MemoryScope.PROJECT)
+
+        project_filter = SearchFilters(
+            project_name="test_update", scope=MemoryScope.PROJECT
+        )
 
         # Verify old function is gone
         query_embedding = await embedding_gen.generate("old function")
@@ -296,10 +315,7 @@ class NewClass:
         )
 
         # Should not find old_function anymore
-        found_old = any(
-            "old_function" in memory.content
-            for memory, _ in results
-        )
+        any("old_function" in memory.content for memory, _ in results)
         # Note: Depending on embedding similarity, might still match.
         # The key test is that we have 2 units now, not 3 (not appending)
 
@@ -328,7 +344,6 @@ async def test_delete_file_index(temp_dir, config):
 
     Uses unique project name to avoid conflicts during parallel execution.
     """
-    import uuid
     test_unique = str(uuid.uuid4())[:8]
 
     sample_file = temp_dir / f"deleteme_{test_unique}.py"
@@ -364,7 +379,10 @@ async def test_delete_file_index(temp_dir, config):
 
         # Filter by project to avoid parallel test interference
         from src.core.models import SearchFilters, MemoryScope
-        project_filter = SearchFilters(project_name=f"test_delete_{test_unique}", scope=MemoryScope.PROJECT)
+
+        project_filter = SearchFilters(
+            project_name=f"test_delete_{test_unique}", scope=MemoryScope.PROJECT
+        )
 
         # Verify units are gone
         query_embedding = await embedding_gen.generate("fibonacci")

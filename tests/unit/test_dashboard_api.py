@@ -1,7 +1,6 @@
 """Tests for dashboard API endpoints (UX-026 Phase 1)."""
 
 import pytest
-from datetime import datetime, UTC
 from unittest.mock import AsyncMock, MagicMock, patch
 from src.core.server import MemoryRAGServer
 from src.core.exceptions import StorageError
@@ -10,10 +9,11 @@ from src.core.exceptions import StorageError
 @pytest.fixture
 def mock_server():
     """Create a mock MemoryRAGServer for testing."""
-    with patch("src.core.server.create_memory_store"), \
-         patch("src.core.server.EmbeddingGenerator"), \
-         patch("src.core.server.EmbeddingCache"):
-
+    with (
+        patch("src.core.server.create_memory_store"),
+        patch("src.core.server.EmbeddingGenerator"),
+        patch("src.core.server.EmbeddingCache"),
+    ):
         server = MemoryRAGServer()
         server.store = AsyncMock()
         return server
@@ -30,20 +30,22 @@ class TestGetDashboardStats:
         mock_server.store.get_all_projects = AsyncMock(
             return_value=["project1", "project2"]
         )
-        mock_server.store.get_project_stats = AsyncMock(side_effect=[
-            {
-                "project_name": "project1",
-                "total_memories": 80,
-                "categories": {"code": 50, "documentation": 30},
-                "lifecycle_states": {"ACTIVE": 70, "ARCHIVED": 10},
-            },
-            {
-                "project_name": "project2",
-                "total_memories": 60,
-                "categories": {"code": 40, "documentation": 20},
-                "lifecycle_states": {"ACTIVE": 55, "ARCHIVED": 5},
-            },
-        ])
+        mock_server.store.get_project_stats = AsyncMock(
+            side_effect=[
+                {
+                    "project_name": "project1",
+                    "total_memories": 80,
+                    "categories": {"code": 50, "documentation": 30},
+                    "lifecycle_states": {"ACTIVE": 70, "ARCHIVED": 10},
+                },
+                {
+                    "project_name": "project2",
+                    "total_memories": 60,
+                    "categories": {"code": 40, "documentation": 20},
+                    "lifecycle_states": {"ACTIVE": 55, "ARCHIVED": 5},
+                },
+            ]
+        )
 
         # Mock Qdrant client for global count
         mock_count_result = MagicMock()
@@ -54,9 +56,11 @@ class TestGetDashboardStats:
         mock_server.store.collection_name = "test_collection"
 
         # Patch Qdrant imports to prevent import errors
-        with patch("qdrant_client.models.Filter"), \
-             patch("qdrant_client.models.FieldCondition"), \
-             patch("qdrant_client.models.IsNullCondition"):
+        with (
+            patch("qdrant_client.models.Filter"),
+            patch("qdrant_client.models.FieldCondition"),
+            patch("qdrant_client.models.IsNullCondition"),
+        ):
             result = await mock_server.get_dashboard_stats()
 
         assert result["status"] == "success"
@@ -84,9 +88,11 @@ class TestGetDashboardStats:
         mock_server.store.collection_name = "test_collection"
 
         # Patch Qdrant imports to prevent import errors
-        with patch("qdrant_client.models.Filter"), \
-             patch("qdrant_client.models.FieldCondition"), \
-             patch("qdrant_client.models.IsNullCondition"):
+        with (
+            patch("qdrant_client.models.Filter"),
+            patch("qdrant_client.models.FieldCondition"),
+            patch("qdrant_client.models.IsNullCondition"),
+        ):
             result = await mock_server.get_dashboard_stats()
 
         assert result["status"] == "success"
@@ -104,21 +110,23 @@ class TestGetDashboardStats:
         mock_server.store.get_all_projects = AsyncMock(
             return_value=["project1", "project2", "project3"]
         )
-        mock_server.store.get_project_stats = AsyncMock(side_effect=[
-            {
-                "project_name": "project1",
-                "total_memories": 50,
-                "categories": {"code": 40},
-                "lifecycle_states": {"ACTIVE": 50},
-            },
-            StorageError("Project 2 failed"),  # Fail on project2
-            {
-                "project_name": "project3",
-                "total_memories": 40,
-                "categories": {"code": 30},
-                "lifecycle_states": {"ACTIVE": 40},
-            },
-        ])
+        mock_server.store.get_project_stats = AsyncMock(
+            side_effect=[
+                {
+                    "project_name": "project1",
+                    "total_memories": 50,
+                    "categories": {"code": 40},
+                    "lifecycle_states": {"ACTIVE": 50},
+                },
+                StorageError("Project 2 failed"),  # Fail on project2
+                {
+                    "project_name": "project3",
+                    "total_memories": 40,
+                    "categories": {"code": 30},
+                    "lifecycle_states": {"ACTIVE": 40},
+                },
+            ]
+        )
 
         # Mock SQLite conn for global count
         mock_server.store.conn = MagicMock()
@@ -140,15 +148,15 @@ class TestGetDashboardStats:
     async def test_get_dashboard_stats_qdrant_backend(self, mock_server):
         """Test dashboard stats with Qdrant backend (no conn attribute)."""
         mock_server.store.count = AsyncMock(return_value=150)
-        mock_server.store.get_all_projects = AsyncMock(
-            return_value=["project1"]
+        mock_server.store.get_all_projects = AsyncMock(return_value=["project1"])
+        mock_server.store.get_project_stats = AsyncMock(
+            return_value={
+                "project_name": "project1",
+                "total_memories": 140,
+                "categories": {"code": 100},
+                "lifecycle_states": {"ACTIVE": 140},
+            }
         )
-        mock_server.store.get_project_stats = AsyncMock(return_value={
-            "project_name": "project1",
-            "total_memories": 140,
-            "categories": {"code": 100},
-            "lifecycle_states": {"ACTIVE": 140},
-        })
 
         # Mock Qdrant client for global count
         mock_count_result = MagicMock()
@@ -159,9 +167,11 @@ class TestGetDashboardStats:
         mock_server.store.collection_name = "test_collection"
 
         # Patch Qdrant imports to prevent import errors
-        with patch("qdrant_client.models.Filter"), \
-             patch("qdrant_client.models.FieldCondition"), \
-             patch("qdrant_client.models.IsNullCondition"):
+        with (
+            patch("qdrant_client.models.Filter"),
+            patch("qdrant_client.models.FieldCondition"),
+            patch("qdrant_client.models.IsNullCondition"),
+        ):
             result = await mock_server.get_dashboard_stats()
 
         assert result["status"] == "success"
@@ -227,7 +237,9 @@ class TestGetRecentActivity:
         assert len(result["recent_searches"]) == 2
         assert len(result["recent_additions"]) == 2
         assert result["recent_searches"][0]["query"] == "authentication"
-        assert result["recent_additions"][0]["content"] == "New auth module implementation"
+        assert (
+            result["recent_additions"][0]["content"] == "New auth module implementation"
+        )
 
         # Verify store was called with correct params
         mock_server.store.get_recent_activity.assert_called_once_with(
@@ -262,8 +274,7 @@ class TestGetRecentActivity:
         mock_server.store.get_recent_activity = AsyncMock(return_value=mock_activity)
 
         result = await mock_server.get_recent_activity(
-            limit=10,
-            project_name="project1"
+            limit=10, project_name="project1"
         )
 
         assert result["status"] == "success"

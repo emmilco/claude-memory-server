@@ -153,7 +153,7 @@ class MemoryStore(ABC):
         self,
         memory_id: str,
         updates: Dict[str, Any],
-        new_embedding: Optional[List[float]] = None
+        new_embedding: Optional[List[float]] = None,
     ) -> bool:
         """
         Update a memory's metadata and optionally its embedding.
@@ -178,7 +178,7 @@ class MemoryStore(ABC):
 
         Returns:
             bool: True if healthy, False otherwise.
-        
+
 
         Note: This function is async for interface compatibility. Abstract methods
         in base classes must be async even without await to maintain consistent
@@ -193,7 +193,7 @@ class MemoryStore(ABC):
 
         Raises:
             StorageError: If initialization fails.
-        
+
 
         Note: This function is async for interface compatibility. Abstract methods
         in base classes must be async even without await to maintain consistent
@@ -205,7 +205,7 @@ class MemoryStore(ABC):
     async def close(self) -> None:
         """
         Close connections and clean up resources.
-        
+
 
         Note: This function is async for interface compatibility. Abstract methods
         in base classes must be async even without await to maintain consistent
@@ -220,7 +220,7 @@ class MemoryStore(ABC):
         sort_by: str = "created_at",
         sort_order: str = "desc",
         limit: int = 20,
-        offset: int = 0
+        offset: int = 0,
     ) -> Tuple[List[MemoryUnit], int]:
         """
         List memories with filtering, sorting, and pagination.

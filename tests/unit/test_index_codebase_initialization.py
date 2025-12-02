@@ -4,7 +4,7 @@ import pytest
 import pytest_asyncio
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, patch
 
 from src.core.server import MemoryRAGServer
 from src.config import ServerConfig
@@ -63,7 +63,7 @@ class Greeter:
 ''')
 
         # Create sample JavaScript file
-        (tmpdir / "example.js").write_text('''
+        (tmpdir / "example.js").write_text("""
 function add(a, b) {
     return a + b;
 }
@@ -73,7 +73,7 @@ class Calculator {
         return a - b;
     }
 }
-''')
+""")
 
         yield tmpdir
 
@@ -96,9 +96,13 @@ class TestIndexCodebaseInitialization:
         in src/core/server.py:2915, causing the ParallelEmbeddingGenerator
         executor to remain None.
         """
-        with patch.object(IncrementalIndexer, 'initialize', new_callable=AsyncMock) as mock_init:
+        with patch.object(
+            IncrementalIndexer, "initialize", new_callable=AsyncMock
+        ) as mock_init:
             # Also need to mock index_directory to avoid actual indexing
-            with patch.object(IncrementalIndexer, 'index_directory', new_callable=AsyncMock) as mock_index:
+            with patch.object(
+                IncrementalIndexer, "index_directory", new_callable=AsyncMock
+            ) as mock_index:
                 mock_index.return_value = {
                     "total_files": 2,
                     "indexed_files": 2,
@@ -124,7 +128,9 @@ class TestIndexCodebaseInitialization:
 
     @pytest.mark.asyncio
     @pytest.mark.real_embeddings
-    async def test_parallel_embedding_generator_executor_is_initialized(self, config, temp_codebase):
+    async def test_parallel_embedding_generator_executor_is_initialized(
+        self, config, temp_codebase
+    ):
         """
         Test that ParallelEmbeddingGenerator.executor is not None after initialization.
 
@@ -163,7 +169,9 @@ class TestIndexCodebaseInitialization:
         await store.close()
 
     @pytest.mark.asyncio
-    async def test_indexing_performance_with_initialization(self, server, temp_codebase):
+    async def test_indexing_performance_with_initialization(
+        self, server, temp_codebase
+    ):
         """
         Test that indexing completes in reasonable time when properly initialized.
 
@@ -197,8 +205,12 @@ class TestIndexCodebaseInitialization:
         assert result["files_indexed"] >= 2  # At least our 2 test files
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="Test requires live Qdrant and has incorrect mock setup (sets embedding_generator = store)")
-    async def test_indexer_initialization_called_even_with_initialized_store(self, config, temp_codebase):
+    @pytest.mark.skip(
+        reason="Test requires live Qdrant and has incorrect mock setup (sets embedding_generator = store)"
+    )
+    async def test_indexer_initialization_called_even_with_initialized_store(
+        self, config, temp_codebase
+    ):
         """
         Test that indexer.initialize() is called even when store is already initialized.
 
@@ -224,8 +236,12 @@ class TestIndexCodebaseInitialization:
         server.store = store  # Use pre-initialized store
         server.embedding_generator = server.store  # Mock to avoid actual generation
 
-        with patch.object(IncrementalIndexer, 'initialize', new_callable=AsyncMock) as mock_init:
-            with patch.object(IncrementalIndexer, 'index_directory', new_callable=AsyncMock) as mock_index:
+        with patch.object(
+            IncrementalIndexer, "initialize", new_callable=AsyncMock
+        ) as mock_init:
+            with patch.object(
+                IncrementalIndexer, "index_directory", new_callable=AsyncMock
+            ) as mock_index:
                 mock_index.return_value = {
                     "total_files": 0,
                     "indexed_files": 0,
@@ -250,6 +266,7 @@ class TestIndexCodebaseInitialization:
 @pytest.fixture
 def mock_embeddings(monkeypatch):
     """Mock embedding generation for faster tests."""
+
     async def mock_batch_generate(self, texts, **kwargs):
         # Return dummy embeddings (dimension matches TEST_EMBEDDING_DIM)
         return [mock_embedding(value=0.1) for _ in texts]
@@ -257,9 +274,9 @@ def mock_embeddings(monkeypatch):
     # Patch both generators
     monkeypatch.setattr(
         "src.embeddings.generator.EmbeddingGenerator.batch_generate",
-        mock_batch_generate
+        mock_batch_generate,
     )
     monkeypatch.setattr(
         "src.embeddings.parallel_generator.ParallelEmbeddingGenerator.batch_generate",
-        mock_batch_generate
+        mock_batch_generate,
     )

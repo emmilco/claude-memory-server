@@ -5,7 +5,6 @@ import asyncio
 import sys
 import time
 from pathlib import Path
-from typing import List
 import random
 from datetime import datetime, timedelta, UTC
 
@@ -76,7 +75,9 @@ def generate_random_content(category: MemoryCategory) -> str:
             action=random.choice(["configure", "optimize", "test"]),
             reason=random.choice(["performance", "security", "maintainability"]),
             library=random.choice(["axios", "lodash", "pandas"]),
-            functionality=random.choice(["HTTP requests", "data manipulation", "parsing"]),
+            functionality=random.choice(
+                ["HTTP requests", "data manipulation", "parsing"]
+            ),
             interface=random.choice(["REST API", "CLI", "SDK"]),
         )
     elif category == MemoryCategory.PREFERENCE:
@@ -90,9 +91,13 @@ def generate_random_content(category: MemoryCategory) -> str:
             tool=random.choice(TOOLS),
             task=random.choice(["testing", "deployment", "debugging"]),
             alternative=random.choice(["manual process", "GUI tools", "scripts"]),
-            detail=random.choice(["4 spaces indentation", "camelCase naming", "80 char limit"]),
+            detail=random.choice(
+                ["4 spaces indentation", "camelCase naming", "80 char limit"]
+            ),
             language=random.choice(LANGUAGES),
-            method=random.choice(["unit tests first", "integration tests", "E2E tests"]),
+            method=random.choice(
+                ["unit tests first", "integration tests", "E2E tests"]
+            ),
             scenario=random.choice(["API changes", "refactoring", "new features"]),
         )
     elif category == MemoryCategory.PROJECT_CONTEXT:
@@ -103,9 +108,15 @@ def generate_random_content(category: MemoryCategory) -> str:
             database=random.choice(["PostgreSQL", "MongoDB", "Redis"]),
             pattern=random.choice(["RESTful", "GraphQL", "gRPC"]),
             module=random.choice(["auth module", "user service", "payment gateway"]),
-            responsibility=random.choice(["authentication", "data validation", "caching"]),
-            steps=random.choice(["CI/CD pipeline", "manual deployment", "automated scripts"]),
-            location=random.choice([".env file", "config.yaml", "environment variables"]),
+            responsibility=random.choice(
+                ["authentication", "data validation", "caching"]
+            ),
+            steps=random.choice(
+                ["CI/CD pipeline", "manual deployment", "automated scripts"]
+            ),
+            location=random.choice(
+                [".env file", "config.yaml", "environment variables"]
+            ),
         )
     else:  # SESSION_STATE
         template = random.choice(SESSION_TEMPLATES)
@@ -118,7 +129,9 @@ def generate_random_content(category: MemoryCategory) -> str:
             current_task=random.choice(["implementation", "debugging", "refactoring"]),
             issue=random.choice(["null pointer", "race condition", "memory leak"]),
             component=random.choice(["database layer", "API handler", "frontend"]),
-            feature=random.choice(["user authentication", "data export", "real-time updates"]),
+            feature=random.choice(
+                ["user authentication", "data export", "real-time updates"]
+            ),
             approach=random.choice(["TDD", "bottom-up", "top-down"]),
         )
 
@@ -168,7 +181,7 @@ async def generate_test_database(
     if total < size:
         category_counts[MemoryCategory.FACT] += size - total
 
-    print(f"Category Distribution:")
+    print("Category Distribution:")
     for cat, count in category_counts.items():
         print(f"  {cat.value}: {count:,} ({count/size*100:.1f}%)")
     print()
@@ -183,7 +196,7 @@ async def generate_test_database(
 
                 # Random timestamps over the past year
                 days_ago = random.randint(0, 365)
-                created_at = datetime.now(UTC) - timedelta(days=days_ago)
+                datetime.now(UTC) - timedelta(days=days_ago)
 
                 # Random importance (biased towards medium)
                 importance = random.gauss(0.5, 0.2)
@@ -195,15 +208,26 @@ async def generate_test_database(
                 elif category == MemoryCategory.SESSION_STATE:
                     context_level = ContextLevel.CONVERSATION
                 else:
-                    context_level = random.choice([
-                        ContextLevel.CORE_IDENTITY,
-                        ContextLevel.PROJECT_SPECIFIC,
-                        ContextLevel.CONVERSATION,
-                    ])
+                    context_level = random.choice(
+                        [
+                            ContextLevel.CORE_IDENTITY,
+                            ContextLevel.PROJECT_SPECIFIC,
+                            ContextLevel.CONVERSATION,
+                        ]
+                    )
 
                 # Random tags (1-3 tags)
-                tag_pool = ["python", "javascript", "web", "api", "testing",
-                           "deployment", "database", "security", "performance"]
+                tag_pool = [
+                    "python",
+                    "javascript",
+                    "web",
+                    "api",
+                    "testing",
+                    "deployment",
+                    "database",
+                    "security",
+                    "performance",
+                ]
                 num_tags = random.randint(1, 3)
                 tags = random.sample(tag_pool, num_tags)
 
@@ -223,10 +247,13 @@ async def generate_test_database(
                     elapsed = time.time() - start_time
                     rate = created_count / elapsed
                     remaining = (size - created_count) / rate if rate > 0 else 0
-                    print(f"  Progress: {created_count:,}/{size:,} "
-                          f"({created_count/size*100:.1f}%) - "
-                          f"{rate:.1f} mem/sec - "
-                          f"ETA: {remaining:.0f}s", end='\r')
+                    print(
+                        f"  Progress: {created_count:,}/{size:,} "
+                        f"({created_count/size*100:.1f}%) - "
+                        f"{rate:.1f} mem/sec - "
+                        f"ETA: {remaining:.0f}s",
+                        end="\r",
+                    )
 
             except Exception as e:
                 errors += 1
@@ -236,7 +263,7 @@ async def generate_test_database(
     elapsed = time.time() - start_time
 
     print(f"\n\n{'='*70}")
-    print(f"Generation Complete")
+    print("Generation Complete")
     print(f"{'='*70}")
     print(f"Total Memories: {created_count:,}")
     print(f"Errors: {errors}")
@@ -252,11 +279,18 @@ async def main():
     """Main entry point."""
     import argparse
 
-    parser = argparse.ArgumentParser(description="Generate test database for performance testing")
-    parser.add_argument("size", type=int, choices=[1000, 10000, 50000],
-                       help="Number of memories to generate (1K, 10K, or 50K)")
-    parser.add_argument("--name", default=None,
-                       help="Custom name for the test database")
+    parser = argparse.ArgumentParser(
+        description="Generate test database for performance testing"
+    )
+    parser.add_argument(
+        "size",
+        type=int,
+        choices=[1000, 10000, 50000],
+        help="Number of memories to generate (1K, 10K, or 50K)",
+    )
+    parser.add_argument(
+        "--name", default=None, help="Custom name for the test database"
+    )
 
     args = parser.parse_args()
 

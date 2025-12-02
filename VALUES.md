@@ -52,6 +52,9 @@ Context-specific refinements. Added via `/wrong` feedback or `/retro` analysis.
 ### V-006: Design before code
 - **For complex bugs**: Use structured debugging (pair programming simulation or differential diagnosis).
 
+### V-008: Thorough reporting
+- **After updating documentation**: Check if related files need matching updates. Workflow docs, CLAUDE.md, and tracking files should stay consistent.
+
 ---
 
 ## Value History
@@ -61,3 +64,4 @@ Context-specific refinements. Added via `/wrong` feedback or `/retro` analysis.
 | 2025-11-29 | Created | V-001 through V-005 | Derived from journal analysis |
 | 2025-11-29 | Calibration | V-001 | 30-second test timeout |
 | 2025-11-29 | Migration | V-001 through V-008 | Migrated from LEARNED_PRINCIPLES.md, consolidated 11 principles into 8 values + calibrations |
+| 2025-12-01 | Calibration | V-008 | Check related files for consistency after doc updates |

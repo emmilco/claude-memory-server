@@ -14,7 +14,6 @@ Qdrant resource contention. They pass reliably when run in isolation.
 import pytest
 import pytest_asyncio
 import asyncio
-from typing import List
 
 from src.config import ServerConfig
 from src.store.qdrant_store import QdrantMemoryStore
@@ -22,7 +21,9 @@ from src.core.models import MemoryCategory, ContextLevel, MemoryScope
 from tests.conftest import mock_embedding
 
 # Skip in parallel test runs - flaky due to Qdrant resource contention
-pytestmark = pytest.mark.skip(reason="Flaky in parallel execution - pass when run in isolation")
+pytestmark = pytest.mark.skip(
+    reason="Flaky in parallel execution - pass when run in isolation"
+)
 
 
 @pytest.fixture
@@ -56,6 +57,7 @@ async def test_immediate_retrieval_after_storage(store):
     """
     # Create a unique test embedding to avoid collisions with parallel tests
     import uuid
+
     test_unique = str(uuid.uuid4())[:8]
     test_embedding = mock_embedding(value=0.5)
 
@@ -69,7 +71,7 @@ async def test_immediate_retrieval_after_storage(store):
             "scope": MemoryScope.GLOBAL.value,
             "importance": 0.8,
             "tags": ["python", "asyncio", "test", test_unique],
-        }
+        },
     )
 
     assert memory_id is not None
@@ -121,7 +123,7 @@ async def test_multiple_immediate_retrievals(store):
                 "context_level": ContextLevel.PROJECT_CONTEXT.value,
                 "scope": MemoryScope.GLOBAL.value,
                 "importance": 0.7,
-            }
+            },
         )
         stored_ids.append(memory_id)
 
@@ -135,7 +137,9 @@ async def test_multiple_immediate_retrievals(store):
     result_ids = {memory.id for memory, score in results}
     found_count = sum(1 for mem_id in stored_ids if mem_id in result_ids)
 
-    assert found_count >= 2, f"Only found {found_count}/3 stored memories immediately after storage"
+    assert (
+        found_count >= 2
+    ), f"Only found {found_count}/3 stored memories immediately after storage"
 
 
 @pytest.mark.asyncio
@@ -147,6 +151,7 @@ async def test_retrieval_with_filters_after_storage(store):
     """
     # Use unique tags to avoid collisions with parallel tests
     import uuid
+
     test_unique = str(uuid.uuid4())[:8]
 
     # Store memories with different categories
@@ -159,7 +164,7 @@ async def test_retrieval_with_filters_after_storage(store):
             "scope": MemoryScope.GLOBAL.value,
             "importance": 0.9,
             "tags": ["python", "fastapi", test_unique],
-        }
+        },
     )
 
     fact_id = await store.store(
@@ -172,7 +177,7 @@ async def test_retrieval_with_filters_after_storage(store):
             "project_name": f"test-project-{test_unique}",
             "importance": 0.7,
             "tags": ["python", "django", test_unique],
-        }
+        },
     )
 
     # Small delay to ensure Qdrant indexing completes in parallel environment
@@ -180,6 +185,7 @@ async def test_retrieval_with_filters_after_storage(store):
 
     # Retrieve with filter for preferences only
     from src.core.models import SearchFilters
+
     filters = SearchFilters(
         category=MemoryCategory.PREFERENCE,
     )
@@ -212,7 +218,7 @@ async def test_high_importance_immediate_retrieval(store):
             "scope": MemoryScope.GLOBAL.value,
             "importance": 0.95,
             "tags": ["security", "authentication"],
-        }
+        },
     )
 
     # Store a low-importance memory
@@ -225,11 +231,12 @@ async def test_high_importance_immediate_retrieval(store):
             "scope": MemoryScope.GLOBAL.value,
             "importance": 0.3,
             "tags": ["formatting"],
-        }
+        },
     )
 
     # Retrieve with importance filter
     from src.core.models import SearchFilters
+
     filters = SearchFilters(
         min_importance=0.8,
     )
@@ -264,7 +271,7 @@ async def test_no_artificial_delay_in_retrieval(store):
             "context_level": ContextLevel.PROJECT_CONTEXT.value,
             "scope": MemoryScope.GLOBAL.value,
             "importance": 0.8,
-        }
+        },
     )
 
     # Measure retrieval time
@@ -288,6 +295,7 @@ async def test_concurrent_store_and_retrieve(store):
 
     This ensures there are no race conditions or locking issues.
     """
+
     async def store_and_retrieve(index):
         # Store a memory
         embedding = mock_embedding(value=float(index) / 100.0)
@@ -299,7 +307,7 @@ async def test_concurrent_store_and_retrieve(store):
                 "context_level": ContextLevel.PROJECT_CONTEXT.value,
                 "scope": MemoryScope.GLOBAL.value,
                 "importance": 0.7,
-            }
+            },
         )
 
         # Immediately retrieve
@@ -314,4 +322,6 @@ async def test_concurrent_store_and_retrieve(store):
     results = await asyncio.gather(*tasks)
 
     # All operations should succeed
-    assert all(results), f"Only {sum(results)}/10 concurrent operations found their memories"
+    assert all(
+        results
+    ), f"Only {sum(results)}/10 concurrent operations found their memories"

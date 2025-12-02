@@ -87,7 +87,9 @@ class TestJSONFormatter:
         stream, logger = captured_log_stream
 
         # Log with extra context
-        logger.info("Cache hit", extra={"context": {"cache_key": "abc123", "hit_rate": 0.85}})
+        logger.info(
+            "Cache hit", extra={"context": {"cache_key": "abc123", "hit_rate": 0.85}}
+        )
         output = stream.getvalue()
 
         log_data = json.loads(output.strip())
@@ -173,7 +175,9 @@ class TestStructuredLogger:
         try:
             raise RuntimeError("Test runtime error")
         except RuntimeError:
-            logger.error_ctx("Database error", table="embeddings", operation="insert", exc_info=True)
+            logger.error_ctx(
+                "Database error", table="embeddings", operation="insert", exc_info=True
+            )
 
         output = stream.getvalue()
         log_data = json.loads(output.strip())
@@ -236,6 +240,7 @@ class TestStructuredLogger:
         stream, _ = captured_log_stream
         # Use unique logger name to avoid cross-test interference in parallel execution
         import uuid
+
         logger = get_logger(f"test.module.{uuid.uuid4().hex[:8]}")
         logger.handlers = [logging.StreamHandler(stream)]
         logger.handlers[0].setFormatter(JSONFormatter())
@@ -361,6 +366,7 @@ class TestIntegration:
         stream, _ = captured_log_stream
         # Use unique logger name to avoid cross-test interference in parallel execution
         import uuid
+
         logger = get_logger(f"test.no_context.{uuid.uuid4().hex[:8]}")
         logger.handlers = [logging.StreamHandler(stream)]
         logger.handlers[0].setFormatter(JSONFormatter())

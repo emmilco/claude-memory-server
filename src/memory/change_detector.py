@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class FileChange:
     """Represents changes to a file."""
+
     file_path: str
     change_type: str  # "added", "modified", "deleted", "renamed"
     old_path: Optional[str] = None  # For renamed files
@@ -81,21 +82,25 @@ class ChangeDetector:
         # Detect added files
         added_paths = new_paths - old_paths
         for path in added_paths:
-            changes.append(FileChange(
-                file_path=path,
-                change_type="added",
-                new_content=new_files[path],
-            ))
+            changes.append(
+                FileChange(
+                    file_path=path,
+                    change_type="added",
+                    new_content=new_files[path],
+                )
+            )
             self.stats["changes_detected"] += 1
 
         # Detect deleted files
         deleted_paths = old_paths - new_paths
         for path in deleted_paths:
-            changes.append(FileChange(
-                file_path=path,
-                change_type="deleted",
-                old_content=old_files[path],
-            ))
+            changes.append(
+                FileChange(
+                    file_path=path,
+                    change_type="deleted",
+                    old_content=old_files[path],
+                )
+            )
             self.stats["changes_detected"] += 1
 
         # Detect modified files
@@ -107,12 +112,14 @@ class ChangeDetector:
             new_content = new_files[path]
 
             if old_content != new_content:
-                changes.append(FileChange(
-                    file_path=path,
-                    change_type="modified",
-                    old_content=old_content,
-                    new_content=new_content,
-                ))
+                changes.append(
+                    FileChange(
+                        file_path=path,
+                        change_type="modified",
+                        old_content=old_content,
+                        new_content=new_content,
+                    )
+                )
                 self.stats["changes_detected"] += 1
 
         # Detect renamed files (optional heuristic)
@@ -180,14 +187,16 @@ class ChangeDetector:
         matched_added = set()
 
         for deleted_change, added_change, ratio in matched_pairs:
-            updated_changes.append(FileChange(
-                file_path=added_change.file_path,
-                change_type="renamed",
-                old_path=deleted_change.file_path,
-                old_content=deleted_change.old_content,
-                new_content=added_change.new_content,
-                similarity_ratio=ratio,
-            ))
+            updated_changes.append(
+                FileChange(
+                    file_path=added_change.file_path,
+                    change_type="renamed",
+                    old_path=deleted_change.file_path,
+                    old_content=deleted_change.old_content,
+                    new_content=added_change.new_content,
+                    similarity_ratio=ratio,
+                )
+            )
             matched_deleted.add(deleted_change.file_path)
             matched_added.add(added_change.file_path)
 

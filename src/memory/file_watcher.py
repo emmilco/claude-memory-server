@@ -6,7 +6,6 @@ import hashlib
 from pathlib import Path
 from typing import Set, Optional, Callable, Dict, Any
 from datetime import datetime, UTC
-from collections import defaultdict
 
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler, FileSystemEvent
@@ -104,8 +103,12 @@ class DebouncedFileWatcher(FileSystemEventHandler):
             "events_processed": self.stats["events_processed"],
             "events_ignored": self.stats["events_ignored"],
             "reindex_triggered": self.stats["reindex_triggered"],
-            "last_event_at": self.stats["last_event_at"].isoformat() if self.stats["last_event_at"] else None,
-            "last_reindex_at": self.stats["last_reindex_at"].isoformat() if self.stats["last_reindex_at"] else None,
+            "last_event_at": self.stats["last_event_at"].isoformat()
+            if self.stats["last_event_at"]
+            else None,
+            "last_reindex_at": self.stats["last_reindex_at"].isoformat()
+            if self.stats["last_reindex_at"]
+            else None,
             "files_watched": len(self.file_mtimes),
         }
 
@@ -129,7 +132,7 @@ class DebouncedFileWatcher(FileSystemEventHandler):
     def _has_changed(self, file_path: Path) -> bool:
         """
         Check if file content has actually changed using efficient multi-step detection.
-        
+
         Uses modification time (mtime) for quick detection, only computes hash on mtime changes
         for conflict resolution. This avoids expensive SHA256 computation for false events.
         """
@@ -138,14 +141,14 @@ class DebouncedFileWatcher(FileSystemEventHandler):
             stat = file_path.stat()
             current_mtime = stat.st_mtime
             previous_mtime = self.file_mtimes.get(file_path)
-            
+
             if current_mtime == previous_mtime:
                 # Same mtime = no change needed
                 return False
-            
+
             # Step 2: Update mtime tracking
             self.file_mtimes[file_path] = current_mtime
-            
+
             # Step 3: On mtime change, verify with hash for accuracy
             # (catches watchdog false events and symlink issues)
             current_hash = self._compute_file_hash(file_path)
@@ -159,7 +162,7 @@ class DebouncedFileWatcher(FileSystemEventHandler):
             self.file_hashes[file_path] = current_hash
 
             return has_changed
-            
+
         except Exception as e:
             logger.warning(f"Error checking if {file_path} changed: {e}")
             return False
@@ -218,8 +221,7 @@ class DebouncedFileWatcher(FileSystemEventHandler):
 
         try:
             asyncio.run_coroutine_threadsafe(
-                self._debounce_callback(file_path),
-                self.loop
+                self._debounce_callback(file_path), self.loop
             )
         except Exception as e:
             logger.error(f"Failed to schedule callback for {file_path}: {e}")
@@ -266,9 +268,7 @@ class DebouncedFileWatcher(FileSystemEventHandler):
                     pass  # Expected
 
             # Create new debounce task (still inside lock)
-            self.debounce_task = asyncio.create_task(
-                self._execute_debounced_callback()
-            )
+            self.debounce_task = asyncio.create_task(self._execute_debounced_callback())
 
     async def _execute_debounced_callback(self):
         """Execute callback after debounce delay."""
@@ -414,6 +414,7 @@ if __name__ == "__main__":
         watcher.start()
         # Keep running
         import time
+
         while True:
             time.sleep(1)
     except KeyboardInterrupt:

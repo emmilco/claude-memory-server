@@ -205,14 +205,10 @@ class HealthReporter:
         noise_score = int((1 - metrics.noise_ratio) * 100)
 
         # Duplicate/contradiction score
-        duplicate_penalty = (
-            metrics.duplicate_rate + metrics.contradiction_rate
-        ) / 2
+        duplicate_penalty = (metrics.duplicate_rate + metrics.contradiction_rate) / 2
         dup_score = int((1 - duplicate_penalty) * 100)
 
-        return int(
-            relevance_score * 0.6 + noise_score * 0.3 + dup_score * 0.1
-        )
+        return int(relevance_score * 0.6 + noise_score * 0.3 + dup_score * 0.1)
 
     def _calculate_db_health_score(self, metrics: HealthMetrics) -> int:
         """
@@ -230,7 +226,7 @@ class HealthReporter:
         # Ideal: 20% ACTIVE, 30% RECENT, 40% ARCHIVED, 10% STALE
         active_pct = metrics.active_memories / metrics.total_memories
         recent_pct = metrics.recent_memories / metrics.total_memories
-        archived_pct = metrics.archived_memories / metrics.total_memories
+        metrics.archived_memories / metrics.total_memories
         stale_pct = metrics.stale_memories / metrics.total_memories
 
         # Score based on how close to ideal
@@ -259,9 +255,7 @@ class HealthReporter:
         else:
             project_score = max(0, 80 - (metrics.active_projects - 10) * 5)
 
-        return int(
-            lifecycle_score * 0.6 + size_score * 0.3 + project_score * 0.1
-        )
+        return int(lifecycle_score * 0.6 + size_score * 0.3 + project_score * 0.1)
 
     def _calculate_usage_score(self, metrics: HealthMetrics) -> int:
         """

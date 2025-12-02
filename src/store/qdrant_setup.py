@@ -12,7 +12,6 @@ from qdrant_client.models import (
     ScalarQuantization,
     ScalarQuantizationConfig,
     ScalarType,
-    QuantizationSearchParams,
     PayloadSchemaType,
 )
 from src.config import ServerConfig
@@ -35,6 +34,7 @@ class QdrantSetup:
         """
         if config is None:
             from src.config import get_config
+
             config = get_config()
 
         self.config = config
@@ -76,7 +76,7 @@ class QdrantSetup:
                 return self.client
             except Exception as e:
                 if attempt < max_retries - 1:
-                    delay = base_delay * (2 ** attempt)  # Exponential backoff
+                    delay = base_delay * (2**attempt)  # Exponential backoff
                     logger.warning(
                         f"Qdrant connection attempt {attempt + 1}/{max_retries} failed: {e}. "
                         f"Retrying in {delay}s..."
@@ -85,8 +85,7 @@ class QdrantSetup:
                 else:
                     # Final attempt failed
                     raise QdrantConnectionError(
-                        url=self.config.qdrant_url,
-                        reason=str(e)
+                        url=self.config.qdrant_url, reason=str(e)
                     )
 
     async def create_pool(
@@ -116,10 +115,10 @@ class QdrantSetup:
             QdrantConnectionError: If pool creation fails
         """
         # Use config defaults if not provided
-        min_size = min_size or getattr(self.config, 'qdrant_pool_min_size', 1)
-        max_size = max_size or getattr(self.config, 'qdrant_pool_size', 5)
-        timeout = timeout or getattr(self.config, 'qdrant_pool_timeout', 10.0)
-        recycle = recycle or getattr(self.config, 'qdrant_pool_recycle', 3600)
+        min_size = min_size or getattr(self.config, "qdrant_pool_min_size", 1)
+        max_size = max_size or getattr(self.config, "qdrant_pool_size", 5)
+        timeout = timeout or getattr(self.config, "qdrant_pool_timeout", 10.0)
+        recycle = recycle or getattr(self.config, "qdrant_pool_recycle", 3600)
 
         logger.info(
             f"Creating connection pool: min={min_size}, max={max_size}, "
@@ -248,7 +247,9 @@ class QdrantSetup:
                     logger.info(f"Created payload index for: {field_name}")
                 except Exception as e:
                     # Index might already exist, that's okay
-                    logger.debug(f"Index creation for {field_name} failed (may already exist): {e}")
+                    logger.debug(
+                        f"Index creation for {field_name} failed (may already exist): {e}"
+                    )
 
         except Exception as e:
             logger.warning(f"Failed to create some payload indices: {e}")

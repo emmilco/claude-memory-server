@@ -12,7 +12,6 @@ import shutil
 from datetime import datetime, UTC
 from pathlib import Path
 from typing import Dict, Optional, List
-import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +85,9 @@ class ArchiveCompressor:
             "statistics": stats,
             "compression_info": compression_info,
             "restore_info": {
-                "estimated_restore_time_seconds": max(5, compression_info.get("compressed_size_mb", 0) / 2),
+                "estimated_restore_time_seconds": max(
+                    5, compression_info.get("compressed_size_mb", 0) / 2
+                ),
                 "dependencies": [],
                 "warnings": [],
             },
@@ -139,7 +140,9 @@ class ArchiveCompressor:
             # Create tar.gz archive
             archive_file = archive_dir / f"{project_name}_index.tar.gz"
 
-            with tarfile.open(archive_file, "w:gz", compresslevel=self.compression_level) as tar:
+            with tarfile.open(
+                archive_file, "w:gz", compresslevel=self.compression_level
+            ) as tar:
                 # Add index data
                 if index_path.exists():
                     tar.add(
@@ -160,7 +163,11 @@ class ArchiveCompressor:
             # Calculate compressed size
             compressed_size = archive_file.stat().st_size
             compressed_size_mb = compressed_size / (1024 * 1024)
-            compression_ratio = compressed_size / (index_size + cache_size) if (index_size + cache_size) > 0 else 0
+            compression_ratio = (
+                compressed_size / (index_size + cache_size)
+                if (index_size + cache_size) > 0
+                else 0
+            )
 
             # Prepare compression info
             compression_info = {

@@ -12,10 +12,10 @@ PERF-007: Connection Pooling - Day 2 Health Checking
 
 import pytest
 import asyncio
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
+from unittest.mock import Mock
 
 from qdrant_client import QdrantClient
-from qdrant_client.http.exceptions import UnexpectedResponse, ResponseHandlingException
+from qdrant_client.http.exceptions import UnexpectedResponse
 
 from src.store.connection_health_checker import (
     ConnectionHealthChecker,
@@ -88,13 +88,16 @@ class TestFastHealthCheck:
 
         assert result.healthy is True
         assert result.level == HealthCheckLevel.FAST
-        assert result.duration_ms < 500.0  # Very generous for test environment with parallel execution
+        assert (
+            result.duration_ms < 500.0
+        )  # Very generous for test environment with parallel execution
         assert result.error is None
 
     @pytest.mark.asyncio
     async def test_fast_check_timeout(self, health_checker):
         """Test fast health check with timeout."""
         import time
+
         client = Mock(spec=QdrantClient)
 
         # Make get_collections block synchronously (runs in executor thread)
@@ -163,6 +166,7 @@ class TestMediumHealthCheck:
     async def test_medium_check_timeout(self, health_checker):
         """Test medium health check with timeout."""
         import time
+
         client = Mock(spec=QdrantClient)
 
         # Make get_collections block synchronously (runs in executor thread)
@@ -233,7 +237,6 @@ class TestDeepHealthCheck:
     @pytest.mark.asyncio
     async def test_deep_check_timeout(self, health_checker):
         """Test deep health check with timeout."""
-        import asyncio
         client = Mock(spec=QdrantClient)
 
         # Make get_collections hang using async sleep to avoid blocking the event loop

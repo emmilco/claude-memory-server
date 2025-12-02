@@ -117,7 +117,11 @@ class TestBulkArchivalManager:
     @pytest.mark.asyncio
     async def test_bulk_archive_dry_run(self, bulk_manager, sample_projects):
         """Test bulk archive in dry-run mode."""
-        projects_to_archive = ["active-project-0", "active-project-1", "inactive-project-0"]
+        projects_to_archive = [
+            "active-project-0",
+            "active-project-1",
+            "inactive-project-0",
+        ]
 
         result = await bulk_manager.bulk_archive_projects(
             project_names=projects_to_archive,
@@ -133,7 +137,10 @@ class TestBulkArchivalManager:
         assert all(r["status"] == "would_archive" for r in result.results)
 
         # Verify states didn't actually change
-        assert bulk_manager.archival_manager.get_project_state("active-project-0") == ProjectState.ACTIVE
+        assert (
+            bulk_manager.archival_manager.get_project_state("active-project-0")
+            == ProjectState.ACTIVE
+        )
 
     @pytest.mark.asyncio
     async def test_bulk_archive_actual(self, bulk_manager, sample_projects):
@@ -153,11 +160,19 @@ class TestBulkArchivalManager:
         assert len(result.results) == 2
 
         # Verify states changed to ARCHIVED
-        assert bulk_manager.archival_manager.get_project_state("active-project-0") == ProjectState.ARCHIVED
-        assert bulk_manager.archival_manager.get_project_state("active-project-1") == ProjectState.ARCHIVED
+        assert (
+            bulk_manager.archival_manager.get_project_state("active-project-0")
+            == ProjectState.ARCHIVED
+        )
+        assert (
+            bulk_manager.archival_manager.get_project_state("active-project-1")
+            == ProjectState.ARCHIVED
+        )
 
     @pytest.mark.asyncio
-    async def test_bulk_archive_skip_already_archived(self, bulk_manager, sample_projects):
+    async def test_bulk_archive_skip_already_archived(
+        self, bulk_manager, sample_projects
+    ):
         """Test that already archived projects are skipped."""
         projects_to_archive = ["archived-project-0", "archived-project-1"]
 
@@ -191,9 +206,15 @@ class TestBulkArchivalManager:
         assert "Exceeded max projects limit" in result.errors[0]
 
     @pytest.mark.asyncio
-    async def test_bulk_archive_with_progress_callback(self, bulk_manager, sample_projects):
+    async def test_bulk_archive_with_progress_callback(
+        self, bulk_manager, sample_projects
+    ):
         """Test bulk archive with progress callback."""
-        projects_to_archive = ["active-project-0", "active-project-1", "active-project-2"]
+        projects_to_archive = [
+            "active-project-0",
+            "active-project-1",
+            "active-project-2",
+        ]
         progress_calls = []
 
         def progress_callback(project_name: str, current: int, total: int):
@@ -229,7 +250,10 @@ class TestBulkArchivalManager:
         assert all(r["status"] == "would_reactivate" for r in result.results)
 
         # Verify states didn't actually change
-        assert bulk_manager.archival_manager.get_project_state("archived-project-0") == ProjectState.ARCHIVED
+        assert (
+            bulk_manager.archival_manager.get_project_state("archived-project-0")
+            == ProjectState.ARCHIVED
+        )
 
     @pytest.mark.asyncio
     async def test_bulk_reactivate_actual(self, bulk_manager, sample_projects):
@@ -248,11 +272,19 @@ class TestBulkArchivalManager:
         assert result.skipped == 0
 
         # Verify states changed to ACTIVE
-        assert bulk_manager.archival_manager.get_project_state("archived-project-0") == ProjectState.ACTIVE
-        assert bulk_manager.archival_manager.get_project_state("archived-project-1") == ProjectState.ACTIVE
+        assert (
+            bulk_manager.archival_manager.get_project_state("archived-project-0")
+            == ProjectState.ACTIVE
+        )
+        assert (
+            bulk_manager.archival_manager.get_project_state("archived-project-1")
+            == ProjectState.ACTIVE
+        )
 
     @pytest.mark.asyncio
-    async def test_bulk_reactivate_skip_not_archived(self, bulk_manager, sample_projects):
+    async def test_bulk_reactivate_skip_not_archived(
+        self, bulk_manager, sample_projects
+    ):
         """Test that non-archived projects are skipped during reactivation."""
         projects_to_reactivate = ["active-project-0", "inactive-project-0"]
 
@@ -297,7 +329,10 @@ class TestBulkArchivalManager:
         assert result.skipped == 0
 
         # Verify states didn't change
-        assert bulk_manager.archival_manager.get_project_state("inactive-project-0") == ProjectState.ACTIVE
+        assert (
+            bulk_manager.archival_manager.get_project_state("inactive-project-0")
+            == ProjectState.ACTIVE
+        )
 
     @pytest.mark.asyncio
     async def test_auto_archive_inactive_actual(self, bulk_manager, sample_projects):
@@ -315,10 +350,15 @@ class TestBulkArchivalManager:
         # Verify states changed to ARCHIVED
         for i in range(5):
             project_name = f"inactive-project-{i}"
-            assert bulk_manager.archival_manager.get_project_state(project_name) == ProjectState.ARCHIVED
+            assert (
+                bulk_manager.archival_manager.get_project_state(project_name)
+                == ProjectState.ARCHIVED
+            )
 
     @pytest.mark.asyncio
-    async def test_auto_archive_no_inactive_projects(self, bulk_manager, sample_projects):
+    async def test_auto_archive_no_inactive_projects(
+        self, bulk_manager, sample_projects
+    ):
         """Test auto-archive when no projects meet threshold."""
         result = await bulk_manager.auto_archive_inactive(
             days_threshold=200,  # Very high threshold, no projects match
@@ -343,7 +383,9 @@ class TestBulkArchivalManager:
         assert result.successful == 3
 
     @pytest.mark.asyncio
-    async def test_auto_archive_excludes_already_archived(self, bulk_manager, sample_projects):
+    async def test_auto_archive_excludes_already_archived(
+        self, bulk_manager, sample_projects
+    ):
         """Test that auto-archive doesn't re-archive already archived projects."""
         # All archived-project-* are already archived and meet threshold
         result = await bulk_manager.auto_archive_inactive(
@@ -376,7 +418,9 @@ class TestBulkArchivalManager:
 
         assert len(candidates) == 3  # Limited to 3
 
-    def test_get_archival_candidates_high_threshold(self, bulk_manager, sample_projects):
+    def test_get_archival_candidates_high_threshold(
+        self, bulk_manager, sample_projects
+    ):
         """Test archival candidates with high threshold (no matches)."""
         candidates = bulk_manager.get_archival_candidates(
             days_threshold=200,

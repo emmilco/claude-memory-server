@@ -97,10 +97,10 @@ class RefinementAdvisor:
                 hints.append(
                     "💡 Add 'function' to your query to focus on functions only"
                 )
-            elif facets.unit_types.get("class", 0) > facets.unit_types.get("function", 0):
-                hints.append(
-                    "💡 Add 'class' to your query to focus on classes only"
-                )
+            elif facets.unit_types.get("class", 0) > facets.unit_types.get(
+                "function", 0
+            ):
+                hints.append("💡 Add 'class' to your query to focus on classes only")
 
         # Query lacks context → suggest more specific terms
         if len(query.split()) < 3:
@@ -112,9 +112,9 @@ class RefinementAdvisor:
         # Keyword search might be better for specific names
         # Check if query contains identifiers (CamelCase, snake_case, or starts with _)
         has_identifier = any(
-            term[0].isupper() or  # CamelCase
-            "_" in term or  # snake_case
-            term.startswith("_")  # private identifier
+            term[0].isupper()  # CamelCase
+            or "_" in term  # snake_case
+            or term.startswith("_")  # private identifier
             for term in query.split()
         )
         if has_identifier and filters.get("search_mode") != "keyword":

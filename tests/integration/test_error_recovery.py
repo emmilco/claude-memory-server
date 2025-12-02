@@ -12,18 +12,11 @@ Tests verify that the server handles various error conditions gracefully:
 
 import asyncio
 import pytest
-import pytest_asyncio
-import uuid
-from unittest.mock import AsyncMock, Mock, patch, MagicMock
-from qdrant_client.http.exceptions import UnexpectedResponse
 
 from src.config import ServerConfig
 from src.core.server import MemoryRAGServer
 from src.core.exceptions import EmbeddingError, ReadOnlyError, SecurityError
-from src.store.qdrant_store import QdrantMemoryStore
-from src.embeddings.generator import EmbeddingGenerator
 from tests.conftest import mock_embedding
-
 
 
 @pytest.fixture
@@ -68,7 +61,7 @@ class TestStoreFailureRecovery:
         # Since there's no retry logic in the current implementation,
         # we expect this to fail and we verify error handling
         try:
-            result = await server.store_memory(
+            await server.store_memory(
                 content="Test resilience",
                 category="fact",
                 scope="global",
@@ -90,7 +83,11 @@ class TestStoreFailureRecovery:
         batch = [
             {"content": "Valid memory 1", "category": "fact", "scope": "global"},
             {"content": "Valid memory 2", "category": "fact", "scope": "global"},
-            {"content": "", "category": "fact", "scope": "global"},  # Invalid (empty content)
+            {
+                "content": "",
+                "category": "fact",
+                "scope": "global",
+            },  # Invalid (empty content)
             {"content": "Valid memory 3", "category": "fact", "scope": "global"},
         ]
 
@@ -123,7 +120,7 @@ class TestStoreFailureRecovery:
 
         # This should either raise a clear error or handle gracefully
         try:
-            result = await server.store_memory(
+            await server.store_memory(
                 content="Test after connection loss",
                 category="fact",
                 scope="global",
@@ -151,6 +148,7 @@ class TestEmbeddingFailureRecovery:
         # Mock embedding generator to timeout
         async def timeout_generate(text):
             import asyncio
+
             await asyncio.sleep(100)  # Simulate timeout
             return mock_embedding(value=0.1)
 
@@ -160,13 +158,13 @@ class TestEmbeddingFailureRecovery:
         # Store should timeout or handle gracefully
         try:
             with pytest.raises((asyncio.TimeoutError, EmbeddingError)):
-                result = await asyncio.wait_for(
+                await asyncio.wait_for(
                     server.store_memory(
                         content="Test timeout",
                         category="fact",
                         scope="global",
                     ),
-                    timeout=1.0  # 1 second timeout
+                    timeout=1.0,  # 1 second timeout
                 )
         finally:
             server.embedding_generator.generate = original_generate
@@ -208,13 +206,13 @@ class TestCacheFailureRecovery:
         await server.initialize()
 
         # Corrupt the cache by closing its connection
-        if hasattr(server.embedding_cache, 'conn') and server.embedding_cache.conn:
+        if hasattr(server.embedding_cache, "conn") and server.embedding_cache.conn:
             server.embedding_cache.conn.close()
             server.embedding_cache.conn = None
 
         # Operations should continue (bypass cache or recreate)
         try:
-            result = await server.store_memory(
+            await server.store_memory(
                 content="Test with corrupted cache",
                 category="fact",
                 scope="global",
@@ -318,6 +316,7 @@ class TestValidationErrorRecovery:
 
         # Empty content raises StorageError wrapping validation error
         from src.core.exceptions import StorageError
+
         with pytest.raises((StorageError, ValueError)):
             await server.store_memory(
                 content="",
@@ -343,6 +342,7 @@ class TestValidationErrorRecovery:
 
         # SQL injection attempt raises StorageError wrapping security/validation error
         from src.core.exceptions import StorageError
+
         with pytest.raises((StorageError, SecurityError, ValueError)):
             await server.store_memory(
                 content="'; DROP TABLE memories--",
@@ -384,11 +384,15 @@ class TestResourceExhaustionHandling:
         # 1. Handle by chunking into smaller batches
         # 2. Reject with clear error message
         try:
-            result = await server.batch_store_memories(large_batch)
+            await server.batch_store_memories(large_batch)
             # If it succeeds, that's good
         except Exception as e:
             # If it fails, it should be a clear validation error
-            assert "batch" in str(e).lower() or "limit" in str(e).lower() or "maximum" in str(e).lower()
+            assert (
+                "batch" in str(e).lower()
+                or "limit" in str(e).lower()
+                or "maximum" in str(e).lower()
+            )
         finally:
             await server.close()
 

@@ -12,17 +12,10 @@ This test suite covers:
 """
 
 import pytest
-from datetime import datetime, UTC
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from src.services.code_indexing_service import CodeIndexingService
 from src.config import ServerConfig
-from src.core.models import (
-    MemoryCategory,
-    ContextLevel,
-    MemoryScope,
-)
 from src.core.exceptions import (
     StorageError,
     ValidationError,
@@ -203,9 +196,14 @@ class TestSearchQualityAnalysis:
             {"relevance_score": 0.7, "code": "def authenticate_user(): pass"},
         ]
 
-        result = service._analyze_search_quality(results, "authenticate user", "project")
+        result = service._analyze_search_quality(
+            results, "authenticate user", "project"
+        )
 
-        assert "authenticate" in result["matched_keywords"] or "user" in result["matched_keywords"]
+        assert (
+            "authenticate" in result["matched_keywords"]
+            or "user" in result["matched_keywords"]
+        )
 
 
 class TestSearchCode:
@@ -379,7 +377,9 @@ class TestSearchCode:
         quality_metrics.duplication_score = 0.1
         quality_metrics.maintainability_index = 75
         quality_metrics.quality_flags = []
-        quality_analyzer.calculate_quality_metrics = MagicMock(return_value=quality_metrics)
+        quality_analyzer.calculate_quality_metrics = MagicMock(
+            return_value=quality_metrics
+        )
 
         service.duplicate_detector = duplicate_detector
         service.quality_analyzer = quality_analyzer
@@ -465,7 +465,9 @@ class TestFindSimilarCode:
         await service.find_similar_code(code_snippet="def test(): pass")
 
         stats = service.get_stats()
-        assert stats["similar_code_searches"] == initial_stats["similar_code_searches"] + 1
+        assert (
+            stats["similar_code_searches"] == initial_stats["similar_code_searches"] + 1
+        )
 
     @pytest.mark.asyncio
     async def test_find_similar_code_interpretation_duplicates(self, service):
@@ -514,11 +516,13 @@ class TestIndexCodebase:
         with patch("src.memory.incremental_indexer.IncrementalIndexer") as MockIndexer:
             mock_indexer = AsyncMock()
             mock_indexer.initialize = AsyncMock()
-            mock_indexer.index_directory = AsyncMock(return_value={
-                "indexed_files": 1,
-                "total_units": 1,
-                "languages": {"python": 1},
-            })
+            mock_indexer.index_directory = AsyncMock(
+                return_value={
+                    "indexed_files": 1,
+                    "total_units": 1,
+                    "languages": {"python": 1},
+                }
+            )
             MockIndexer.return_value = mock_indexer
 
             result = await service.index_codebase(
@@ -539,7 +543,9 @@ class TestIndexCodebase:
             )
 
     @pytest.mark.asyncio
-    async def test_index_codebase_file_instead_of_directory_raises(self, service, tmp_path):
+    async def test_index_codebase_file_instead_of_directory_raises(
+        self, service, tmp_path
+    ):
         """Test indexing a file instead of directory raises."""
         test_file = tmp_path / "test.py"
         test_file.write_text("test")
@@ -583,11 +589,13 @@ class TestReindexProject:
 
         with patch("src.memory.incremental_indexer.IncrementalIndexer") as MockIndexer:
             mock_indexer = AsyncMock()
-            mock_indexer.index_directory = AsyncMock(return_value={
-                "indexed_files": 1,
-                "total_units": 1,
-                "languages": {"python": 1},
-            })
+            mock_indexer.index_directory = AsyncMock(
+                return_value={
+                    "indexed_files": 1,
+                    "total_units": 1,
+                    "languages": {"python": 1},
+                }
+            )
             MockIndexer.return_value = mock_indexer
 
             result = await service.reindex_project(
@@ -608,11 +616,13 @@ class TestReindexProject:
 
         with patch("src.memory.incremental_indexer.IncrementalIndexer") as MockIndexer:
             mock_indexer = AsyncMock()
-            mock_indexer.index_directory = AsyncMock(return_value={
-                "indexed_files": 1,
-                "total_units": 1,
-                "languages": {},
-            })
+            mock_indexer.index_directory = AsyncMock(
+                return_value={
+                    "indexed_files": 1,
+                    "total_units": 1,
+                    "languages": {},
+                }
+            )
             MockIndexer.return_value = mock_indexer
 
             result = await service.reindex_project(
@@ -643,11 +653,13 @@ class TestGetIndexedFiles:
     def service(self):
         """Create service instance for indexed files tests."""
         store = AsyncMock()
-        store.get_indexed_files = AsyncMock(return_value={
-            "files": [{"file_path": "/test.py", "language": "python"}],
-            "total": 1,
-            "offset": 0,
-        })
+        store.get_indexed_files = AsyncMock(
+            return_value={
+                "files": [{"file_path": "/test.py", "language": "python"}],
+                "total": 1,
+                "offset": 0,
+            }
+        )
 
         return CodeIndexingService(
             store=store,
@@ -671,7 +683,7 @@ class TestGetIndexedFiles:
     @pytest.mark.asyncio
     async def test_get_indexed_files_pagination(self, service):
         """Test indexed files pagination."""
-        result = await service.get_indexed_files(
+        await service.get_indexed_files(
             limit=10,
             offset=5,
         )
@@ -690,11 +702,13 @@ class TestListIndexedUnits:
     def service(self):
         """Create service instance for list units tests."""
         store = AsyncMock()
-        store.list_indexed_units = AsyncMock(return_value={
-            "units": [{"unit_name": "test", "unit_type": "function"}],
-            "total": 1,
-            "offset": 0,
-        })
+        store.list_indexed_units = AsyncMock(
+            return_value={
+                "units": [{"unit_name": "test", "unit_type": "function"}],
+                "total": 1,
+                "offset": 0,
+            }
+        )
 
         return CodeIndexingService(
             store=store,
@@ -892,7 +906,7 @@ class TestEmbeddingCaching:
     @pytest.mark.asyncio
     async def test_cache_miss_generates_and_caches(self, service):
         """Test cache miss generates embedding and stores in cache."""
-        result = await service._get_embedding("test code")
+        await service._get_embedding("test code")
 
         service.embedding_cache.get.assert_called_once()
         service.embedding_generator.generate.assert_called_once()
@@ -991,10 +1005,12 @@ class TestDeduplication:
         }
 
         store = AsyncMock()
-        store.retrieve = AsyncMock(return_value=[
-            (mock_memory1, 0.9),
-            (mock_memory2, 0.85),
-        ])
+        store.retrieve = AsyncMock(
+            return_value=[
+                (mock_memory1, 0.9),
+                (mock_memory2, 0.85),
+            ]
+        )
 
         embedding_generator = AsyncMock()
         embedding_generator.generate = AsyncMock(return_value=mock_embedding(value=0.1))

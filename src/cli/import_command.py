@@ -58,8 +58,12 @@ async def import_command(
         try:
             strategy = ConflictStrategy(conflict_strategy)
         except ValueError:
-            console.print(f"[red]Error:[/red] Invalid conflict strategy: {conflict_strategy}")
-            console.print(f"Valid strategies: {', '.join(s.value for s in ConflictStrategy)}")
+            console.print(
+                f"[red]Error:[/red] Invalid conflict strategy: {conflict_strategy}"
+            )
+            console.print(
+                f"Valid strategies: {', '.join(s.value for s in ConflictStrategy)}"
+            )
             return 1
 
         # Parse category filter
@@ -71,25 +75,37 @@ async def import_command(
             console.print(f"[red]Error:[/red] File not found: {input_file}")
             return 1
 
-        is_archive = input_path.suffix == ".gz" or input_path.suffixes == [".tar", ".gz"]
+        is_archive = input_path.suffix == ".gz" or input_path.suffixes == [
+            ".tar",
+            ".gz",
+        ]
 
         # Display import configuration
         config_table = Table(show_header=False, box=None)
         config_table.add_row("[cyan]Input File:[/cyan]", str(input_path))
-        config_table.add_row("[cyan]Format:[/cyan]", "Archive (.tar.gz)" if is_archive else "JSON")
+        config_table.add_row(
+            "[cyan]Format:[/cyan]", "Archive (.tar.gz)" if is_archive else "JSON"
+        )
         config_table.add_row("[cyan]Conflict Strategy:[/cyan]", strategy.value)
-        config_table.add_row("[cyan]Mode:[/cyan]", "[yellow]DRY RUN[/yellow]" if dry_run else "[green]LIVE IMPORT[/green]")
+        config_table.add_row(
+            "[cyan]Mode:[/cyan]",
+            "[yellow]DRY RUN[/yellow]" if dry_run else "[green]LIVE IMPORT[/green]",
+        )
         if project:
             config_table.add_row("[cyan]Project Filter:[/cyan]", project)
         if category:
             config_table.add_row("[cyan]Category Filter:[/cyan]", category)
 
-        console.print(Panel(config_table, title="Import Configuration", border_style="blue"))
+        console.print(
+            Panel(config_table, title="Import Configuration", border_style="blue")
+        )
         console.print()
 
         # Confirmation prompt (skip if --yes or dry-run)
         if not dry_run and not yes:
-            if not Confirm.ask("[yellow]⚠ This will modify your database. Continue?[/yellow]"):
+            if not Confirm.ask(
+                "[yellow]⚠ This will modify your database. Continue?[/yellow]"
+            ):
                 console.print("[yellow]Import cancelled.[/yellow]")
                 return 0
 
@@ -101,7 +117,7 @@ async def import_command(
         ) as progress:
             task = progress.add_task(
                 "Analyzing import..." if dry_run else "Importing memories...",
-                total=None
+                total=None,
             )
 
             if is_archive:
@@ -126,17 +142,29 @@ async def import_command(
         results_table = Table(show_header=False, box=None)
 
         if dry_run:
-            results_table.add_row("[yellow]⚠[/yellow] Dry run completed (no changes made)")
+            results_table.add_row(
+                "[yellow]⚠[/yellow] Dry run completed (no changes made)"
+            )
         else:
             results_table.add_row("[green]✓[/green] Import completed successfully")
 
         results_table.add_row("")
-        results_table.add_row("[cyan]Total Memories in File:[/cyan]", str(stats["total_memories"]))
-        results_table.add_row("[cyan]Imported:[/cyan]", f"[green]{stats['imported']}[/green]")
-        results_table.add_row("[cyan]Skipped:[/cyan]", f"[yellow]{stats['skipped']}[/yellow]")
-        results_table.add_row("[cyan]Conflicts:[/cyan]", f"[magenta]{stats['conflicts']}[/magenta]")
+        results_table.add_row(
+            "[cyan]Total Memories in File:[/cyan]", str(stats["total_memories"])
+        )
+        results_table.add_row(
+            "[cyan]Imported:[/cyan]", f"[green]{stats['imported']}[/green]"
+        )
+        results_table.add_row(
+            "[cyan]Skipped:[/cyan]", f"[yellow]{stats['skipped']}[/yellow]"
+        )
+        results_table.add_row(
+            "[cyan]Conflicts:[/cyan]", f"[magenta]{stats['conflicts']}[/magenta]"
+        )
         if stats["errors"] > 0:
-            results_table.add_row("[cyan]Errors:[/cyan]", f"[red]{stats['errors']}[/red]")
+            results_table.add_row(
+                "[cyan]Errors:[/cyan]", f"[red]{stats['errors']}[/red]"
+            )
 
         # Conflict resolution breakdown
         if stats["conflicts"] > 0:
@@ -160,7 +188,9 @@ async def import_command(
         console.print()
 
         if dry_run:
-            console.print("[yellow]💡 Tip:[/yellow] Remove --dry-run to perform the actual import")
+            console.print(
+                "[yellow]💡 Tip:[/yellow] Remove --dry-run to perform the actual import"
+            )
             console.print()
 
         # Cleanup
@@ -185,23 +215,19 @@ def main():
         dest="conflict_strategy",
         choices=["keep_newer", "keep_older", "keep_both", "skip", "merge_metadata"],
         default="keep_newer",
-        help="Conflict resolution strategy (default: keep_newer)"
+        help="Conflict resolution strategy (default: keep_newer)",
     )
     parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Analyze import without making changes"
+        "--dry-run", action="store_true", help="Analyze import without making changes"
     )
     parser.add_argument("--project", help="Only import this project (selective import)")
     parser.add_argument(
         "--category",
         choices=["preference", "fact", "event", "workflow", "context"],
-        help="Only import this category (selective import)"
+        help="Only import this category (selective import)",
     )
     parser.add_argument(
-        "-y", "--yes",
-        action="store_true",
-        help="Skip confirmation prompts"
+        "-y", "--yes", action="store_true", help="Skip confirmation prompts"
     )
 
     args = parser.parse_args()

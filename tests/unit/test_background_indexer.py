@@ -3,9 +3,8 @@
 import pytest
 import asyncio
 import tempfile
-import uuid
 from pathlib import Path
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, patch
 
 from src.memory.background_indexer import BackgroundIndexer
 from src.memory.job_state_manager import JobStatus
@@ -13,7 +12,13 @@ from src.memory.notification_manager import NotificationManager, NotificationBac
 from src.config import ServerConfig
 
 
-async def wait_for_job_status(indexer, job_id: str, expected_status: JobStatus, timeout: float = 5.0, allow_completed: bool = False):
+async def wait_for_job_status(
+    indexer,
+    job_id: str,
+    expected_status: JobStatus,
+    timeout: float = 5.0,
+    allow_completed: bool = False,
+):
     """
     Wait for a job to reach a specific status.
 
@@ -123,16 +128,18 @@ def indexer(job_db, notification_manager, config):
 
 
 @pytest.mark.asyncio
-@patch('src.memory.background_indexer.IncrementalIndexer')
+@patch("src.memory.background_indexer.IncrementalIndexer")
 async def test_start_indexing_job(mock_indexer_class, indexer, test_files):
     """Test starting indexing job."""
     # Mock IncrementalIndexer
     mock_indexer = AsyncMock()
     mock_indexer.initialize = AsyncMock()
-    mock_indexer.index_file = AsyncMock(return_value={
-        "units_indexed": 1,
-        "skipped": False,
-    })
+    mock_indexer.index_file = AsyncMock(
+        return_value={
+            "units_indexed": 1,
+            "skipped": False,
+        }
+    )
     mock_indexer.close = AsyncMock()
     mock_indexer.SUPPORTED_EXTENSIONS = {".py"}
     mock_indexer_class.return_value = mock_indexer
@@ -155,16 +162,18 @@ async def test_start_indexing_job(mock_indexer_class, indexer, test_files):
 
 
 @pytest.mark.asyncio
-@patch('src.memory.background_indexer.IncrementalIndexer')
+@patch("src.memory.background_indexer.IncrementalIndexer")
 async def test_start_background_job(mock_indexer_class, indexer, test_files):
     """Test starting job in background."""
     # Mock IncrementalIndexer
     mock_indexer = AsyncMock()
     mock_indexer.initialize = AsyncMock()
-    mock_indexer.index_file = AsyncMock(return_value={
-        "units_indexed": 1,
-        "skipped": False,
-    })
+    mock_indexer.index_file = AsyncMock(
+        return_value={
+            "units_indexed": 1,
+            "skipped": False,
+        }
+    )
     mock_indexer.close = AsyncMock()
     mock_indexer.SUPPORTED_EXTENSIONS = {".py"}
     mock_indexer_class.return_value = mock_indexer
@@ -180,7 +189,9 @@ async def test_start_background_job(mock_indexer_class, indexer, test_files):
     assert job_id is not None
 
     # Wait for job to reach running or completed state (allow completed for fast jobs)
-    job = await wait_for_job_status(indexer, job_id, JobStatus.RUNNING, timeout=1.0, allow_completed=True)
+    job = await wait_for_job_status(
+        indexer, job_id, JobStatus.RUNNING, timeout=1.0, allow_completed=True
+    )
     assert job.status in (JobStatus.RUNNING, JobStatus.COMPLETED)
 
     # Wait for job to complete
@@ -212,7 +223,7 @@ async def test_start_job_not_directory(indexer, temp_dir):
 
 
 @pytest.mark.asyncio
-@patch('src.memory.background_indexer.IncrementalIndexer')
+@patch("src.memory.background_indexer.IncrementalIndexer")
 async def test_pause_job(mock_indexer_class, indexer, test_files):
     """Test pausing a running job."""
     # Mock IncrementalIndexer with slow indexing
@@ -257,16 +268,18 @@ async def test_pause_nonexistent_job(indexer):
 
 
 @pytest.mark.asyncio
-@patch('src.memory.background_indexer.IncrementalIndexer')
+@patch("src.memory.background_indexer.IncrementalIndexer")
 async def test_pause_completed_job(mock_indexer_class, indexer, test_files):
     """Test pausing already completed job."""
     # Mock IncrementalIndexer
     mock_indexer = AsyncMock()
     mock_indexer.initialize = AsyncMock()
-    mock_indexer.index_file = AsyncMock(return_value={
-        "units_indexed": 1,
-        "skipped": False,
-    })
+    mock_indexer.index_file = AsyncMock(
+        return_value={
+            "units_indexed": 1,
+            "skipped": False,
+        }
+    )
     mock_indexer.close = AsyncMock()
     mock_indexer.SUPPORTED_EXTENSIONS = {".py"}
     mock_indexer_class.return_value = mock_indexer
@@ -285,7 +298,7 @@ async def test_pause_completed_job(mock_indexer_class, indexer, test_files):
 
 
 @pytest.mark.asyncio
-@patch('src.memory.background_indexer.IncrementalIndexer')
+@patch("src.memory.background_indexer.IncrementalIndexer")
 async def test_resume_job(mock_indexer_class, indexer, test_files):
     """Test resuming a paused job."""
     # Mock IncrementalIndexer
@@ -338,16 +351,18 @@ async def test_resume_nonexistent_job(indexer):
 
 
 @pytest.mark.asyncio
-@patch('src.memory.background_indexer.IncrementalIndexer')
+@patch("src.memory.background_indexer.IncrementalIndexer")
 async def test_resume_running_job(mock_indexer_class, indexer, test_files):
     """Test resuming already running job."""
     # Mock IncrementalIndexer
     mock_indexer = AsyncMock()
     mock_indexer.initialize = AsyncMock()
-    mock_indexer.index_file = AsyncMock(return_value={
-        "units_indexed": 1,
-        "skipped": False,
-    })
+    mock_indexer.index_file = AsyncMock(
+        return_value={
+            "units_indexed": 1,
+            "skipped": False,
+        }
+    )
     mock_indexer.close = AsyncMock()
     mock_indexer.SUPPORTED_EXTENSIONS = {".py"}
     mock_indexer_class.return_value = mock_indexer
@@ -361,7 +376,9 @@ async def test_resume_running_job(mock_indexer_class, indexer, test_files):
     )
 
     # Wait for job to reach running or completed state (allow completed for fast jobs)
-    job = await wait_for_job_status(indexer, job_id, JobStatus.RUNNING, timeout=1.0, allow_completed=True)
+    job = await wait_for_job_status(
+        indexer, job_id, JobStatus.RUNNING, timeout=1.0, allow_completed=True
+    )
 
     # Try to resume running job (only if it's still running)
     if job.status == JobStatus.RUNNING:
@@ -373,7 +390,7 @@ async def test_resume_running_job(mock_indexer_class, indexer, test_files):
 
 
 @pytest.mark.asyncio
-@patch('src.memory.background_indexer.IncrementalIndexer')
+@patch("src.memory.background_indexer.IncrementalIndexer")
 async def test_cancel_job(mock_indexer_class, indexer, test_files):
     """Test cancelling a running job."""
     # Mock IncrementalIndexer with slow indexing
@@ -418,16 +435,18 @@ async def test_cancel_nonexistent_job(indexer):
 
 
 @pytest.mark.asyncio
-@patch('src.memory.background_indexer.IncrementalIndexer')
+@patch("src.memory.background_indexer.IncrementalIndexer")
 async def test_list_jobs(mock_indexer_class, indexer, test_files):
     """Test listing jobs."""
     # Mock IncrementalIndexer
     mock_indexer = AsyncMock()
     mock_indexer.initialize = AsyncMock()
-    mock_indexer.index_file = AsyncMock(return_value={
-        "units_indexed": 1,
-        "skipped": False,
-    })
+    mock_indexer.index_file = AsyncMock(
+        return_value={
+            "units_indexed": 1,
+            "skipped": False,
+        }
+    )
     mock_indexer.close = AsyncMock()
     mock_indexer.SUPPORTED_EXTENSIONS = {".py"}
     mock_indexer_class.return_value = mock_indexer
@@ -457,16 +476,18 @@ async def test_list_jobs(mock_indexer_class, indexer, test_files):
 
 
 @pytest.mark.asyncio
-@patch('src.memory.background_indexer.IncrementalIndexer')
+@patch("src.memory.background_indexer.IncrementalIndexer")
 async def test_list_jobs_by_status(mock_indexer_class, indexer, test_files):
     """Test listing jobs filtered by status."""
     # Mock IncrementalIndexer
     mock_indexer = AsyncMock()
     mock_indexer.initialize = AsyncMock()
-    mock_indexer.index_file = AsyncMock(return_value={
-        "units_indexed": 1,
-        "skipped": False,
-    })
+    mock_indexer.index_file = AsyncMock(
+        return_value={
+            "units_indexed": 1,
+            "skipped": False,
+        }
+    )
     mock_indexer.close = AsyncMock()
     mock_indexer.SUPPORTED_EXTENSIONS = {".py"}
     mock_indexer_class.return_value = mock_indexer
@@ -485,16 +506,18 @@ async def test_list_jobs_by_status(mock_indexer_class, indexer, test_files):
 
 
 @pytest.mark.asyncio
-@patch('src.memory.background_indexer.IncrementalIndexer')
+@patch("src.memory.background_indexer.IncrementalIndexer")
 async def test_delete_completed_job(mock_indexer_class, indexer, test_files):
     """Test deleting a completed job."""
     # Mock IncrementalIndexer
     mock_indexer = AsyncMock()
     mock_indexer.initialize = AsyncMock()
-    mock_indexer.index_file = AsyncMock(return_value={
-        "units_indexed": 1,
-        "skipped": False,
-    })
+    mock_indexer.index_file = AsyncMock(
+        return_value={
+            "units_indexed": 1,
+            "skipped": False,
+        }
+    )
     mock_indexer.close = AsyncMock()
     mock_indexer.SUPPORTED_EXTENSIONS = {".py"}
     mock_indexer_class.return_value = mock_indexer
@@ -517,7 +540,7 @@ async def test_delete_completed_job(mock_indexer_class, indexer, test_files):
 
 
 @pytest.mark.asyncio
-@patch('src.memory.background_indexer.IncrementalIndexer')
+@patch("src.memory.background_indexer.IncrementalIndexer")
 async def test_cannot_delete_running_job(mock_indexer_class, indexer, test_files):
     """Test that running jobs cannot be deleted."""
     # Mock IncrementalIndexer with slow indexing
@@ -554,16 +577,20 @@ async def test_cannot_delete_running_job(mock_indexer_class, indexer, test_files
 
 
 @pytest.mark.asyncio
-@patch('src.memory.background_indexer.IncrementalIndexer')
-async def test_notifications_sent(mock_indexer_class, indexer, test_files, notification_backend):
+@patch("src.memory.background_indexer.IncrementalIndexer")
+async def test_notifications_sent(
+    mock_indexer_class, indexer, test_files, notification_backend
+):
     """Test that notifications are sent during indexing."""
     # Mock IncrementalIndexer
     mock_indexer = AsyncMock()
     mock_indexer.initialize = AsyncMock()
-    mock_indexer.index_file = AsyncMock(return_value={
-        "units_indexed": 1,
-        "skipped": False,
-    })
+    mock_indexer.index_file = AsyncMock(
+        return_value={
+            "units_indexed": 1,
+            "skipped": False,
+        }
+    )
     mock_indexer.close = AsyncMock()
     mock_indexer.SUPPORTED_EXTENSIONS = {".py"}
     mock_indexer_class.return_value = mock_indexer

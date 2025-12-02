@@ -2,7 +2,6 @@
 
 import pytest
 import sqlite3
-from datetime import datetime, timedelta, UTC
 from pathlib import Path
 import tempfile
 
@@ -10,8 +9,6 @@ from src.monitoring.performance_tracker import (
     PerformanceTracker,
     PerformanceMetric,
     RegressionSeverity,
-    PerformanceBaseline,
-    PerformanceRegression,
 )
 
 
@@ -64,9 +61,7 @@ class TestDatabaseInitialization:
         """Should create indexes for performance."""
         with sqlite3.connect(temp_db) as conn:
             cursor = conn.cursor()
-            cursor.execute(
-                "SELECT name FROM sqlite_master WHERE type='index'"
-            )
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='index'")
             indexes = [row[0] for row in cursor.fetchall()]
             assert "idx_perf_metrics_timestamp" in indexes
             assert "idx_perf_metrics_metric" in indexes
@@ -80,7 +75,9 @@ class TestMetricRecording:
         tracker.record_metric(PerformanceMetric.SEARCH_LATENCY_P50, 12.5)
 
         # Verify stored
-        history = tracker.get_metric_history(PerformanceMetric.SEARCH_LATENCY_P50, days=1)
+        history = tracker.get_metric_history(
+            PerformanceMetric.SEARCH_LATENCY_P50, days=1
+        )
         assert len(history) == 1
         assert history[0][1] == 12.5
 
@@ -92,7 +89,9 @@ class TestMetricRecording:
         )
 
         # Verify stored (metadata checked via database)
-        history = tracker.get_metric_history(PerformanceMetric.INDEXING_THROUGHPUT, days=1)
+        history = tracker.get_metric_history(
+            PerformanceMetric.INDEXING_THROUGHPUT, days=1
+        )
         assert len(history) == 1
 
     def test_records_multiple_metrics(self, tracker):
@@ -102,9 +101,15 @@ class TestMetricRecording:
         tracker.record_metric(PerformanceMetric.CACHE_HIT_RATE, 0.85)
 
         # Verify all stored
-        p50_history = tracker.get_metric_history(PerformanceMetric.SEARCH_LATENCY_P50, days=1)
-        p95_history = tracker.get_metric_history(PerformanceMetric.SEARCH_LATENCY_P95, days=1)
-        cache_history = tracker.get_metric_history(PerformanceMetric.CACHE_HIT_RATE, days=1)
+        p50_history = tracker.get_metric_history(
+            PerformanceMetric.SEARCH_LATENCY_P50, days=1
+        )
+        p95_history = tracker.get_metric_history(
+            PerformanceMetric.SEARCH_LATENCY_P95, days=1
+        )
+        cache_history = tracker.get_metric_history(
+            PerformanceMetric.CACHE_HIT_RATE, days=1
+        )
 
         assert len(p50_history) == 1
         assert len(p95_history) == 1
@@ -120,7 +125,9 @@ class TestBaselineCalculation:
         for i in range(30):
             tracker.record_metric(PerformanceMetric.SEARCH_LATENCY_P50, 10.0 + i * 0.1)
 
-        baseline = tracker.calculate_baseline(PerformanceMetric.SEARCH_LATENCY_P50, days=30)
+        baseline = tracker.calculate_baseline(
+            PerformanceMetric.SEARCH_LATENCY_P50, days=30
+        )
 
         assert baseline is not None
         assert baseline.metric == PerformanceMetric.SEARCH_LATENCY_P50
@@ -136,7 +143,9 @@ class TestBaselineCalculation:
         for i in range(5):
             tracker.record_metric(PerformanceMetric.SEARCH_LATENCY_P50, 10.0)
 
-        baseline = tracker.calculate_baseline(PerformanceMetric.SEARCH_LATENCY_P50, days=30)
+        baseline = tracker.calculate_baseline(
+            PerformanceMetric.SEARCH_LATENCY_P50, days=30
+        )
 
         assert baseline is None
 
@@ -163,7 +172,9 @@ class TestBaselineCalculation:
         # Add more data with different values
         for i in range(30):
             tracker.record_metric(PerformanceMetric.SEARCH_LATENCY_P50, 15.0)
-        baseline = tracker.calculate_baseline(PerformanceMetric.SEARCH_LATENCY_P50, days=30)
+        baseline = tracker.calculate_baseline(
+            PerformanceMetric.SEARCH_LATENCY_P50, days=30
+        )
 
         # Should include all 60 samples (30 of 10.0 + 30 of 15.0) = 12.5 average
         assert baseline.mean == 12.5
@@ -181,7 +192,9 @@ class TestRegressionDetection:
         tracker.calculate_baseline(PerformanceMetric.SEARCH_LATENCY_P50, days=30)
 
         # Current performance is same
-        regression = tracker.detect_regression(PerformanceMetric.SEARCH_LATENCY_P50, 10.0)
+        regression = tracker.detect_regression(
+            PerformanceMetric.SEARCH_LATENCY_P50, 10.0
+        )
 
         assert regression is None
 
@@ -193,7 +206,9 @@ class TestRegressionDetection:
         tracker.calculate_baseline(PerformanceMetric.SEARCH_LATENCY_P50, days=30)
 
         # Current performance degraded by 15%
-        regression = tracker.detect_regression(PerformanceMetric.SEARCH_LATENCY_P50, 11.5)
+        regression = tracker.detect_regression(
+            PerformanceMetric.SEARCH_LATENCY_P50, 11.5
+        )
 
         assert regression is not None
         assert regression.severity == RegressionSeverity.MINOR
@@ -208,7 +223,9 @@ class TestRegressionDetection:
         tracker.calculate_baseline(PerformanceMetric.SEARCH_LATENCY_P50, days=30)
 
         # Current performance degraded by 50%
-        regression = tracker.detect_regression(PerformanceMetric.SEARCH_LATENCY_P50, 15.0)
+        regression = tracker.detect_regression(
+            PerformanceMetric.SEARCH_LATENCY_P50, 15.0
+        )
 
         assert regression is not None
         assert regression.severity == RegressionSeverity.SEVERE
@@ -223,7 +240,9 @@ class TestRegressionDetection:
         tracker.calculate_baseline(PerformanceMetric.SEARCH_LATENCY_P50, days=30)
 
         # Current performance degraded by 100%
-        regression = tracker.detect_regression(PerformanceMetric.SEARCH_LATENCY_P50, 20.0)
+        regression = tracker.detect_regression(
+            PerformanceMetric.SEARCH_LATENCY_P50, 20.0
+        )
 
         assert regression is not None
         assert regression.severity == RegressionSeverity.CRITICAL
@@ -237,7 +256,9 @@ class TestRegressionDetection:
         tracker.calculate_baseline(PerformanceMetric.INDEXING_THROUGHPUT, days=30)
 
         # Current performance degraded (lower throughput)
-        regression = tracker.detect_regression(PerformanceMetric.INDEXING_THROUGHPUT, 10.0)
+        regression = tracker.detect_regression(
+            PerformanceMetric.INDEXING_THROUGHPUT, 10.0
+        )
 
         assert regression is not None
         assert regression.severity == RegressionSeverity.SEVERE  # 50% degradation
@@ -266,13 +287,17 @@ class TestRecommendationGeneration:
             tracker.record_metric(PerformanceMetric.SEARCH_LATENCY_P95, 20.0)
         tracker.calculate_baseline(PerformanceMetric.SEARCH_LATENCY_P95, days=30)
 
-        regression = tracker.detect_regression(PerformanceMetric.SEARCH_LATENCY_P95, 30.0)
+        regression = tracker.detect_regression(
+            PerformanceMetric.SEARCH_LATENCY_P95, 30.0
+        )
 
         assert regression is not None
         assert len(regression.recommendations) > 0
         # Should include recommendations about collection size, quantization, etc.
-        assert any("collection" in rec.lower() or "quantization" in rec.lower()
-                   for rec in regression.recommendations)
+        assert any(
+            "collection" in rec.lower() or "quantization" in rec.lower()
+            for rec in regression.recommendations
+        )
 
     def test_generates_recommendations_for_throughput_regression(self, tracker):
         """Should generate recommendations for throughput regression."""
@@ -281,7 +306,9 @@ class TestRecommendationGeneration:
             tracker.record_metric(PerformanceMetric.INDEXING_THROUGHPUT, 20.0)
         tracker.calculate_baseline(PerformanceMetric.INDEXING_THROUGHPUT, days=30)
 
-        regression = tracker.detect_regression(PerformanceMetric.INDEXING_THROUGHPUT, 10.0)
+        regression = tracker.detect_regression(
+            PerformanceMetric.INDEXING_THROUGHPUT, 10.0
+        )
 
         assert regression is not None
         assert len(regression.recommendations) > 0
@@ -295,7 +322,9 @@ class TestRecommendationGeneration:
             tracker.record_metric(PerformanceMetric.SEARCH_LATENCY_P99, 20.0)
         tracker.calculate_baseline(PerformanceMetric.SEARCH_LATENCY_P99, days=30)
 
-        regression = tracker.detect_regression(PerformanceMetric.SEARCH_LATENCY_P99, 60.0)
+        regression = tracker.detect_regression(
+            PerformanceMetric.SEARCH_LATENCY_P99, 60.0
+        )
 
         assert regression is not None
         assert len(regression.recommendations) <= 5
@@ -381,7 +410,9 @@ class TestMetricHistory:
         for i in range(10):
             tracker.record_metric(PerformanceMetric.SEARCH_LATENCY_P50, 10.0 + i)
 
-        history = tracker.get_metric_history(PerformanceMetric.SEARCH_LATENCY_P50, days=1)
+        history = tracker.get_metric_history(
+            PerformanceMetric.SEARCH_LATENCY_P50, days=1
+        )
 
         assert len(history) == 10
         # Verify chronological order
@@ -395,13 +426,17 @@ class TestMetricHistory:
         for i in range(5):
             tracker.record_metric(PerformanceMetric.SEARCH_LATENCY_P50, 10.0)
 
-        history = tracker.get_metric_history(PerformanceMetric.SEARCH_LATENCY_P50, days=30)
+        history = tracker.get_metric_history(
+            PerformanceMetric.SEARCH_LATENCY_P50, days=30
+        )
 
         assert len(history) == 5
 
     def test_returns_empty_history_for_no_data(self, tracker):
         """Should return empty list when no data exists."""
-        history = tracker.get_metric_history(PerformanceMetric.SEARCH_LATENCY_P50, days=30)
+        history = tracker.get_metric_history(
+            PerformanceMetric.SEARCH_LATENCY_P50, days=30
+        )
 
         assert len(history) == 0
 
@@ -442,7 +477,9 @@ class TestCurrentValue:
         for i in range(5):
             tracker.record_metric(PerformanceMetric.SEARCH_LATENCY_P50, 10.0 + i)
 
-        current = tracker.get_current_value(PerformanceMetric.SEARCH_LATENCY_P50, days=1)
+        current = tracker.get_current_value(
+            PerformanceMetric.SEARCH_LATENCY_P50, days=1
+        )
 
         assert current is not None
         # Average of 10, 11, 12, 13, 14 = 12.0
@@ -450,6 +487,8 @@ class TestCurrentValue:
 
     def test_returns_none_for_no_recent_data(self, tracker):
         """Should return None when no recent data exists."""
-        current = tracker.get_current_value(PerformanceMetric.SEARCH_LATENCY_P50, days=1)
+        current = tracker.get_current_value(
+            PerformanceMetric.SEARCH_LATENCY_P50, days=1
+        )
 
         assert current is None

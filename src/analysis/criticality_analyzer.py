@@ -46,7 +46,7 @@ Part of FEAT-049: Intelligent Code Importance Scoring
 
 import re
 import logging
-from typing import Dict, Any, List, Optional, Set
+from typing import Dict, Any, List, Optional
 from pathlib import Path
 from dataclasses import dataclass
 
@@ -72,28 +72,82 @@ class CriticalityAnalyzer:
 
     # Security-related keywords (context-aware)
     SECURITY_KEYWORDS = {
-        "auth", "authenticate", "authorization", "authorize", "login", "logout",
-        "password", "credential", "token", "session", "cookie", "jwt",
-        "encrypt", "decrypt", "hash", "crypto", "cipher", "sign", "verify",
-        "permission", "privilege", "access_control", "role", "grant", "revoke",
-        "security", "vulnerable", "exploit", "sanitize", "validate", "escape",
-        "sql_injection", "xss", "csrf", "secret", "private_key", "api_key",
+        "auth",
+        "authenticate",
+        "authorization",
+        "authorize",
+        "login",
+        "logout",
+        "password",
+        "credential",
+        "token",
+        "session",
+        "cookie",
+        "jwt",
+        "encrypt",
+        "decrypt",
+        "hash",
+        "crypto",
+        "cipher",
+        "sign",
+        "verify",
+        "permission",
+        "privilege",
+        "access_control",
+        "role",
+        "grant",
+        "revoke",
+        "security",
+        "vulnerable",
+        "exploit",
+        "sanitize",
+        "validate",
+        "escape",
+        "sql_injection",
+        "xss",
+        "csrf",
+        "secret",
+        "private_key",
+        "api_key",
     }
 
     # Critical decorators/annotations
     CRITICAL_DECORATORS = {
-        "python": ["@critical", "@security", "@auth", "@permission", "@admin", "@require"],
+        "python": [
+            "@critical",
+            "@security",
+            "@auth",
+            "@permission",
+            "@admin",
+            "@require",
+        ],
         "javascript": ["@Critical", "@Security", "@Auth", "@Permission", "@Admin"],
         "typescript": ["@Critical", "@Security", "@Auth", "@Permission", "@Admin"],
-        "java": ["@Critical", "@Security", "@Auth", "@Permission", "@Admin", "@Secured"],
+        "java": [
+            "@Critical",
+            "@Security",
+            "@Auth",
+            "@Permission",
+            "@Admin",
+            "@Secured",
+        ],
         "go": ["// @critical", "// @security", "// @auth"],
         "rust": ["#[critical]", "#[security]", "#[auth]"],
     }
 
     # Entry point indicators (file-level)
     ENTRY_POINT_NAMES = {
-        "main", "__main__", "index", "app", "server", "init", "__init__",
-        "bootstrap", "startup", "entry", "run",
+        "main",
+        "__main__",
+        "index",
+        "app",
+        "server",
+        "init",
+        "__init__",
+        "bootstrap",
+        "startup",
+        "entry",
+        "run",
     }
 
     def __init__(self):
@@ -121,14 +175,16 @@ class CriticalityAnalyzer:
         """
         name = code_unit.get("name", "")
         content = code_unit.get("content", "")
-        unit_type = code_unit.get("unit_type", "function")
+        code_unit.get("unit_type", "function")
         language = code_unit.get("language", "python")
 
         # Calculate metrics
         security_kw = self._find_security_keywords(name, content)
         has_error = self._has_error_handling(content, language)
         has_decorator = self._has_critical_decorator(content, language)
-        proximity = self._calculate_file_proximity(file_path, name) if file_path else 0.0
+        proximity = (
+            self._calculate_file_proximity(file_path, name) if file_path else 0.0
+        )
 
         # Calculate criticality boost
         boost = self._calculate_criticality_boost(
@@ -154,7 +210,7 @@ class CriticalityAnalyzer:
 
         for keyword in self.SECURITY_KEYWORDS:
             # Check if keyword appears as a whole word (not substring)
-            pattern = rf'\b{re.escape(keyword)}\b'
+            pattern = rf"\b{re.escape(keyword)}\b"
             if re.search(pattern, combined_text):
                 found.append(keyword)
 
@@ -172,28 +228,57 @@ class CriticalityAnalyzer:
         # Language-specific error handling patterns
         patterns = {
             "python": [
-                r'\btry\b', r'\bexcept\b', r'\bfinally\b', r'\braise\b',
-                r'\bassert\b', r'\bif\s+not\b', r'\bif\s+.*\s+is\s+None\b',
+                r"\btry\b",
+                r"\bexcept\b",
+                r"\bfinally\b",
+                r"\braise\b",
+                r"\bassert\b",
+                r"\bif\s+not\b",
+                r"\bif\s+.*\s+is\s+None\b",
             ],
             "javascript": [
-                r'\btry\b', r'\bcatch\b', r'\bfinally\b', r'\bthrow\b',
-                r'\.catch\(', r'if\s*\(.*===.*null\)', r'if\s*\(!',
+                r"\btry\b",
+                r"\bcatch\b",
+                r"\bfinally\b",
+                r"\bthrow\b",
+                r"\.catch\(",
+                r"if\s*\(.*===.*null\)",
+                r"if\s*\(!",
             ],
             "typescript": [
-                r'\btry\b', r'\bcatch\b', r'\bfinally\b', r'\bthrow\b',
-                r'\.catch\(', r'if\s*\(.*===.*null\)', r'if\s*\(!',
+                r"\btry\b",
+                r"\bcatch\b",
+                r"\bfinally\b",
+                r"\bthrow\b",
+                r"\.catch\(",
+                r"if\s*\(.*===.*null\)",
+                r"if\s*\(!",
             ],
             "java": [
-                r'\btry\b', r'\bcatch\b', r'\bfinally\b', r'\bthrow\b',
-                r'\bthrows\b', r'if\s*\(.*==.*null\)', r'if\s*\(!',
+                r"\btry\b",
+                r"\bcatch\b",
+                r"\bfinally\b",
+                r"\bthrow\b",
+                r"\bthrows\b",
+                r"if\s*\(.*==.*null\)",
+                r"if\s*\(!",
             ],
             "go": [
-                r'if\s+err\s*!=\s*nil', r'panic\(', r'defer\b',
-                r'if\s+.*\s*==\s*nil', r'errors\.New',
+                r"if\s+err\s*!=\s*nil",
+                r"panic\(",
+                r"defer\b",
+                r"if\s+.*\s*==\s*nil",
+                r"errors\.New",
             ],
             "rust": [
-                r'\bResult<', r'\bOption<', r'\.unwrap\(', r'\.expect\(',
-                r'\bmatch\b', r'\bif\s+let\b', r'\?', r'panic!',
+                r"\bResult<",
+                r"\bOption<",
+                r"\.unwrap\(",
+                r"\.expect\(",
+                r"\bmatch\b",
+                r"\bif\s+let\b",
+                r"\?",
+                r"panic!",
             ],
         }
 
@@ -228,9 +313,7 @@ class CriticalityAnalyzer:
 
         # Validate file_path type early and convert PathLike objects to Path
         if file_path is None:
-            logger.warning(
-                "Expected Path object for proximity calculation, got None"
-            )
+            logger.warning("Expected Path object for proximity calculation, got None")
             # Can only score function name, skip file-based scoring
             func_name = function_name.lower()
             if func_name in self.ENTRY_POINT_NAMES:
@@ -271,25 +354,29 @@ class CriticalityAnalyzer:
         try:
             parts = file_path.parts
             if len(parts) == 0:
-                logger.debug(f"Empty path parts for {file_path}, skipping depth scoring")
+                logger.debug(
+                    f"Empty path parts for {file_path}, skipping depth scoring"
+                )
             else:
                 depth = len(parts)
                 # Max depth consideration: 10 levels
                 depth_score = max(0.0, 1.0 - (depth / 10.0))
                 score += depth_score * 0.2
-                logger.debug(f"Depth score for {file_path}: {depth_score:.2f} (depth={depth})")
+                logger.debug(
+                    f"Depth score for {file_path}: {depth_score:.2f} (depth={depth})"
+                )
         except (AttributeError, TypeError) as e:
             # Unexpected attribute/type issues
             logger.warning(
                 f"Unexpected error calculating depth score for {file_path}: {e}",
-                exc_info=True
+                exc_info=True,
             )
             # Continue without depth scoring
         except Exception as e:
             # Catch-all for truly unexpected errors - log with full traceback
             logger.error(
                 f"Critical error in depth calculation for {file_path}: {e}",
-                exc_info=True
+                exc_info=True,
             )
             # Don't fail the entire criticality analysis over depth scoring
 

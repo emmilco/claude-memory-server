@@ -98,7 +98,11 @@ class TestSimpleHealthScore:
     def test_penalized_high_latency(self, service):
         """Test score penalized for high latency."""
         # Moderate latency (50-100ms)
-        metrics_moderate = {"avg_latency_ms": 75, "error_rate": 0, "cache_hit_rate": 1.0}
+        metrics_moderate = {
+            "avg_latency_ms": 75,
+            "error_rate": 0,
+            "cache_hit_rate": 1.0,
+        }
         score_moderate = service._calculate_simple_health_score(metrics_moderate)
         assert score_moderate == 90  # -10 penalty
 
@@ -110,7 +114,11 @@ class TestSimpleHealthScore:
     def test_penalized_high_error_rate(self, service):
         """Test score penalized for high error rate."""
         # Moderate error rate (5-10%)
-        metrics_moderate = {"avg_latency_ms": 10, "error_rate": 0.07, "cache_hit_rate": 1.0}
+        metrics_moderate = {
+            "avg_latency_ms": 10,
+            "error_rate": 0.07,
+            "cache_hit_rate": 1.0,
+        }
         score_moderate = service._calculate_simple_health_score(metrics_moderate)
         assert score_moderate == 85  # -15 penalty
 
@@ -129,8 +137,8 @@ class TestSimpleHealthScore:
         """Test score with multiple penalties."""
         metrics = {
             "avg_latency_ms": 150,  # -20
-            "error_rate": 0.15,      # -30
-            "cache_hit_rate": 0.3,   # -10
+            "error_rate": 0.15,  # -30
+            "cache_hit_rate": 0.3,  # -10
         }
         score = service._calculate_simple_health_score(metrics)
         assert score == 40  # 100 - 20 - 30 - 10
@@ -322,7 +330,7 @@ class TestGetActiveAlerts:
     @pytest.mark.asyncio
     async def test_alerts_with_severity_filter(self, service):
         """Test alerts with severity filter."""
-        result = await service.get_active_alerts(severity_filter="CRITICAL")
+        await service.get_active_alerts(severity_filter="CRITICAL")
 
         service.alert_engine.get_active_alerts.assert_called_with(
             severity_filter="CRITICAL"
@@ -478,7 +486,9 @@ class TestStartDashboard:
         )
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="DashboardServer class not available - needs implementation")
+    @pytest.mark.skip(
+        reason="DashboardServer class not available - needs implementation"
+    )
     async def test_start_dashboard_success(self, service):
         """Test successful dashboard start."""
         with patch("src.dashboard.web_server.DashboardServer") as MockServer:
@@ -493,7 +503,9 @@ class TestStartDashboard:
             assert result["port"] == 8080
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="DashboardServer class not available - needs implementation")
+    @pytest.mark.skip(
+        reason="DashboardServer class not available - needs implementation"
+    )
     async def test_start_dashboard_custom_host_port(self, service):
         """Test dashboard with custom host and port."""
         with patch("src.dashboard.web_server.DashboardServer") as MockServer:
@@ -508,7 +520,9 @@ class TestStartDashboard:
             assert result["port"] == 9000
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="DashboardServer class not available - needs implementation")
+    @pytest.mark.skip(
+        reason="DashboardServer class not available - needs implementation"
+    )
     async def test_start_dashboard_error_raises(self, service):
         """Test dashboard start error raises StorageError."""
         with patch("src.dashboard.web_server.DashboardServer") as MockServer:
@@ -708,5 +722,7 @@ class TestIntegrationScenarios:
             await service.collect_metrics_snapshot()
 
         stats = service.get_stats()
-        assert stats["health_checks"] == 6  # 3 from get_health_score + 3 from get_performance_metrics
+        assert (
+            stats["health_checks"] == 6
+        )  # 3 from get_health_score + 3 from get_performance_metrics
         assert stats["metrics_collected"] == 3

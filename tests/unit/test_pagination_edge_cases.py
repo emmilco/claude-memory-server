@@ -27,7 +27,7 @@ class TestPaginationEdgeCases:
         }
 
         result = validate_query_request(payload)
-        assert not hasattr(result, 'offset')
+        assert not hasattr(result, "offset")
         assert result.limit == 10
 
     def test_limit_equals_zero(self):
@@ -40,7 +40,9 @@ class TestPaginationEdgeCases:
         with pytest.raises(ValidationError) as exc:
             validate_query_request(payload)
         error_msg = str(exc.value).lower()
-        assert "limit" in error_msg or "greater" in error_msg or "validation" in error_msg
+        assert (
+            "limit" in error_msg or "greater" in error_msg or "validation" in error_msg
+        )
 
     def test_limit_equals_one(self):
         """Test limit = 1 (minimum valid)."""
@@ -110,13 +112,18 @@ class TestPaginationEdgeCases:
         with pytest.raises(ValidationError) as exc:
             validate_query_request(payload)
         error_msg = str(exc.value).lower()
-        assert "limit" in error_msg or "greater" in error_msg or "validation" in error_msg
+        assert (
+            "limit" in error_msg or "greater" in error_msg or "validation" in error_msg
+        )
 
-    @pytest.mark.parametrize("limit", [
-        1,      # Minimum
-        50,     # Middle
-        100,    # Maximum
-    ])
+    @pytest.mark.parametrize(
+        "limit",
+        [
+            1,  # Minimum
+            50,  # Middle
+            100,  # Maximum
+        ],
+    )
     def test_valid_limit_values(self, limit):
         """Test various valid limit values."""
         payload = {
@@ -127,11 +134,14 @@ class TestPaginationEdgeCases:
         result = validate_query_request(payload)
         assert result.limit == limit
 
-    @pytest.mark.parametrize("limit,error_keyword", [
-        (-1, "limit"),       # Invalid limit
-        (0, "limit"),        # Invalid limit
-        (101, "limit"),      # Limit too large
-    ])
+    @pytest.mark.parametrize(
+        "limit,error_keyword",
+        [
+            (-1, "limit"),  # Invalid limit
+            (0, "limit"),  # Invalid limit
+            (101, "limit"),  # Limit too large
+        ],
+    )
     def test_invalid_limit_values(self, limit, error_keyword):
         """Test various invalid limit values."""
         payload = {
@@ -143,7 +153,11 @@ class TestPaginationEdgeCases:
             validate_query_request(payload)
         error_msg = str(exc.value).lower()
         # Should mention the problematic field
-        assert error_keyword in error_msg or "validation" in error_msg or "greater" in error_msg
+        assert (
+            error_keyword in error_msg
+            or "validation" in error_msg
+            or "greater" in error_msg
+        )
 
     def test_pagination_with_empty_query(self):
         """Test limit parameter with empty query (should fail on query, not limit)."""

@@ -6,7 +6,7 @@ from pathlib import Path
 
 from src.tagging.collection_manager import CollectionManager
 from src.tagging.models import CollectionCreate
-from src.core.exceptions import ValidationError, StorageError
+from src.core.exceptions import StorageError
 
 
 @pytest.fixture

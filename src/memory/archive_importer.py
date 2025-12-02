@@ -90,7 +90,9 @@ class ArchiveImporter:
                 extracted_project_name = extracted_project_dir.name
 
                 # Use custom project name if provided, otherwise use extracted name
-                target_project_name = project_name if project_name else extracted_project_name
+                target_project_name = (
+                    project_name if project_name else extracted_project_name
+                )
 
                 # Validate archive structure
                 if validate:
@@ -108,7 +110,9 @@ class ArchiveImporter:
                     with open(manifest_file, "r") as f:
                         manifest = json.load(f)
                 else:
-                    logger.warning(f"No manifest found in archive for {target_project_name}")
+                    logger.warning(
+                        f"No manifest found in archive for {target_project_name}"
+                    )
 
                 # Check for conflict
                 existing_archive = self.compressor.get_archive_info(target_project_name)
@@ -120,8 +124,12 @@ class ArchiveImporter:
                             "conflict": True,
                         }
                     elif conflict_resolution == "overwrite":
-                        logger.info(f"Overwriting existing archive for {target_project_name}")
-                        delete_success = self.compressor.delete_archive(target_project_name)
+                        logger.info(
+                            f"Overwriting existing archive for {target_project_name}"
+                        )
+                        delete_success = self.compressor.delete_archive(
+                            target_project_name
+                        )
                         if not delete_success:
                             return {
                                 "success": False,
@@ -134,13 +142,17 @@ class ArchiveImporter:
                         }
 
                 # Copy archive to destination
-                dest_archive_dir = self.compressor._get_project_archive_dir(target_project_name)
+                dest_archive_dir = self.compressor._get_project_archive_dir(
+                    target_project_name
+                )
                 dest_archive_dir.mkdir(parents=True, exist_ok=True)
 
                 # Copy the compressed index archive
                 source_archive = extracted_project_dir / "archive.tar.gz"
                 if source_archive.exists():
-                    dest_archive_file = dest_archive_dir / f"{target_project_name}_index.tar.gz"
+                    dest_archive_file = (
+                        dest_archive_dir / f"{target_project_name}_index.tar.gz"
+                    )
                     shutil.copy2(source_archive, dest_archive_file)
                 else:
                     return {
@@ -171,10 +183,14 @@ class ArchiveImporter:
                 return {
                     "success": True,
                     "project_name": target_project_name,
-                    "original_name": extracted_project_name if target_project_name != extracted_project_name else None,
+                    "original_name": extracted_project_name
+                    if target_project_name != extracted_project_name
+                    else None,
                     "import_size_mb": round(import_size_mb, 2),
                     "manifest": manifest,
-                    "conflict_resolution": conflict_resolution if existing_archive else None,
+                    "conflict_resolution": conflict_resolution
+                    if existing_archive
+                    else None,
                 }
 
         except Exception as e:
@@ -231,7 +247,7 @@ class ArchiveImporter:
 
             # Validate archive file is a valid tar.gz
             try:
-                with tarfile.open(archive_file, "r:gz") as tar:
+                with tarfile.open(archive_file, "r:gz"):
                     # Just check that it can be opened
                     pass
             except Exception as e:
@@ -309,7 +325,9 @@ class ArchiveImporter:
                     "valid": True,
                     "project_name": extracted_project_dir.name,
                     "manifest": manifest,
-                    "archive_size_mb": round(archive_path.stat().st_size / (1024 * 1024), 2),
+                    "archive_size_mb": round(
+                        archive_path.stat().st_size / (1024 * 1024), 2
+                    ),
                 }
 
         except Exception as e:

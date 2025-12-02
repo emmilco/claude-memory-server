@@ -262,7 +262,9 @@ class TestLifecycleManager:
         assert len(stale_ids_default) == 0
 
         # With custom threshold (90), is stale
-        stale_ids_custom = self.manager.get_stale_memory_ids(memories, threshold_days=90)
+        stale_ids_custom = self.manager.get_stale_memory_ids(
+            memories, threshold_days=90
+        )
         assert len(stale_ids_custom) == 1
 
     def test_get_lifecycle_stats(self):

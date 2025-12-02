@@ -45,7 +45,10 @@ def test_synonym_suggestions(suggester):
     corrections = suggester.suggest_corrections("auth handler")
 
     # Should suggest authentication or authorization as synonym for auth
-    assert any("authentication" in c or "authorization" in c or "authorize" in c for c in corrections)
+    assert any(
+        "authentication" in c or "authorization" in c or "authorize" in c
+        for c in corrections
+    )
 
 
 def test_no_suggestions_for_correct_query(suggester):
@@ -75,27 +78,32 @@ def test_max_suggestions_limit(suggester):
 async def test_load_indexed_terms(suggester, mock_store):
     """Test loading indexed terms from store."""
     # Mock indexed memories
-    mock_store.list_memories = AsyncMock(return_value=[
-        {
-            "metadata": {
-                "unit_name": "validateToken",
-                "unit_type": "function",
-            }
-        },
-        {
-            "metadata": {
-                "unit_name": "UserRepository",
-                "unit_type": "class",
-            }
-        },
-    ])
+    mock_store.list_memories = AsyncMock(
+        return_value=[
+            {
+                "metadata": {
+                    "unit_name": "validateToken",
+                    "unit_type": "function",
+                }
+            },
+            {
+                "metadata": {
+                    "unit_name": "UserRepository",
+                    "unit_type": "class",
+                }
+            },
+        ]
+    )
 
     await suggester.load_indexed_terms("test-project")
 
     # Should have loaded terms
     assert suggester._terms_loaded
     assert len(suggester.indexed_terms) > 0
-    assert "validatetoken" in suggester.indexed_terms or "validateToken" in suggester.indexed_terms
+    assert (
+        "validatetoken" in suggester.indexed_terms
+        or "validateToken" in suggester.indexed_terms
+    )
 
 
 def test_find_close_matches(suggester):
@@ -119,14 +127,16 @@ def test_skip_short_terms(suggester):
 @pytest.mark.asyncio
 async def test_load_indexed_terms_extracts_words(suggester, mock_store):
     """Test that multi-word names are split into individual words."""
-    mock_store.list_memories = AsyncMock(return_value=[
-        {
-            "metadata": {
-                "unit_name": "validate_user_token",
-                "unit_type": "function",
-            }
-        },
-    ])
+    mock_store.list_memories = AsyncMock(
+        return_value=[
+            {
+                "metadata": {
+                    "unit_name": "validate_user_token",
+                    "unit_type": "function",
+                }
+            },
+        ]
+    )
 
     await suggester.load_indexed_terms()
 

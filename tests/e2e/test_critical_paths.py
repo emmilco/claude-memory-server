@@ -10,7 +10,6 @@ The tests use incorrect API parameters (e.g., 'mode' instead of 'search_mode',
 
 import pytest
 import time
-from pathlib import Path
 
 # E2E tests for critical user workflows - API compatibility fixed
 
@@ -18,6 +17,7 @@ from pathlib import Path
 # ============================================================================
 # First-Time User Tests (3 tests)
 # ============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -43,19 +43,21 @@ async def test_first_time_setup(fresh_server, sample_code_project):
     result = await server.index_codebase(
         directory_path=str(project_path),
         project_name="my-first-project",
-        recursive=True
+        recursive=True,
     )
 
     assert result is not None
     assert result.get("files_indexed", 0) >= 4  # Should index at least 4 Python files
-    assert result.get("units_indexed", 0) >= 10  # Should have multiple functions/classes
+    assert (
+        result.get("units_indexed", 0) >= 10
+    )  # Should have multiple functions/classes
 
     # Step 3: Perform first search
     search_result = await server.search_code(
         query="authentication function",
         project_name="my-first-project",
         search_mode="semantic",
-        limit=5
+        limit=5,
     )
 
     # Step 4: Verify meaningful results
@@ -86,7 +88,7 @@ async def test_first_memory_storage(fresh_server):
         content=memory_content,
         category="fact",
         importance=0.8,
-        tags=["authentication", "jwt", "security"]
+        tags=["authentication", "jwt", "security"],
     )
 
     assert store_result is not None
@@ -95,8 +97,7 @@ async def test_first_memory_storage(fresh_server):
 
     # Step 2: Retrieve by semantic search
     retrieve_result = await server.retrieve_memories(
-        query="How long do JWT tokens last?",
-        limit=5
+        query="How long do JWT tokens last?", limit=5
     )
 
     assert retrieve_result is not None
@@ -110,7 +111,11 @@ async def test_first_memory_storage(fresh_server):
     # Step 3: Verify content matches
     # Results have structure: {"memory": {"id": ..., "content": ..., "tags": ...}, "score": ...}
     found = False
-    results = retrieve_result.get("results", []) if isinstance(retrieve_result, dict) else retrieve_result
+    results = (
+        retrieve_result.get("results", [])
+        if isinstance(retrieve_result, dict)
+        else retrieve_result
+    )
     for result in results:
         mem = result.get("memory", result)  # Handle nested or flat structure
         mem_id = mem.get("id") or mem.get("memory_id")
@@ -139,9 +144,7 @@ async def test_first_code_search(fresh_server, sample_code_project):
     # Step 1: Index small project
     start_time = time.time()
     index_result = await server.index_codebase(
-        directory_path=str(project_path),
-        project_name="sample-project",
-        recursive=True
+        directory_path=str(project_path), project_name="sample-project", recursive=True
     )
     index_time = time.time() - start_time
 
@@ -156,7 +159,7 @@ async def test_first_code_search(fresh_server, sample_code_project):
         query="database connection",
         project_name="sample-project",
         search_mode="hybrid",
-        limit=10
+        limit=10,
     )
     search_time = time.time() - start_time
 
@@ -184,6 +187,7 @@ async def test_first_code_search(fresh_server, sample_code_project):
 # Daily Workflow Tests (4 tests)
 # ============================================================================
 
+
 @pytest.mark.e2e
 @pytest.mark.asyncio
 async def test_developer_daily_workflow(fresh_server, sample_code_project):
@@ -201,7 +205,7 @@ async def test_developer_daily_workflow(fresh_server, sample_code_project):
     await server.index_codebase(
         directory_path=str(sample_code_project),
         project_name="work-project",
-        recursive=True
+        recursive=True,
     )
 
     # Step 1: Morning search for code I was working on
@@ -209,7 +213,7 @@ async def test_developer_daily_workflow(fresh_server, sample_code_project):
         query="authentication handler verify password",
         project_name="work-project",
         search_mode="semantic",
-        limit=5
+        limit=5,
     )
 
     assert len(search_result.get("results", [])) > 0
@@ -225,7 +229,7 @@ async def test_developer_daily_workflow(fresh_server, sample_code_project):
         content=note_content,
         category="fact",
         importance=0.9,
-        tags=["security", "authentication", "technical-debt"]
+        tags=["security", "authentication", "technical-debt"],
     )
 
     assert store_result is not None
@@ -233,13 +237,14 @@ async def test_developer_daily_workflow(fresh_server, sample_code_project):
 
     # Step 4: Later in the day, retrieve my note
     memories = await server.retrieve_memories(
-        query="password hashing authentication",
-        limit=5
+        query="password hashing authentication", limit=5
     )
 
     # Verify I can find my note
     # Results have structure: {"memory": {"id": ...}, "score": ...}
-    memories_list = memories.get("results", []) if isinstance(memories, dict) else memories
+    memories_list = (
+        memories.get("results", []) if isinstance(memories, dict) else memories
+    )
     found = any(
         (m.get("memory", m).get("id") or m.get("memory", m).get("memory_id")) == note_id
         for m in memories_list
@@ -263,9 +268,7 @@ async def test_code_exploration_workflow(fresh_server, sample_code_project):
 
     # Step 1: Index new codebase
     await server.index_codebase(
-        directory_path=str(project_path),
-        project_name="new-codebase",
-        recursive=True
+        directory_path=str(project_path), project_name="new-codebase", recursive=True
     )
 
     # Step 2: Find entry points
@@ -273,7 +276,7 @@ async def test_code_exploration_workflow(fresh_server, sample_code_project):
         query="main entry point",
         project_name="new-codebase",
         search_mode="semantic",
-        limit=5
+        limit=5,
     )
 
     assert len(search_result.get("results", [])) > 0
@@ -285,17 +288,14 @@ async def test_code_exploration_workflow(fresh_server, sample_code_project):
         similar_result = await server.find_similar_code(
             code_snippet=main_function["code_snippet"],
             project_name="new-codebase",
-            limit=5
+            limit=5,
         )
 
         assert similar_result is not None
         assert len(similar_result.get("results", [])) > 0
 
     # Step 4: Navigate through structure - get indexed files
-    files_result = await server.get_indexed_files(
-        project_name="new-codebase",
-        limit=10
-    )
+    files_result = await server.get_indexed_files(project_name="new-codebase", limit=10)
 
     assert files_result is not None
     assert len(files_result.get("files", [])) >= 4  # Should have multiple files
@@ -315,31 +315,36 @@ async def test_memory_organization_workflow(fresh_server):
 
     # Step 1: Store multiple memories with different tags
     memories_data = [
-        ("React hooks should be called at top level", ["react", "frontend", "best-practices"]),
-        ("Use prepared statements to prevent SQL injection", ["security", "database", "best-practices"]),
+        (
+            "React hooks should be called at top level",
+            ["react", "frontend", "best-practices"],
+        ),
+        (
+            "Use prepared statements to prevent SQL injection",
+            ["security", "database", "best-practices"],
+        ),
         ("API rate limit is 1000 requests per hour", ["api", "performance", "limits"]),
-        ("Cache database queries for 5 minutes", ["performance", "database", "caching"]),
+        (
+            "Cache database queries for 5 minutes",
+            ["performance", "database", "caching"],
+        ),
     ]
 
     stored_ids = []
     for content, tags in memories_data:
         result = await server.store_memory(
-            content=content,
-            category="fact",
-            importance=0.7,
-            tags=tags
+            content=content, category="fact", importance=0.7, tags=tags
         )
         stored_ids.append(result["memory_id"])
 
     # Step 2: Filter by specific tag
-    list_result = await server.list_memories(
-        tags=["database"],
-        limit=10
-    )
+    list_result = await server.list_memories(tags=["database"], limit=10)
 
     assert list_result is not None
     database_memories = list_result.get("memories", [])
-    assert len(database_memories) >= 2  # Should find at least 2 database-related memories
+    assert (
+        len(database_memories) >= 2
+    )  # Should find at least 2 database-related memories
 
     # Verify they're actually tagged with 'database'
     for memory in database_memories:
@@ -354,7 +359,9 @@ async def test_memory_organization_workflow(fresh_server):
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
-async def test_project_switch_workflow(fresh_server, sample_code_project, test_project_factory):
+async def test_project_switch_workflow(
+    fresh_server, sample_code_project, test_project_factory
+):
     """Test: Work on project A → Switch to B → Search B only.
 
     Simulates switching between multiple projects:
@@ -370,14 +377,14 @@ async def test_project_switch_workflow(fresh_server, sample_code_project, test_p
     await server.index_codebase(
         directory_path=str(sample_code_project),
         project_name="project-a",
-        recursive=True
+        recursive=True,
     )
 
     search_a = await server.search_code(
         query="authentication",
         project_name="project-a",
         search_mode="semantic",
-        limit=5
+        limit=5,
     )
 
     assert len(search_a.get("results", [])) > 0
@@ -386,17 +393,12 @@ async def test_project_switch_workflow(fresh_server, sample_code_project, test_p
     # Step 3: Create and index project B
     project_b_path = test_project_factory(name="project_b", files=5, language="python")
     await server.index_codebase(
-        directory_path=str(project_b_path),
-        project_name="project-b",
-        recursive=True
+        directory_path=str(project_b_path), project_name="project-b", recursive=True
     )
 
     # Step 4: Search project B
     search_b = await server.search_code(
-        query="function",
-        project_name="project-b",
-        search_mode="semantic",
-        limit=5
+        query="function", project_name="project-b", search_mode="semantic", limit=5
     )
 
     assert len(search_b.get("results", [])) > 0
@@ -418,6 +420,7 @@ async def test_project_switch_workflow(fresh_server, sample_code_project, test_p
 # Data Management Tests (3 tests)
 # ============================================================================
 
+
 @pytest.mark.e2e
 @pytest.mark.asyncio
 async def test_project_backup_restore(fresh_server, sample_code_project):
@@ -436,7 +439,7 @@ async def test_project_backup_restore(fresh_server, sample_code_project):
     index_result = await server.index_codebase(
         directory_path=str(sample_code_project),
         project_name=project_name,
-        recursive=True
+        recursive=True,
     )
 
     original_files = index_result.get("files_indexed", 0)
@@ -447,11 +450,11 @@ async def test_project_backup_restore(fresh_server, sample_code_project):
         query="database connection",
         project_name=project_name,
         search_mode="semantic",
-        limit=5
+        limit=5,
     )
 
     assert len(search_before.get("results", [])) > 0
-    results_before = search_before["results"]
+    search_before["results"]
 
     # Step 3: Re-index (simulates restore by re-indexing from source)
     # In a real backup/restore scenario, we'd use export/import tools
@@ -459,14 +462,16 @@ async def test_project_backup_restore(fresh_server, sample_code_project):
     reindex_result = await server.index_codebase(
         directory_path=str(sample_code_project),
         project_name=project_name,
-        recursive=True
+        recursive=True,
     )
 
     # Step 4: Verify data is consistent
     # Re-indexing might skip unchanged files (incremental behavior)
     # Verify files were processed (may be fewer due to incremental skip)
     reindex_files = reindex_result.get("files_indexed", 0)
-    assert reindex_files >= original_files - 1, f"Expected at least {original_files - 1} files, got {reindex_files}"
+    assert (
+        reindex_files >= original_files - 1
+    ), f"Expected at least {original_files - 1} files, got {reindex_files}"
     # Units might vary slightly due to incremental indexing, but should be close
     assert abs(reindex_result.get("units_indexed", 0) - original_units) <= 5
 
@@ -475,7 +480,7 @@ async def test_project_backup_restore(fresh_server, sample_code_project):
         query="database connection",
         project_name=project_name,
         search_mode="semantic",
-        limit=5
+        limit=5,
     )
 
     assert len(search_after.get("results", [])) > 0
@@ -502,7 +507,7 @@ async def test_memory_bulk_operations(fresh_server):
             content=f"Test memory number {i} with searchable content",
             category="fact",
             importance=0.5,
-            tags=["test", f"batch-{i // 5}"]  # Group into batches
+            tags=["test", f"batch-{i // 5}"],  # Group into batches
         )
         stored_ids.append(result["memory_id"])
 
@@ -543,27 +548,24 @@ async def test_cross_project_data_isolation(fresh_server, test_project_factory):
     server = fresh_server
 
     # Step 1: Create and index project 1
-    project1 = test_project_factory(name="isolated_project_1", files=5, language="python")
+    project1 = test_project_factory(
+        name="isolated_project_1", files=5, language="python"
+    )
     await server.index_codebase(
-        directory_path=str(project1),
-        project_name="isolated-1",
-        recursive=True
+        directory_path=str(project1), project_name="isolated-1", recursive=True
     )
 
     # Step 2: Create and index project 2
-    project2 = test_project_factory(name="isolated_project_2", files=5, language="javascript")
+    project2 = test_project_factory(
+        name="isolated_project_2", files=5, language="javascript"
+    )
     await server.index_codebase(
-        directory_path=str(project2),
-        project_name="isolated-2",
-        recursive=True
+        directory_path=str(project2), project_name="isolated-2", recursive=True
     )
 
     # Step 3: Search project 1 - should only return Python files
     search1 = await server.search_code(
-        query="function",
-        project_name="isolated-1",
-        search_mode="semantic",
-        limit=10
+        query="function", project_name="isolated-1", search_mode="semantic", limit=10
     )
 
     results1 = search1.get("results", [])
@@ -577,10 +579,7 @@ async def test_cross_project_data_isolation(fresh_server, test_project_factory):
 
     # Step 4: Search project 2 - should only return JavaScript files
     search2 = await server.search_code(
-        query="function",
-        project_name="isolated-2",
-        search_mode="semantic",
-        limit=10
+        query="function", project_name="isolated-2", search_mode="semantic", limit=10
     )
 
     results2 = search2.get("results", [])
@@ -595,7 +594,9 @@ async def test_cross_project_data_isolation(fresh_server, test_project_factory):
     # Step 5: Verify no overlap in results
     paths1 = {r["file_path"] for r in results1}
     paths2 = {r["file_path"] for r in results2}
-    assert len(paths1.intersection(paths2)) == 0, "Projects should have no overlapping results"
+    assert (
+        len(paths1.intersection(paths2)) == 0
+    ), "Projects should have no overlapping results"
 
 
 # ============================================================================

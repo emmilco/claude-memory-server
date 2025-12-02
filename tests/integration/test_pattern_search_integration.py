@@ -5,8 +5,9 @@ import pytest
 # FEAT-058 integration tests need rewriting - API mismatches with implementation
 # Tests were written before implementation and don't match actual API
 # TODO: Rewrite tests to match IncrementalIndexer API (use dir_path not directory, etc.)
-pytestmark = pytest.mark.skip(reason="FEAT-058 integration tests have API mismatches - need rewriting")
-from pathlib import Path
+pytestmark = pytest.mark.skip(
+    reason="FEAT-058 integration tests have API mismatches - need rewriting"
+)
 
 from src.core.server import MemoryRAGServer
 from src.config import ServerConfig
@@ -117,7 +118,7 @@ class TestPatternSearchIntegration:
             pattern="@preset:bare_except",
             pattern_mode="filter",
             project_name="test-patterns",
-            limit=10
+            limit=10,
         )
 
         assert results["status"] == "success"
@@ -141,7 +142,7 @@ class TestPatternSearchIntegration:
             pattern="@preset:security_keywords",
             pattern_mode="boost",
             project_name="test-patterns",
-            limit=10
+            limit=10,
         )
 
         assert results["status"] == "success"
@@ -149,17 +150,18 @@ class TestPatternSearchIntegration:
 
         # Results with pattern matches should be ranked higher
         pattern_matched_results = [
-            r for r in results["results"]
-            if r.get("pattern_matched", False)
+            r for r in results["results"] if r.get("pattern_matched", False)
         ]
         non_matched_results = [
-            r for r in results["results"]
-            if not r.get("pattern_matched", False)
+            r for r in results["results"] if not r.get("pattern_matched", False)
         ]
 
         # If we have both types, matched should rank higher
         if pattern_matched_results and non_matched_results:
-            assert pattern_matched_results[0]["relevance_score"] >= non_matched_results[0]["relevance_score"]
+            assert (
+                pattern_matched_results[0]["relevance_score"]
+                >= non_matched_results[0]["relevance_score"]
+            )
 
     @pytest.mark.asyncio
     async def test_require_mode_strict_matching(self, server_with_indexed_code):
@@ -171,7 +173,7 @@ class TestPatternSearchIntegration:
             pattern="@preset:TODO_comments",
             pattern_mode="require",
             project_name="test-patterns",
-            limit=10
+            limit=10,
         )
 
         assert results["status"] == "success"
@@ -191,7 +193,7 @@ class TestPatternSearchIntegration:
             pattern=r"(password|secret|api_key)",
             pattern_mode="filter",
             project_name="test-patterns",
-            limit=10
+            limit=10,
         )
 
         assert results["status"] == "success"
@@ -212,7 +214,7 @@ class TestPatternSearchIntegration:
             pattern="@preset:bare_except",
             pattern_mode="filter",
             project_name="test-patterns",
-            limit=1
+            limit=1,
         )
 
         assert len(results["results"]) > 0
@@ -235,9 +237,7 @@ class TestPatternSearchIntegration:
         server = server_with_indexed_code
 
         results = await server.search_code(
-            query="error handling",
-            project_name="test-patterns",
-            limit=10
+            query="error handling", project_name="test-patterns", limit=10
         )
 
         assert results["status"] == "success"
@@ -258,7 +258,7 @@ class TestPatternSearchIntegration:
                 query="test",
                 pattern="test",
                 pattern_mode="invalid",
-                project_name="test-patterns"
+                project_name="test-patterns",
             )
 
     @pytest.mark.asyncio
@@ -271,7 +271,7 @@ class TestPatternSearchIntegration:
                 query="test",
                 pattern=r"(?P<invalid",  # Invalid regex
                 pattern_mode="filter",
-                project_name="test-patterns"
+                project_name="test-patterns",
             )
 
     @pytest.mark.asyncio
@@ -284,7 +284,7 @@ class TestPatternSearchIntegration:
                 query="test",
                 pattern="@preset:nonexistent",
                 pattern_mode="filter",
-                project_name="test-patterns"
+                project_name="test-patterns",
             )
 
     @pytest.mark.asyncio
@@ -297,7 +297,7 @@ class TestPatternSearchIntegration:
             pattern=r"nonexistent_pattern_xyz123",
             pattern_mode="filter",
             project_name="test-patterns",
-            limit=10
+            limit=10,
         )
 
         # Should return success but with no results
@@ -315,7 +315,7 @@ class TestPatternSearchIntegration:
             pattern_mode="filter",
             file_pattern="**/config.py",
             project_name="test-patterns",
-            limit=10
+            limit=10,
         )
 
         assert results["status"] == "success"
@@ -336,7 +336,7 @@ class TestPatternSearchIntegration:
             pattern_mode="filter",
             language="python",
             project_name="test-patterns",
-            limit=10
+            limit=10,
         )
 
         assert results["status"] == "success"
@@ -356,7 +356,7 @@ class TestPatternSearchIntegration:
             pattern="@preset:security_keywords",
             pattern_mode="filter",
             project_name="test-patterns",
-            limit=10
+            limit=10,
         )
 
         assert len(results["results"]) > 0
@@ -369,6 +369,7 @@ class TestPatternSearchIntegration:
             # Verify by counting manually
             import re
             from src.search.pattern_matcher import PATTERN_PRESETS
+
             pattern = PATTERN_PRESETS["security_keywords"]
             actual_count = len(re.findall(pattern, content, re.MULTILINE | re.DOTALL))
             assert count == actual_count
@@ -380,11 +381,10 @@ class TestPatternSearchIntegration:
 
         # Search without pattern
         import time
+
         start = time.time()
         results_no_pattern = await server.search_code(
-            query="error handling",
-            project_name="test-patterns",
-            limit=10
+            query="error handling", project_name="test-patterns", limit=10
         )
         time_no_pattern = (time.time() - start) * 1000
 
@@ -395,7 +395,7 @@ class TestPatternSearchIntegration:
             pattern="@preset:bare_except",
             pattern_mode="filter",
             project_name="test-patterns",
-            limit=10
+            limit=10,
         )
         time_with_pattern = (time.time() - start) * 1000
 

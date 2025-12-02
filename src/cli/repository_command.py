@@ -1,14 +1,12 @@
 """Repository management commands for CLI."""
 
-import asyncio
 import logging
 from pathlib import Path
-from typing import Optional, List
 
 try:
     from rich.console import Console
     from rich.table import Table
-    from rich.panel import Panel
+
     RICH_AVAILABLE = True
 except ImportError:
     RICH_AVAILABLE = False
@@ -36,12 +34,12 @@ class RepositoryCommand:
         """
         # Map subcommands to handlers
         handlers = {
-            'list': self._list_repositories,
-            'register': self._register_repository,
-            'unregister': self._unregister_repository,
-            'info': self._get_repository_info,
-            'add-dep': self._add_dependency,
-            'remove-dep': self._remove_dependency,
+            "list": self._list_repositories,
+            "register": self._register_repository,
+            "unregister": self._unregister_repository,
+            "info": self._get_repository_info,
+            "add-dep": self._add_dependency,
+            "remove-dep": self._remove_dependency,
         }
 
         handler = handlers.get(args.repo_subcommand)
@@ -64,14 +62,16 @@ class RepositoryCommand:
                     status_filter = RepositoryStatus(args.status.upper())
                 except ValueError:
                     self._print_error(f"Invalid status: {args.status}")
-                    self._print_info("Valid statuses: INDEXED, INDEXING, STALE, ERROR, NOT_INDEXED")
+                    self._print_info(
+                        "Valid statuses: INDEXED, INDEXING, STALE, ERROR, NOT_INDEXED"
+                    )
                     return
 
             # Get repositories
             repositories = await registry.list_repositories(
                 status=status_filter,
                 workspace_id=args.workspace,
-                tags=args.tags.split(',') if args.tags else None
+                tags=args.tags.split(",") if args.tags else None,
             )
 
             if not repositories:
@@ -110,7 +110,7 @@ class RepositoryCommand:
                 path=str(path),
                 name=args.name,
                 git_url=args.git_url,
-                tags=args.tags.split(',') if args.tags else []
+                tags=args.tags.split(",") if args.tags else [],
             )
 
             # Get repository details
@@ -221,7 +221,9 @@ class RepositoryCommand:
             # Remove dependency
             await registry.remove_dependency(args.repo_id, args.depends_on)
 
-            self._print_success(f"Dependency removed: {args.repo_id} → {args.depends_on}")
+            self._print_success(
+                f"Dependency removed: {args.repo_id} → {args.depends_on}"
+            )
 
         except Exception as e:
             self._print_error(f"Failed to remove dependency: {e}")
@@ -250,7 +252,9 @@ class RepositoryCommand:
 
             status_text = f"[{status_color}]{repo.status.value}[/{status_color}]"
 
-            workspaces = ", ".join(repo.workspace_ids[:2]) if repo.workspace_ids else "-"
+            workspaces = (
+                ", ".join(repo.workspace_ids[:2]) if repo.workspace_ids else "-"
+            )
             if len(repo.workspace_ids) > 2:
                 workspaces += f" +{len(repo.workspace_ids) - 2}"
 
@@ -261,7 +265,7 @@ class RepositoryCommand:
                 repo.repo_type.value,
                 f"{repo.file_count:,}" if repo.file_count else "-",
                 f"{repo.unit_count:,}" if repo.unit_count else "-",
-                workspaces
+                workspaces,
             )
 
         self.console.print()
@@ -293,7 +297,10 @@ class RepositoryCommand:
     def _print_rich_repository_info(self, repository, dependencies):
         """Print detailed repository info in rich format."""
         # Main info table
-        table = Table(title=f"[bold cyan]Repository: {repository.name}[/bold cyan]", show_header=False)
+        table = Table(
+            title=f"[bold cyan]Repository: {repository.name}[/bold cyan]",
+            show_header=False,
+        )
         table.add_column("Field", style="cyan", width=20)
         table.add_column("Value", style="white")
 
@@ -323,7 +330,9 @@ class RepositoryCommand:
             table.add_row("Semantic Units", f"{repository.unit_count:,}")
 
         if repository.indexed_at:
-            table.add_row("Last Indexed", repository.indexed_at.strftime("%Y-%m-%d %H:%M:%S"))
+            table.add_row(
+                "Last Indexed", repository.indexed_at.strftime("%Y-%m-%d %H:%M:%S")
+            )
 
         if repository.tags:
             table.add_row("Tags", ", ".join(repository.tags))
@@ -339,7 +348,9 @@ class RepositoryCommand:
             total_deps = sum(len(deps) for deps in dependencies.values())
             if total_deps > 0:
                 self.console.print()
-                dep_table = Table(title=f"[bold cyan]Dependencies ({total_deps})[/bold cyan]")
+                dep_table = Table(
+                    title=f"[bold cyan]Dependencies ({total_deps})[/bold cyan]"
+                )
                 dep_table.add_column("Depth", justify="center", style="cyan")
                 dep_table.add_column("Repository IDs", style="white")
 
@@ -369,7 +380,9 @@ class RepositoryCommand:
             print(f"Semantic Units: {repository.unit_count:,}")
 
         if repository.indexed_at:
-            print(f"Last Indexed: {repository.indexed_at.strftime('%Y-%m-%d %H:%M:%S')}")
+            print(
+                f"Last Indexed: {repository.indexed_at.strftime('%Y-%m-%d %H:%M:%S')}"
+            )
 
         if repository.tags:
             print(f"Tags: {', '.join(repository.tags)}")
@@ -413,103 +426,58 @@ class RepositoryCommand:
 def add_repository_parser(subparsers):
     """Add repository command parser."""
     repo_parser = subparsers.add_parser(
-        'repository',
-        aliases=['repo'],
-        help='Manage code repositories'
+        "repository", aliases=["repo"], help="Manage code repositories"
     )
 
     repo_subparsers = repo_parser.add_subparsers(
-        dest='repo_subcommand',
-        help='Repository subcommands'
+        dest="repo_subcommand", help="Repository subcommands"
     )
 
     # List repositories
-    list_parser = repo_subparsers.add_parser(
-        'list',
-        help='List all repositories'
-    )
+    list_parser = repo_subparsers.add_parser("list", help="List all repositories")
     list_parser.add_argument(
-        '--status',
-        help='Filter by status (INDEXED, INDEXING, STALE, ERROR, NOT_INDEXED)'
+        "--status",
+        help="Filter by status (INDEXED, INDEXING, STALE, ERROR, NOT_INDEXED)",
     )
-    list_parser.add_argument(
-        '--workspace',
-        help='Filter by workspace ID'
-    )
-    list_parser.add_argument(
-        '--tags',
-        help='Filter by tags (comma-separated)'
-    )
+    list_parser.add_argument("--workspace", help="Filter by workspace ID")
+    list_parser.add_argument("--tags", help="Filter by tags (comma-separated)")
 
     # Register repository
     register_parser = repo_subparsers.add_parser(
-        'register',
-        help='Register a new repository'
+        "register", help="Register a new repository"
     )
+    register_parser.add_argument("path", help="Path to repository")
     register_parser.add_argument(
-        'path',
-        help='Path to repository'
+        "--name", help="Repository name (defaults to directory name)"
     )
-    register_parser.add_argument(
-        '--name',
-        help='Repository name (defaults to directory name)'
-    )
-    register_parser.add_argument(
-        '--git-url',
-        help='Git repository URL'
-    )
-    register_parser.add_argument(
-        '--tags',
-        help='Tags (comma-separated)'
-    )
+    register_parser.add_argument("--git-url", help="Git repository URL")
+    register_parser.add_argument("--tags", help="Tags (comma-separated)")
 
     # Unregister repository
     unregister_parser = repo_subparsers.add_parser(
-        'unregister',
-        help='Unregister a repository'
+        "unregister", help="Unregister a repository"
     )
-    unregister_parser.add_argument(
-        'repo_id',
-        help='Repository ID'
-    )
+    unregister_parser.add_argument("repo_id", help="Repository ID")
 
     # Get repository info
     info_parser = repo_subparsers.add_parser(
-        'info',
-        help='Get detailed repository information'
+        "info", help="Get detailed repository information"
     )
-    info_parser.add_argument(
-        'repo_id',
-        help='Repository ID'
-    )
+    info_parser.add_argument("repo_id", help="Repository ID")
 
     # Add dependency
     add_dep_parser = repo_subparsers.add_parser(
-        'add-dep',
-        help='Add a dependency relationship'
+        "add-dep", help="Add a dependency relationship"
     )
-    add_dep_parser.add_argument(
-        'repo_id',
-        help='Repository ID'
-    )
-    add_dep_parser.add_argument(
-        'depends_on',
-        help='Dependency repository ID'
-    )
+    add_dep_parser.add_argument("repo_id", help="Repository ID")
+    add_dep_parser.add_argument("depends_on", help="Dependency repository ID")
 
     # Remove dependency
     remove_dep_parser = repo_subparsers.add_parser(
-        'remove-dep',
-        help='Remove a dependency relationship'
+        "remove-dep", help="Remove a dependency relationship"
     )
-    remove_dep_parser.add_argument(
-        'repo_id',
-        help='Repository ID'
-    )
-    remove_dep_parser.add_argument(
-        'depends_on',
-        help='Dependency repository ID'
-    )
+    remove_dep_parser.add_argument("repo_id", help="Repository ID")
+    remove_dep_parser.add_argument("depends_on", help="Dependency repository ID")
 
     return repo_parser
 

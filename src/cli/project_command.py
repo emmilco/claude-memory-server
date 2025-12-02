@@ -3,7 +3,6 @@
 import asyncio
 import logging
 import sys
-from typing import Optional
 
 from rich.console import Console
 from rich.panel import Panel
@@ -35,7 +34,9 @@ async def project_list() -> int:
         result = await server.list_projects()
 
         if result["status"] != "success":
-            console.print(f"[red]Error:[/red] {result.get('message', 'Unknown error')}\n")
+            console.print(
+                f"[red]Error:[/red] {result.get('message', 'Unknown error')}\n"
+            )
             await server.close()
             return 1
 
@@ -98,7 +99,9 @@ async def project_stats(project_name: str) -> int:
         result = await server.get_project_details(project_name)
 
         if result["status"] != "success":
-            console.print(f"[red]Error:[/red] {result.get('message', 'Unknown error')}\n")
+            console.print(
+                f"[red]Error:[/red] {result.get('message', 'Unknown error')}\n"
+            )
             await server.close()
             return 1
 
@@ -107,10 +110,18 @@ async def project_stats(project_name: str) -> int:
         # Display statistics
         info_table = Table(show_header=False, box=None)
         info_table.add_row("[cyan]Project Name:[/cyan]", project_name)
-        info_table.add_row("[cyan]Total Memories:[/cyan]", str(stats.get("total_memories", 0)))
-        info_table.add_row("[cyan]Total Files:[/cyan]", str(stats.get("total_files", 0)))
-        info_table.add_row("[cyan]Total Functions:[/cyan]", str(stats.get("total_functions", 0)))
-        info_table.add_row("[cyan]Total Classes:[/cyan]", str(stats.get("total_classes", 0)))
+        info_table.add_row(
+            "[cyan]Total Memories:[/cyan]", str(stats.get("total_memories", 0))
+        )
+        info_table.add_row(
+            "[cyan]Total Files:[/cyan]", str(stats.get("total_files", 0))
+        )
+        info_table.add_row(
+            "[cyan]Total Functions:[/cyan]", str(stats.get("total_functions", 0))
+        )
+        info_table.add_row(
+            "[cyan]Total Classes:[/cyan]", str(stats.get("total_classes", 0))
+        )
 
         if stats.get("last_updated"):
             info_table.add_row("[cyan]Last Updated:[/cyan]", str(stats["last_updated"]))
@@ -129,7 +140,9 @@ async def project_stats(project_name: str) -> int:
             for level, count in stats["context_levels"].items():
                 info_table.add_row(f"  {level}:", str(count))
 
-        console.print(Panel(info_table, title="Project Statistics", border_style="blue"))
+        console.print(
+            Panel(info_table, title="Project Statistics", border_style="blue")
+        )
         console.print()
 
         await server.close()
@@ -157,7 +170,9 @@ async def project_delete(project_name: str, force: bool = False) -> int:
 
         # Confirmation prompt
         if not force:
-            console.print("[yellow]WARNING: This will permanently delete all memories, files, and data for this project![/yellow]")
+            console.print(
+                "[yellow]WARNING: This will permanently delete all memories, files, and data for this project![/yellow]"
+            )
             confirmation = input("\nType the project name to confirm deletion: ")
             if confirmation != project_name:
                 console.print("\n[dim]Deletion cancelled.[/dim]\n")
@@ -172,7 +187,9 @@ async def project_delete(project_name: str, force: bool = False) -> int:
         result = await server.delete_project(project_name)
 
         if result["status"] != "success":
-            console.print(f"[red]Error:[/red] {result.get('message', 'Unknown error')}\n")
+            console.print(
+                f"[red]Error:[/red] {result.get('message', 'Unknown error')}\n"
+            )
             await server.close()
             return 1
 
@@ -200,7 +217,7 @@ async def project_rename(old_name: str, new_name: str) -> int:
         Exit code (0 for success, 1 for failure)
     """
     try:
-        console.print(f"\n[bold blue]Rename Project[/bold blue]\n")
+        console.print("\n[bold blue]Rename Project[/bold blue]\n")
         console.print(f"[cyan]{old_name}[/cyan] → [green]{new_name}[/green]\n")
 
         # Initialize server
@@ -212,7 +229,9 @@ async def project_rename(old_name: str, new_name: str) -> int:
         result = await server.rename_project(old_name, new_name)
 
         if result["status"] != "success":
-            console.print(f"[red]Error:[/red] {result.get('message', 'Unknown error')}\n")
+            console.print(
+                f"[red]Error:[/red] {result.get('message', 'Unknown error')}\n"
+            )
             await server.close()
             return 1
 
@@ -236,16 +255,22 @@ def main():
     subparsers = parser.add_subparsers(dest="command", help="Project commands")
 
     # list command
-    list_parser = subparsers.add_parser("list", help="List all indexed projects")
+    subparsers.add_parser("list", help="List all indexed projects")
 
     # stats command
-    stats_parser = subparsers.add_parser("stats", help="Show detailed project statistics")
+    stats_parser = subparsers.add_parser(
+        "stats", help="Show detailed project statistics"
+    )
     stats_parser.add_argument("project_name", help="Name of project")
 
     # delete command
-    delete_parser = subparsers.add_parser("delete", help="Delete a project and all its data")
+    delete_parser = subparsers.add_parser(
+        "delete", help="Delete a project and all its data"
+    )
     delete_parser.add_argument("project_name", help="Name of project to delete")
-    delete_parser.add_argument("--force", action="store_true", help="Skip confirmation prompt")
+    delete_parser.add_argument(
+        "--force", action="store_true", help="Skip confirmation prompt"
+    )
 
     # rename command
     rename_parser = subparsers.add_parser("rename", help="Rename a project")

@@ -25,12 +25,16 @@ class TestSecurityKeywordDetection:
 
     def test_no_security_keywords(self, analyzer):
         """Code without security keywords."""
-        keywords = analyzer._find_security_keywords("simple_func", "def simple_func():\n    return 42")
+        keywords = analyzer._find_security_keywords(
+            "simple_func", "def simple_func():\n    return 42"
+        )
         assert len(keywords) == 0
 
     def test_auth_keywords(self, analyzer):
         """Detect authentication keywords."""
-        code = "def authenticate_user(username, password):\n    return check_credentials()"
+        code = (
+            "def authenticate_user(username, password):\n    return check_credentials()"
+        )
         keywords = analyzer._find_security_keywords("authenticate_user", code)
         assert "authenticate" in keywords or "password" in keywords
 
@@ -285,7 +289,9 @@ class TestCriticalityBoostCalculation:
 
     def test_multiple_keywords(self, analyzer):
         """Multiple security keywords give larger boost."""
-        boost = analyzer._calculate_criticality_boost(["auth", "password", "token"], False, False, 0.0)
+        boost = analyzer._calculate_criticality_boost(
+            ["auth", "password", "token"], False, False, 0.0
+        )
         assert boost >= 0.10
 
     def test_error_handling_boost(self, analyzer):
@@ -311,20 +317,14 @@ class TestCriticalityBoostCalculation:
     def test_combined_boost(self, analyzer):
         """All factors combined."""
         boost = analyzer._calculate_criticality_boost(
-            ["auth", "password", "token"],
-            True,
-            True,
-            1.0
+            ["auth", "password", "token"], True, True, 1.0
         )
         assert boost >= 0.15
 
     def test_boost_capped(self, analyzer):
         """Boost is capped at MAX_CRITICALITY_BOOST."""
         boost = analyzer._calculate_criticality_boost(
-            ["auth", "password", "token", "crypto", "encrypt"] * 10,
-            True,
-            True,
-            1.0
+            ["auth", "password", "token", "crypto", "encrypt"] * 10, True, True, 1.0
         )
         assert boost <= 0.2
 

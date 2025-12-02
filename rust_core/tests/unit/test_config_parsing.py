@@ -9,7 +9,7 @@ import pytest
 from mcp_performance_core import parse_source_file
 
 # Sample JSON configuration
-SAMPLE_JSON = '''
+SAMPLE_JSON = """
 {
   "name": "my-app",
   "version": "1.0.0",
@@ -27,10 +27,10 @@ SAMPLE_JSON = '''
     "webpack": "^5.75.0"
   }
 }
-'''
+"""
 
 # Sample YAML configuration (docker-compose)
-SAMPLE_YAML = '''
+SAMPLE_YAML = """
 version: '3.8'
 
 services:
@@ -48,10 +48,10 @@ services:
 
 volumes:
   db_data:
-'''
+"""
 
 # Sample TOML configuration
-SAMPLE_TOML = '''
+SAMPLE_TOML = """
 [package]
 name = "my-crate"
 version = "0.1.0"
@@ -67,10 +67,10 @@ criterion = "0.5"
 [profile.release]
 opt-level = 3
 lto = true
-'''
+"""
 
 # Sample GitHub Actions YAML
-GITHUB_ACTIONS_YAML = '''
+GITHUB_ACTIONS_YAML = """
 name: CI
 
 on:
@@ -94,7 +94,7 @@ jobs:
       - uses: actions/checkout@v3
       - name: Build
         run: npm run build
-'''
+"""
 
 
 class TestJSONParsing:
@@ -277,7 +277,7 @@ class TestConfigEdgeCases:
 
     def test_json_nested_objects(self):
         """Test JSON with deeply nested objects."""
-        nested_json = '''
+        nested_json = """
         {
           "level1": {
             "level2": {
@@ -287,7 +287,7 @@ class TestConfigEdgeCases:
             }
           }
         }
-        '''
+        """
         result = parse_source_file("nested.json", nested_json)
 
         assert result.language == "Json"
@@ -295,7 +295,7 @@ class TestConfigEdgeCases:
 
     def test_yaml_with_anchors(self):
         """Test YAML with anchors and aliases."""
-        yaml_with_anchors = '''
+        yaml_with_anchors = """
         defaults: &defaults
           timeout: 30
           retries: 3
@@ -303,7 +303,7 @@ class TestConfigEdgeCases:
         production:
           <<: *defaults
           server: prod.example.com
-        '''
+        """
         result = parse_source_file("config.yaml", yaml_with_anchors)
 
         assert result.language == "Yaml"
@@ -311,7 +311,7 @@ class TestConfigEdgeCases:
 
     def test_toml_with_arrays(self):
         """Test TOML with array tables."""
-        toml_with_arrays = '''
+        toml_with_arrays = """
         [[bin]]
         name = "app1"
         path = "src/main1.rs"
@@ -319,7 +319,7 @@ class TestConfigEdgeCases:
         [[bin]]
         name = "app2"
         path = "src/main2.rs"
-        '''
+        """
         result = parse_source_file("config.toml", toml_with_arrays)
 
         assert result.language == "Toml"

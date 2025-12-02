@@ -3,7 +3,7 @@
 import asyncio
 import logging
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 from datetime import datetime, UTC
 import sys
 
@@ -58,7 +58,7 @@ async def backup_create(
 
         backup_path = backup_dir / filename
 
-        console.print(f"\n[bold blue]Creating Backup[/bold blue]\n")
+        console.print("\n[bold blue]Creating Backup[/bold blue]\n")
         console.print(f"[cyan]Destination:[/cyan] {backup_path}\n")
 
         # Initialize store and create backup
@@ -95,9 +95,13 @@ async def backup_create(
         results_table.add_row("")
         results_table.add_row("[cyan]Backup File:[/cyan]", str(backup_path))
         results_table.add_row("[cyan]Memories:[/cyan]", str(stats["memory_count"]))
-        results_table.add_row("[cyan]Size:[/cyan]", f"{stats['file_size_bytes']:,} bytes")
+        results_table.add_row(
+            "[cyan]Size:[/cyan]", f"{stats['file_size_bytes']:,} bytes"
+        )
 
-        console.print(Panel(results_table, title="Backup Created", border_style="green"))
+        console.print(
+            Panel(results_table, title="Backup Created", border_style="green")
+        )
         console.print()
 
         await store.close()
@@ -143,7 +147,7 @@ async def backup_list(destination: Optional[str] = None) -> int:
             return 0
 
         # Display backups
-        console.print(f"\n[bold blue]Available Backups[/bold blue]\n")
+        console.print("\n[bold blue]Available Backups[/bold blue]\n")
 
         table = Table(show_header=True)
         table.add_column("Filename", style="cyan")
@@ -153,7 +157,9 @@ async def backup_list(destination: Optional[str] = None) -> int:
 
         for backup_file in backups:
             stat = backup_file.stat()
-            created = datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S")
+            created = datetime.fromtimestamp(stat.st_mtime).strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
             size = f"{stat.st_size:,} bytes"
             format_type = "Archive" if backup_file.suffix == ".gz" else "JSON"
 
@@ -201,15 +207,24 @@ async def backup_restore(
         config_table = Table(show_header=False, box=None)
         config_table.add_row("[cyan]Backup File:[/cyan]", str(backup_path))
         config_table.add_row("[cyan]Conflict Strategy:[/cyan]", strategy)
-        config_table.add_row("[cyan]Mode:[/cyan]", "[yellow]DRY RUN[/yellow]" if dry_run else "[red]LIVE RESTORE[/red]")
+        config_table.add_row(
+            "[cyan]Mode:[/cyan]",
+            "[yellow]DRY RUN[/yellow]" if dry_run else "[red]LIVE RESTORE[/red]",
+        )
 
-        console.print(Panel(config_table, title="Restore Configuration", border_style="blue"))
+        console.print(
+            Panel(config_table, title="Restore Configuration", border_style="blue")
+        )
         console.print()
 
         # Confirmation prompt
         if not dry_run and not yes:
-            console.print("[red]⚠ WARNING: This will restore data from the backup.[/red]")
-            console.print("[yellow]Depending on your conflict strategy, this may overwrite existing memories.[/yellow]\n")
+            console.print(
+                "[red]⚠ WARNING: This will restore data from the backup.[/red]"
+            )
+            console.print(
+                "[yellow]Depending on your conflict strategy, this may overwrite existing memories.[/yellow]\n"
+            )
 
             if not Confirm.ask("[yellow]Continue with restore?[/yellow]"):
                 console.print("[yellow]Restore cancelled.[/yellow]")
@@ -229,11 +244,13 @@ async def backup_restore(
             console=console,
         ) as progress:
             task = progress.add_task(
-                "Analyzing restore..." if dry_run else "Restoring backup...",
-                total=None
+                "Analyzing restore..." if dry_run else "Restoring backup...", total=None
             )
 
-            is_archive = backup_path.suffix == ".gz" or backup_path.suffixes == [".tar", ".gz"]
+            is_archive = backup_path.suffix == ".gz" or backup_path.suffixes == [
+                ".tar",
+                ".gz",
+            ]
 
             if is_archive:
                 stats = await importer.import_from_archive(
@@ -254,17 +271,29 @@ async def backup_restore(
         results_table = Table(show_header=False, box=None)
 
         if dry_run:
-            results_table.add_row("[yellow]⚠[/yellow] Dry run completed (no changes made)")
+            results_table.add_row(
+                "[yellow]⚠[/yellow] Dry run completed (no changes made)"
+            )
         else:
             results_table.add_row("[green]✓[/green] Restore completed successfully")
 
         results_table.add_row("")
-        results_table.add_row("[cyan]Total Memories:[/cyan]", str(stats["total_memories"]))
-        results_table.add_row("[cyan]Restored:[/cyan]", f"[green]{stats['imported']}[/green]")
-        results_table.add_row("[cyan]Skipped:[/cyan]", f"[yellow]{stats['skipped']}[/yellow]")
-        results_table.add_row("[cyan]Conflicts:[/cyan]", f"[magenta]{stats['conflicts']}[/magenta]")
+        results_table.add_row(
+            "[cyan]Total Memories:[/cyan]", str(stats["total_memories"])
+        )
+        results_table.add_row(
+            "[cyan]Restored:[/cyan]", f"[green]{stats['imported']}[/green]"
+        )
+        results_table.add_row(
+            "[cyan]Skipped:[/cyan]", f"[yellow]{stats['skipped']}[/yellow]"
+        )
+        results_table.add_row(
+            "[cyan]Conflicts:[/cyan]", f"[magenta]{stats['conflicts']}[/magenta]"
+        )
 
-        console.print(Panel(results_table, title="Restore Results", border_style="green"))
+        console.print(
+            Panel(results_table, title="Restore Results", border_style="green")
+        )
         console.print()
 
         await store.close()
@@ -324,14 +353,18 @@ async def backup_cleanup(
         backups.sort(key=lambda p: p.stat().st_mtime, reverse=True)
 
         if len(backups) <= keep:
-            console.print(f"\n[green]No cleanup needed. Found {len(backups)} backups (keeping {keep}).[/green]\n")
+            console.print(
+                f"\n[green]No cleanup needed. Found {len(backups)} backups (keeping {keep}).[/green]\n"
+            )
             return 0
 
         # Determine which backups to delete
         to_delete = backups[keep:]
 
-        console.print(f"\n[bold blue]Backup Cleanup[/bold blue]\n")
-        console.print(f"[cyan]Found {len(backups)} backups, keeping {keep} most recent.[/cyan]")
+        console.print("\n[bold blue]Backup Cleanup[/bold blue]\n")
+        console.print(
+            f"[cyan]Found {len(backups)} backups, keeping {keep} most recent.[/cyan]"
+        )
         console.print(f"[yellow]Will delete {len(to_delete)} old backups:[/yellow]\n")
 
         for backup in to_delete:
@@ -355,7 +388,9 @@ async def backup_cleanup(
                 logger.error(f"Failed to delete {backup}: {e}")
                 console.print(f"[red]Failed to delete {backup.name}: {e}[/red]")
 
-        console.print(f"\n[green]✓ Cleanup complete. Deleted {deleted_count} old backups.[/green]\n")
+        console.print(
+            f"\n[green]✓ Cleanup complete. Deleted {deleted_count} old backups.[/green]\n"
+        )
 
         return 0
 
@@ -383,7 +418,7 @@ def main():
         "--format",
         choices=["json", "archive"],
         default="archive",
-        help="Backup format (default: archive)"
+        help="Backup format (default: archive)",
     )
     create_parser.add_argument("--project", help="Only backup this project")
 
@@ -398,21 +433,24 @@ def main():
         "--strategy",
         choices=["keep_newer", "keep_older", "keep_both", "skip", "merge_metadata"],
         default="keep_newer",
-        help="Conflict resolution strategy"
+        help="Conflict resolution strategy",
     )
-    restore_parser.add_argument("--dry-run", action="store_true", help="Analyze without making changes")
-    restore_parser.add_argument("-y", "--yes", action="store_true", help="Skip confirmation prompts")
+    restore_parser.add_argument(
+        "--dry-run", action="store_true", help="Analyze without making changes"
+    )
+    restore_parser.add_argument(
+        "-y", "--yes", action="store_true", help="Skip confirmation prompts"
+    )
 
     # cleanup command
     cleanup_parser = subparsers.add_parser("cleanup", help="Clean up old backups")
     cleanup_parser.add_argument(
-        "--keep",
-        type=int,
-        default=7,
-        help="Number of backups to keep (default: 7)"
+        "--keep", type=int, default=7, help="Number of backups to keep (default: 7)"
     )
     cleanup_parser.add_argument("--destination", help="Backup destination directory")
-    cleanup_parser.add_argument("-y", "--yes", action="store_true", help="Skip confirmation prompts")
+    cleanup_parser.add_argument(
+        "-y", "--yes", action="store_true", help="Skip confirmation prompts"
+    )
 
     args = parser.parse_args()
 
@@ -422,28 +460,36 @@ def main():
 
     # Run appropriate command
     if args.command == "create":
-        exit_code = asyncio.run(backup_create(
-            destination=args.destination,
-            format=args.format,
-            project=args.project,
-        ))
+        exit_code = asyncio.run(
+            backup_create(
+                destination=args.destination,
+                format=args.format,
+                project=args.project,
+            )
+        )
     elif args.command == "list":
-        exit_code = asyncio.run(backup_list(
-            destination=args.destination,
-        ))
+        exit_code = asyncio.run(
+            backup_list(
+                destination=args.destination,
+            )
+        )
     elif args.command == "restore":
-        exit_code = asyncio.run(backup_restore(
-            backup_file=args.backup_file,
-            strategy=args.strategy,
-            dry_run=args.dry_run,
-            yes=args.yes,
-        ))
+        exit_code = asyncio.run(
+            backup_restore(
+                backup_file=args.backup_file,
+                strategy=args.strategy,
+                dry_run=args.dry_run,
+                yes=args.yes,
+            )
+        )
     elif args.command == "cleanup":
-        exit_code = asyncio.run(backup_cleanup(
-            keep=args.keep,
-            destination=args.destination,
-            yes=args.yes,
-        ))
+        exit_code = asyncio.run(
+            backup_cleanup(
+                keep=args.keep,
+                destination=args.destination,
+                yes=args.yes,
+            )
+        )
     else:
         parser.print_help()
         exit_code = 1

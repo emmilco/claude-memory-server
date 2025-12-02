@@ -382,13 +382,30 @@ def func():
     def test_score_in_valid_range(self, analyzer):
         """All scores are in valid range (0.3-0.7)."""
         test_cases = [
-            {"content": "def f(): pass", "signature": "def f():", "unit_type": "function", "language": "python"},
-            {"content": "def f(x):\n    if x: return 1\n    return 0", "signature": "def f(x):", "unit_type": "function", "language": "python"},
-            {"content": "def f(a,b,c):\n" + "    if a:\n" * 10 + "        pass", "signature": "def f(a,b,c):", "unit_type": "function", "language": "python"},
+            {
+                "content": "def f(): pass",
+                "signature": "def f():",
+                "unit_type": "function",
+                "language": "python",
+            },
+            {
+                "content": "def f(x):\n    if x: return 1\n    return 0",
+                "signature": "def f(x):",
+                "unit_type": "function",
+                "language": "python",
+            },
+            {
+                "content": "def f(a,b,c):\n" + "    if a:\n" * 10 + "        pass",
+                "signature": "def f(a,b,c):",
+                "unit_type": "function",
+                "language": "python",
+            },
         ]
         for code_unit in test_cases:
             metrics = analyzer.analyze(code_unit)
-            assert 0.3 <= metrics.complexity_score <= 0.7, f"Score {metrics.complexity_score} out of range"
+            assert (
+                0.3 <= metrics.complexity_score <= 0.7
+            ), f"Score {metrics.complexity_score} out of range"
 
 
 class TestLanguageSupport:

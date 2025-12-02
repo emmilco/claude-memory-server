@@ -11,8 +11,7 @@ Part of FEAT-060: Code Quality Metrics & Hotspots
 """
 
 import logging
-import math
-from typing import Dict, Any, List, Optional, Tuple, Literal
+from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
 from enum import Enum
 
@@ -24,14 +23,16 @@ logger = logging.getLogger(__name__)
 
 class QualitySeverity(str, Enum):
     """Quality issue severity levels."""
+
     CRITICAL = "critical"  # Requires immediate attention
-    HIGH = "high"          # Should be addressed soon
-    MEDIUM = "medium"      # Should be monitored
-    LOW = "low"            # Nice to fix
+    HIGH = "high"  # Should be addressed soon
+    MEDIUM = "medium"  # Should be monitored
+    LOW = "low"  # Nice to fix
 
 
 class QualityCategory(str, Enum):
     """Quality issue categories."""
+
     COMPLEXITY = "complexity"
     DUPLICATION = "duplication"
     LENGTH = "length"
@@ -47,6 +48,7 @@ class CodeQualityMetrics:
 
     Extended from ComplexityMetrics with additional quality indicators.
     """
+
     # Base complexity metrics
     cyclomatic_complexity: int
     line_count: int
@@ -70,6 +72,7 @@ class QualityHotspot:
     Represents a specific quality problem with metadata for prioritization
     and actionable recommendations.
     """
+
     severity: QualitySeverity
     category: QualityCategory
     file_path: str
@@ -137,11 +140,29 @@ class QualityAnalyzer:
         """
         # Load defaults from config (REF-021)
         config = get_config()
-        self.complexity_high = complexity_high if complexity_high is not None else config.quality.complexity_high
-        self.complexity_critical = complexity_critical if complexity_critical is not None else config.quality.complexity_critical
-        self.long_function_lines = long_function_lines if long_function_lines is not None else config.quality.long_function_lines
-        self.deep_nesting = deep_nesting if deep_nesting is not None else config.quality.deep_nesting
-        self.many_parameters = many_parameters if many_parameters is not None else config.quality.many_parameters
+        self.complexity_high = (
+            complexity_high
+            if complexity_high is not None
+            else config.quality.complexity_high
+        )
+        self.complexity_critical = (
+            complexity_critical
+            if complexity_critical is not None
+            else config.quality.complexity_critical
+        )
+        self.long_function_lines = (
+            long_function_lines
+            if long_function_lines is not None
+            else config.quality.long_function_lines
+        )
+        self.deep_nesting = (
+            deep_nesting if deep_nesting is not None else config.quality.deep_nesting
+        )
+        self.many_parameters = (
+            many_parameters
+            if many_parameters is not None
+            else config.quality.many_parameters
+        )
         self.mi_excellent = config.quality.maintainability_excellent
         self.mi_good = config.quality.maintainability_good
         self.mi_poor = config.quality.maintainability_poor
@@ -347,117 +368,150 @@ class QualityAnalyzer:
 
         # Check cyclomatic complexity
         if quality_metrics.cyclomatic_complexity > self.complexity_critical:
-            severity, _ = self.classify_complexity(quality_metrics.cyclomatic_complexity)
-            hotspots.append(self.create_quality_hotspot(
-                category=QualityCategory.COMPLEXITY,
-                severity=severity,
-                file_path=file_path,
-                unit_name=unit_name,
-                start_line=start_line,
-                end_line=end_line,
-                metric_value=quality_metrics.cyclomatic_complexity,
-                threshold=self.complexity_critical,
-                recommendation=f"Refactor into smaller functions (target: <{self.complexity_high})",
-            ))
-        elif quality_metrics.cyclomatic_complexity > self.complexity_high:
-            hotspots.append(self.create_quality_hotspot(
-                category=QualityCategory.COMPLEXITY,
-                severity=QualitySeverity.HIGH,
-                file_path=file_path,
-                unit_name=unit_name,
-                start_line=start_line,
-                end_line=end_line,
-                metric_value=quality_metrics.cyclomatic_complexity,
-                threshold=self.complexity_high,
-                recommendation=f"Consider simplifying logic (target: <{self.complexity_high})",
-            ))
-
-        # Check function length
-        if quality_metrics.line_count > self.long_function_lines:
-            severity = QualitySeverity.CRITICAL if quality_metrics.line_count > self.long_function_lines * 2 else QualitySeverity.HIGH
-            hotspots.append(self.create_quality_hotspot(
-                category=QualityCategory.LENGTH,
-                severity=severity,
-                file_path=file_path,
-                unit_name=unit_name,
-                start_line=start_line,
-                end_line=end_line,
-                metric_value=quality_metrics.line_count,
-                threshold=self.long_function_lines,
-                recommendation=f"Extract into smaller functions (target: <{self.long_function_lines} lines)",
-            ))
-
-        # Check nesting depth
-        if quality_metrics.nesting_depth > self.deep_nesting:
-            severity = QualitySeverity.CRITICAL if quality_metrics.nesting_depth > self.deep_nesting + 2 else QualitySeverity.HIGH
-            hotspots.append(self.create_quality_hotspot(
-                category=QualityCategory.NESTING,
-                severity=severity,
-                file_path=file_path,
-                unit_name=unit_name,
-                start_line=start_line,
-                end_line=end_line,
-                metric_value=quality_metrics.nesting_depth,
-                threshold=self.deep_nesting,
-                recommendation=f"Reduce nesting with early returns or helper functions (target: <{self.deep_nesting})",
-            ))
-
-        # Check parameter count
-        if quality_metrics.parameter_count > self.many_parameters:
-            severity = QualitySeverity.HIGH if quality_metrics.parameter_count > self.many_parameters + 2 else QualitySeverity.MEDIUM
-            hotspots.append(self.create_quality_hotspot(
-                category=QualityCategory.PARAMETERS,
-                severity=severity,
-                file_path=file_path,
-                unit_name=unit_name,
-                start_line=start_line,
-                end_line=end_line,
-                metric_value=quality_metrics.parameter_count,
-                threshold=self.many_parameters,
-                recommendation=f"Consider parameter object or builder pattern (target: <{self.many_parameters} parameters)",
-            ))
-
-        # Check duplication
-        if quality_metrics.duplication_score > 0.95:
-            hotspots.append(self.create_quality_hotspot(
-                category=QualityCategory.DUPLICATION,
-                severity=QualitySeverity.CRITICAL,
-                file_path=file_path,
-                unit_name=unit_name,
-                start_line=start_line,
-                end_line=end_line,
-                metric_value=quality_metrics.duplication_score,
-                threshold=0.95,
-                recommendation="Extract common logic into shared utility (near-exact duplicate detected)",
-            ))
-        elif quality_metrics.duplication_score > 0.85:
-            hotspots.append(self.create_quality_hotspot(
-                category=QualityCategory.DUPLICATION,
-                severity=QualitySeverity.HIGH,
-                file_path=file_path,
-                unit_name=unit_name,
-                start_line=start_line,
-                end_line=end_line,
-                metric_value=quality_metrics.duplication_score,
-                threshold=0.85,
-                recommendation="Consider consolidating similar logic (high similarity detected)",
-            ))
-
-        # Check documentation
-        if not quality_metrics.has_documentation:
-            # Only flag complex functions without docs as medium severity
-            if quality_metrics.cyclomatic_complexity > 5 or quality_metrics.line_count > 50:
-                hotspots.append(self.create_quality_hotspot(
-                    category=QualityCategory.DOCUMENTATION,
-                    severity=QualitySeverity.MEDIUM,
+            severity, _ = self.classify_complexity(
+                quality_metrics.cyclomatic_complexity
+            )
+            hotspots.append(
+                self.create_quality_hotspot(
+                    category=QualityCategory.COMPLEXITY,
+                    severity=severity,
                     file_path=file_path,
                     unit_name=unit_name,
                     start_line=start_line,
                     end_line=end_line,
-                    metric_value=0.0,
-                    threshold=1.0,
-                    recommendation="Add documentation explaining purpose and usage",
-                ))
+                    metric_value=quality_metrics.cyclomatic_complexity,
+                    threshold=self.complexity_critical,
+                    recommendation=f"Refactor into smaller functions (target: <{self.complexity_high})",
+                )
+            )
+        elif quality_metrics.cyclomatic_complexity > self.complexity_high:
+            hotspots.append(
+                self.create_quality_hotspot(
+                    category=QualityCategory.COMPLEXITY,
+                    severity=QualitySeverity.HIGH,
+                    file_path=file_path,
+                    unit_name=unit_name,
+                    start_line=start_line,
+                    end_line=end_line,
+                    metric_value=quality_metrics.cyclomatic_complexity,
+                    threshold=self.complexity_high,
+                    recommendation=f"Consider simplifying logic (target: <{self.complexity_high})",
+                )
+            )
+
+        # Check function length
+        if quality_metrics.line_count > self.long_function_lines:
+            severity = (
+                QualitySeverity.CRITICAL
+                if quality_metrics.line_count > self.long_function_lines * 2
+                else QualitySeverity.HIGH
+            )
+            hotspots.append(
+                self.create_quality_hotspot(
+                    category=QualityCategory.LENGTH,
+                    severity=severity,
+                    file_path=file_path,
+                    unit_name=unit_name,
+                    start_line=start_line,
+                    end_line=end_line,
+                    metric_value=quality_metrics.line_count,
+                    threshold=self.long_function_lines,
+                    recommendation=f"Extract into smaller functions (target: <{self.long_function_lines} lines)",
+                )
+            )
+
+        # Check nesting depth
+        if quality_metrics.nesting_depth > self.deep_nesting:
+            severity = (
+                QualitySeverity.CRITICAL
+                if quality_metrics.nesting_depth > self.deep_nesting + 2
+                else QualitySeverity.HIGH
+            )
+            hotspots.append(
+                self.create_quality_hotspot(
+                    category=QualityCategory.NESTING,
+                    severity=severity,
+                    file_path=file_path,
+                    unit_name=unit_name,
+                    start_line=start_line,
+                    end_line=end_line,
+                    metric_value=quality_metrics.nesting_depth,
+                    threshold=self.deep_nesting,
+                    recommendation=f"Reduce nesting with early returns or helper functions (target: <{self.deep_nesting})",
+                )
+            )
+
+        # Check parameter count
+        if quality_metrics.parameter_count > self.many_parameters:
+            severity = (
+                QualitySeverity.HIGH
+                if quality_metrics.parameter_count > self.many_parameters + 2
+                else QualitySeverity.MEDIUM
+            )
+            hotspots.append(
+                self.create_quality_hotspot(
+                    category=QualityCategory.PARAMETERS,
+                    severity=severity,
+                    file_path=file_path,
+                    unit_name=unit_name,
+                    start_line=start_line,
+                    end_line=end_line,
+                    metric_value=quality_metrics.parameter_count,
+                    threshold=self.many_parameters,
+                    recommendation=f"Consider parameter object or builder pattern (target: <{self.many_parameters} parameters)",
+                )
+            )
+
+        # Check duplication
+        if quality_metrics.duplication_score > 0.95:
+            hotspots.append(
+                self.create_quality_hotspot(
+                    category=QualityCategory.DUPLICATION,
+                    severity=QualitySeverity.CRITICAL,
+                    file_path=file_path,
+                    unit_name=unit_name,
+                    start_line=start_line,
+                    end_line=end_line,
+                    metric_value=quality_metrics.duplication_score,
+                    threshold=0.95,
+                    recommendation="Extract common logic into shared utility (near-exact duplicate detected)",
+                )
+            )
+        elif quality_metrics.duplication_score > 0.85:
+            hotspots.append(
+                self.create_quality_hotspot(
+                    category=QualityCategory.DUPLICATION,
+                    severity=QualitySeverity.HIGH,
+                    file_path=file_path,
+                    unit_name=unit_name,
+                    start_line=start_line,
+                    end_line=end_line,
+                    metric_value=quality_metrics.duplication_score,
+                    threshold=0.85,
+                    recommendation="Consider consolidating similar logic (high similarity detected)",
+                )
+            )
+
+        # Check documentation
+        if not quality_metrics.has_documentation:
+            # Only flag complex functions without docs as medium severity
+            if (
+                quality_metrics.cyclomatic_complexity > 5
+                or quality_metrics.line_count > 50
+            ):
+                hotspots.append(
+                    self.create_quality_hotspot(
+                        category=QualityCategory.DOCUMENTATION,
+                        severity=QualitySeverity.MEDIUM,
+                        file_path=file_path,
+                        unit_name=unit_name,
+                        start_line=start_line,
+                        end_line=end_line,
+                        metric_value=0.0,
+                        threshold=1.0,
+                        recommendation="Add documentation explaining purpose and usage",
+                    )
+                )
 
         return hotspots
 

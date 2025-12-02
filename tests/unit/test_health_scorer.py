@@ -4,8 +4,8 @@ import pytest
 from datetime import datetime, UTC, timedelta
 from unittest.mock import AsyncMock, MagicMock
 
-from src.memory.health_scorer import HealthScorer, HealthScore
-from src.core.models import LifecycleState, MemoryUnit
+from src.memory.health_scorer import HealthScorer
+from src.core.models import LifecycleState
 
 
 class TestHealthScorer:

@@ -4,7 +4,7 @@ import json
 import logging
 from datetime import datetime, UTC
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Any
+from typing import Dict, List, Any
 from enum import Enum
 
 logger = logging.getLogger(__name__)
@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 class ProjectState(Enum):
     """Project lifecycle states."""
+
     ACTIVE = "active"  # Currently being used
     PAUSED = "paused"  # Temporarily inactive
     ARCHIVED = "archived"  # Long-term inactive, compressed
@@ -48,10 +49,12 @@ class ProjectArchivalManager:
         """Load project states from file."""
         if self.state_file.exists():
             try:
-                with open(self.state_file, 'r') as f:
+                with open(self.state_file, "r") as f:
                     data = json.load(f)
                     self.project_states = data.get("projects", {})
-                    logger.info(f"Loaded states for {len(self.project_states)} projects")
+                    logger.info(
+                        f"Loaded states for {len(self.project_states)} projects"
+                    )
             except Exception as e:
                 logger.error(f"Failed to load project states: {e}")
                 self.project_states = {}
@@ -66,7 +69,7 @@ class ProjectArchivalManager:
                 "projects": self.project_states,
                 "last_updated": datetime.now(UTC).isoformat(),
             }
-            with open(self.state_file, 'w') as f:
+            with open(self.state_file, "w") as f:
                 json.dump(data, f, indent=2)
             logger.info(f"Saved states for {len(self.project_states)} projects")
         except Exception as e:
@@ -104,10 +107,7 @@ class ProjectArchivalManager:
         logger.info(f"Initialized new project: {project_name}")
 
     def record_activity(
-        self,
-        project_name: str,
-        activity_type: str,
-        count: int = 1
+        self, project_name: str, activity_type: str, count: int = 1
     ) -> None:
         """
         Record activity for a project.
@@ -127,7 +127,9 @@ class ProjectArchivalManager:
         if activity_type == "search":
             project["searches_count"] = project.get("searches_count", 0) + count
         elif activity_type == "index_update":
-            project["index_updates_count"] = project.get("index_updates_count", 0) + count
+            project["index_updates_count"] = (
+                project.get("index_updates_count", 0) + count
+            )
         elif activity_type == "files_indexed":
             project["files_indexed"] = project.get("files_indexed", 0) + count
 
@@ -156,12 +158,15 @@ class ProjectArchivalManager:
             if last_activity.tzinfo is None:
                 # Assume UTC if not specified
                 from datetime import timezone
+
                 last_activity = last_activity.replace(tzinfo=timezone.utc)
 
             delta = datetime.now(UTC) - last_activity
             return delta.total_seconds() / 86400  # Convert to days
         except Exception as e:
-            logger.warning(f"Failed to calculate days since activity for {project_name}: {e}")
+            logger.warning(
+                f"Failed to calculate days since activity for {project_name}: {e}"
+            )
             return 0.0
 
     def archive_project(self, project_name: str) -> Dict[str, Any]:
@@ -175,16 +180,13 @@ class ProjectArchivalManager:
             Dict with archival results
         """
         if project_name not in self.project_states:
-            return {
-                "success": False,
-                "message": f"Project '{project_name}' not found"
-            }
+            return {"success": False, "message": f"Project '{project_name}' not found"}
 
         current_state = self.get_project_state(project_name)
         if current_state == ProjectState.ARCHIVED:
             return {
                 "success": False,
-                "message": f"Project '{project_name}' is already archived"
+                "message": f"Project '{project_name}' is already archived",
             }
 
         # Update state
@@ -198,7 +200,7 @@ class ProjectArchivalManager:
             "success": True,
             "message": f"Project '{project_name}' archived successfully",
             "state": ProjectState.ARCHIVED.value,
-            "archived_at": self.project_states[project_name]["archived_at"]
+            "archived_at": self.project_states[project_name]["archived_at"],
         }
 
     def reactivate_project(self, project_name: str) -> Dict[str, Any]:
@@ -212,22 +214,23 @@ class ProjectArchivalManager:
             Dict with reactivation results
         """
         if project_name not in self.project_states:
-            return {
-                "success": False,
-                "message": f"Project '{project_name}' not found"
-            }
+            return {"success": False, "message": f"Project '{project_name}' not found"}
 
         current_state = self.get_project_state(project_name)
         if current_state == ProjectState.ACTIVE:
             return {
                 "success": False,
-                "message": f"Project '{project_name}' is already active"
+                "message": f"Project '{project_name}' is already active",
             }
 
         # Update state
         self.project_states[project_name]["state"] = ProjectState.ACTIVE.value
-        self.project_states[project_name]["reactivated_at"] = datetime.now(UTC).isoformat()
-        self.project_states[project_name]["last_activity"] = datetime.now(UTC).isoformat()
+        self.project_states[project_name]["reactivated_at"] = datetime.now(
+            UTC
+        ).isoformat()
+        self.project_states[project_name]["last_activity"] = datetime.now(
+            UTC
+        ).isoformat()
         self._save_states()
 
         logger.info(f"Reactivated project: {project_name}")
@@ -236,7 +239,7 @@ class ProjectArchivalManager:
             "success": True,
             "message": f"Project '{project_name}' reactivated successfully",
             "state": ProjectState.ACTIVE.value,
-            "reactivated_at": self.project_states[project_name]["reactivated_at"]
+            "reactivated_at": self.project_states[project_name]["reactivated_at"],
         }
 
     def get_inactive_projects(self) -> List[str]:
@@ -276,7 +279,8 @@ class ProjectArchivalManager:
             List of project names in the specified state
         """
         return [
-            name for name, data in self.project_states.items()
+            name
+            for name, data in self.project_states.items()
             if data.get("state") == state.value
         ]
 

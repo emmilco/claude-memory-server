@@ -11,7 +11,6 @@ Responsibilities:
 """
 
 import asyncio
-import logging
 import threading
 import time
 from pathlib import Path
@@ -118,10 +117,7 @@ class CodeIndexingService:
             return "weak"
 
     def _analyze_search_quality(
-        self,
-        results: List[Dict[str, Any]],
-        query: str,
-        project_name: Optional[str]
+        self, results: List[Dict[str, Any]], query: str, project_name: Optional[str]
     ) -> Dict[str, Any]:
         """Analyze search result quality and provide suggestions."""
         if not results:
@@ -139,7 +135,7 @@ class CodeIndexingService:
 
         scores = [r.get("relevance_score", 0) for r in results]
         max_score = max(scores)
-        avg_score = sum(scores) / len(scores) if scores else 0.0
+        sum(scores) / len(scores) if scores else 0.0
 
         if max_score >= 0.85:
             quality = "excellent"
@@ -313,7 +309,9 @@ class CodeIndexingService:
                 if language and language_val.lower() != language.lower():
                     continue
 
-                unit_name = metadata.get("unit_name") or metadata.get("name", "(unnamed)")
+                unit_name = metadata.get("unit_name") or metadata.get(
+                    "name", "(unnamed)"
+                )
                 start_line = metadata.get("start_line", 0)
                 dedup_key = (file_path, start_line, unit_name)
 
@@ -339,7 +337,11 @@ class CodeIndexingService:
                 }
 
                 # Calculate quality metrics if requested
-                if include_quality_metrics and self.quality_analyzer and self.duplicate_detector:
+                if (
+                    include_quality_metrics
+                    and self.quality_analyzer
+                    and self.duplicate_detector
+                ):
                     code_unit = {
                         "content": memory.content,
                         "signature": metadata.get("signature", ""),
@@ -347,7 +349,11 @@ class CodeIndexingService:
                         "language": language_val,
                     }
 
-                    duplication_score = await self.duplicate_detector.calculate_duplication_score(memory)
+                    duplication_score = (
+                        await self.duplicate_detector.calculate_duplication_score(
+                            memory
+                        )
+                    )
                     quality_metrics = self.quality_analyzer.calculate_quality_metrics(
                         code_unit=code_unit,
                         duplication_score=duplication_score,
@@ -359,15 +365,23 @@ class CodeIndexingService:
                         "nesting_depth": quality_metrics.nesting_depth,
                         "parameter_count": quality_metrics.parameter_count,
                         "has_documentation": quality_metrics.has_documentation,
-                        "duplication_score": round(quality_metrics.duplication_score, 2),
+                        "duplication_score": round(
+                            quality_metrics.duplication_score, 2
+                        ),
                         "maintainability_index": quality_metrics.maintainability_index,
                         "quality_flags": quality_metrics.quality_flags,
                     }
 
                     # Apply quality filters
-                    if min_complexity is not None and quality_metrics.cyclomatic_complexity < min_complexity:
+                    if (
+                        min_complexity is not None
+                        and quality_metrics.cyclomatic_complexity < min_complexity
+                    ):
                         continue
-                    if max_complexity is not None and quality_metrics.cyclomatic_complexity > max_complexity:
+                    if (
+                        max_complexity is not None
+                        and quality_metrics.cyclomatic_complexity > max_complexity
+                    ):
                         continue
                     if has_duplicates is not None:
                         is_duplicate = quality_metrics.duplication_score > 0.85
@@ -377,7 +391,10 @@ class CodeIndexingService:
                         is_long = quality_metrics.line_count > 100
                         if is_long != long_functions:
                             continue
-                    if maintainability_min is not None and quality_metrics.maintainability_index < maintainability_min:
+                    if (
+                        maintainability_min is not None
+                        and quality_metrics.maintainability_index < maintainability_min
+                    ):
                         continue
 
                 code_results.append(result_dict)
@@ -386,19 +403,25 @@ class CodeIndexingService:
             with self._stats_lock:
                 self.stats["searches_performed"] += 1
 
-            quality_info = self._analyze_search_quality(code_results, query, filter_project_name)
+            quality_info = self._analyze_search_quality(
+                code_results, query, filter_project_name
+            )
 
             actual_search_mode = search_mode
             if search_mode == "hybrid" and not self.hybrid_searcher:
                 actual_search_mode = "semantic"
 
             if self.metrics_collector:
-                avg_relevance = sum(r["relevance_score"] for r in code_results) / len(code_results) if code_results else 0.0
+                avg_relevance = (
+                    sum(r["relevance_score"] for r in code_results) / len(code_results)
+                    if code_results
+                    else 0.0
+                )
                 self.metrics_collector.log_query(
                     query=query,
                     latency_ms=query_time_ms,
                     result_count=len(code_results),
-                    avg_relevance=avg_relevance
+                    avg_relevance=avg_relevance,
                 )
 
             logger.info(
@@ -496,7 +519,9 @@ class CodeIndexingService:
                 if language and language_val.lower() != language.lower():
                     continue
 
-                unit_name = metadata.get("unit_name") or metadata.get("name", "(unnamed)")
+                unit_name = metadata.get("unit_name") or metadata.get(
+                    "name", "(unnamed)"
+                )
                 start_line = metadata.get("start_line", 0)
                 dedup_key = (file_path, start_line, unit_name)
 
@@ -507,31 +532,37 @@ class CodeIndexingService:
                 similarity_score = min(max(score, 0.0), 1.0)
                 confidence_label = self._get_confidence_label(similarity_score)
 
-                code_results.append({
-                    "file_path": file_path or "(no path)",
-                    "start_line": start_line,
-                    "end_line": metadata.get("end_line", 0),
-                    "unit_name": unit_name,
-                    "unit_type": metadata.get("unit_type", "(unknown type)"),
-                    "signature": metadata.get("signature", ""),
-                    "language": language_val or "(unknown language)",
-                    "code": memory.content,
-                    "similarity_score": similarity_score,
-                    "confidence_label": confidence_label,
-                    "confidence_display": f"{similarity_score:.0%} ({confidence_label})",
-                })
+                code_results.append(
+                    {
+                        "file_path": file_path or "(no path)",
+                        "start_line": start_line,
+                        "end_line": metadata.get("end_line", 0),
+                        "unit_name": unit_name,
+                        "unit_type": metadata.get("unit_type", "(unknown type)"),
+                        "signature": metadata.get("signature", ""),
+                        "language": language_val or "(unknown language)",
+                        "code": memory.content,
+                        "similarity_score": similarity_score,
+                        "confidence_label": confidence_label,
+                        "confidence_display": f"{similarity_score:.0%} ({confidence_label})",
+                    }
+                )
 
             query_time_ms = (time.time() - start_time) * 1000
             with self._stats_lock:
                 self.stats["similar_code_searches"] += 1
 
             if self.metrics_collector:
-                avg_relevance = sum(r["similarity_score"] for r in code_results) / len(code_results) if code_results else 0.0
+                avg_relevance = (
+                    sum(r["similarity_score"] for r in code_results) / len(code_results)
+                    if code_results
+                    else 0.0
+                )
                 self.metrics_collector.log_query(
                     query=f"<code_similarity:{len(code_snippet)} chars>",
                     latency_ms=query_time_ms,
                     result_count=len(code_results),
-                    avg_relevance=avg_relevance
+                    avg_relevance=avg_relevance,
                 )
 
             # Generate interpretation
@@ -608,7 +639,9 @@ class CodeIndexingService:
 
             await indexer.initialize()
 
-            logger.info(f"Indexing codebase: {dir_path} (project: {index_project_name})")
+            logger.info(
+                f"Indexing codebase: {dir_path} (project: {index_project_name})"
+            )
             result = await indexer.index_directory(
                 dir_path=dir_path,
                 recursive=recursive,
@@ -681,10 +714,14 @@ class CodeIndexingService:
 
             if clear_existing:
                 logger.info(f"Clearing existing index for project: {project_name}")
-                if hasattr(self.store, 'delete_code_units_by_project'):
+                if hasattr(self.store, "delete_code_units_by_project"):
                     try:
                         async with asyncio.timeout(30.0):
-                            units_deleted = await self.store.delete_code_units_by_project(project_name)
+                            units_deleted = (
+                                await self.store.delete_code_units_by_project(
+                                    project_name
+                                )
+                            )
                     except TimeoutError:
                         logger.error("Delete code units operation timed out after 30s")
                         raise StorageError("Delete code units operation timed out")
@@ -757,15 +794,15 @@ class CodeIndexingService:
             try:
                 async with asyncio.timeout(30.0):
                     result = await self.store.get_indexed_files(
-                        project_name=project_name,
-                        limit=limit,
-                        offset=offset
+                        project_name=project_name, limit=limit, offset=offset
                     )
             except TimeoutError:
                 logger.error("Get indexed files operation timed out after 30s")
                 raise StorageError("Get indexed files operation timed out")
 
-            result["has_more"] = (result["offset"] + len(result["files"])) < result["total"]
+            result["has_more"] = (result["offset"] + len(result["files"])) < result[
+                "total"
+            ]
 
             logger.info(
                 f"Retrieved {len(result['files'])} indexed files "
@@ -810,13 +847,15 @@ class CodeIndexingService:
                         file_pattern=file_pattern,
                         unit_type=unit_type,
                         limit=limit,
-                        offset=offset
+                        offset=offset,
                     )
             except TimeoutError:
                 logger.error("List indexed units operation timed out after 30s")
                 raise StorageError("List indexed units operation timed out")
 
-            result["has_more"] = (result["offset"] + len(result["units"])) < result["total"]
+            result["has_more"] = (result["offset"] + len(result["units"])) < result[
+                "total"
+            ]
 
             logger.info(
                 f"Retrieved {len(result['units'])} indexed units "
@@ -829,10 +868,7 @@ class CodeIndexingService:
             logger.error(f"Failed to list indexed units: {e}", exc_info=True)
             raise StorageError(f"Failed to list indexed units: {e}") from e
 
-    async def _build_dependency_graph(
-        self,
-        project_name: Optional[str]
-    ) -> Any:
+    async def _build_dependency_graph(self, project_name: Optional[str]) -> Any:
         """Build dependency graph from stored metadata."""
         from src.memory.dependency_graph import DependencyGraph
 
@@ -854,7 +890,9 @@ class CodeIndexingService:
                     limit=10000,
                 )
         except TimeoutError:
-            logger.error("Build dependency graph retrieve operation timed out after 30s")
+            logger.error(
+                "Build dependency graph retrieve operation timed out after 30s"
+            )
             raise RetrievalError("Build dependency graph retrieval operation timed out")
 
         file_imports: Dict[str, List[Dict[str, Any]]] = {}
@@ -904,16 +942,18 @@ class CodeIndexingService:
             for dep in deps:
                 details = graph.get_import_details(file_path, dep)
                 if details:
-                    import_details.extend([
-                        {
-                            "target_file": dep,
-                            "module": d["module"],
-                            "items": d["items"],
-                            "type": d["type"],
-                            "line": d["line"],
-                        }
-                        for d in details
-                    ])
+                    import_details.extend(
+                        [
+                            {
+                                "target_file": dep,
+                                "module": d["module"],
+                                "items": d["items"],
+                                "type": d["type"],
+                                "line": d["line"],
+                            }
+                            for d in details
+                        ]
+                    )
 
             return {
                 "file": file_path,
@@ -999,11 +1039,13 @@ class CodeIndexingService:
                     src = path[i]
                     tgt = path[i + 1]
                     details = graph.get_import_details(src, tgt)
-                    path_details.append({
-                        "from": src,
-                        "to": tgt,
-                        "imports": details,
-                    })
+                    path_details.append(
+                        {
+                            "from": src,
+                            "to": tgt,
+                            "imports": details,
+                        }
+                    )
 
                 return {
                     "source": source_file,

@@ -10,12 +10,11 @@ Run with: python examples/tracing_demo.py
 
 import asyncio
 import logging
-from src.core.tracing import new_operation, get_operation_id, get_logger, traced
+from src.core.tracing import get_logger, traced
 
 # Configure logging to show operation IDs
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 
 # Create context-aware loggers for different modules
@@ -57,7 +56,9 @@ async def handle_request(request_data: str):
 
     if not cache_result:
         # Cache miss - query database
-        db_result = await simulate_database_query(f"SELECT * WHERE data='{request_data}'")
+        db_result = await simulate_database_query(
+            f"SELECT * WHERE data='{request_data}'"
+        )
         server_logger.info(f"Database returned {len(db_result['results'])} results")
 
     server_logger.info("Request completed successfully")
@@ -78,7 +79,7 @@ async def main():
     # Simulate 3 concurrent requests
     print("\n🔹 Simulating 3 concurrent requests...\n")
 
-    results = await asyncio.gather(
+    await asyncio.gather(
         handle_request("user_data_1"),
         handle_request("user_data_2"),
         handle_request("user_data_3"),

@@ -153,7 +153,7 @@ class ReadOnlyStoreWrapper(MemoryStore):
         self,
         memory_id: str,
         updates: Dict[str, Any],
-        new_embedding: Optional[List[float]] = None
+        new_embedding: Optional[List[float]] = None,
     ) -> bool:
         """
         Update operation is blocked in read-only mode.
@@ -177,7 +177,7 @@ class ReadOnlyStoreWrapper(MemoryStore):
 
         Returns:
             True if healthy
-        
+
 
         Note: This function is async for framework/interface compatibility, even
         though it doesn't currently use await. Future changes may add async operations.
@@ -190,7 +190,7 @@ class ReadOnlyStoreWrapper(MemoryStore):
         sort_by: str = "created_at",
         sort_order: str = "desc",
         limit: int = 20,
-        offset: int = 0
+        offset: int = 0,
     ) -> Tuple[List[MemoryUnit], int]:
         """
         List memories (read operation allowed).
@@ -210,7 +210,7 @@ class ReadOnlyStoreWrapper(MemoryStore):
             sort_by=sort_by,
             sort_order=sort_order,
             limit=limit,
-            offset=offset
+            offset=offset,
         )
 
     async def get_indexed_files(
@@ -231,9 +231,7 @@ class ReadOnlyStoreWrapper(MemoryStore):
             Dictionary with files list and pagination info
         """
         return await self.wrapped_store.get_indexed_files(
-            project_name=project_name,
-            limit=limit,
-            offset=offset
+            project_name=project_name, limit=limit, offset=offset
         )
 
     async def list_indexed_units(
@@ -265,7 +263,7 @@ class ReadOnlyStoreWrapper(MemoryStore):
             file_pattern=file_pattern,
             unit_type=unit_type,
             limit=limit,
-            offset=offset
+            offset=offset,
         )
 
     async def close(self) -> None:

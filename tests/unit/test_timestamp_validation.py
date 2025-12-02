@@ -4,9 +4,12 @@ Tests for BUG-064: Integer Overflow in Unix Timestamp Conversion
 """
 
 import pytest
-from datetime import datetime, UTC
 
-from src.store.qdrant_store import _validate_timestamp, MIN_UNIX_TIMESTAMP, MAX_UNIX_TIMESTAMP
+from src.store.qdrant_store import (
+    _validate_timestamp,
+    MIN_UNIX_TIMESTAMP,
+    MAX_UNIX_TIMESTAMP,
+)
 from src.core.exceptions import ValidationError
 
 

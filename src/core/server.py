@@ -1,12 +1,10 @@
 """MCP Server implementation for Claude Memory RAG."""
 
-import logging
 import asyncio
 import json
 import os
 import re
 import time
-import fnmatch
 from typing import Optional, Dict, Any, List, Callable
 from datetime import datetime, UTC
 from pathlib import Path
@@ -29,12 +27,6 @@ from src.core.models import (
     MemoryCategory,
     MemoryScope,
     LifecycleState,
-    GetUsageStatisticsRequest,
-    GetUsageStatisticsResponse,
-    GetTopQueriesRequest,
-    GetTopQueriesResponse,
-    GetFrequentlyAccessedCodeRequest,
-    GetFrequentlyAccessedCodeResponse,
 )
 from src.core.exceptions import (
     StorageError,
@@ -42,6 +34,7 @@ from src.core.exceptions import (
     ReadOnlyError,
     RetrievalError,
 )
+
 # RetrievalGate removed (BUG-018) - was blocking valid queries
 from src.memory.usage_tracker import UsageTracker
 from src.memory.pruner import MemoryPruner
@@ -58,7 +51,7 @@ from src.monitoring.alert_engine import AlertEngine
 from src.monitoring.health_reporter import HealthReporter
 from src.monitoring.capacity_planner import CapacityPlanner
 from src.memory.project_archival import ProjectArchivalManager
-from src.core.tracing import new_operation, get_operation_id, get_logger
+from src.core.tracing import new_operation, get_logger
 from src.tagging.tag_manager import TagManager
 
 # Service layer imports (REF-016: Split MemoryRAGServer God Class)
@@ -114,12 +107,20 @@ class MemoryRAGServer(StructuralQueryMixin):
         self.query_expander: Optional[QueryExpander] = None
         self.hybrid_searcher: Optional[HybridSearcher] = None
         self.cross_project_consent: Optional = None  # Cross-project consent manager
-        self.suggestion_engine: Optional[SuggestionEngine] = None  # Proactive suggestions
-        self.pattern_tracker: Optional[UsagePatternTracker] = None  # Usage pattern analytics
+        self.suggestion_engine: Optional[SuggestionEngine] = (
+            None  # Proactive suggestions
+        )
+        self.pattern_tracker: Optional[UsagePatternTracker] = (
+            None  # Usage pattern analytics
+        )
         self.scheduler = None  # APScheduler instance
         self.auto_indexing_service: Optional = None  # Auto-indexing service (FEAT-016)
-        self.archival_manager: Optional[ProjectArchivalManager] = None  # Project archival tracking
-        self.tag_manager: Optional[TagManager] = None  # Tag management for memory organization
+        self.archival_manager: Optional[ProjectArchivalManager] = (
+            None  # Project archival tracking
+        )
+        self.tag_manager: Optional[TagManager] = (
+            None  # Tag management for memory organization
+        )
 
         # Quality analysis (FEAT-060)
         self.complexity_analyzer: Optional[ComplexityAnalyzer] = None
@@ -133,27 +134,22 @@ class MemoryRAGServer(StructuralQueryMixin):
             "memories_retrieved": 0,
             "memories_deleted": 0,
             "queries_processed": 0,
-            
             # Performance metrics
             "total_query_time_ms": 0.0,
             "total_store_time_ms": 0.0,
             "total_retrieval_time_ms": 0.0,
-            
             # Cache metrics
             "cache_hits": 0,
             "cache_misses": 0,
-            
             # Error tracking
             "embedding_generation_errors": 0,
             "storage_errors": 0,
             "retrieval_errors": 0,
             "validation_errors": 0,
-
             # Retrieval gate metrics
             "queries_gated": 0,
             "queries_retrieved": 0,
             "estimated_tokens_saved": 0,
-
             # Timestamps
             "server_start_time": datetime.now().isoformat(),
             "last_query_time": None,
@@ -168,7 +164,9 @@ class MemoryRAGServer(StructuralQueryMixin):
         self.query_service: Optional[QueryService] = None
         self.analytics_service: Optional[AnalyticsService] = None
 
-    async def initialize(self, defer_preload: bool = False, defer_auto_index: bool = False) -> None:
+    async def initialize(
+        self, defer_preload: bool = False, defer_auto_index: bool = False
+    ) -> None:
         """Initialize async components.
 
         Args:
@@ -186,6 +184,7 @@ class MemoryRAGServer(StructuralQueryMixin):
             # Wrap in read-only wrapper if needed
             if self.config.advanced.read_only_mode:
                 from src.store.readonly_wrapper import ReadOnlyStoreWrapper
+
                 self.store = ReadOnlyStoreWrapper(self.store)
                 logger.info("Read-only mode enabled")
 
@@ -215,11 +214,13 @@ class MemoryRAGServer(StructuralQueryMixin):
             self.pruner = MemoryPruner(self.config, self.store)
 
             # Initialize project archival manager (REF-011)
-            config_dir = os.path.dirname(os.path.expanduser(self.config.embedding_cache_path))
+            config_dir = os.path.dirname(
+                os.path.expanduser(self.config.embedding_cache_path)
+            )
             archival_file = os.path.join(config_dir, "project_states.json")
             self.archival_manager = ProjectArchivalManager(
                 state_file_path=archival_file,
-                inactivity_threshold_days=self.config.memory.archival_threshold_days
+                inactivity_threshold_days=self.config.memory.archival_threshold_days,
             )
 
             # Initialize performance monitoring (FEAT-022) - Must be before scheduler
@@ -229,13 +230,15 @@ class MemoryRAGServer(StructuralQueryMixin):
             self.metrics_collector = MetricsCollector(
                 db_path=monitoring_db_path,
                 store=self.store,
-                archival_manager=self.archival_manager
+                archival_manager=self.archival_manager,
             )
             self.alert_engine = AlertEngine(db_path=monitoring_db_path)
             self.health_reporter = HealthReporter()
             self.capacity_planner = CapacityPlanner(self.metrics_collector)
 
-            logger.info(f"Performance monitoring enabled (metrics DB: {monitoring_db_path})")
+            logger.info(
+                f"Performance monitoring enabled (metrics DB: {monitoring_db_path})"
+            )
 
             # Initialize background scheduler for auto-pruning
             if self.config.memory.auto_pruning:
@@ -253,7 +256,9 @@ class MemoryRAGServer(StructuralQueryMixin):
                 logger.info("Conversation tracking enabled")
 
                 # Initialize query expander (requires embedding generator)
-                self.query_expander = QueryExpander(self.config, self.embedding_generator)
+                self.query_expander = QueryExpander(
+                    self.config, self.embedding_generator
+                )
                 logger.info("Query expansion enabled")
             else:
                 self.conversation_tracker = None
@@ -263,7 +268,9 @@ class MemoryRAGServer(StructuralQueryMixin):
             # Initialize quality analysis components (FEAT-060)
             self.complexity_analyzer = ComplexityAnalyzer()
             self.quality_analyzer = QualityAnalyzer(self.complexity_analyzer)
-            self.duplicate_detector = DuplicateDetector(self.store, self.embedding_generator)
+            self.duplicate_detector = DuplicateDetector(
+                self.store, self.embedding_generator
+            )
             logger.info("Quality analysis components initialized")
 
             # Initialize tag manager for memory organization (BUG-092)
@@ -278,8 +285,7 @@ class MemoryRAGServer(StructuralQueryMixin):
                     "cascade": FusionMethod.CASCADE,
                 }
                 fusion_method = fusion_method_map.get(
-                    self.config.hybrid_fusion_method.lower(),
-                    FusionMethod.WEIGHTED
+                    self.config.hybrid_fusion_method.lower(), FusionMethod.WEIGHTED
                 )
                 self.hybrid_searcher = HybridSearcher(
                     alpha=self.config.hybrid_search_alpha,
@@ -298,6 +304,7 @@ class MemoryRAGServer(StructuralQueryMixin):
             # Initialize cross-project consent manager if enabled
             if self.config.search.cross_project_enabled:
                 from src.memory.cross_project_consent import CrossProjectConsent
+
                 self.cross_project_consent = CrossProjectConsent(
                     self.config.cross_project_opt_in_file
                 )
@@ -312,8 +319,13 @@ class MemoryRAGServer(StructuralQueryMixin):
 
             # Initialize auto-indexing service if enabled (FEAT-016)
             if defer_auto_index:
-                logger.info("Auto-indexing deferred - call start_deferred_auto_indexing() when ready")
-            elif self.config.indexing.auto_index_enabled and self.config.indexing.auto_index_on_startup:
+                logger.info(
+                    "Auto-indexing deferred - call start_deferred_auto_indexing() when ready"
+                )
+            elif (
+                self.config.indexing.auto_index_enabled
+                and self.config.indexing.auto_index_on_startup
+            ):
                 await self._start_auto_indexing()
             else:
                 logger.info("Auto-indexing disabled or not configured for startup")
@@ -337,7 +349,9 @@ class MemoryRAGServer(StructuralQueryMixin):
             # Note: os module imported at module level (line 6)
             if self.config.analytics.usage_pattern_analytics:
                 # Store analytics DB in same directory as SQLite memory DB
-                sqlite_dir = os.path.dirname(os.path.expanduser(self.config.sqlite_path))
+                sqlite_dir = os.path.dirname(
+                    os.path.expanduser(self.config.sqlite_path)
+                )
                 analytics_db_path = os.path.join(sqlite_dir, "usage_analytics.db")
                 self.pattern_tracker = UsagePatternTracker(db_path=analytics_db_path)
                 logger.info(
@@ -357,7 +371,9 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         except (ImportError, ModuleNotFoundError) as e:
             # Missing dependency - provide actionable error message
-            logger.error(f"Missing dependency during initialization: {e}", exc_info=True)
+            logger.error(
+                f"Missing dependency during initialization: {e}", exc_info=True
+            )
             missing_module = str(e).split("'")[1] if "'" in str(e) else "unknown"
             error_msg = (
                 f"Failed to initialize server - missing required dependency: {missing_module}. "
@@ -519,7 +535,7 @@ class MemoryRAGServer(StructuralQueryMixin):
             Dict with memory_id, status, and auto-classified context_level
         """
         # Start new operation with unique ID for tracing
-        op_id = new_operation()
+        new_operation()
         logger.info(f"Storing memory: {content[:50]}...")
 
         if self.config.advanced.read_only_mode:
@@ -530,17 +546,25 @@ class MemoryRAGServer(StructuralQueryMixin):
             try:
                 category_enum = MemoryCategory(category)
             except ValueError:
-                raise ValidationError(f"Invalid value '{category}' for parameter 'category'. Valid values: preference, fact, event, workflow, context, code")
+                raise ValidationError(
+                    f"Invalid value '{category}' for parameter 'category'. Valid values: preference, fact, event, workflow, context, code"
+                )
 
             try:
                 scope_enum = MemoryScope(scope)
             except ValueError:
-                raise ValidationError(f"Invalid value '{scope}' for parameter 'scope'. Valid values: global, project")
+                raise ValidationError(
+                    f"Invalid value '{scope}' for parameter 'scope'. Valid values: global, project"
+                )
 
             try:
-                context_level_enum = ContextLevel(context_level) if context_level else None
+                context_level_enum = (
+                    ContextLevel(context_level) if context_level else None
+                )
             except ValueError:
-                raise ValidationError(f"Invalid value '{context_level}' for parameter 'context_level'. Valid values: USER_PREFERENCE, PROJECT_CONTEXT, SESSION_STATE")
+                raise ValidationError(
+                    f"Invalid value '{context_level}' for parameter 'context_level'. Valid values: USER_PREFERENCE, PROJECT_CONTEXT, SESSION_STATE"
+                )
 
             # Validate request
             request = StoreMemoryRequest(
@@ -673,7 +697,7 @@ class MemoryRAGServer(StructuralQueryMixin):
             Dict with results, relevance scores, total_found, query_time_ms, and used_cache
         """
         # Start new operation with unique ID for tracing
-        op_id = new_operation()
+        new_operation()
         logger.info(f"Retrieving memories: query='{query[:50]}', limit={limit}")
 
         try:
@@ -683,23 +707,32 @@ class MemoryRAGServer(StructuralQueryMixin):
             adv_filters_obj = None
             if advanced_filters:
                 from src.core.models import AdvancedSearchFilters
+
                 adv_filters_obj = AdvancedSearchFilters(**advanced_filters)
 
             # Validate enum parameters
             try:
-                context_level_enum = ContextLevel(context_level) if context_level else None
+                context_level_enum = (
+                    ContextLevel(context_level) if context_level else None
+                )
             except ValueError:
-                raise ValidationError(f"Invalid value '{context_level}' for parameter 'context_level'. Valid values: USER_PREFERENCE, PROJECT_CONTEXT, SESSION_STATE")
+                raise ValidationError(
+                    f"Invalid value '{context_level}' for parameter 'context_level'. Valid values: USER_PREFERENCE, PROJECT_CONTEXT, SESSION_STATE"
+                )
 
             try:
                 scope_enum = MemoryScope(scope) if scope else None
             except ValueError:
-                raise ValidationError(f"Invalid value '{scope}' for parameter 'scope'. Valid values: global, project")
+                raise ValidationError(
+                    f"Invalid value '{scope}' for parameter 'scope'. Valid values: global, project"
+                )
 
             try:
                 category_enum = MemoryCategory(category) if category else None
             except ValueError:
-                raise ValidationError(f"Invalid value '{category}' for parameter 'category'. Valid values: preference, fact, event, workflow, context, code")
+                raise ValidationError(
+                    f"Invalid value '{category}' for parameter 'category'. Valid values: preference, fact, event, workflow, context, code"
+                )
 
             # Validate request
             request = QueryRequest(
@@ -720,7 +753,9 @@ class MemoryRAGServer(StructuralQueryMixin):
             expanded_query = query
             recent_queries = []
             if session_id and self.conversation_tracker and self.query_expander:
-                recent_queries = self.conversation_tracker.get_recent_queries(session_id)
+                recent_queries = self.conversation_tracker.get_recent_queries(
+                    session_id
+                )
                 if recent_queries:
                     expanded_query = await self.query_expander.expand_query(
                         query, recent_queries
@@ -749,7 +784,9 @@ class MemoryRAGServer(StructuralQueryMixin):
             if session_id and self.conversation_tracker:
                 # Fetch more to account for deduplication
                 fetch_limit = request.limit * self.config.deduplication_fetch_multiplier
-                shown_memory_ids = self.conversation_tracker.get_shown_memory_ids(session_id)
+                shown_memory_ids = self.conversation_tracker.get_shown_memory_ids(
+                    session_id
+                )
                 logger.debug(
                     f"Deduplication enabled: fetching {fetch_limit} results "
                     f"(filtering {len(shown_memory_ids)} shown)"
@@ -766,14 +803,15 @@ class MemoryRAGServer(StructuralQueryMixin):
             if session_id and shown_memory_ids:
                 # Filter out already-shown memories
                 filtered_results = [
-                    (memory, score) for memory, score in results
+                    (memory, score)
+                    for memory, score in results
                     if memory.id not in shown_memory_ids
                 ]
 
                 # Trim to requested limit
-                results = filtered_results[:request.limit]
+                results = filtered_results[: request.limit]
 
-                if filtered_results != results[:len(filtered_results)]:
+                if filtered_results != results[: len(filtered_results)]:
                     logger.debug(
                         f"Deduplication: filtered {len(results) - len(filtered_results)} "
                         f"shown memories"
@@ -795,7 +833,9 @@ class MemoryRAGServer(StructuralQueryMixin):
                         composite_score = self.usage_tracker.calculate_composite_score(
                             similarity_score=similarity_score,
                             created_at=memory.created_at,
-                            last_used=datetime.fromisoformat(usage_stats["last_used"]) if usage_stats.get("last_used") else None,
+                            last_used=datetime.fromisoformat(usage_stats["last_used"])
+                            if usage_stats.get("last_used")
+                            else None,
                             use_count=usage_stats.get("use_count", 0),
                         )
                     else:
@@ -813,7 +853,10 @@ class MemoryRAGServer(StructuralQueryMixin):
                 await self.usage_tracker.record_batch(memory_ids, scores)
 
                 # Use reranked results
-                results = [(memory, composite_score) for memory, composite_score, _ in reranked_results]
+                results = [
+                    (memory, composite_score)
+                    for memory, composite_score, _ in reranked_results
+                ]
 
             # Convert to response format
             # Clamp scores to [0, 1] range to handle floating point precision issues
@@ -844,18 +887,26 @@ class MemoryRAGServer(StructuralQueryMixin):
                     session_id=session_id,
                     query=query,
                     results_shown=results_shown,
-                    query_embedding=query_embedding if self.config.memory.conversation_tracking else None,
+                    query_embedding=query_embedding
+                    if self.config.memory.conversation_tracking
+                    else None,
                 )
-                logger.debug(f"Tracked {len(results_shown)} results in session {session_id}")
+                logger.debug(
+                    f"Tracked {len(results_shown)} results in session {session_id}"
+                )
 
             # Log metrics for performance monitoring
             if self.metrics_collector:
-                avg_relevance = sum(r.score for r in memory_results) / len(memory_results) if memory_results else 0.0
+                avg_relevance = (
+                    sum(r.score for r in memory_results) / len(memory_results)
+                    if memory_results
+                    else 0.0
+                )
                 self.metrics_collector.log_query(
                     query=query,
                     latency_ms=query_time_ms,
                     result_count=len(memory_results),
-                    avg_relevance=avg_relevance
+                    avg_relevance=avg_relevance,
                 )
 
             return response.model_dump()
@@ -878,7 +929,7 @@ class MemoryRAGServer(StructuralQueryMixin):
             Dict with status ("success" or "not_found")
         """
         # Start new operation with unique ID for tracing
-        op_id = new_operation()
+        new_operation()
         logger.info(f"Deleting memory: {memory_id}")
 
         if self.config.advanced.read_only_mode:
@@ -974,8 +1025,10 @@ class MemoryRAGServer(StructuralQueryMixin):
             )
         """
         # Start new operation with unique ID for tracing
-        op_id = new_operation()
-        logger.info(f"Delete by query (dry_run={dry_run}): category={category}, project={project_name}, tags={tags}")
+        new_operation()
+        logger.info(
+            f"Delete by query (dry_run={dry_run}): category={category}, project={project_name}, tags={tags}"
+        )
 
         if self.config.advanced.read_only_mode:
             raise ReadOnlyError("Cannot delete memories in read-only mode")
@@ -984,22 +1037,34 @@ class MemoryRAGServer(StructuralQueryMixin):
         try:
             category_enum = MemoryCategory(category.lower()) if category else None
         except ValueError:
-            raise ValidationError(f"Invalid value '{category}' for parameter 'category'. Valid values: preference, fact, event, workflow, context, code")
+            raise ValidationError(
+                f"Invalid value '{category}' for parameter 'category'. Valid values: preference, fact, event, workflow, context, code"
+            )
 
         try:
-            lifecycle_enum = LifecycleState(lifecycle_state.upper()) if lifecycle_state else None
+            lifecycle_enum = (
+                LifecycleState(lifecycle_state.upper()) if lifecycle_state else None
+            )
         except ValueError:
-            raise ValidationError(f"Invalid value '{lifecycle_state}' for parameter 'lifecycle_state'. Valid values: ACTIVE, RECENT, ARCHIVED, STALE")
+            raise ValidationError(
+                f"Invalid value '{lifecycle_state}' for parameter 'lifecycle_state'. Valid values: ACTIVE, RECENT, ARCHIVED, STALE"
+            )
 
         try:
             scope_enum = MemoryScope(scope.lower()) if scope else None
         except ValueError:
-            raise ValidationError(f"Invalid value '{scope}' for parameter 'scope'. Valid values: global, project")
+            raise ValidationError(
+                f"Invalid value '{scope}' for parameter 'scope'. Valid values: global, project"
+            )
 
         try:
-            context_level_enum = ContextLevel(context_level.upper()) if context_level else None
+            context_level_enum = (
+                ContextLevel(context_level.upper()) if context_level else None
+            )
         except ValueError:
-            raise ValidationError(f"Invalid value '{context_level}' for parameter 'context_level'. Valid values: USER_PREFERENCE, PROJECT_CONTEXT, SESSION_STATE")
+            raise ValidationError(
+                f"Invalid value '{context_level}' for parameter 'context_level'. Valid values: USER_PREFERENCE, PROJECT_CONTEXT, SESSION_STATE"
+            )
 
         # Build SearchFilters from parameters
         filters = SearchFilters(
@@ -1020,9 +1085,7 @@ class MemoryRAGServer(StructuralQueryMixin):
                 # Preview mode: use list_memories to get matches
                 # Use a high limit to get accurate count (up to max_count)
                 memories = await self.store.list_memories(
-                    filters=filters,
-                    limit=max_count,
-                    offset=0
+                    filters=filters, limit=max_count, offset=0
                 )
 
                 # Calculate statistics
@@ -1048,17 +1111,25 @@ class MemoryRAGServer(StructuralQueryMixin):
                 elif total_count > 0:
                     warnings.append(f"This will delete {total_count} memory(ies)")
 
-                high_importance_count = sum(1 for m in memories if m.importance and m.importance > 0.7)
+                high_importance_count = sum(
+                    1 for m in memories if m.importance and m.importance > 0.7
+                )
                 if high_importance_count > 0:
-                    warnings.append(f"Includes {high_importance_count} high-importance memories (>0.7)")
+                    warnings.append(
+                        f"Includes {high_importance_count} high-importance memories (>0.7)"
+                    )
 
                 if not project_name:
                     projects = set(m.project_name for m in memories if m.project_name)
                     if len(projects) > 1:
-                        warnings.append(f"Affects {len(projects)} projects: {', '.join(sorted(projects)[:3])}")
+                        warnings.append(
+                            f"Affects {len(projects)} projects: {', '.join(sorted(projects)[:3])}"
+                        )
 
                 if total_count >= max_count:
-                    warnings.append(f"Operation limited to {max_count} memories (safety limit)")
+                    warnings.append(
+                        f"Operation limited to {max_count} memories (safety limit)"
+                    )
 
                 return {
                     "preview": True,
@@ -1085,7 +1156,9 @@ class MemoryRAGServer(StructuralQueryMixin):
                 elif deleted_count > 0:
                     warnings.append(f"Deleted {deleted_count} memory(ies)")
 
-                logger.info(f"Deleted {deleted_count} memories using query-based deletion")
+                logger.info(
+                    f"Deleted {deleted_count} memories using query-based deletion"
+                )
 
                 return {
                     "preview": False,
@@ -1133,13 +1206,15 @@ class MemoryRAGServer(StructuralQueryMixin):
                         "project_name": memory.project_name,
                         "created_at": memory.created_at.isoformat(),
                         "updated_at": memory.updated_at.isoformat(),
-                        "last_accessed": memory.last_accessed.isoformat() if memory.last_accessed else memory.last_accessed,
-                    }
+                        "last_accessed": memory.last_accessed.isoformat()
+                        if memory.last_accessed
+                        else memory.last_accessed,
+                    },
                 }
             else:
                 return {
                     "status": "not_found",
-                    "message": f"Memory {memory_id} not found"
+                    "message": f"Memory {memory_id} not found",
                 }
 
         except Exception as e:
@@ -1201,7 +1276,9 @@ class MemoryRAGServer(StructuralQueryMixin):
                     updates["category"] = cat.value
                     updated_fields.append("category")
                 except ValueError:
-                    raise ValidationError(f"Invalid value '{category}' for parameter 'category'. Valid values: preference, fact, event, workflow, context, code")
+                    raise ValidationError(
+                        f"Invalid value '{category}' for parameter 'category'. Valid values: preference, fact, event, workflow, context, code"
+                    )
 
             if importance is not None:
                 # Validate importance
@@ -1232,7 +1309,9 @@ class MemoryRAGServer(StructuralQueryMixin):
                     updates["context_level"] = cl.value
                     updated_fields.append("context_level")
                 except ValueError:
-                    raise ValidationError(f"Invalid value '{context_level}' for parameter 'context_level'. Valid values: USER_PREFERENCE, PROJECT_CONTEXT, SESSION_STATE")
+                    raise ValidationError(
+                        f"Invalid value '{context_level}' for parameter 'context_level'. Valid values: USER_PREFERENCE, PROJECT_CONTEXT, SESSION_STATE"
+                    )
 
             # Check that at least one field is being updated
             if not updates:
@@ -1244,29 +1323,31 @@ class MemoryRAGServer(StructuralQueryMixin):
 
             if "content" in updates and regenerate_embedding:
                 embedding_regenerated = True
-                new_embedding = await self.embedding_generator.generate(updates["content"])
+                new_embedding = await self.embedding_generator.generate(
+                    updates["content"]
+                )
 
             # Perform update
             success = await self.store.update(
-                memory_id=memory_id,
-                updates=updates,
-                new_embedding=new_embedding
+                memory_id=memory_id, updates=updates, new_embedding=new_embedding
             )
 
             if success:
                 # Update stats
-                self.stats["memories_updated"] = self.stats.get("memories_updated", 0) + 1
+                self.stats["memories_updated"] = (
+                    self.stats.get("memories_updated", 0) + 1
+                )
 
                 return {
                     "status": "updated",
                     "updated_fields": updated_fields,
                     "embedding_regenerated": embedding_regenerated,
-                    "updated_at": datetime.now(UTC).isoformat()
+                    "updated_at": datetime.now(UTC).isoformat(),
                 }
             else:
                 return {
                     "status": "not_found",
-                    "message": f"Memory {memory_id} not found"
+                    "message": f"Memory {memory_id} not found",
                 }
 
         except ValidationError:
@@ -1291,7 +1372,7 @@ class MemoryRAGServer(StructuralQueryMixin):
         sort_by: str = "created_at",
         sort_order: str = "desc",
         limit: int = 20,
-        offset: int = 0
+        offset: int = 0,
     ) -> Dict[str, Any]:
         """
         List and browse memories with filtering and pagination.
@@ -1344,17 +1425,23 @@ class MemoryRAGServer(StructuralQueryMixin):
                 try:
                     filters["category"] = MemoryCategory(category)
                 except ValueError:
-                    raise ValidationError(f"Invalid value '{category}' for parameter 'category'. Valid values: preference, fact, event, workflow, context, code")
+                    raise ValidationError(
+                        f"Invalid value '{category}' for parameter 'category'. Valid values: preference, fact, event, workflow, context, code"
+                    )
             if context_level:
                 try:
                     filters["context_level"] = ContextLevel(context_level)
                 except ValueError:
-                    raise ValidationError(f"Invalid value '{context_level}' for parameter 'context_level'. Valid values: USER_PREFERENCE, PROJECT_CONTEXT, SESSION_STATE")
+                    raise ValidationError(
+                        f"Invalid value '{context_level}' for parameter 'context_level'. Valid values: USER_PREFERENCE, PROJECT_CONTEXT, SESSION_STATE"
+                    )
             if scope:
                 try:
                     filters["scope"] = MemoryScope(scope)
                 except ValueError:
-                    raise ValidationError(f"Invalid value '{scope}' for parameter 'scope'. Valid values: global, project")
+                    raise ValidationError(
+                        f"Invalid value '{scope}' for parameter 'scope'. Valid values: global, project"
+                    )
             if project_name:
                 filters["project_name"] = project_name
             if tags:
@@ -1374,7 +1461,7 @@ class MemoryRAGServer(StructuralQueryMixin):
                 sort_by=sort_by,
                 sort_order=sort_order,
                 limit=limit,
-                offset=offset
+                offset=offset,
             )
 
             # Convert to dicts
@@ -1403,7 +1490,7 @@ class MemoryRAGServer(StructuralQueryMixin):
                 "returned_count": len(memory_dicts),
                 "offset": offset,
                 "limit": limit,
-                "has_more": (offset + len(memory_dicts)) < total_count
+                "has_more": (offset + len(memory_dicts)) < total_count,
             }
 
         except ValidationError:
@@ -1454,13 +1541,13 @@ class MemoryRAGServer(StructuralQueryMixin):
         try:
             # Query store (store auto-caps limit and offset to valid ranges)
             result = await self.store.get_indexed_files(
-                project_name=project_name,
-                limit=limit,
-                offset=offset
+                project_name=project_name, limit=limit, offset=offset
             )
 
             # Add has_more flag
-            result["has_more"] = (result["offset"] + len(result["files"])) < result["total"]
+            result["has_more"] = (result["offset"] + len(result["files"])) < result[
+                "total"
+            ]
 
             logger.info(
                 f"Retrieved {len(result['files'])} indexed files "
@@ -1534,11 +1621,13 @@ class MemoryRAGServer(StructuralQueryMixin):
                 file_pattern=file_pattern,
                 unit_type=unit_type,
                 limit=limit,
-                offset=offset
+                offset=offset,
             )
 
             # Add has_more flag
-            result["has_more"] = (result["offset"] + len(result["units"])) < result["total"]
+            result["has_more"] = (result["offset"] + len(result["units"])) < result[
+                "total"
+            ]
 
             logger.info(
                 f"Retrieved {len(result['units'])} indexed units "
@@ -1752,24 +1841,34 @@ class MemoryRAGServer(StructuralQueryMixin):
         """
         # Validate format
         if format not in ["json", "markdown"]:
-            raise ValidationError(f"Invalid export format: {format}. Must be 'json' or 'markdown'")
+            raise ValidationError(
+                f"Invalid export format: {format}. Must be 'json' or 'markdown'"
+            )
 
         try:
             # Validate enum parameters
             try:
                 category_enum = MemoryCategory(category) if category else None
             except ValueError:
-                raise ValidationError(f"Invalid value '{category}' for parameter 'category'. Valid values: preference, fact, event, workflow, context, code")
+                raise ValidationError(
+                    f"Invalid value '{category}' for parameter 'category'. Valid values: preference, fact, event, workflow, context, code"
+                )
 
             try:
-                context_level_enum = ContextLevel(context_level) if context_level else None
+                context_level_enum = (
+                    ContextLevel(context_level) if context_level else None
+                )
             except ValueError:
-                raise ValidationError(f"Invalid value '{context_level}' for parameter 'context_level'. Valid values: USER_PREFERENCE, PROJECT_CONTEXT, SESSION_STATE")
+                raise ValidationError(
+                    f"Invalid value '{context_level}' for parameter 'context_level'. Valid values: USER_PREFERENCE, PROJECT_CONTEXT, SESSION_STATE"
+                )
 
             try:
                 scope_enum = MemoryScope(scope) if scope else None
             except ValueError:
-                raise ValidationError(f"Invalid value '{scope}' for parameter 'scope'. Valid values: global, project")
+                raise ValidationError(
+                    f"Invalid value '{scope}' for parameter 'scope'. Valid values: global, project"
+                )
 
             # Get all matching memories by querying the store directly
             filters = SearchFilters(
@@ -1786,32 +1885,36 @@ class MemoryRAGServer(StructuralQueryMixin):
             # Get memories from store (using list_memories with large limit to get all)
             filters_dict = filters.to_dict() if filters else {}
             if project_name:
-                filters_dict['project_name'] = project_name
+                filters_dict["project_name"] = project_name
 
             memories_list, total_count = await self.store.list_memories(
                 filters=filters_dict,
                 limit=999999,  # Get all matching memories
-                offset=0
+                offset=0,
             )
 
             # Convert to dict format
             memories = []
             for mem in memories_list:
-                memories.append({
-                    "id": mem.id,
-                    "memory_id": mem.id,
-                    "content": mem.content,
-                    "category": mem.category.value,
-                    "context_level": mem.context_level.value,
-                    "importance": mem.importance,
-                    "tags": mem.tags or [],
-                    "metadata": mem.metadata or {},
-                    "scope": mem.scope.value,
-                    "project_name": mem.project_name,
-                    "created_at": mem.created_at.isoformat(),
-                    "updated_at": mem.updated_at.isoformat(),
-                    "last_accessed": mem.last_accessed.isoformat() if mem.last_accessed else mem.last_accessed,
-                })
+                memories.append(
+                    {
+                        "id": mem.id,
+                        "memory_id": mem.id,
+                        "content": mem.content,
+                        "category": mem.category.value,
+                        "context_level": mem.context_level.value,
+                        "importance": mem.importance,
+                        "tags": mem.tags or [],
+                        "metadata": mem.metadata or {},
+                        "scope": mem.scope.value,
+                        "project_name": mem.project_name,
+                        "created_at": mem.created_at.isoformat(),
+                        "updated_at": mem.updated_at.isoformat(),
+                        "last_accessed": mem.last_accessed.isoformat()
+                        if mem.last_accessed
+                        else mem.last_accessed,
+                    }
+                )
 
             total_count = len(memories)
 
@@ -1832,7 +1935,7 @@ class MemoryRAGServer(StructuralQueryMixin):
                         "date_from": date_from,
                         "date_to": date_to,
                     },
-                    "memories": memories
+                    "memories": memories,
                 }
                 content = json.dumps(export_data, indent=2)
 
@@ -1841,7 +1944,7 @@ class MemoryRAGServer(StructuralQueryMixin):
                     "# Memory Export",
                     f"Exported: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
                     f"Total Memories: {total_count}",
-                    ""
+                    "",
                 ]
 
                 for mem in memories:
@@ -1850,14 +1953,14 @@ class MemoryRAGServer(StructuralQueryMixin):
                     lines.append(f"**Importance:** {mem['importance']:.2f}")
                     lines.append(f"**Context Level:** {mem['context_level']}")
                     lines.append(f"**Scope:** {mem['scope']}")
-                    if mem.get('project_name'):
+                    if mem.get("project_name"):
                         lines.append(f"**Project:** {mem['project_name']}")
-                    if mem.get('tags'):
+                    if mem.get("tags"):
                         lines.append(f"**Tags:** {', '.join(mem['tags'])}")
                     lines.append(f"**Created:** {mem['created_at']}")
                     lines.append(f"**Updated:** {mem.get('updated_at', 'N/A')}")
                     lines.append("")
-                    lines.append(mem['content'])
+                    lines.append(mem["content"])
                     lines.append("")
                     lines.append("---")
                     lines.append("")
@@ -1868,21 +1971,23 @@ class MemoryRAGServer(StructuralQueryMixin):
             if output_path:
                 output_file = Path(output_path).expanduser()
                 output_file.parent.mkdir(parents=True, exist_ok=True)
-                output_file.write_text(content, encoding='utf-8')
+                output_file.write_text(content, encoding="utf-8")
 
-                logger.info(f"Exported {total_count} memories to {output_path} ({format} format)")
+                logger.info(
+                    f"Exported {total_count} memories to {output_path} ({format} format)"
+                )
                 return {
                     "status": "success",
                     "file_path": str(output_file),
                     "format": format,
-                    "count": total_count
+                    "count": total_count,
                 }
             else:
                 return {
                     "status": "success",
                     "content": content,
                     "format": format,
-                    "count": total_count
+                    "count": total_count,
                 }
 
         except ValidationError:
@@ -1944,14 +2049,16 @@ class MemoryRAGServer(StructuralQueryMixin):
                             "Supported: .json"
                         )
 
-                import_content = import_file.read_text(encoding='utf-8')
+                import_content = import_file.read_text(encoding="utf-8")
             else:
                 import_content = content
                 format = format or "json"
 
             # Validate format
             if format != "json":
-                raise ValidationError(f"Only JSON format is supported for import, got: {format}")
+                raise ValidationError(
+                    f"Only JSON format is supported for import, got: {format}"
+                )
 
             # Parse JSON
             try:
@@ -1992,13 +2099,17 @@ class MemoryRAGServer(StructuralQueryMixin):
 
                         elif conflict_mode == "overwrite":
                             # Generate embedding for new content
-                            embedding = await self.embedding_generator.generate(mem_data["content"])
+                            embedding = await self.embedding_generator.generate(
+                                mem_data["content"]
+                            )
 
                             # Build updates
                             updates = {
                                 "content": mem_data["content"],
                                 "category": mem_data.get("category", "fact"),
-                                "context_level": mem_data.get("context_level", "SESSION_STATE"),
+                                "context_level": mem_data.get(
+                                    "context_level", "SESSION_STATE"
+                                ),
                                 "importance": mem_data.get("importance", 0.5),
                                 "tags": mem_data.get("tags", []),
                             }
@@ -2007,7 +2118,9 @@ class MemoryRAGServer(StructuralQueryMixin):
                                 updates["metadata"] = mem_data["metadata"]
 
                             # Update using store's update method
-                            success = await self.store.update(mem_id, updates, embedding)
+                            success = await self.store.update(
+                                mem_id, updates, embedding
+                            )
 
                             if success:
                                 updated_count += 1
@@ -2020,12 +2133,21 @@ class MemoryRAGServer(StructuralQueryMixin):
 
                             if "content" in mem_data and mem_data["content"]:
                                 updates["content"] = mem_data["content"]
-                                embedding = await self.embedding_generator.generate(mem_data["content"])
+                                embedding = await self.embedding_generator.generate(
+                                    mem_data["content"]
+                                )
                             else:
                                 embedding = None
 
                             # Merge metadata
-                            for field in ["category", "context_level", "scope", "importance", "tags", "project_name"]:
+                            for field in [
+                                "category",
+                                "context_level",
+                                "scope",
+                                "importance",
+                                "tags",
+                                "project_name",
+                            ]:
                                 if field in mem_data and mem_data[field] is not None:
                                     updates[field] = mem_data[field]
 
@@ -2033,23 +2155,31 @@ class MemoryRAGServer(StructuralQueryMixin):
                                 updates["metadata"] = mem_data["metadata"]
 
                             if updates:
-                                success = await self.store.update(mem_id, updates, embedding)
+                                success = await self.store.update(
+                                    mem_id, updates, embedding
+                                )
                                 if success:
                                     updated_count += 1
                                 else:
-                                    errors.append(f"Memory {mem_id}: Merge update failed")
+                                    errors.append(
+                                        f"Memory {mem_id}: Merge update failed"
+                                    )
                             else:
                                 skipped_count += 1
 
                     else:
                         # Memory doesn't exist - create new
-                        embedding = await self.embedding_generator.generate(mem_data["content"])
+                        embedding = await self.embedding_generator.generate(
+                            mem_data["content"]
+                        )
 
                         # Create memory request
                         request = StoreMemoryRequest(
                             content=mem_data["content"],
                             category=mem_data.get("category", "fact"),
-                            context_level=mem_data.get("context_level", "SESSION_STATE"),
+                            context_level=mem_data.get(
+                                "context_level", "SESSION_STATE"
+                            ),
                             importance=mem_data.get("importance", 0.5),
                             tags=mem_data.get("tags", []),
                             metadata=mem_data.get("metadata", {}),
@@ -2078,7 +2208,9 @@ class MemoryRAGServer(StructuralQueryMixin):
                         created_count += 1
 
                 except Exception as e:
-                    errors.append(f"Memory at index {idx} (ID: {mem_id if 'mem_id' in locals() else 'unknown'}): {str(e)}")
+                    errors.append(
+                        f"Memory at index {idx} (ID: {mem_id if 'mem_id' in locals() else 'unknown'}): {str(e)}"
+                    )
 
             logger.info(
                 f"Import completed: {created_count} created, {updated_count} updated, "
@@ -2091,7 +2223,7 @@ class MemoryRAGServer(StructuralQueryMixin):
                 "updated": updated_count,
                 "skipped": skipped_count,
                 "errors": errors,
-                "total_processed": len(memories)
+                "total_processed": len(memories),
             }
 
         except ValidationError:
@@ -2209,11 +2341,15 @@ class MemoryRAGServer(StructuralQueryMixin):
 
                     # Aggregate categories
                     for category, count in stats.get("categories", {}).items():
-                        all_categories[category] = all_categories.get(category, 0) + count
+                        all_categories[category] = (
+                            all_categories.get(category, 0) + count
+                        )
 
                     # Aggregate lifecycle states
                     for state, count in stats.get("lifecycle_states", {}).items():
-                        all_lifecycle_states[state] = all_lifecycle_states.get(state, 0) + count
+                        all_lifecycle_states[state] = (
+                            all_lifecycle_states.get(state, 0) + count
+                        )
 
                 except Exception as e:
                     logger.warning(f"Failed to get stats for project {project}: {e}")
@@ -2229,10 +2365,7 @@ class MemoryRAGServer(StructuralQueryMixin):
                     collection_name=self.store.collection_name,
                     count_filter=Filter(
                         should=[
-                            FieldCondition(
-                                key="project_name",
-                                match=IsNullCondition()
-                            ),
+                            FieldCondition(key="project_name", match=IsNullCondition()),
                         ]
                     ),
                     exact=True,
@@ -2380,8 +2513,7 @@ class MemoryRAGServer(StructuralQueryMixin):
         )
 
     async def start_conversation_session(
-        self,
-        description: Optional[str] = None
+        self, description: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Start a new conversation session for context tracking.
@@ -2396,17 +2528,14 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         Returns:
             Dict with session_id and status
-        
+
 
         Note: This function is async for MCP protocol compatibility, even though it
         doesn't currently use await. The MCP framework requires handler functions to
         be async, and future changes may add async operations.
         """
         if not self.conversation_tracker:
-            return {
-                "error": "Conversation tracking is disabled",
-                "status": "disabled"
-            }
+            return {"error": "Conversation tracking is disabled", "status": "disabled"}
 
         try:
             session_id = self.conversation_tracker.create_session(description)
@@ -2421,15 +2550,9 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         except Exception as e:
             logger.error(f"Failed to start conversation session: {e}", exc_info=True)
-            return {
-                "error": str(e),
-                "status": "failed"
-            }
+            return {"error": str(e), "status": "failed"}
 
-    async def end_conversation_session(
-        self,
-        session_id: str
-    ) -> Dict[str, Any]:
+    async def end_conversation_session(self, session_id: str) -> Dict[str, Any]:
         """
         End and cleanup a conversation session.
 
@@ -2438,17 +2561,14 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         Returns:
             Dict with status
-        
+
 
         Note: This function is async for MCP protocol compatibility, even though it
         doesn't currently use await. The MCP framework requires handler functions to
         be async, and future changes may add async operations.
         """
         if not self.conversation_tracker:
-            return {
-                "error": "Conversation tracking is disabled",
-                "status": "disabled"
-            }
+            return {"error": "Conversation tracking is disabled", "status": "disabled"}
 
         try:
             success = self.conversation_tracker.end_session(session_id)
@@ -2457,17 +2577,11 @@ class MemoryRAGServer(StructuralQueryMixin):
                 logger.info(f"Ended conversation session: {session_id}")
                 return {"status": "ended"}
             else:
-                return {
-                    "error": "Session not found",
-                    "status": "not_found"
-                }
+                return {"error": "Session not found", "status": "not_found"}
 
         except Exception as e:
             logger.error(f"Failed to end conversation session: {e}", exc_info=True)
-            return {
-                "error": str(e),
-                "status": "failed"
-            }
+            return {"error": str(e), "status": "failed"}
 
     async def list_conversation_sessions(self) -> Dict[str, Any]:
         """
@@ -2475,34 +2589,24 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         Returns:
             Dict with sessions list and stats
-        
+
 
         Note: This function is async for MCP protocol compatibility, even though it
         doesn't currently use await. The MCP framework requires handler functions to
         be async, and future changes may add async operations.
         """
         if not self.conversation_tracker:
-            return {
-                "error": "Conversation tracking is disabled",
-                "sessions": []
-            }
+            return {"error": "Conversation tracking is disabled", "sessions": []}
 
         try:
             sessions = self.conversation_tracker.get_all_sessions()
             stats = self.conversation_tracker.get_stats()
 
-            return {
-                "sessions": sessions,
-                "stats": stats,
-                "status": "success"
-            }
+            return {"sessions": sessions, "stats": stats, "status": "success"}
 
         except Exception as e:
             logger.error(f"Failed to list conversation sessions: {e}", exc_info=True)
-            return {
-                "error": str(e),
-                "sessions": []
-            }
+            return {"error": str(e), "sessions": []}
 
     def _analyze_search_quality(
         self,
@@ -2531,13 +2635,15 @@ class MemoryRAGServer(StructuralQueryMixin):
 
             # Check if we should suggest other projects
             if project_name:
-                suggestions.append(f"Did you mean to search in a different project?")
+                suggestions.append("Did you mean to search in a different project?")
 
-            suggestions.extend([
-                "Try a different query with more general terms",
-                "Consider using related keywords or synonyms",
-                "Run: python -m src.cli index ./your-project",
-            ])
+            suggestions.extend(
+                [
+                    "Try a different query with more general terms",
+                    "Consider using related keywords or synonyms",
+                    "Run: python -m src.cli index ./your-project",
+                ]
+            )
 
             return {
                 "quality": "no_results",
@@ -2549,7 +2655,7 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         # Analyze score distribution
         scores = [r["relevance_score"] for r in results]
-        avg_score = sum(scores) / len(scores)
+        sum(scores) / len(scores)
         max_score = max(scores)
         min_score = min(scores)
 
@@ -2562,7 +2668,9 @@ class MemoryRAGServer(StructuralQueryMixin):
         elif max_score >= 0.70:
             quality = "good"
             confidence = max_score
-            interpretation = f"Found {len(results)} relevant results (confidence: {max_score:.0%})"
+            interpretation = (
+                f"Found {len(results)} relevant results (confidence: {max_score:.0%})"
+            )
             suggestions = []
         elif max_score >= 0.55:
             quality = "moderate"
@@ -2704,7 +2812,9 @@ class MemoryRAGServer(StructuralQueryMixin):
 
             # Validate search mode
             if search_mode not in ["semantic", "keyword", "hybrid"]:
-                raise ValidationError(f"Invalid search_mode: {search_mode}. Must be 'semantic', 'keyword', or 'hybrid'")
+                raise ValidationError(
+                    f"Invalid search_mode: {search_mode}. Must be 'semantic', 'keyword', or 'hybrid'"
+                )
 
             # Handle empty query
             if not query or not query.strip():
@@ -2719,7 +2829,9 @@ class MemoryRAGServer(StructuralQueryMixin):
                     "query_time_ms": 0.0,
                     "quality": "poor",
                     "confidence": "very_low",
-                    "suggestions": ["Provide a search query with keywords or description"],
+                    "suggestions": [
+                        "Provide a search query with keywords or description"
+                    ],
                     "interpretation": "Empty query - no search performed",
                     "matched_keywords": [],
                 }
@@ -2774,7 +2886,9 @@ class MemoryRAGServer(StructuralQueryMixin):
             else:
                 # Standard semantic search (or fallback if hybrid not available)
                 if search_mode == "hybrid":
-                    logger.warning("Hybrid search requested but not enabled, falling back to semantic search")
+                    logger.warning(
+                        "Hybrid search requested but not enabled, falling back to semantic search"
+                    )
 
                 results = await self.store.retrieve(
                     query_embedding=query_embedding,
@@ -2784,7 +2898,9 @@ class MemoryRAGServer(StructuralQueryMixin):
 
             # Format results for code search with deduplication
             code_results = []
-            seen_units = set()  # Track (file_path, start_line, unit_name) to deduplicate
+            seen_units = (
+                set()
+            )  # Track (file_path, start_line, unit_name) to deduplicate
 
             for memory, score in results:
                 # Extract code-specific metadata (stored in nested metadata dict during indexing)
@@ -2801,12 +2917,16 @@ class MemoryRAGServer(StructuralQueryMixin):
                     continue
 
                 # Deduplication: Skip if we've already seen this exact code unit
-                unit_name = nested_metadata.get("unit_name") or nested_metadata.get("name", "(unnamed)")
+                unit_name = nested_metadata.get("unit_name") or nested_metadata.get(
+                    "name", "(unnamed)"
+                )
                 start_line = nested_metadata.get("start_line", 0)
                 dedup_key = (file_path, start_line, unit_name)
 
                 if dedup_key in seen_units:
-                    logger.debug(f"Skipping duplicate: {unit_name} at {file_path}:{start_line}")
+                    logger.debug(
+                        f"Skipping duplicate: {unit_name} at {file_path}:{start_line}"
+                    )
                     continue
                 seen_units.add(dedup_key)
 
@@ -2838,8 +2958,10 @@ class MemoryRAGServer(StructuralQueryMixin):
                     }
 
                     # Calculate duplication score
-                    duplication_score = await self.duplicate_detector.calculate_duplication_score(
-                        memory
+                    duplication_score = (
+                        await self.duplicate_detector.calculate_duplication_score(
+                            memory
+                        )
                     )
 
                     # Calculate quality metrics
@@ -2855,15 +2977,23 @@ class MemoryRAGServer(StructuralQueryMixin):
                         "nesting_depth": quality_metrics.nesting_depth,
                         "parameter_count": quality_metrics.parameter_count,
                         "has_documentation": quality_metrics.has_documentation,
-                        "duplication_score": round(quality_metrics.duplication_score, 2),
+                        "duplication_score": round(
+                            quality_metrics.duplication_score, 2
+                        ),
                         "maintainability_index": quality_metrics.maintainability_index,
                         "quality_flags": quality_metrics.quality_flags,
                     }
 
                     # Apply quality filters (FEAT-060)
-                    if min_complexity is not None and quality_metrics.cyclomatic_complexity < min_complexity:
+                    if (
+                        min_complexity is not None
+                        and quality_metrics.cyclomatic_complexity < min_complexity
+                    ):
                         continue
-                    if max_complexity is not None and quality_metrics.cyclomatic_complexity > max_complexity:
+                    if (
+                        max_complexity is not None
+                        and quality_metrics.cyclomatic_complexity > max_complexity
+                    ):
                         continue
                     if has_duplicates is not None:
                         is_duplicate = quality_metrics.duplication_score > 0.85
@@ -2873,7 +3003,10 @@ class MemoryRAGServer(StructuralQueryMixin):
                         is_long = quality_metrics.line_count > 100
                         if is_long != long_functions:
                             continue
-                    if maintainability_min is not None and quality_metrics.maintainability_index < maintainability_min:
+                    if (
+                        maintainability_min is not None
+                        and quality_metrics.maintainability_index < maintainability_min
+                    ):
                         continue
 
                 code_results.append(result_dict)
@@ -2886,7 +3019,9 @@ class MemoryRAGServer(StructuralQueryMixin):
             )
 
             # Add quality indicators and suggestions
-            quality_info = self._analyze_search_quality(code_results, query, filter_project_name)
+            quality_info = self._analyze_search_quality(
+                code_results, query, filter_project_name
+            )
 
             # Determine actual search mode used
             actual_search_mode = search_mode
@@ -2895,12 +3030,16 @@ class MemoryRAGServer(StructuralQueryMixin):
 
             # Log metrics for performance monitoring
             if self.metrics_collector:
-                avg_relevance = sum(r["relevance_score"] for r in code_results) / len(code_results) if code_results else 0.0
+                avg_relevance = (
+                    sum(r["relevance_score"] for r in code_results) / len(code_results)
+                    if code_results
+                    else 0.0
+                )
                 self.metrics_collector.log_query(
                     query=query,
                     latency_ms=query_time_ms,
                     result_count=len(code_results),
-                    avg_relevance=avg_relevance
+                    avg_relevance=avg_relevance,
                 )
 
             return {
@@ -3006,7 +3145,9 @@ class MemoryRAGServer(StructuralQueryMixin):
 
             # Format results for code search with deduplication
             code_results = []
-            seen_units = set()  # Track (file_path, start_line, unit_name) to deduplicate
+            seen_units = (
+                set()
+            )  # Track (file_path, start_line, unit_name) to deduplicate
 
             for memory, score in results:
                 # Extract code-specific metadata (stored in nested metadata dict during indexing)
@@ -3023,42 +3164,52 @@ class MemoryRAGServer(StructuralQueryMixin):
                     continue
 
                 # Deduplication: Skip if we've already seen this exact code unit
-                unit_name = nested_metadata.get("unit_name") or nested_metadata.get("name", "(unnamed)")
+                unit_name = nested_metadata.get("unit_name") or nested_metadata.get(
+                    "name", "(unnamed)"
+                )
                 start_line = nested_metadata.get("start_line", 0)
                 dedup_key = (file_path, start_line, unit_name)
 
                 if dedup_key in seen_units:
-                    logger.debug(f"Skipping duplicate: {unit_name} at {file_path}:{start_line}")
+                    logger.debug(
+                        f"Skipping duplicate: {unit_name} at {file_path}:{start_line}"
+                    )
                     continue
                 seen_units.add(dedup_key)
 
                 similarity_score = min(max(score, 0.0), 1.0)
                 confidence_label = self._get_confidence_label(similarity_score)
 
-                code_results.append({
-                    "file_path": file_path or "(no path)",
-                    "start_line": start_line,
-                    "end_line": nested_metadata.get("end_line", 0),
-                    "unit_name": unit_name,
-                    "unit_type": nested_metadata.get("unit_type", "(unknown type)"),
-                    "signature": nested_metadata.get("signature", ""),
-                    "language": language_val or "(unknown language)",
-                    "code": memory.content,
-                    "similarity_score": similarity_score,
-                    "confidence_label": confidence_label,
-                    "confidence_display": f"{similarity_score:.0%} ({confidence_label})",
-                })
+                code_results.append(
+                    {
+                        "file_path": file_path or "(no path)",
+                        "start_line": start_line,
+                        "end_line": nested_metadata.get("end_line", 0),
+                        "unit_name": unit_name,
+                        "unit_type": nested_metadata.get("unit_type", "(unknown type)"),
+                        "signature": nested_metadata.get("signature", ""),
+                        "language": language_val or "(unknown language)",
+                        "code": memory.content,
+                        "similarity_score": similarity_score,
+                        "confidence_label": confidence_label,
+                        "confidence_display": f"{similarity_score:.0%} ({confidence_label})",
+                    }
+                )
 
             query_time_ms = (time.time() - start_time) * 1000
 
             # Log metrics for performance monitoring
             if self.metrics_collector:
-                avg_relevance = sum(r["similarity_score"] for r in code_results) / len(code_results) if code_results else 0.0
+                avg_relevance = (
+                    sum(r["similarity_score"] for r in code_results) / len(code_results)
+                    if code_results
+                    else 0.0
+                )
                 self.metrics_collector.log_query(
                     query=f"<code_similarity:{len(code_snippet)} chars>",  # Anonymize code snippet
                     latency_ms=query_time_ms,
                     result_count=len(code_results),
-                    avg_relevance=avg_relevance
+                    avg_relevance=avg_relevance,
                 )
 
             logger.info(
@@ -3076,13 +3227,24 @@ class MemoryRAGServer(StructuralQueryMixin):
                 ]
             elif code_results[0]["similarity_score"] >= 0.95:
                 interpretation = f"Found {len(code_results)} very similar code snippets (likely duplicates or near-duplicates)"
-                suggestions = ["Consider consolidating duplicate code", "These snippets may share significant logic"]
+                suggestions = [
+                    "Consider consolidating duplicate code",
+                    "These snippets may share significant logic",
+                ]
             elif code_results[0]["similarity_score"] >= 0.80:
                 interpretation = f"Found {len(code_results)} similar code patterns"
-                suggestions = ["These snippets implement similar functionality", "Good candidates for refactoring or code reuse"]
+                suggestions = [
+                    "These snippets implement similar functionality",
+                    "Good candidates for refactoring or code reuse",
+                ]
             else:
-                interpretation = f"Found {len(code_results)} somewhat related code snippets"
-                suggestions = ["These snippets may share some concepts but differ significantly", "Consider if these patterns are applicable to your use case"]
+                interpretation = (
+                    f"Found {len(code_results)} somewhat related code snippets"
+                )
+                suggestions = [
+                    "These snippets may share some concepts but differ significantly",
+                    "Consider if these patterns are applicable to your use case",
+                ]
 
             return {
                 "results": code_results,
@@ -3134,7 +3296,10 @@ class MemoryRAGServer(StructuralQueryMixin):
             Dict with results grouped by project, total_found, projects_searched
         """
         # Check if cross-project search is enabled
-        if not self.config.search.cross_project_enabled or not self.cross_project_consent:
+        if (
+            not self.config.search.cross_project_enabled
+            or not self.cross_project_consent
+        ):
             raise ValidationError(
                 "Cross-project search is disabled. Enable it in config to use this feature."
             )
@@ -3145,8 +3310,7 @@ class MemoryRAGServer(StructuralQueryMixin):
             # Determine which projects to search
             search_all_mode = self.config.search.cross_project_default_mode == "all"
             searchable_projects = self.cross_project_consent.get_searchable_projects(
-                current_project=self.project_name,
-                search_all=search_all_mode
+                current_project=self.project_name, search_all=search_all_mode
             )
 
             if not searchable_projects:
@@ -3158,7 +3322,7 @@ class MemoryRAGServer(StructuralQueryMixin):
                     "interpretation": "No projects available for cross-project search. Opt in projects first.",
                     "suggestions": [
                         "Use the opt-in tool to enable cross-project search for your projects",
-                        "Current project is automatically searchable if it exists"
+                        "Current project is automatically searchable if it exists",
                     ],
                     "query_time_ms": 0.0,
                 }
@@ -3196,18 +3360,25 @@ class MemoryRAGServer(StructuralQueryMixin):
             projects_with_results = {}
             for result in final_results:
                 project = result.get("source_project")
-                projects_with_results[project] = projects_with_results.get(project, 0) + 1
+                projects_with_results[project] = (
+                    projects_with_results.get(project, 0) + 1
+                )
 
             query_time_ms = (time.time() - start_time) * 1000
 
             # Log metrics for performance monitoring
             if self.metrics_collector:
-                avg_relevance = sum(r["relevance_score"] for r in final_results) / len(final_results) if final_results else 0.0
+                avg_relevance = (
+                    sum(r["relevance_score"] for r in final_results)
+                    / len(final_results)
+                    if final_results
+                    else 0.0
+                )
                 self.metrics_collector.log_query(
                     query=query,
                     latency_ms=query_time_ms,
                     result_count=len(final_results),
-                    avg_relevance=avg_relevance
+                    avg_relevance=avg_relevance,
                 )
 
             logger.info(
@@ -3221,18 +3392,21 @@ class MemoryRAGServer(StructuralQueryMixin):
                 suggestions = [
                     "Try a different search query",
                     "Verify that projects have been indexed",
-                    f"Searched projects: {', '.join(sorted(searchable_projects))}"
+                    f"Searched projects: {', '.join(sorted(searchable_projects))}",
                 ]
             elif len(projects_with_results) > 1:
                 interpretation = (
                     f"Found {len(final_results)} results across {len(projects_with_results)} projects. "
                     f"Similar patterns exist in multiple codebases - consider code reuse!"
                 )
-                project_breakdown = [f"{p}: {c} results" for p, c in sorted(projects_with_results.items())]
+                project_breakdown = [
+                    f"{p}: {c} results"
+                    for p, c in sorted(projects_with_results.items())
+                ]
                 suggestions = [
                     "Results show similar implementations across your projects",
                     f"Project breakdown: {', '.join(project_breakdown)}",
-                    "Consider extracting common patterns into a shared library"
+                    "Consider extracting common patterns into a shared library",
                 ]
             else:
                 single_project = list(projects_with_results.keys())[0]
@@ -3271,7 +3445,10 @@ class MemoryRAGServer(StructuralQueryMixin):
         Returns:
             Dict with project_name, opted_in status, granted_at timestamp
         """
-        if not self.config.search.cross_project_enabled or not self.cross_project_consent:
+        if (
+            not self.config.search.cross_project_enabled
+            or not self.cross_project_consent
+        ):
             raise ValidationError(
                 "Cross-project search is disabled. Enable it in config to use this feature."
             )
@@ -3297,7 +3474,10 @@ class MemoryRAGServer(StructuralQueryMixin):
         Returns:
             Dict with project_name, opted_in=false status, revoked_at timestamp
         """
-        if not self.config.search.cross_project_enabled or not self.cross_project_consent:
+        if (
+            not self.config.search.cross_project_enabled
+            or not self.cross_project_consent
+        ):
             raise ValidationError(
                 "Cross-project search is disabled. Enable it in config to use this feature."
             )
@@ -3319,7 +3499,10 @@ class MemoryRAGServer(StructuralQueryMixin):
         Returns:
             Dict with opted_in_projects list, opted_out_projects list, and statistics
         """
-        if not self.config.search.cross_project_enabled or not self.cross_project_consent:
+        if (
+            not self.config.search.cross_project_enabled
+            or not self.cross_project_consent
+        ):
             raise ValidationError(
                 "Cross-project search is disabled. Enable it in config to use this feature."
             )
@@ -3401,7 +3584,9 @@ class MemoryRAGServer(StructuralQueryMixin):
             await indexer.initialize()
 
             # Index directory
-            logger.info(f"Indexing codebase: {dir_path} (project: {index_project_name})")
+            logger.info(
+                f"Indexing codebase: {dir_path} (project: {index_project_name})"
+            )
             result = await indexer.index_directory(
                 dir_path=dir_path,
                 recursive=recursive,
@@ -3495,12 +3680,18 @@ class MemoryRAGServer(StructuralQueryMixin):
 
                 # Delete all CODE memories for this project
                 # Code units are stored with category="code", scope="project"
-                if hasattr(self.store, 'delete_code_units_by_project'):
-                    units_deleted = await self.store.delete_code_units_by_project(project_name)
-                    logger.info(f"Deleted {units_deleted} existing code units for project: {project_name}")
+                if hasattr(self.store, "delete_code_units_by_project"):
+                    units_deleted = await self.store.delete_code_units_by_project(
+                        project_name
+                    )
+                    logger.info(
+                        f"Deleted {units_deleted} existing code units for project: {project_name}"
+                    )
                 else:
                     # Fallback for stores that don't support bulk deletion
-                    logger.warning("Store doesn't support bulk deletion, clear_existing not fully available")
+                    logger.warning(
+                        "Store doesn't support bulk deletion, clear_existing not fully available"
+                    )
                     units_deleted = 0
 
             # Step 2: Clear embedding cache if requested
@@ -3573,7 +3764,6 @@ class MemoryRAGServer(StructuralQueryMixin):
         """
         try:
             from pathlib import Path
-            from src.memory.dependency_graph import DependencyGraph
 
             file_path = str(Path(file_path).resolve())
             filter_project_name = project_name or self.project_name
@@ -3592,16 +3782,18 @@ class MemoryRAGServer(StructuralQueryMixin):
             for dep in deps:
                 details = graph.get_import_details(file_path, dep)
                 if details:
-                    import_details.extend([
-                        {
-                            "target_file": dep,
-                            "module": d["module"],
-                            "items": d["items"],
-                            "type": d["type"],
-                            "line": d["line"],
-                        }
-                        for d in details
-                    ])
+                    import_details.extend(
+                        [
+                            {
+                                "target_file": dep,
+                                "module": d["module"],
+                                "items": d["items"],
+                                "type": d["type"],
+                                "line": d["line"],
+                            }
+                            for d in details
+                        ]
+                    )
 
             return {
                 "file": file_path,
@@ -3635,7 +3827,6 @@ class MemoryRAGServer(StructuralQueryMixin):
         """
         try:
             from pathlib import Path
-            from src.memory.dependency_graph import DependencyGraph
 
             file_path = str(Path(file_path).resolve())
             filter_project_name = project_name or self.project_name
@@ -3680,7 +3871,6 @@ class MemoryRAGServer(StructuralQueryMixin):
         """
         try:
             from pathlib import Path
-            from src.memory.dependency_graph import DependencyGraph
 
             source_file = str(Path(source_file).resolve())
             target_file = str(Path(target_file).resolve())
@@ -3699,11 +3889,13 @@ class MemoryRAGServer(StructuralQueryMixin):
                     src = path[i]
                     tgt = path[i + 1]
                     details = graph.get_import_details(src, tgt)
-                    path_details.append({
-                        "from": src,
-                        "to": tgt,
-                        "imports": details,
-                    })
+                    path_details.append(
+                        {
+                            "from": src,
+                            "to": tgt,
+                            "imports": details,
+                        }
+                    )
 
                 return {
                     "source": source_file,
@@ -3739,8 +3931,6 @@ class MemoryRAGServer(StructuralQueryMixin):
             Dict with dependency statistics
         """
         try:
-            from src.memory.dependency_graph import DependencyGraph
-
             filter_project_name = project_name or self.project_name
 
             # Build dependency graph from stored metadata
@@ -3764,8 +3954,7 @@ class MemoryRAGServer(StructuralQueryMixin):
             raise RetrievalError(f"Failed to get dependency stats: {e}") from e
 
     async def _build_dependency_graph(
-        self,
-        project_name: Optional[str]
+        self, project_name: Optional[str]
     ) -> "DependencyGraph":
         """
         Build dependency graph from stored metadata.
@@ -3853,7 +4042,6 @@ class MemoryRAGServer(StructuralQueryMixin):
                 "error": str(e),
             }
 
-
     async def get_token_analytics(
         self,
         period_days: int = 30,
@@ -3880,7 +4068,7 @@ class MemoryRAGServer(StructuralQueryMixin):
             - avg_relevance: Average search result quality
             - total_searches: Number of searches performed
             - total_files_indexed: Number of files indexed
-        
+
 
         Note: This function is async for MCP protocol compatibility, even though it
         doesn't currently use await. The MCP framework requires handler functions to
@@ -3945,7 +4133,6 @@ class MemoryRAGServer(StructuralQueryMixin):
             Dict with matching commits
         """
         try:
-            from datetime import datetime, timedelta, UTC
             start_time = time.time()
 
             logger.info(f"Searching git history: '{query}' (project: {project_name})")
@@ -3977,7 +4164,10 @@ class MemoryRAGServer(StructuralQueryMixin):
                     file_changes = await self.store.get_commits_by_file(
                         file_path, limit=100
                     )
-                    if any(fc["commit_hash"] == commit["commit_hash"] for fc in file_changes):
+                    if any(
+                        fc["commit_hash"] == commit["commit_hash"]
+                        for fc in file_changes
+                    ):
                         filtered_commits.append(commit)
                         if len(filtered_commits) >= limit:
                             break
@@ -3988,15 +4178,17 @@ class MemoryRAGServer(StructuralQueryMixin):
             # Format results
             results = []
             for commit in commits:
-                results.append({
-                    "commit_hash": commit["commit_hash"],
-                    "author": f"{commit['author_name']} <{commit['author_email']}>",
-                    "date": commit["author_date"],
-                    "message": commit["message"],
-                    "branches": commit.get("branch_names", []),
-                    "tags": commit.get("tags", []),
-                    "stats": commit.get("stats", {}),
-                })
+                results.append(
+                    {
+                        "commit_hash": commit["commit_hash"],
+                        "author": f"{commit['author_name']} <{commit['author_email']}>",
+                        "date": commit["author_date"],
+                        "message": commit["message"],
+                        "branches": commit.get("branch_names", []),
+                        "tags": commit.get("tags", []),
+                        "stats": commit.get("stats", {}),
+                    }
+                )
 
             query_time_ms = (time.time() - start_time) * 1000
 
@@ -4006,10 +4198,12 @@ class MemoryRAGServer(StructuralQueryMixin):
                     query=query,
                     latency_ms=query_time_ms,
                     result_count=len(results),
-                    avg_relevance=None  # FTS search has no semantic scores
+                    avg_relevance=None,  # FTS search has no semantic scores
                 )
 
-            logger.info(f"Found {len(results)} matching commits in {query_time_ms:.2f}ms")
+            logger.info(
+                f"Found {len(results)} matching commits in {query_time_ms:.2f}ms"
+            )
 
             return {
                 "status": "success",
@@ -4122,7 +4316,9 @@ class MemoryRAGServer(StructuralQueryMixin):
             # Store file changes
             changes_stored = 0
             if file_changes_dicts:
-                changes_stored = await self.store.store_git_file_changes(file_changes_dicts)
+                changes_stored = await self.store.store_git_file_changes(
+                    file_changes_dicts
+                )
 
             total_time_s = time.time() - start_time
             stats = git_indexer.get_stats()
@@ -4145,7 +4341,7 @@ class MemoryRAGServer(StructuralQueryMixin):
                 "indexing_time_seconds": round(total_time_s, 2),
             }
 
-        except ImportError as e:
+        except ImportError:
             raise ValidationError(
                 "GitPython is required for git indexing. "
                 "Install with: pip install GitPython>=3.1.40"
@@ -4194,7 +4390,10 @@ class MemoryRAGServer(StructuralQueryMixin):
             Dict with commit history
         """
         try:
-            logger.info(f"Showing evolution: {file_path}" + (f" ({function_name})" if function_name else ""))
+            logger.info(
+                f"Showing evolution: {file_path}"
+                + (f" ({function_name})" if function_name else "")
+            )
 
             # Get commits that modified this file
             commits = await self.store.get_commits_by_file(file_path, limit=limit * 2)
@@ -4292,7 +4491,6 @@ class MemoryRAGServer(StructuralQueryMixin):
                 - interpretation: str ("high|medium|low churn")
         """
         try:
-            from datetime import datetime, UTC
             start_time = time.time()
 
             logger.info(f"Calculating change frequency for: {file_or_function}")
@@ -4311,7 +4509,8 @@ class MemoryRAGServer(StructuralQueryMixin):
             # Filter by date if specified
             if since_dt and commits:
                 commits = [
-                    c for c in commits
+                    c
+                    for c in commits
                     if c.get("author_date") and c["author_date"] >= since_dt
                 ]
 
@@ -4354,10 +4553,13 @@ class MemoryRAGServer(StructuralQueryMixin):
             churn_score = min(1.0, (changes_per_week / 5.0) * (avg_change_size / 100.0))
 
             # Get unique authors
-            unique_authors = len(set(c.get("author_email", "") for c in commits if c.get("author_email")))
+            unique_authors = len(
+                set(c.get("author_email", "") for c in commits if c.get("author_email"))
+            )
 
             # Count change types
             from collections import defaultdict
+
             change_types = defaultdict(int)
             for commit in commits:
                 change_type = commit.get("change_type", "modified")
@@ -4435,7 +4637,8 @@ class MemoryRAGServer(StructuralQueryMixin):
         try:
             from datetime import datetime, timedelta, UTC
             from collections import defaultdict
-            start_time = time.time()
+
+            time.time()
 
             logger.info(f"Finding churn hotspots (last {days} days)")
 
@@ -4451,7 +4654,7 @@ class MemoryRAGServer(StructuralQueryMixin):
             )
 
             # Group by file path
-            files = defaultdict(list)
+            defaultdict(list)
 
             # For each commit, get the files it modified
             for commit in commits:
@@ -4469,7 +4672,9 @@ class MemoryRAGServer(StructuralQueryMixin):
             # Get unique file paths from recent commits and analyze each
 
             # For now, return a placeholder indicating implementation needed
-            logger.warning("get_churn_hotspots: Full implementation requires additional store methods")
+            logger.warning(
+                "get_churn_hotspots: Full implementation requires additional store methods"
+            )
 
             return {
                 "hotspots": [],
@@ -4521,6 +4726,7 @@ class MemoryRAGServer(StructuralQueryMixin):
         """
         try:
             from datetime import datetime, timedelta, UTC
+
             start_time = time.time()
 
             logger.info(f"Getting recent changes (last {days} days)")
@@ -4555,7 +4761,9 @@ class MemoryRAGServer(StructuralQueryMixin):
             # Apply file pattern filter if specified
             # Note: This would work better with file-level change tracking
             if file_pattern:
-                logger.info(f"File pattern filtering not fully implemented: {file_pattern}")
+                logger.info(
+                    f"File pattern filtering not fully implemented: {file_pattern}"
+                )
 
             # Sort by date descending (most recent first)
             results.sort(key=lambda x: x.get("commit_date", ""), reverse=True)
@@ -4681,6 +4889,7 @@ class MemoryRAGServer(StructuralQueryMixin):
         """
         try:
             from collections import defaultdict
+
             start_time = time.time()
 
             logger.info(f"Getting code authors for: {file_path}")
@@ -4699,14 +4908,16 @@ class MemoryRAGServer(StructuralQueryMixin):
                 }
 
             # Group by author
-            authors_data = defaultdict(lambda: {
-                "author_name": "",
-                "author_email": "",
-                "commit_count": 0,
-                "lines_added": 0,
-                "lines_deleted": 0,
-                "commits": [],
-            })
+            authors_data = defaultdict(
+                lambda: {
+                    "author_name": "",
+                    "author_email": "",
+                    "commit_count": 0,
+                    "lines_added": 0,
+                    "lines_deleted": 0,
+                    "commits": [],
+                }
+            )
 
             for commit in commits:
                 email = commit.get("author_email", "unknown")
@@ -4723,22 +4934,30 @@ class MemoryRAGServer(StructuralQueryMixin):
             authors = []
             for email, data in authors_data.items():
                 commit_dates = [d for d in data["commits"] if d]
-                authors.append({
-                    "author_name": data["author_name"],
-                    "author_email": data["author_email"],
-                    "commit_count": data["commit_count"],
-                    "lines_added": data["lines_added"],
-                    "lines_deleted": data["lines_deleted"],
-                    "first_commit": min(commit_dates).isoformat() if commit_dates else None,
-                    "last_commit": max(commit_dates).isoformat() if commit_dates else None,
-                })
+                authors.append(
+                    {
+                        "author_name": data["author_name"],
+                        "author_email": data["author_email"],
+                        "commit_count": data["commit_count"],
+                        "lines_added": data["lines_added"],
+                        "lines_deleted": data["lines_deleted"],
+                        "first_commit": min(commit_dates).isoformat()
+                        if commit_dates
+                        else None,
+                        "last_commit": max(commit_dates).isoformat()
+                        if commit_dates
+                        else None,
+                    }
+                )
 
             # Sort by commit count (descending)
             authors.sort(key=lambda x: x["commit_count"], reverse=True)
 
             query_time_ms = (time.time() - start_time) * 1000
 
-            logger.info(f"Found {len(authors)} authors for {file_path} in {query_time_ms:.2f}ms")
+            logger.info(
+                f"Found {len(authors)} authors for {file_path} in {query_time_ms:.2f}ms"
+            )
 
             return {
                 "file_path": file_path,
@@ -4947,7 +5166,9 @@ class MemoryRAGServer(StructuralQueryMixin):
             # Cleanup orphaned usage tracking
             orphaned_count = await self.pruner.cleanup_orphaned_usage_tracking()
             if orphaned_count > 0:
-                logger.info(f"Cleaned up {orphaned_count} orphaned usage tracking records")
+                logger.info(
+                    f"Cleaned up {orphaned_count} orphaned usage tracking records"
+                )
 
         except Exception as e:
             logger.error(f"Auto-prune job failed: {e}", exc_info=True)
@@ -4958,7 +5179,9 @@ class MemoryRAGServer(StructuralQueryMixin):
             logger.info("Running metrics collection job")
 
             if not self.metrics_collector:
-                logger.warning("Metrics collector not initialized, skipping metrics collection")
+                logger.warning(
+                    "Metrics collector not initialized, skipping metrics collection"
+                )
                 return
 
             # Collect current metrics
@@ -4978,97 +5201,6 @@ class MemoryRAGServer(StructuralQueryMixin):
 
         except Exception as e:
             logger.error(f"Metrics collection job failed: {e}", exc_info=True)
-    async def export_memories(
-        self,
-        output_path: str,
-        format: str = "json",
-        project_name: Optional[str] = None,
-        category: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        """
-        Export memories to file (MCP tool).
-
-        Args:
-            output_path: Path to write export file
-            format: Export format (json, markdown, archive)
-            project_name: Filter by project name
-            category: Filter by category
-
-        Returns:
-            Export statistics
-
-        Raises:
-            ValueError: If invalid format or category
-            StorageError: If export fails
-        """
-        from src.backup.exporter import DataExporter
-        from src.core.models import MemoryCategory
-        from pathlib import Path
-
-        # Validate parameters
-        if format not in ["json", "markdown", "archive"]:
-            raise ValueError(f"Invalid format: {format}. Must be json, markdown, or archive")
-
-        category_filter = None
-        if category:
-            try:
-                category_filter = MemoryCategory(category)
-            except ValueError:
-                raise ValueError(f"Invalid category: {category}")
-
-        # Create exporter and export
-        exporter = DataExporter(self.store)
-        output = Path(output_path).expanduser()
-
-        if format == "json":
-            stats = await exporter.export_to_json(
-                output_path=output,
-                project_name=project_name,
-                category=category_filter,
-            )
-        elif format == "markdown":
-            stats = await exporter.export_to_markdown(
-                output_path=output,
-                project_name=project_name,
-                include_metadata=True,
-            )
-        elif format == "archive":
-            stats = await exporter.create_portable_archive(
-                output_path=output,
-                project_name=project_name,
-                include_embeddings=True,
-            )
-
-        logger.info(f"MCP export completed: {stats}")
-        return stats
-
-    async def import_memories(
-        self,
-        input_path: str,
-        conflict_strategy: str = "keep_newer",
-        dry_run: bool = False,
-        selective_project: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        """
-        Import memories from file (MCP tool).
-
-        Args:
-            input_path: Path to import file
-            conflict_strategy: How to handle conflicts (keep_newer, keep_older, keep_both, skip, merge_metadata)
-            dry_run: If True, analyze but don't actually import
-            selective_project: Only import this project
-
-        Returns:
-            Import statistics
-
-        Raises:
-            ValueError: If invalid strategy or file not found
-            StorageError: If import fails
-        """
-        from src.backup.importer import DataImporter, ConflictStrategy
-        from pathlib import Path
-
-        # Validate parameters
 
     async def start_deferred_auto_indexing(self) -> None:
         """
@@ -5077,11 +5209,14 @@ class MemoryRAGServer(StructuralQueryMixin):
         Call this after the server is ready to accept requests, to run
         auto-indexing in the background without blocking startup.
         """
-        if not getattr(self, '_defer_auto_index', False):
+        if not getattr(self, "_defer_auto_index", False):
             logger.debug("Auto-indexing was not deferred, skipping")
             return
 
-        if self.config.indexing.auto_index_enabled and self.config.indexing.auto_index_on_startup:
+        if (
+            self.config.indexing.auto_index_enabled
+            and self.config.indexing.auto_index_on_startup
+        ):
             logger.info("Starting deferred auto-indexing...")
             await self._start_auto_indexing()
         else:
@@ -5100,7 +5235,9 @@ class MemoryRAGServer(StructuralQueryMixin):
             # Use detected project name or directory name
             project_name = self.project_name or project_path.name
 
-            logger.info(f"Starting auto-indexing for project: {project_name} at {project_path}")
+            logger.info(
+                f"Starting auto-indexing for project: {project_name} at {project_path}"
+            )
 
             # Import here to avoid circular dependency
             from src.memory.auto_indexing_service import AutoIndexingService
@@ -5153,7 +5290,7 @@ class MemoryRAGServer(StructuralQueryMixin):
             return {
                 "enabled": False,
                 "status": "disabled",
-                "message": "Auto-indexing is not enabled or failed to initialize"
+                "message": "Auto-indexing is not enabled or failed to initialize",
             }
 
         progress = await self.auto_indexing_service.get_progress()
@@ -5186,128 +5323,15 @@ class MemoryRAGServer(StructuralQueryMixin):
             )
             await self.auto_indexing_service.initialize()
 
-        logger.info(f"Manual re-index triggered for {self.auto_indexing_service.project_name}")
+        logger.info(
+            f"Manual re-index triggered for {self.auto_indexing_service.project_name}"
+        )
         result = await self.auto_indexing_service.trigger_reindex()
 
         return {
             "status": "success",
             "result": result,
         }
-    async def export_memories(
-        self,
-        output_path: str,
-        format: str = "json",
-        project_name: Optional[str] = None,
-        category: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        """
-        Export memories to file (MCP tool).
-
-        Args:
-            output_path: Path to write export file
-            format: Export format (json, markdown, archive)
-            project_name: Filter by project name
-            category: Filter by category
-
-        Returns:
-            Export statistics
-
-        Raises:
-            ValueError: If invalid format or category
-            StorageError: If export fails
-        """
-        from src.backup.exporter import DataExporter
-        from src.core.models import MemoryCategory
-        from pathlib import Path
-
-        # Validate parameters
-        if format not in ["json", "markdown", "archive"]:
-            raise ValueError(f"Invalid format: {format}. Must be json, markdown, or archive")
-
-        category_filter = None
-        if category:
-            try:
-                category_filter = MemoryCategory(category)
-            except ValueError:
-                raise ValueError(f"Invalid category: {category}")
-
-        # Create exporter and export
-        exporter = DataExporter(self.store)
-        output = Path(output_path).expanduser()
-
-        if format == "json":
-            stats = await exporter.export_to_json(
-                output_path=output,
-                project_name=project_name,
-                category=category_filter,
-            )
-        elif format == "markdown":
-            stats = await exporter.export_to_markdown(
-                output_path=output,
-                project_name=project_name,
-                include_metadata=True,
-            )
-        elif format == "archive":
-            stats = await exporter.create_portable_archive(
-                output_path=output,
-                project_name=project_name,
-                include_embeddings=True,
-            )
-
-        logger.info(f"MCP export completed: {stats}")
-        return stats
-
-    async def import_memories(
-        self,
-        input_path: str,
-        conflict_strategy: str = "keep_newer",
-        dry_run: bool = False,
-        selective_project: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        """
-        Import memories from file (MCP tool).
-
-        Args:
-            input_path: Path to import file
-            conflict_strategy: How to handle conflicts (keep_newer, keep_older, keep_both, skip, merge_metadata)
-            dry_run: If True, analyze but don't actually import
-            selective_project: Only import this project
-
-        Returns:
-            Import statistics
-
-        Raises:
-            ValueError: If invalid strategy or file not found
-            StorageError: If import fails
-        """
-        from src.backup.importer import DataImporter, ConflictStrategy
-        from pathlib import Path
-
-        # Validate parameters
-        try:
-            logger.info("Running metrics collection job")
-
-            if not self.metrics_collector:
-                logger.warning("Metrics collector not initialized, skipping metrics collection")
-                return
-
-            # Collect current metrics
-            metrics = await self.metrics_collector.collect_metrics()
-
-            # Calculate health score (simplified version)
-            metrics.health_score = self._calculate_simple_health_score(metrics)
-
-            # Store metrics in database
-            self.metrics_collector.store_metrics(metrics)
-
-            logger.info(
-                f"Metrics collected: {metrics.total_memories} memories, "
-                f"{metrics.avg_search_latency_ms:.2f}ms avg latency, "
-                f"health score: {metrics.health_score}/100"
-            )
-
-        except Exception as e:
-            logger.error(f"Metrics collection job failed: {e}", exc_info=True)
 
     def _calculate_simple_health_score(self, metrics) -> int:
         """Calculate a simple health score from metrics (0-100)."""
@@ -5458,7 +5482,8 @@ class MemoryRAGServer(StructuralQueryMixin):
                     "success": True,
                     "suggestion_id": suggestion_id,
                     "accepted": accepted,
-                    "threshold_updated": new_threshold != self.suggestion_engine.high_confidence_threshold,
+                    "threshold_updated": new_threshold
+                    != self.suggestion_engine.high_confidence_threshold,
                     "current_threshold": new_threshold,
                     "explanation": explanation,
                 }
@@ -5494,7 +5519,7 @@ class MemoryRAGServer(StructuralQueryMixin):
 
             # Enable with custom threshold
             set_suggestion_mode(enabled=True, threshold=0.85)
-        
+
 
         Note: This function is async for MCP protocol compatibility, even though it
         doesn't currently use await. The MCP framework requires handler functions to
@@ -5552,13 +5577,13 @@ class MemoryRAGServer(StructuralQueryMixin):
             if not self.pattern_tracker:
                 raise ValidationError(
                     "Usage pattern analytics not enabled",
-                    solution="Enable via config: enable_usage_pattern_analytics = true"
+                    solution="Enable via config: enable_usage_pattern_analytics = true",
                 )
 
             if not 1 <= days <= 365:
                 raise ValidationError(
                     f"Invalid days value: {days}",
-                    solution="Days must be between 1 and 365"
+                    solution="Days must be between 1 and 365",
                 )
 
             stats = await self.pattern_tracker.get_usage_stats(days=days)
@@ -5600,19 +5625,19 @@ class MemoryRAGServer(StructuralQueryMixin):
             if not self.pattern_tracker:
                 raise ValidationError(
                     "Usage pattern analytics not enabled",
-                    solution="Enable via config: enable_usage_pattern_analytics = true"
+                    solution="Enable via config: enable_usage_pattern_analytics = true",
                 )
 
             if not 1 <= limit <= 100:
                 raise ValidationError(
                     f"Invalid limit value: {limit}",
-                    solution="Limit must be between 1 and 100"
+                    solution="Limit must be between 1 and 100",
                 )
 
             if not 1 <= days <= 365:
                 raise ValidationError(
                     f"Invalid days value: {days}",
-                    solution="Days must be between 1 and 365"
+                    solution="Days must be between 1 and 365",
                 )
 
             queries = await self.pattern_tracker.get_top_queries(limit=limit, days=days)
@@ -5649,19 +5674,19 @@ class MemoryRAGServer(StructuralQueryMixin):
             if not self.pattern_tracker:
                 raise ValidationError(
                     "Usage pattern analytics not enabled",
-                    solution="Enable via config: enable_usage_pattern_analytics = true"
+                    solution="Enable via config: enable_usage_pattern_analytics = true",
                 )
 
             if not 1 <= limit <= 100:
                 raise ValidationError(
                     f"Invalid limit value: {limit}",
-                    solution="Limit must be between 1 and 100"
+                    solution="Limit must be between 1 and 100",
                 )
 
             if not 1 <= days <= 365:
                 raise ValidationError(
                     f"Invalid days value: {days}",
-                    solution="Days must be between 1 and 365"
+                    solution="Days must be between 1 and 365",
                 )
 
             code_items = await self.pattern_tracker.get_frequently_accessed_code(

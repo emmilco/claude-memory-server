@@ -126,7 +126,9 @@ class TestGetUsageStatistics:
     @pytest.mark.asyncio
     async def test_stats_error_raises(self, service):
         """Test statistics error raises StorageError."""
-        service.pattern_tracker.get_usage_statistics.side_effect = Exception("Stats failed")
+        service.pattern_tracker.get_usage_statistics.side_effect = Exception(
+            "Stats failed"
+        )
 
         with pytest.raises(StorageError):
             await service.get_usage_statistics()
@@ -196,7 +198,9 @@ class TestGetTopQueries:
     @pytest.mark.asyncio
     async def test_queries_error_raises(self, service):
         """Test queries error raises StorageError."""
-        service.pattern_tracker.get_top_queries.side_effect = Exception("Queries failed")
+        service.pattern_tracker.get_top_queries.side_effect = Exception(
+            "Queries failed"
+        )
 
         with pytest.raises(StorageError):
             await service.get_top_queries()
@@ -265,7 +269,9 @@ class TestGetFrequentlyAccessedCode:
     @pytest.mark.asyncio
     async def test_code_error_raises(self, service):
         """Test code access error raises StorageError."""
-        service.pattern_tracker.get_frequently_accessed_code.side_effect = Exception("Code failed")
+        service.pattern_tracker.get_frequently_accessed_code.side_effect = Exception(
+            "Code failed"
+        )
 
         with pytest.raises(StorageError):
             await service.get_frequently_accessed_code()
@@ -278,11 +284,13 @@ class TestGetTokenAnalytics:
     def service(self):
         """Create service with usage tracker."""
         usage_tracker = AsyncMock()
-        usage_tracker.get_token_analytics = AsyncMock(return_value={
-            "total_tokens_saved": 50000,
-            "cost_savings_usd": 2.50,
-            "sessions_analyzed": 100,
-        })
+        usage_tracker.get_token_analytics = AsyncMock(
+            return_value={
+                "total_tokens_saved": 50000,
+                "cost_savings_usd": 2.50,
+                "sessions_analyzed": 100,
+            }
+        )
 
         return AnalyticsService(
             store=MagicMock(),
@@ -425,13 +433,15 @@ class TestGetQualityMetrics:
     def service(self):
         """Create service for quality metrics tests."""
         store = AsyncMock()
-        store.get_quality_metrics = AsyncMock(return_value={
-            "total_searches": 500,
-            "helpful_count": 400,
-            "not_helpful_count": 100,
-            "helpfulness_rate": 0.8,
-            "avg_results_per_search": 4.2,
-        })
+        store.get_quality_metrics = AsyncMock(
+            return_value={
+                "total_searches": 500,
+                "helpful_count": 400,
+                "not_helpful_count": 100,
+                "helpfulness_rate": 0.8,
+                "avg_results_per_search": 4.2,
+            }
+        )
 
         return AnalyticsService(
             store=store,
@@ -536,15 +546,19 @@ class TestIntegrationScenarios:
         ]
 
         usage_tracker = AsyncMock()
-        usage_tracker.get_token_analytics = AsyncMock(return_value={
-            "tokens_saved": 5000,
-        })
+        usage_tracker.get_token_analytics = AsyncMock(
+            return_value={
+                "tokens_saved": 5000,
+            }
+        )
 
         store = AsyncMock()
         store.submit_search_feedback = AsyncMock(return_value="fb_123")
-        store.get_quality_metrics = AsyncMock(return_value={
-            "helpfulness_rate": 0.85,
-        })
+        store.get_quality_metrics = AsyncMock(
+            return_value={
+                "helpfulness_rate": 0.85,
+            }
+        )
 
         return AnalyticsService(
             store=store,

@@ -1,7 +1,6 @@
 """Tests for system prerequisite checking."""
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 from src.core.system_check import SystemChecker, SystemRequirement
 
 
@@ -234,8 +233,12 @@ class TestSystemChecker:
         checker = SystemChecker()
 
         requirements = [
-            SystemRequirement("Python", True, "3.11.0", "3.9.0", "brew install python", "required"),
-            SystemRequirement("Docker", False, None, None, "docker install", "recommended"),
+            SystemRequirement(
+                "Python", True, "3.11.0", "3.9.0", "brew install python", "required"
+            ),
+            SystemRequirement(
+                "Docker", False, None, None, "docker install", "recommended"
+            ),
         ]
 
         checker.print_report(requirements, show_install_commands=True)
@@ -265,7 +268,10 @@ class TestSystemChecker:
         checker = SystemChecker()
         python_req = checker.check_python_version()
 
-        assert "apt-get" in python_req.install_command or "dnf" in python_req.install_command
+        assert (
+            "apt-get" in python_req.install_command
+            or "dnf" in python_req.install_command
+        )
 
     @patch("platform.system")
     def test_os_specific_install_commands_windows(self, mock_system):

@@ -176,7 +176,7 @@ class MultiRepositoryIndexer:
             else:
                 self.embedding_generator = EmbeddingGenerator(self.config)
 
-        if hasattr(self.embedding_generator, 'initialize'):
+        if hasattr(self.embedding_generator, "initialize"):
             await self.embedding_generator.initialize()
 
         logger.info("MultiRepositoryIndexer ready")
@@ -189,7 +189,7 @@ class MultiRepositoryIndexer:
         self._indexer_cache.clear()
 
         # Close shared resources
-        if self.embedding_generator and hasattr(self.embedding_generator, 'close'):
+        if self.embedding_generator and hasattr(self.embedding_generator, "close"):
             await self.embedding_generator.close()
 
         if self.store:
@@ -261,8 +261,7 @@ class MultiRepositoryIndexer:
 
             # Update status to ERROR
             await self.repository_registry.update_repository(
-                repository_id,
-                {"status": RepositoryStatus.ERROR}
+                repository_id, {"status": RepositoryStatus.ERROR}
             )
 
             return RepositoryIndexResult(
@@ -275,8 +274,7 @@ class MultiRepositoryIndexer:
 
         # Update status to INDEXING
         await self.repository_registry.update_repository(
-            repository_id,
-            {"status": RepositoryStatus.INDEXING}
+            repository_id, {"status": RepositoryStatus.INDEXING}
         )
 
         try:
@@ -330,8 +328,7 @@ class MultiRepositoryIndexer:
 
             # Update status to ERROR
             await self.repository_registry.update_repository(
-                repository_id,
-                {"status": RepositoryStatus.ERROR}
+                repository_id, {"status": RepositoryStatus.ERROR}
             )
 
             return RepositoryIndexResult(
@@ -497,7 +494,8 @@ class MultiRepositoryIndexer:
         cutoff_date = datetime.now(UTC) - timedelta(days=max_age_days)
 
         old_repos = [
-            repo for repo in all_repos
+            repo
+            for repo in all_repos
             if repo.status == RepositoryStatus.INDEXED
             and repo.last_updated
             and repo.last_updated < cutoff_date

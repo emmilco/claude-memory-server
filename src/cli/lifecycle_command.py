@@ -2,8 +2,6 @@
 
 import asyncio
 import argparse
-from datetime import datetime, UTC
-from typing import Optional
 
 from rich.console import Console
 from rich.table import Table
@@ -15,7 +13,10 @@ from src.store.factory import StorageFactory
 from src.memory.lifecycle_manager import LifecycleManager, LifecycleConfig
 from src.core.models import LifecycleState
 from src.memory.usage_tracker import UsageTracker
-from src.memory.storage_optimizer import StorageOptimizer, LifecycleConfig as OptimizerConfig
+from src.memory.storage_optimizer import (
+    StorageOptimizer,
+    LifecycleConfig as OptimizerConfig,
+)
 
 console = Console()
 
@@ -76,6 +77,7 @@ async def health_command(args: argparse.Namespace) -> int:
     except Exception as e:
         console.print(f"[red]Error:[/red] {e}")
         import traceback
+
         traceback.print_exc()
         return 1
 
@@ -132,7 +134,9 @@ async def update_command(args: argparse.Namespace) -> int:
                         f"  • {memory.id[:8]}... → {memory.lifecycle_state.value}"
                     )
 
-            console.print(f"[green]✓ Updated {len(transitions)} lifecycle states[/green]")
+            console.print(
+                f"[green]✓ Updated {len(transitions)} lifecycle states[/green]"
+            )
         else:
             console.print("[green]✓ All lifecycle states are current[/green]")
 
@@ -176,13 +180,15 @@ def _display_health_dashboard(
     title_text.append("MEMORY HEALTH REPORT\n", style="bold")
     title_text.append(
         f"Overall Health: {health_score}/100 ({health_status}) {health_emoji}",
-        style=f"bold {health_color}"
+        style=f"bold {health_color}",
     )
     console.print(Panel(title_text, style=health_color))
     console.print()
 
     # Database status table
-    db_table = Table(title="Database Status", show_header=True, header_style="bold cyan")
+    db_table = Table(
+        title="Database Status", show_header=True, header_style="bold cyan"
+    )
     db_table.add_column("Lifecycle State", style="cyan")
     db_table.add_column("Count", justify="right")
     db_table.add_column("Percentage", justify="right")
@@ -193,7 +199,12 @@ def _display_health_dashboard(
     percentages = stats["percentages"]
 
     # Add rows with status indicators
-    for state in [LifecycleState.ACTIVE, LifecycleState.RECENT, LifecycleState.ARCHIVED, LifecycleState.STALE]:
+    for state in [
+        LifecycleState.ACTIVE,
+        LifecycleState.RECENT,
+        LifecycleState.ARCHIVED,
+        LifecycleState.STALE,
+    ]:
         count = by_state.get(state.value, 0)
         pct = percentages.get(state.value, 0.0)
 
@@ -215,31 +226,42 @@ def _display_health_dashboard(
             state.value,
             str(count),
             f"{pct:.1f}%",
-            f"[{status_color}]{status}[/{status_color}]"
+            f"[{status_color}]{status}[/{status_color}]",
         )
 
     # Add total row
     db_table.add_row(
-        "[bold]TOTAL[/bold]",
-        f"[bold]{total}[/bold]",
-        "[bold]100.0%[/bold]",
-        ""
+        "[bold]TOTAL[/bold]", f"[bold]{total}[/bold]", "[bold]100.0%[/bold]", ""
     )
 
     console.print(db_table)
     console.print()
 
     # Quality metrics table
-    quality_table = Table(title="Quality Metrics", show_header=True, header_style="bold cyan")
+    quality_table = Table(
+        title="Quality Metrics", show_header=True, header_style="bold cyan"
+    )
     quality_table.add_column("Metric", style="cyan")
     quality_table.add_column("Value", justify="right")
     quality_table.add_column("Target", justify="right")
     quality_table.add_column("Status", justify="center")
 
     metrics_config = [
-        ("Noise Ratio", quality_metrics["noise_ratio"], "<25%", 25, True),  # True = lower is better
+        (
+            "Noise Ratio",
+            quality_metrics["noise_ratio"],
+            "<25%",
+            25,
+            True,
+        ),  # True = lower is better
         ("Stale Memory Ratio", quality_metrics["stale_ratio"], "<15%", 15, True),
-        ("Active Memory Ratio", quality_metrics["active_ratio"], ">10%", 10, False),  # False = higher is better
+        (
+            "Active Memory Ratio",
+            quality_metrics["active_ratio"],
+            ">10%",
+            10,
+            False,
+        ),  # False = higher is better
     ]
 
     for metric_name, value, target, threshold, lower_is_better in metrics_config:
@@ -254,7 +276,7 @@ def _display_health_dashboard(
             metric_name,
             f"{value:.1f}%",
             target,
-            f"[{status_color}]{status}[/{status_color}]"
+            f"[{status_color}]{status}[/{status_color}]",
         )
 
     console.print(quality_table)
@@ -266,7 +288,7 @@ def _display_health_dashboard(
         rec_panel = Panel(
             "\n".join(f"• {rec}" for rec in recommendations),
             title="[bold yellow]Recommendations[/bold yellow]",
-            style="yellow"
+            style="yellow",
         )
         console.print(rec_panel)
 
@@ -280,7 +302,7 @@ def _calculate_health_score(stats: dict, quality_metrics: dict) -> int:
     if stale_ratio > 15:
         score -= (stale_ratio - 15) * 2
     elif stale_ratio > 10:
-        score -= (stale_ratio - 10)
+        score -= stale_ratio - 10
 
     # Penalize high noise ratio
     noise_ratio = quality_metrics["noise_ratio"]
@@ -294,7 +316,7 @@ def _calculate_health_score(stats: dict, quality_metrics: dict) -> int:
     if active_ratio < 5:
         score -= (5 - active_ratio) * 3
     elif active_ratio < 10:
-        score -= (10 - active_ratio)
+        score -= 10 - active_ratio
 
     return max(0, min(100, int(score)))
 
@@ -311,8 +333,12 @@ def _calculate_quality_metrics(memories: list, usage_data: dict) -> dict:
 
     # Count states
     stale_count = sum(1 for m in memories if m.lifecycle_state == LifecycleState.STALE)
-    archived_count = sum(1 for m in memories if m.lifecycle_state == LifecycleState.ARCHIVED)
-    active_count = sum(1 for m in memories if m.lifecycle_state == LifecycleState.ACTIVE)
+    archived_count = sum(
+        1 for m in memories if m.lifecycle_state == LifecycleState.ARCHIVED
+    )
+    active_count = sum(
+        1 for m in memories if m.lifecycle_state == LifecycleState.ACTIVE
+    )
 
     # Calculate ratios
     noise_ratio = ((stale_count + archived_count) / total) * 100
@@ -369,7 +395,6 @@ async def _get_all_memories(store):
     try:
         # Try to get memories using a broad search
         # We'll need to implement this properly in the store classes
-        from src.core.models import MemoryUnit
 
         # For now, return empty list - this needs proper implementation
         # based on the store type
@@ -396,7 +421,9 @@ async def optimize_command(args: argparse.Namespace) -> int:
         store = await StorageFactory.create_store(config)
         await store.initialize()
 
-        console.print("[cyan]Analyzing storage for optimization opportunities...[/cyan]\n")
+        console.print(
+            "[cyan]Analyzing storage for optimization opportunities...[/cyan]\n"
+        )
 
         optimizer_config = OptimizerConfig()
         optimizer = StorageOptimizer(store, optimizer_config)
@@ -407,7 +434,9 @@ async def optimize_command(args: argparse.Namespace) -> int:
         # Display summary
         console.print(f"[bold]Total Memories:[/bold] {analysis.total_memories:,}")
         console.print(f"[bold]Total Storage:[/bold] {analysis.total_size_mb:.2f} MB")
-        console.print(f"[bold]Potential Savings:[/bold] {analysis.potential_savings_mb:.2f} MB\n")
+        console.print(
+            f"[bold]Potential Savings:[/bold] {analysis.potential_savings_mb:.2f} MB\n"
+        )
 
         # Lifecycle distribution
         if analysis.by_lifecycle_state:
@@ -435,12 +464,12 @@ async def optimize_command(args: argparse.Namespace) -> int:
 
             for i, opp in enumerate(analysis.opportunities, 1):
                 risk_colors = {
-                    'safe': 'green',
-                    'low': 'blue',
-                    'medium': 'yellow',
-                    'high': 'red',
+                    "safe": "green",
+                    "low": "blue",
+                    "medium": "yellow",
+                    "high": "red",
                 }
-                risk_color = risk_colors.get(opp.risk_level, 'white')
+                risk_color = risk_colors.get(opp.risk_level, "white")
 
                 opp_table.add_row(
                     str(i),
@@ -448,20 +477,26 @@ async def optimize_command(args: argparse.Namespace) -> int:
                     opp.description,
                     f"{opp.affected_count:,}",
                     f"{opp.storage_savings_mb:.2f} MB",
-                    f"[{risk_color}]{opp.risk_level.upper()}[/{risk_color}]"
+                    f"[{risk_color}]{opp.risk_level.upper()}[/{risk_color}]",
                 )
 
             console.print(opp_table)
             console.print()
 
             # Count safe opportunities
-            safe_opps = [o for o in analysis.opportunities if o.risk_level == 'safe']
+            safe_opps = [o for o in analysis.opportunities if o.risk_level == "safe"]
             if safe_opps:
                 safe_savings = sum(o.storage_savings_mb for o in safe_opps)
-                console.print(f"[green]✓ {len(safe_opps)} safe optimizations available ({safe_savings:.2f} MB savings)[/green]")
-                console.print("[dim]Run 'python -m src.cli lifecycle auto' to apply safe optimizations[/dim]")
+                console.print(
+                    f"[green]✓ {len(safe_opps)} safe optimizations available ({safe_savings:.2f} MB savings)[/green]"
+                )
+                console.print(
+                    "[dim]Run 'python -m src.cli lifecycle auto' to apply safe optimizations[/dim]"
+                )
         else:
-            console.print("[green]✓ No optimization opportunities found - storage is healthy![/green]")
+            console.print(
+                "[green]✓ No optimization opportunities found - storage is healthy![/green]"
+            )
 
         await store.close()
         return 0
@@ -469,6 +504,7 @@ async def optimize_command(args: argparse.Namespace) -> int:
     except Exception as e:
         console.print(f"[red]Error:[/red] {e}")
         import traceback
+
         traceback.print_exc()
         return 1
 
@@ -494,10 +530,14 @@ async def auto_optimize_command(args: argparse.Namespace) -> int:
         console.print(f"\n🔧 [bold]Auto-Optimization ({mode_text})[/bold]\n")
 
         if dry_run:
-            console.print("[dim]Running in dry-run mode (no changes will be made)[/dim]")
+            console.print(
+                "[dim]Running in dry-run mode (no changes will be made)[/dim]"
+            )
             console.print("[dim]Use --execute to apply changes[/dim]\n")
         else:
-            console.print("[yellow]⚠️  Running in LIVE mode (changes will be applied!)[/yellow]\n")
+            console.print(
+                "[yellow]⚠️  Running in LIVE mode (changes will be applied!)[/yellow]\n"
+            )
 
         optimizer_config = OptimizerConfig()
         optimizer = StorageOptimizer(store, optimizer_config)
@@ -511,20 +551,28 @@ async def auto_optimize_command(args: argparse.Namespace) -> int:
         results_table.add_column("Value", justify="right")
 
         results_table.add_row("Total Memories", f"{result['total_memories']:,}")
-        results_table.add_row("Opportunities Found", str(result['opportunities_found']))
-        results_table.add_row("Safe Opportunities", str(result['safe_opportunities']))
-        results_table.add_row("Optimizations Applied", f"[green]{result['applied']}[/green]")
-        results_table.add_row("Potential Savings", f"[green]{result['savings_mb']:.2f} MB[/green]")
+        results_table.add_row("Opportunities Found", str(result["opportunities_found"]))
+        results_table.add_row("Safe Opportunities", str(result["safe_opportunities"]))
+        results_table.add_row(
+            "Optimizations Applied", f"[green]{result['applied']}[/green]"
+        )
+        results_table.add_row(
+            "Potential Savings", f"[green]{result['savings_mb']:.2f} MB[/green]"
+        )
 
         console.print(results_table)
 
-        if result['applied'] == 0 and result['safe_opportunities'] > 0 and dry_run:
+        if result["applied"] == 0 and result["safe_opportunities"] > 0 and dry_run:
             console.print("\n[yellow]ℹ️  No changes were made (dry-run mode)[/yellow]")
             console.print("[dim]Run with --execute to apply optimizations[/dim]")
-        elif result['applied'] > 0:
-            console.print(f"\n[green]✓ Successfully optimized {result['applied']} memories![/green]")
-        elif result['safe_opportunities'] == 0:
-            console.print("\n[green]✓ No safe optimizations needed - storage is healthy![/green]")
+        elif result["applied"] > 0:
+            console.print(
+                f"\n[green]✓ Successfully optimized {result['applied']} memories![/green]"
+            )
+        elif result["safe_opportunities"] == 0:
+            console.print(
+                "\n[green]✓ No safe optimizations needed - storage is healthy![/green]"
+            )
 
         await store.close()
         return 0
@@ -532,6 +580,7 @@ async def auto_optimize_command(args: argparse.Namespace) -> int:
     except Exception as e:
         console.print(f"[red]Error:[/red] {e}")
         import traceback
+
         traceback.print_exc()
         return 1
 
@@ -557,9 +606,15 @@ async def config_command(args: argparse.Namespace) -> int:
         trans_table.add_column("Threshold", style="bold cyan")
         trans_table.add_column("Days", justify="right")
 
-        trans_table.add_row("ACTIVE → RECENT", str(lifecycle_config.active_to_recent_days))
-        trans_table.add_row("RECENT → ARCHIVED", str(lifecycle_config.recent_to_archived_days))
-        trans_table.add_row("ARCHIVED → STALE", str(lifecycle_config.archived_to_stale_days))
+        trans_table.add_row(
+            "ACTIVE → RECENT", str(lifecycle_config.active_to_recent_days)
+        )
+        trans_table.add_row(
+            "RECENT → ARCHIVED", str(lifecycle_config.recent_to_archived_days)
+        )
+        trans_table.add_row(
+            "ARCHIVED → STALE", str(lifecycle_config.archived_to_stale_days)
+        )
 
         console.print(trans_table)
         console.print()
@@ -582,19 +637,44 @@ async def config_command(args: argparse.Namespace) -> int:
         opt_table.add_column("Setting", style="bold cyan")
         opt_table.add_column("Value")
 
-        opt_table.add_row("Session Expiry", f"{optimizer_config.session_expiry_hours} hours")
-        opt_table.add_row("Importance Decay Half-Life", f"{optimizer_config.importance_decay_half_life_days} days")
-        opt_table.add_row("Auto-Archive Threshold", f"{optimizer_config.auto_archive_threshold_days} days")
-        opt_table.add_row("Auto-Delete Threshold", f"{optimizer_config.auto_delete_threshold_days} days")
-        opt_table.add_row("Compression Threshold", f"{optimizer_config.compression_size_threshold_kb} KB")
-        opt_table.add_row("Auto-Compression", "✓ Enabled" if optimizer_config.enable_auto_compression else "✗ Disabled")
-        opt_table.add_row("Auto-Archival", "✓ Enabled" if optimizer_config.enable_auto_archival else "✗ Disabled")
-        opt_table.add_row("Auto-Deduplication", "✓ Enabled" if optimizer_config.enable_auto_deduplication else "✗ Disabled")
+        opt_table.add_row(
+            "Session Expiry", f"{optimizer_config.session_expiry_hours} hours"
+        )
+        opt_table.add_row(
+            "Importance Decay Half-Life",
+            f"{optimizer_config.importance_decay_half_life_days} days",
+        )
+        opt_table.add_row(
+            "Auto-Archive Threshold",
+            f"{optimizer_config.auto_archive_threshold_days} days",
+        )
+        opt_table.add_row(
+            "Auto-Delete Threshold",
+            f"{optimizer_config.auto_delete_threshold_days} days",
+        )
+        opt_table.add_row(
+            "Compression Threshold",
+            f"{optimizer_config.compression_size_threshold_kb} KB",
+        )
+        opt_table.add_row(
+            "Auto-Compression",
+            "✓ Enabled" if optimizer_config.enable_auto_compression else "✗ Disabled",
+        )
+        opt_table.add_row(
+            "Auto-Archival",
+            "✓ Enabled" if optimizer_config.enable_auto_archival else "✗ Disabled",
+        )
+        opt_table.add_row(
+            "Auto-Deduplication",
+            "✓ Enabled" if optimizer_config.enable_auto_deduplication else "✗ Disabled",
+        )
 
         console.print(opt_table)
         console.print()
 
-        console.print("[dim]💡 To modify configuration, edit lifecycle_manager.py and storage_optimizer.py[/dim]")
+        console.print(
+            "[dim]💡 To modify configuration, edit lifecycle_manager.py and storage_optimizer.py[/dim]"
+        )
 
         return 0
 
@@ -605,45 +685,32 @@ async def config_command(args: argparse.Namespace) -> int:
 
 def main():
     """Main entry point for lifecycle command."""
-    parser = argparse.ArgumentParser(
-        description="Memory lifecycle management"
-    )
+    parser = argparse.ArgumentParser(description="Memory lifecycle management")
     subparsers = parser.add_subparsers(dest="command", help="Lifecycle commands")
 
     # Health command
-    health_parser = subparsers.add_parser(
-        "health",
-        help="Display memory health dashboard"
-    )
+    subparsers.add_parser("health", help="Display memory health dashboard")
 
     # Update command
-    update_parser = subparsers.add_parser(
-        "update",
-        help="Update lifecycle states for all memories"
-    )
+    subparsers.add_parser("update", help="Update lifecycle states for all memories")
 
     # Optimize command
-    optimize_parser = subparsers.add_parser(
-        "optimize",
-        help="Analyze storage for optimization opportunities"
+    subparsers.add_parser(
+        "optimize", help="Analyze storage for optimization opportunities"
     )
 
     # Auto-optimize command
     auto_parser = subparsers.add_parser(
-        "auto",
-        help="Automatically apply safe optimizations"
+        "auto", help="Automatically apply safe optimizations"
     )
     auto_parser.add_argument(
         "--execute",
         action="store_true",
-        help="Actually apply changes (default is dry-run)"
+        help="Actually apply changes (default is dry-run)",
     )
 
     # Config command
-    config_parser = subparsers.add_parser(
-        "config",
-        help="Show lifecycle configuration"
-    )
+    subparsers.add_parser("config", help="Show lifecycle configuration")
 
     args = parser.parse_args()
 

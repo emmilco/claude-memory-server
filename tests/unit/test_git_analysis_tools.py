@@ -11,7 +11,7 @@ Tests the 5 new MCP tools:
 import pytest
 import pytest_asyncio
 from datetime import datetime, UTC, timedelta
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import Mock, AsyncMock
 
 from src.core.server import MemoryRAGServer
 from src.config import ServerConfig
@@ -53,7 +53,7 @@ def sample_commits():
             "change_type": "modified",
             "lines_added": 10 + i,
             "lines_deleted": 5 + i,
-            "stats": {"files_changed": 2, "insertions": 10+i, "deletions": 5+i},
+            "stats": {"files_changed": 2, "insertions": 10 + i, "deletions": 5 + i},
         }
         for i in range(10)
     ]
@@ -121,7 +121,10 @@ async def test_get_change_frequency_churn_score_calculation(server):
 
     # Should have high churn score
     assert result["churn_score"] > 0.5
-    assert "high churn" in result["interpretation"].lower() or "medium churn" in result["interpretation"].lower()
+    assert (
+        "high churn" in result["interpretation"].lower()
+        or "medium churn" in result["interpretation"].lower()
+    )
 
 
 # Tests for get_churn_hotspots
@@ -188,7 +191,7 @@ async def test_get_recent_changes_sorting(server, sample_commits):
     if len(changes) > 1:
         for i in range(len(changes) - 1):
             date1 = changes[i]["commit_date"]
-            date2 = changes[i+1]["commit_date"]
+            date2 = changes[i + 1]["commit_date"]
             # More recent (higher date) should come first
             assert date1 >= date2
 
@@ -299,7 +302,9 @@ async def test_get_code_authors_multiple_authors(server):
     assert len(result["authors"]) == 2
 
     # Alice should have 2 commits
-    alice = next((a for a in result["authors"] if a["author_email"] == "alice@example.com"), None)
+    alice = next(
+        (a for a in result["authors"] if a["author_email"] == "alice@example.com"), None
+    )
     assert alice is not None
     assert alice["commit_count"] == 2
     assert alice["lines_added"] == 150
@@ -310,11 +315,41 @@ async def test_get_code_authors_multiple_authors(server):
 async def test_get_code_authors_sorted_by_commits(server):
     """Test that authors are sorted by commit count."""
     commits = [
-        {"author_email": "alice@example.com", "author_name": "Alice", "author_date": datetime.now(UTC), "lines_added": 10, "lines_deleted": 5},
-        {"author_email": "bob@example.com", "author_name": "Bob", "author_date": datetime.now(UTC), "lines_added": 10, "lines_deleted": 5},
-        {"author_email": "alice@example.com", "author_name": "Alice", "author_date": datetime.now(UTC), "lines_added": 10, "lines_deleted": 5},
-        {"author_email": "alice@example.com", "author_name": "Alice", "author_date": datetime.now(UTC), "lines_added": 10, "lines_deleted": 5},
-        {"author_email": "bob@example.com", "author_name": "Bob", "author_date": datetime.now(UTC), "lines_added": 10, "lines_deleted": 5},
+        {
+            "author_email": "alice@example.com",
+            "author_name": "Alice",
+            "author_date": datetime.now(UTC),
+            "lines_added": 10,
+            "lines_deleted": 5,
+        },
+        {
+            "author_email": "bob@example.com",
+            "author_name": "Bob",
+            "author_date": datetime.now(UTC),
+            "lines_added": 10,
+            "lines_deleted": 5,
+        },
+        {
+            "author_email": "alice@example.com",
+            "author_name": "Alice",
+            "author_date": datetime.now(UTC),
+            "lines_added": 10,
+            "lines_deleted": 5,
+        },
+        {
+            "author_email": "alice@example.com",
+            "author_name": "Alice",
+            "author_date": datetime.now(UTC),
+            "lines_added": 10,
+            "lines_deleted": 5,
+        },
+        {
+            "author_email": "bob@example.com",
+            "author_name": "Bob",
+            "author_date": datetime.now(UTC),
+            "lines_added": 10,
+            "lines_deleted": 5,
+        },
     ]
 
     server.store.get_commits_by_file = AsyncMock(return_value=commits)
@@ -335,7 +370,9 @@ async def test_get_code_authors_sorted_by_commits(server):
 async def test_get_file_history_alias(server, sample_commits):
     """Test that get_file_history correctly calls show_function_evolution."""
     # Mock show_function_evolution
-    server.show_function_evolution = AsyncMock(return_value={"status": "success", "commits": []})
+    server.show_function_evolution = AsyncMock(
+        return_value={"status": "success", "commits": []}
+    )
 
     await server.get_file_history("src/test.py", limit=50)
 

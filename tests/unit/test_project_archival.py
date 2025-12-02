@@ -1,7 +1,6 @@
 """Tests for project archival and lifecycle management."""
 
 import pytest
-from pathlib import Path
 from src.memory.project_archival import ProjectArchivalManager, ProjectState
 
 

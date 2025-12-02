@@ -117,7 +117,7 @@ class UsageAnalyzer:
             UsageMetrics with calculated metrics and boost
         """
         name = code_unit.get("name", "")
-        content = code_unit.get("content", "")
+        code_unit.get("content", "")
         unit_type = code_unit.get("unit_type", "function")
         language = code_unit.get("language", "python")
 
@@ -132,7 +132,9 @@ class UsageAnalyzer:
         is_entry_point = self._is_entry_point(file_path)
 
         # Calculate usage boost
-        boost = self._calculate_usage_boost(caller_count, is_public, is_exported, is_entry_point)
+        boost = self._calculate_usage_boost(
+            caller_count, is_public, is_exported, is_entry_point
+        )
 
         return UsageMetrics(
             caller_count=caller_count,
@@ -180,15 +182,15 @@ class UsageAnalyzer:
         # Language-specific call patterns
         if language.lower() in ["python"]:
             # Match: function_name( or function_name (
-            pattern = r'\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\('
+            pattern = r"\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\("
         elif language.lower() in ["javascript", "typescript"]:
             # Match: functionName( or object.method(
-            pattern = r'\b([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\('
+            pattern = r"\b([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\("
         elif language.lower() in ["java", "go", "rust"]:
             # Match: functionName( or object.method(
-            pattern = r'\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\('
+            pattern = r"\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\("
         else:
-            pattern = r'\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\('
+            pattern = r"\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\("
 
         matches = re.findall(pattern, content)
         calls.update(matches)
@@ -218,16 +220,16 @@ class UsageAnalyzer:
         # Language-specific private naming conventions
         if language.lower() == "python":
             # Single or double underscore prefix = private
-            return not name.startswith('_')
+            return not name.startswith("_")
         elif language.lower() in ["javascript", "typescript"]:
             # Underscore or hash prefix = private
-            return not name.startswith('_') and not name.startswith('#')
+            return not name.startswith("_") and not name.startswith("#")
         elif language.lower() == "go":
             # Lowercase first letter = unexported (private)
             return name[0].isupper() if name else False
         else:
             # Default: assume underscore prefix = private
-            return not name.startswith('_')
+            return not name.startswith("_")
 
     def _is_exported(
         self, name: str, file_content: Optional[str], language: str
@@ -247,20 +249,20 @@ class UsageAnalyzer:
         # Language-specific export patterns
         if language.lower() == "python":
             # Check for __all__ export list
-            all_match = re.search(r'__all__\s*=\s*\[(.*?)\]', file_content, re.DOTALL)
+            all_match = re.search(r"__all__\s*=\s*\[(.*?)\]", file_content, re.DOTALL)
             if all_match:
                 exports = all_match.group(1)
                 # Check if name is in the list
                 return f'"{name}"' in exports or f"'{name}'" in exports
             # If no __all__, assume public functions are exported
-            return not name.startswith('_')
+            return not name.startswith("_")
 
         elif language.lower() in ["javascript", "typescript"]:
             # Check for export keyword
             export_patterns = [
-                rf'export\s+(function|class|const|let|var)\s+{re.escape(name)}\b',
-                rf'export\s+\{{[^}}]*\b{re.escape(name)}\b[^}}]*\}}',  # export { func1, func2 }
-                rf'export\s+default\s+{re.escape(name)}\b',
+                rf"export\s+(function|class|const|let|var)\s+{re.escape(name)}\b",
+                rf"export\s+\{{[^}}]*\b{re.escape(name)}\b[^}}]*\}}",  # export { func1, func2 }
+                rf"export\s+default\s+{re.escape(name)}\b",
             ]
             for pattern in export_patterns:
                 if re.search(pattern, file_content):
@@ -270,7 +272,7 @@ class UsageAnalyzer:
         elif language.lower() == "java":
             # Check for public modifier in class/method declaration
             # More flexible pattern to match methods: public void methodName()
-            pattern = rf'\bpublic\s+(\w+\s+)*{re.escape(name)}\s*\('
+            pattern = rf"\bpublic\s+(\w+\s+)*{re.escape(name)}\s*\("
             return bool(re.search(pattern, file_content))
 
         elif language.lower() == "go":
@@ -303,19 +305,30 @@ class UsageAnalyzer:
         path_parts = [p.lower() for p in file_path.parts]
 
         # Entry point filenames
-        entry_point_files = ['__init__.py', 'main.py', 'app.py', 'api.py', 'server.py', 'cli.py']
+        entry_point_files = [
+            "__init__.py",
+            "main.py",
+            "app.py",
+            "api.py",
+            "server.py",
+            "cli.py",
+        ]
         if filename in entry_point_files:
             return True
 
         # Entry point directories
-        entry_point_dirs = ['api', 'core', 'routes', 'endpoints', 'handlers']
+        entry_point_dirs = ["api", "core", "routes", "endpoints", "handlers"]
         if any(dir_name in path_parts for dir_name in entry_point_dirs):
             return True
 
         return False
 
     def _calculate_usage_boost(
-        self, caller_count: int, is_public: bool, is_exported: bool, is_entry_point: bool
+        self,
+        caller_count: int,
+        is_public: bool,
+        is_exported: bool,
+        is_entry_point: bool,
     ) -> float:
         """
         Calculate usage boost (0.0-0.2 range).

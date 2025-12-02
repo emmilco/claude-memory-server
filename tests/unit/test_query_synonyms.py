@@ -113,7 +113,10 @@ class TestCodeContextExpansion:
 
         # Should add database-related terms
         expanded_lower = expanded.lower()
-        assert any(term in expanded_lower for term in ["connection", "query", "table", "schema"])
+        assert any(
+            term in expanded_lower
+            for term in ["connection", "query", "table", "schema"]
+        )
 
     def test_expand_with_code_context_api(self):
         """Test API-related context expansion."""
@@ -121,7 +124,10 @@ class TestCodeContextExpansion:
         expanded = expand_with_code_context(query, max_context_terms=5)
 
         expanded_lower = expanded.lower()
-        assert any(term in expanded_lower for term in ["endpoint", "request", "response", "http"])
+        assert any(
+            term in expanded_lower
+            for term in ["endpoint", "request", "response", "http"]
+        )
 
     def test_expand_with_code_context_max_terms(self):
         """Test that max_context_terms is respected."""
@@ -284,7 +290,10 @@ class TestSpecificUseCases:
 
         expanded_lower = expanded.lower()
         # Should include API-related terms or the original query terms
-        assert any(term in expanded_lower for term in ["endpoint", "http", "request", "api", "rest"])
+        assert any(
+            term in expanded_lower
+            for term in ["endpoint", "http", "request", "api", "rest"]
+        )
 
     @pytest.mark.skip_ci(reason="Query expansion timing/environment sensitive")
     def test_error_handling_search(self):
@@ -303,7 +312,9 @@ class TestSpecificUseCases:
 
         expanded_lower = expanded.lower()
         # Should include async-related terms
-        assert any(term in expanded_lower for term in ["await", "promise", "asynchronous"])
+        assert any(
+            term in expanded_lower for term in ["await", "promise", "asynchronous"]
+        )
 
 
 class TestEdgeCases:

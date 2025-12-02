@@ -18,23 +18,23 @@ Qdrant resource contention. They pass reliably when run in isolation.
 import pytest
 import pytest_asyncio
 import asyncio
-from typing import List
-from datetime import datetime, UTC
 
 from src.store.qdrant_store import QdrantMemoryStore
-from src.store.connection_pool import QdrantConnectionPool, PoolStats
+from src.store.connection_pool import QdrantConnectionPool
 from src.config import ServerConfig
-from src.core.models import MemoryUnit
 from tests.conftest import mock_embedding
 
 # Skip in parallel test runs - flaky due to Qdrant resource contention
-pytestmark = pytest.mark.skip(reason="Flaky in parallel execution - pass when run in isolation")
+pytestmark = pytest.mark.skip(
+    reason="Flaky in parallel execution - pass when run in isolation"
+)
 
 
 @pytest.fixture
 def test_config(unique_qdrant_collection):
     """Get test config with unique collection."""
     from src.config import get_config
+
     config = get_config()
     config.qdrant_collection_name = unique_qdrant_collection
     # Configure pool settings for tests
@@ -106,15 +106,14 @@ class TestPoolStoreIntegration:
                 "category": "context",
                 "context_level": "PROJECT_CONTEXT",
                 "importance": 0.8,
-            }
+            },
         )
 
         assert memory_id is not None
 
         # Retrieve should work
         results = await store_with_pool.retrieve(
-            query_embedding=mock_embedding(value=0.1),
-            limit=10
+            query_embedding=mock_embedding(value=0.1), limit=10
         )
 
         assert len(results) > 0
@@ -132,8 +131,7 @@ class TestPoolStoreIntegration:
 
         # Perform retrieve
         await store_with_pool.retrieve(
-            query_embedding=mock_embedding(value=0.1),
-            limit=5
+            query_embedding=mock_embedding(value=0.1), limit=5
         )
 
         # Check that pool was used
@@ -152,7 +150,7 @@ class TestPoolStoreIntegration:
                     "category": "context",
                     "context_level": "PROJECT_CONTEXT",
                     "importance": 0.5,
-                }
+                },
             )
 
         # Get initial stats
@@ -162,14 +160,11 @@ class TestPoolStoreIntegration:
         # Perform concurrent retrieves
         async def concurrent_retrieve(i):
             return await store_with_pool.retrieve(
-                query_embedding=mock_embedding(value=float(i) / 10),
-                limit=5
+                query_embedding=mock_embedding(value=float(i) / 10), limit=5
             )
 
         # Run 10 concurrent retrieves
-        results = await asyncio.gather(*[
-            concurrent_retrieve(i) for i in range(10)
-        ])
+        results = await asyncio.gather(*[concurrent_retrieve(i) for i in range(10)])
 
         # All should succeed
         assert len(results) == 10
@@ -213,7 +208,7 @@ class TestPoolStoreIntegration:
                     "category": "context",
                     "context_level": "PROJECT_CONTEXT",
                     "importance": 0.5,
-                }
+                },
             )
             for i in range(10)
         ]
@@ -229,7 +224,9 @@ class TestPoolStoreIntegration:
 
         # Should have used pool
         final_stats = store_with_pool.get_pool_stats()
-        assert final_stats["total_acquires"] == initial_acquires + 1  # Single acquire for batch
+        assert (
+            final_stats["total_acquires"] == initial_acquires + 1
+        )  # Single acquire for batch
 
     async def test_delete_with_pool(self, store_with_pool):
         """Test delete operation with pool."""
@@ -240,7 +237,7 @@ class TestPoolStoreIntegration:
             metadata={
                 "category": "context",
                 "context_level": "PROJECT_CONTEXT",
-            }
+            },
         )
 
         # Get initial stats
@@ -265,13 +262,12 @@ class TestPoolStoreIntegration:
                 metadata={
                     "category": "context",
                     "context_level": "PROJECT_CONTEXT",
-                }
+                },
             )
 
         for i in range(5):
             await store_with_pool.retrieve(
-                query_embedding=mock_embedding(value=float(i)),
-                limit=5
+                query_embedding=mock_embedding(value=float(i)), limit=5
             )
 
         # Check that acquires == releases (all connections returned)
@@ -299,7 +295,7 @@ class TestPoolStoreIntegration:
                 metadata={
                     "category": "context",
                     "context_level": "PROJECT_CONTEXT",
-                }
+                },
             )
 
             # No health failures should occur with valid Qdrant
@@ -342,13 +338,13 @@ class TestPoolStoreIntegration:
             id1 = await store1.store(
                 content="Store 1 memory",
                 embedding=mock_embedding(value=0.1),
-                metadata={"category": "context", "context_level": "PROJECT_CONTEXT"}
+                metadata={"category": "context", "context_level": "PROJECT_CONTEXT"},
             )
 
             id2 = await store2.store(
                 content="Store 2 memory",
                 embedding=mock_embedding(value=0.2),
-                metadata={"category": "context", "context_level": "PROJECT_CONTEXT"}
+                metadata={"category": "context", "context_level": "PROJECT_CONTEXT"},
             )
 
             assert id1 != id2
@@ -390,15 +386,14 @@ class TestPoolStoreIntegration:
             metadata={
                 "category": "context",
                 "context_level": "PROJECT_CONTEXT",
-            }
+            },
         )
 
         assert memory_id is not None
 
         # Retrieve operation
         results = await store_without_pool.retrieve(
-            query_embedding=mock_embedding(value=0.3),
-            limit=5
+            query_embedding=mock_embedding(value=0.3), limit=5
         )
 
         assert len(results) > 0
@@ -411,8 +406,16 @@ class TestPoolStoreIntegration:
         baseline_releases = stats["total_releases"]
 
         # Perform exactly 3 operations
-        await store_with_pool.store("Test 1", mock_embedding(value=0.1), {"category": "context", "context_level": "PROJECT_CONTEXT"})
-        await store_with_pool.store("Test 2", mock_embedding(value=0.2), {"category": "context", "context_level": "PROJECT_CONTEXT"})
+        await store_with_pool.store(
+            "Test 1",
+            mock_embedding(value=0.1),
+            {"category": "context", "context_level": "PROJECT_CONTEXT"},
+        )
+        await store_with_pool.store(
+            "Test 2",
+            mock_embedding(value=0.2),
+            {"category": "context", "context_level": "PROJECT_CONTEXT"},
+        )
         await store_with_pool.retrieve(mock_embedding(value=0.1), limit=5)
 
         # Check metrics

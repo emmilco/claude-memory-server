@@ -57,8 +57,12 @@ def test_estimate_project_specific(estimator, metrics_store):
     metrics_store.store_metrics(100, 20.0, project_name="slow-project")
 
     # Fast project should have faster estimate
-    fast_min, fast_max = estimator.estimate_indexing_time(100, project_name="fast-project")
-    slow_min, slow_max = estimator.estimate_indexing_time(100, project_name="slow-project")
+    fast_min, fast_max = estimator.estimate_indexing_time(
+        100, project_name="fast-project"
+    )
+    slow_min, slow_max = estimator.estimate_indexing_time(
+        100, project_name="slow-project"
+    )
 
     assert fast_max < slow_min  # Fast project should be clearly faster
 

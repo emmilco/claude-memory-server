@@ -12,7 +12,6 @@ Responsibilities:
 
 import asyncio
 import json
-import logging
 import re
 import threading
 from datetime import datetime, timedelta, UTC
@@ -261,7 +260,7 @@ class MemoryService:
         Returns:
             Dict with memory_id, status, and auto-classified context_level
         """
-        op_id = new_operation()
+        new_operation()
         logger.info(f"Storing memory: {content[:50]}...")
 
         if self.config.advanced.read_only_mode:
@@ -272,17 +271,25 @@ class MemoryService:
             try:
                 category_enum = MemoryCategory(category)
             except ValueError:
-                raise ValidationError(f"Invalid value '{category}' for parameter 'category'. Valid values: preference, fact, event, workflow, context, code")
+                raise ValidationError(
+                    f"Invalid value '{category}' for parameter 'category'. Valid values: preference, fact, event, workflow, context, code"
+                )
 
             try:
                 scope_enum = MemoryScope(scope)
             except ValueError:
-                raise ValidationError(f"Invalid value '{scope}' for parameter 'scope'. Valid values: global, project")
+                raise ValidationError(
+                    f"Invalid value '{scope}' for parameter 'scope'. Valid values: global, project"
+                )
 
             try:
-                context_level_enum = ContextLevel(context_level) if context_level else None
+                context_level_enum = (
+                    ContextLevel(context_level) if context_level else None
+                )
             except ValueError:
-                raise ValidationError(f"Invalid value '{context_level}' for parameter 'context_level'. Valid values: USER_PREFERENCE, PROJECT_CONTEXT, SESSION_STATE")
+                raise ValidationError(
+                    f"Invalid value '{context_level}' for parameter 'context_level'. Valid values: USER_PREFERENCE, PROJECT_CONTEXT, SESSION_STATE"
+                )
 
             request = StoreMemoryRequest(
                 content=content,
@@ -388,34 +395,44 @@ class MemoryService:
         Returns:
             Dict with results, relevance scores, total_found, query_time_ms
         """
-        op_id = new_operation()
+        new_operation()
         logger.info(f"Retrieving memories: query='{query[:50]}', limit={limit}")
 
         try:
             import time
+
             start_time = time.time()
 
             # Construct advanced_filters if provided
             adv_filters_obj = None
             if advanced_filters:
                 from src.core.models import AdvancedSearchFilters
+
                 adv_filters_obj = AdvancedSearchFilters(**advanced_filters)
 
             # Validate enum parameters
             try:
-                context_level_enum = ContextLevel(context_level) if context_level else None
+                context_level_enum = (
+                    ContextLevel(context_level) if context_level else None
+                )
             except ValueError:
-                raise ValidationError(f"Invalid value '{context_level}' for parameter 'context_level'. Valid values: USER_PREFERENCE, PROJECT_CONTEXT, SESSION_STATE")
+                raise ValidationError(
+                    f"Invalid value '{context_level}' for parameter 'context_level'. Valid values: USER_PREFERENCE, PROJECT_CONTEXT, SESSION_STATE"
+                )
 
             try:
                 scope_enum = MemoryScope(scope) if scope else None
             except ValueError:
-                raise ValidationError(f"Invalid value '{scope}' for parameter 'scope'. Valid values: global, project")
+                raise ValidationError(
+                    f"Invalid value '{scope}' for parameter 'scope'. Valid values: global, project"
+                )
 
             try:
                 category_enum = MemoryCategory(category) if category else None
             except ValueError:
-                raise ValidationError(f"Invalid value '{category}' for parameter 'category'. Valid values: preference, fact, event, workflow, context, code")
+                raise ValidationError(
+                    f"Invalid value '{category}' for parameter 'category'. Valid values: preference, fact, event, workflow, context, code"
+                )
 
             # Validate request
             request = QueryRequest(
@@ -434,7 +451,9 @@ class MemoryService:
             expanded_query = query
             recent_queries = []
             if session_id and self.conversation_tracker and self.query_expander:
-                recent_queries = self.conversation_tracker.get_recent_queries(session_id)
+                recent_queries = self.conversation_tracker.get_recent_queries(
+                    session_id
+                )
                 if recent_queries:
                     expanded_query = await self.query_expander.expand_query(
                         query, recent_queries
@@ -446,15 +465,17 @@ class MemoryService:
             query_embedding = await self._get_embedding(expanded_query)
 
             # Build filters with Pydantic validation
-            filters = SearchFilters.model_validate({
-                "context_level": request.context_level,
-                "scope": request.scope,
-                "project_name": request.project_name,
-                "category": request.category,
-                "min_importance": request.min_importance,
-                "tags": request.tags,
-                "advanced_filters": request.advanced_filters,
-            })
+            filters = SearchFilters.model_validate(
+                {
+                    "context_level": request.context_level,
+                    "scope": request.scope,
+                    "project_name": request.project_name,
+                    "category": request.category,
+                    "min_importance": request.min_importance,
+                    "tags": request.tags,
+                    "advanced_filters": request.advanced_filters,
+                }
+            )
 
             # Determine fetch limit (with deduplication multiplier if needed)
             fetch_limit = request.limit
@@ -463,7 +484,9 @@ class MemoryService:
             if session_id and self.conversation_tracker:
                 # Fetch more to account for deduplication
                 fetch_limit = request.limit * self.config.deduplication_fetch_multiplier
-                shown_memory_ids = self.conversation_tracker.get_shown_memory_ids(session_id)
+                shown_memory_ids = self.conversation_tracker.get_shown_memory_ids(
+                    session_id
+                )
                 logger.debug(
                     f"Deduplication enabled: fetching {fetch_limit} results "
                     f"(filtering {len(shown_memory_ids)} shown)"
@@ -484,10 +507,11 @@ class MemoryService:
             # Apply deduplication if session provided
             if session_id and shown_memory_ids:
                 filtered_results = [
-                    (memory, score) for memory, score in results
+                    (memory, score)
+                    for memory, score in results
                     if memory.id not in shown_memory_ids
                 ]
-                results = filtered_results[:request.limit]
+                results = filtered_results[: request.limit]
 
             # Update stats for successful retrieval
             with self._stats_lock:
@@ -504,7 +528,9 @@ class MemoryService:
                         composite_score = self.usage_tracker.calculate_composite_score(
                             similarity_score=similarity_score,
                             created_at=memory.created_at,
-                            last_used=datetime.fromisoformat(usage_stats["last_used"]) if usage_stats.get("last_used") else None,
+                            last_used=datetime.fromisoformat(usage_stats["last_used"])
+                            if usage_stats.get("last_used")
+                            else None,
                             use_count=usage_stats.get("use_count", 0),
                         )
                     else:
@@ -518,7 +544,10 @@ class MemoryService:
                 scores = [comp_score for _, comp_score, _ in reranked_results]
                 await self.usage_tracker.record_batch(memory_ids, scores)
 
-                results = [(memory, composite_score) for memory, composite_score, _ in reranked_results]
+                results = [
+                    (memory, composite_score)
+                    for memory, composite_score, _ in reranked_results
+                ]
 
             # Convert to response format
             memory_results = [
@@ -549,17 +578,23 @@ class MemoryService:
                     session_id=session_id,
                     query=query,
                     results_shown=results_shown,
-                    query_embedding=query_embedding if self.config.memory.conversation_tracking else None,
+                    query_embedding=query_embedding
+                    if self.config.memory.conversation_tracking
+                    else None,
                 )
 
             # Log metrics for performance monitoring
             if self.metrics_collector:
-                avg_relevance = sum(r.score for r in memory_results) / len(memory_results) if memory_results else 0.0
+                avg_relevance = (
+                    sum(r.score for r in memory_results) / len(memory_results)
+                    if memory_results
+                    else 0.0
+                )
                 self.metrics_collector.log_query(
                     query=query,
                     latency_ms=query_time_ms,
                     result_count=len(memory_results),
-                    avg_relevance=avg_relevance
+                    avg_relevance=avg_relevance,
                 )
 
             return response.model_dump()
@@ -578,7 +613,7 @@ class MemoryService:
         Returns:
             Dict with status ("success" or "not_found")
         """
-        op_id = new_operation()
+        new_operation()
         logger.info(f"Deleting memory: {memory_id}")
 
         if self.config.advanced.read_only_mode:
@@ -598,12 +633,14 @@ class MemoryService:
                 if self.tag_manager:
                     try:
                         self.tag_manager.cleanup_memory_tags(memory_id)
-                        logger.debug(f"Cleaned up tag associations for memory: {memory_id}")
+                        logger.debug(
+                            f"Cleaned up tag associations for memory: {memory_id}"
+                        )
                     except Exception as tag_error:
                         # Log but don't fail the delete operation if tag cleanup fails
                         logger.warning(
                             f"Failed to cleanup tags for memory {memory_id}: {tag_error}",
-                            exc_info=True
+                            exc_info=True,
                         )
 
                 with self._stats_lock:
@@ -651,13 +688,15 @@ class MemoryService:
                         "project_name": memory.project_name,
                         "created_at": memory.created_at.isoformat(),
                         "updated_at": memory.updated_at.isoformat(),
-                        "last_accessed": memory.last_accessed.isoformat() if memory.last_accessed else None,
-                    }
+                        "last_accessed": memory.last_accessed.isoformat()
+                        if memory.last_accessed
+                        else None,
+                    },
                 }
             else:
                 return {
                     "status": "not_found",
-                    "message": f"Memory {memory_id} not found"
+                    "message": f"Memory {memory_id} not found",
                 }
 
         except Exception as e:
@@ -710,7 +749,9 @@ class MemoryService:
                     updates["category"] = cat.value
                     updated_fields.append("category")
                 except ValueError:
-                    raise ValidationError(f"Invalid value '{category}' for parameter 'category'. Valid values: preference, fact, event, workflow, context, code")
+                    raise ValidationError(
+                        f"Invalid value '{category}' for parameter 'category'. Valid values: preference, fact, event, workflow, context, code"
+                    )
 
             if importance is not None:
                 if not (0.0 <= importance <= 1.0):
@@ -737,7 +778,9 @@ class MemoryService:
                     updates["context_level"] = cl.value
                     updated_fields.append("context_level")
                 except ValueError:
-                    raise ValidationError(f"Invalid value '{context_level}' for parameter 'context_level'. Valid values: USER_PREFERENCE, PROJECT_CONTEXT, SESSION_STATE")
+                    raise ValidationError(
+                        f"Invalid value '{context_level}' for parameter 'context_level'. Valid values: USER_PREFERENCE, PROJECT_CONTEXT, SESSION_STATE"
+                    )
 
             if not updates:
                 raise ValidationError("At least one field must be provided for update")
@@ -748,7 +791,9 @@ class MemoryService:
 
             if "content" in updates and regenerate_embedding:
                 embedding_regenerated = True
-                new_embedding = await self.embedding_generator.generate(updates["content"])
+                new_embedding = await self.embedding_generator.generate(
+                    updates["content"]
+                )
 
             # Perform update
             try:
@@ -756,25 +801,27 @@ class MemoryService:
                     success = await self.store.update(
                         memory_id=memory_id,
                         updates=updates,
-                        new_embedding=new_embedding
+                        new_embedding=new_embedding,
                     )
             except TimeoutError:
                 logger.error("Update operation timed out after 30s")
                 raise StorageError("Memory update operation timed out")
 
             if success:
-                self.stats["memories_updated"] = self.stats.get("memories_updated", 0) + 1
+                self.stats["memories_updated"] = (
+                    self.stats.get("memories_updated", 0) + 1
+                )
 
                 return {
                     "status": "updated",
                     "updated_fields": updated_fields,
                     "embedding_regenerated": embedding_regenerated,
-                    "updated_at": datetime.now(UTC).isoformat()
+                    "updated_at": datetime.now(UTC).isoformat(),
                 }
             else:
                 return {
                     "status": "not_found",
-                    "message": f"Memory {memory_id} not found"
+                    "message": f"Memory {memory_id} not found",
                 }
 
         except ValidationError:
@@ -799,7 +846,7 @@ class MemoryService:
         sort_by: str = "created_at",
         sort_order: str = "desc",
         limit: int = 20,
-        offset: int = 0
+        offset: int = 0,
     ) -> Dict[str, Any]:
         """
         List and browse memories with filtering and pagination.
@@ -838,17 +885,23 @@ class MemoryService:
                 try:
                     filters["category"] = MemoryCategory(category)
                 except ValueError:
-                    raise ValidationError(f"Invalid value '{category}' for parameter 'category'. Valid values: preference, fact, event, workflow, context, code")
+                    raise ValidationError(
+                        f"Invalid value '{category}' for parameter 'category'. Valid values: preference, fact, event, workflow, context, code"
+                    )
             if context_level:
                 try:
                     filters["context_level"] = ContextLevel(context_level)
                 except ValueError:
-                    raise ValidationError(f"Invalid value '{context_level}' for parameter 'context_level'. Valid values: USER_PREFERENCE, PROJECT_CONTEXT, SESSION_STATE")
+                    raise ValidationError(
+                        f"Invalid value '{context_level}' for parameter 'context_level'. Valid values: USER_PREFERENCE, PROJECT_CONTEXT, SESSION_STATE"
+                    )
             if scope:
                 try:
                     filters["scope"] = MemoryScope(scope)
                 except ValueError:
-                    raise ValidationError(f"Invalid value '{scope}' for parameter 'scope'. Valid values: global, project")
+                    raise ValidationError(
+                        f"Invalid value '{scope}' for parameter 'scope'. Valid values: global, project"
+                    )
             if project_name:
                 filters["project_name"] = project_name
             if tags:
@@ -869,7 +922,7 @@ class MemoryService:
                         sort_by=sort_by,
                         sort_order=sort_order,
                         limit=limit,
-                        offset=offset
+                        offset=offset,
                     )
             except TimeoutError:
                 logger.error("List memories operation timed out after 30s")
@@ -900,7 +953,7 @@ class MemoryService:
                 "returned_count": len(memory_dicts),
                 "offset": offset,
                 "limit": limit,
-                "has_more": (offset + len(memory_dicts)) < total_count
+                "has_more": (offset + len(memory_dicts)) < total_count,
             }
 
         except ValidationError:
@@ -930,7 +983,9 @@ class MemoryService:
         try:
             try:
                 async with asyncio.timeout(30.0):
-                    success = await self.store.migrate_memory_scope(memory_id, new_project_name)
+                    success = await self.store.migrate_memory_scope(
+                        memory_id, new_project_name
+                    )
             except TimeoutError:
                 logger.error("Migrate memory scope operation timed out after 30s")
                 raise StorageError("Migrate memory scope operation timed out")
@@ -1121,30 +1176,34 @@ class MemoryService:
             Dict with status, file_path (or content), memory_count
         """
         if format not in ["json", "markdown"]:
-            raise ValidationError(f"Invalid export format: {format}. Must be 'json' or 'markdown'")
+            raise ValidationError(
+                f"Invalid export format: {format}. Must be 'json' or 'markdown'"
+            )
 
         try:
-            filters = SearchFilters.model_validate({
-                "category": MemoryCategory(category) if category else None,
-                "context_level": ContextLevel(context_level) if context_level else None,
-                "scope": MemoryScope(scope) if scope else None,
-                "tags": tags or [],
-                "min_importance": min_importance,
-                "max_importance": max_importance,
-                "date_from": date_from,
-                "date_to": date_to,
-            })
+            filters = SearchFilters.model_validate(
+                {
+                    "category": MemoryCategory(category) if category else None,
+                    "context_level": ContextLevel(context_level)
+                    if context_level
+                    else None,
+                    "scope": MemoryScope(scope) if scope else None,
+                    "tags": tags or [],
+                    "min_importance": min_importance,
+                    "max_importance": max_importance,
+                    "date_from": date_from,
+                    "date_to": date_to,
+                }
+            )
 
             filters_dict = filters.to_dict() if filters else {}
             if project_name:
-                filters_dict['project_name'] = project_name
+                filters_dict["project_name"] = project_name
 
             try:
                 async with asyncio.timeout(30.0):
                     memories_list, total_count = await self.store.list_memories(
-                        filters=filters_dict,
-                        limit=999999,
-                        offset=0
+                        filters=filters_dict, limit=999999, offset=0
                     )
             except TimeoutError:
                 logger.error("List memories for export operation timed out after 30s")
@@ -1152,21 +1211,25 @@ class MemoryService:
 
             memories = []
             for mem in memories_list:
-                memories.append({
-                    "id": mem.id,
-                    "memory_id": mem.id,
-                    "content": mem.content,
-                    "category": mem.category.value,
-                    "context_level": mem.context_level.value,
-                    "importance": mem.importance,
-                    "tags": mem.tags or [],
-                    "metadata": mem.metadata or {},
-                    "scope": mem.scope.value,
-                    "project_name": mem.project_name,
-                    "created_at": mem.created_at.isoformat(),
-                    "updated_at": mem.updated_at.isoformat(),
-                    "last_accessed": mem.last_accessed.isoformat() if mem.last_accessed else None,
-                })
+                memories.append(
+                    {
+                        "id": mem.id,
+                        "memory_id": mem.id,
+                        "content": mem.content,
+                        "category": mem.category.value,
+                        "context_level": mem.context_level.value,
+                        "importance": mem.importance,
+                        "tags": mem.tags or [],
+                        "metadata": mem.metadata or {},
+                        "scope": mem.scope.value,
+                        "project_name": mem.project_name,
+                        "created_at": mem.created_at.isoformat(),
+                        "updated_at": mem.updated_at.isoformat(),
+                        "last_accessed": mem.last_accessed.isoformat()
+                        if mem.last_accessed
+                        else None,
+                    }
+                )
 
             total_count = len(memories)
 
@@ -1186,7 +1249,7 @@ class MemoryService:
                         "date_from": date_from,
                         "date_to": date_to,
                     },
-                    "memories": memories
+                    "memories": memories,
                 }
                 content = json.dumps(export_data, indent=2)
             else:  # markdown
@@ -1194,7 +1257,7 @@ class MemoryService:
                     "# Memory Export",
                     f"Exported: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
                     f"Total Memories: {total_count}",
-                    ""
+                    "",
                 ]
 
                 for mem in memories:
@@ -1203,14 +1266,14 @@ class MemoryService:
                     lines.append(f"**Importance:** {mem['importance']:.2f}")
                     lines.append(f"**Context Level:** {mem['context_level']}")
                     lines.append(f"**Scope:** {mem['scope']}")
-                    if mem.get('project_name'):
+                    if mem.get("project_name"):
                         lines.append(f"**Project:** {mem['project_name']}")
-                    if mem.get('tags'):
+                    if mem.get("tags"):
                         lines.append(f"**Tags:** {', '.join(mem['tags'])}")
                     lines.append(f"**Created:** {mem['created_at']}")
                     lines.append(f"**Updated:** {mem.get('updated_at', 'N/A')}")
                     lines.append("")
-                    lines.append(mem['content'])
+                    lines.append(mem["content"])
                     lines.append("")
                     lines.append("---")
                     lines.append("")
@@ -1220,21 +1283,23 @@ class MemoryService:
             if output_path:
                 output_file = Path(output_path).expanduser()
                 output_file.parent.mkdir(parents=True, exist_ok=True)
-                output_file.write_text(content, encoding='utf-8')
+                output_file.write_text(content, encoding="utf-8")
 
-                logger.info(f"Exported {total_count} memories to {output_path} ({format} format)")
+                logger.info(
+                    f"Exported {total_count} memories to {output_path} ({format} format)"
+                )
                 return {
                     "status": "success",
                     "file_path": str(output_file),
                     "format": format,
-                    "count": total_count
+                    "count": total_count,
                 }
             else:
                 return {
                     "status": "success",
                     "content": content,
                     "format": format,
-                    "count": total_count
+                    "count": total_count,
                 }
 
         except ValidationError:
@@ -1285,13 +1350,15 @@ class MemoryService:
                             f"Cannot auto-detect format from extension: {ext}. Supported: .json"
                         )
 
-                import_content = import_file.read_text(encoding='utf-8')
+                import_content = import_file.read_text(encoding="utf-8")
             else:
                 import_content = content
                 format = format or "json"
 
             if format != "json":
-                raise ValidationError(f"Only JSON format is supported for import, got: {format}")
+                raise ValidationError(
+                    f"Only JSON format is supported for import, got: {format}"
+                )
 
             try:
                 data = json.loads(import_content)
@@ -1321,7 +1388,9 @@ class MemoryService:
                         async with asyncio.timeout(30.0):
                             existing = await self.store.get_by_id(mem_id)
                     except TimeoutError:
-                        logger.error(f"Get by ID for import timed out after 30s (ID: {mem_id})")
+                        logger.error(
+                            f"Get by ID for import timed out after 30s (ID: {mem_id})"
+                        )
                         errors.append(f"Memory {mem_id}: Timeout during retrieval")
                         continue
 
@@ -1330,12 +1399,16 @@ class MemoryService:
                             skipped_count += 1
                             continue
                         elif conflict_mode == "overwrite":
-                            embedding = await self.embedding_generator.generate(mem_data["content"])
+                            embedding = await self.embedding_generator.generate(
+                                mem_data["content"]
+                            )
 
                             updates = {
                                 "content": mem_data["content"],
                                 "category": mem_data.get("category", "fact"),
-                                "context_level": mem_data.get("context_level", "SESSION_STATE"),
+                                "context_level": mem_data.get(
+                                    "context_level", "SESSION_STATE"
+                                ),
                                 "importance": mem_data.get("importance", 0.5),
                                 "tags": mem_data.get("tags", []),
                             }
@@ -1345,9 +1418,13 @@ class MemoryService:
 
                             try:
                                 async with asyncio.timeout(30.0):
-                                    success = await self.store.update(mem_id, updates, embedding)
+                                    success = await self.store.update(
+                                        mem_id, updates, embedding
+                                    )
                             except TimeoutError:
-                                logger.error(f"Update for import timed out after 30s (ID: {mem_id})")
+                                logger.error(
+                                    f"Update for import timed out after 30s (ID: {mem_id})"
+                                )
                                 errors.append(f"Memory {mem_id}: Timeout during update")
                                 continue
 
@@ -1360,11 +1437,20 @@ class MemoryService:
 
                             if "content" in mem_data and mem_data["content"]:
                                 updates["content"] = mem_data["content"]
-                                embedding = await self.embedding_generator.generate(mem_data["content"])
+                                embedding = await self.embedding_generator.generate(
+                                    mem_data["content"]
+                                )
                             else:
                                 embedding = None
 
-                            for field in ["category", "context_level", "scope", "importance", "tags", "project_name"]:
+                            for field in [
+                                "category",
+                                "context_level",
+                                "scope",
+                                "importance",
+                                "tags",
+                                "project_name",
+                            ]:
                                 if field in mem_data and mem_data[field] is not None:
                                     updates[field] = mem_data[field]
 
@@ -1374,25 +1460,37 @@ class MemoryService:
                             if updates:
                                 try:
                                     async with asyncio.timeout(30.0):
-                                        success = await self.store.update(mem_id, updates, embedding)
+                                        success = await self.store.update(
+                                            mem_id, updates, embedding
+                                        )
                                 except TimeoutError:
-                                    logger.error(f"Update for merge import timed out after 30s (ID: {mem_id})")
-                                    errors.append(f"Memory {mem_id}: Timeout during merge update")
+                                    logger.error(
+                                        f"Update for merge import timed out after 30s (ID: {mem_id})"
+                                    )
+                                    errors.append(
+                                        f"Memory {mem_id}: Timeout during merge update"
+                                    )
                                     continue
 
                                 if success:
                                     updated_count += 1
                                 else:
-                                    errors.append(f"Memory {mem_id}: Merge update failed")
+                                    errors.append(
+                                        f"Memory {mem_id}: Merge update failed"
+                                    )
                             else:
                                 skipped_count += 1
                     else:
-                        embedding = await self.embedding_generator.generate(mem_data["content"])
+                        embedding = await self.embedding_generator.generate(
+                            mem_data["content"]
+                        )
 
                         request = StoreMemoryRequest(
                             content=mem_data["content"],
                             category=mem_data.get("category", "fact"),
-                            context_level=mem_data.get("context_level", "SESSION_STATE"),
+                            context_level=mem_data.get(
+                                "context_level", "SESSION_STATE"
+                            ),
                             importance=mem_data.get("importance", 0.5),
                             tags=mem_data.get("tags", []),
                             metadata=mem_data.get("metadata", {}),
@@ -1419,14 +1517,18 @@ class MemoryService:
                                     metadata=store_metadata,
                                 )
                         except TimeoutError:
-                            logger.error(f"Store for import timed out after 30s (ID: {mem_id})")
+                            logger.error(
+                                f"Store for import timed out after 30s (ID: {mem_id})"
+                            )
                             errors.append(f"Memory {mem_id}: Timeout during store")
                             continue
 
                         created_count += 1
 
                 except Exception as e:
-                    errors.append(f"Memory at index {idx} (ID: {mem_id if 'mem_id' in locals() else 'unknown'}): {str(e)}")
+                    errors.append(
+                        f"Memory at index {idx} (ID: {mem_id if 'mem_id' in locals() else 'unknown'}): {str(e)}"
+                    )
 
             logger.info(
                 f"Import completed: {created_count} created, {updated_count} updated, "
@@ -1439,7 +1541,7 @@ class MemoryService:
                 "updated": updated_count,
                 "skipped": skipped_count,
                 "errors": errors,
-                "total_processed": len(memories)
+                "total_processed": len(memories),
             }
 
         except ValidationError:
@@ -1552,10 +1654,14 @@ class MemoryService:
                     project_stats.append(stats)
 
                     for category, count in stats.get("categories", {}).items():
-                        all_categories[category] = all_categories.get(category, 0) + count
+                        all_categories[category] = (
+                            all_categories.get(category, 0) + count
+                        )
 
                     for state, count in stats.get("lifecycle_states", {}).items():
-                        all_lifecycle_states[state] = all_lifecycle_states.get(state, 0) + count
+                        all_lifecycle_states[state] = (
+                            all_lifecycle_states.get(state, 0) + count
+                        )
 
                 except Exception as e:
                     logger.warning(f"Failed to get stats for project {project}: {e}")
@@ -1570,7 +1676,9 @@ class MemoryService:
                 from src.core.models import SearchFilters, MemoryScope
 
                 # Create a filter for global-scoped memories only
-                global_filters = SearchFilters.model_validate({"scope": MemoryScope.GLOBAL})
+                global_filters = SearchFilters.model_validate(
+                    {"scope": MemoryScope.GLOBAL}
+                )
                 try:
                     async with asyncio.timeout(30.0):
                         global_count = await self.store.count(filters=global_filters)

@@ -10,7 +10,6 @@ Tests usage pattern analysis including:
 """
 
 import pytest
-from pathlib import Path
 from src.analysis.usage_analyzer import UsageAnalyzer
 
 
@@ -39,7 +38,10 @@ class TestCallGraphConstruction:
             }
         ]
         analyzer._build_call_graph(units, "python")
-        assert "simple_func" not in analyzer.call_graph or len(analyzer.call_graph.get("simple_func", set())) == 0
+        assert (
+            "simple_func" not in analyzer.call_graph
+            or len(analyzer.call_graph.get("simple_func", set())) == 0
+        )
 
     def test_function_calls_another(self, analyzer):
         """Function calling another function."""
@@ -64,10 +66,30 @@ class TestCallGraphConstruction:
     def test_multiple_callers(self, analyzer):
         """Multiple functions calling the same function."""
         units = [
-            {"name": "caller1", "content": "def caller1():\n    return target()", "unit_type": "function", "language": "python"},
-            {"name": "caller2", "content": "def caller2():\n    return target()", "unit_type": "function", "language": "python"},
-            {"name": "caller3", "content": "def caller3():\n    return target()", "unit_type": "function", "language": "python"},
-            {"name": "target", "content": "def target():\n    return 42", "unit_type": "function", "language": "python"},
+            {
+                "name": "caller1",
+                "content": "def caller1():\n    return target()",
+                "unit_type": "function",
+                "language": "python",
+            },
+            {
+                "name": "caller2",
+                "content": "def caller2():\n    return target()",
+                "unit_type": "function",
+                "language": "python",
+            },
+            {
+                "name": "caller3",
+                "content": "def caller3():\n    return target()",
+                "unit_type": "function",
+                "language": "python",
+            },
+            {
+                "name": "target",
+                "content": "def target():\n    return 42",
+                "unit_type": "function",
+                "language": "python",
+            },
         ]
         analyzer._build_call_graph(units, "python")
         assert len(analyzer.call_graph["target"]) == 3
@@ -146,19 +168,28 @@ class TestPublicAPIDetection:
 
     def test_python_private_function(self, analyzer):
         """Python function with single underscore is private."""
-        assert analyzer._is_public_api("_private_function", "function", "python") is False
+        assert (
+            analyzer._is_public_api("_private_function", "function", "python") is False
+        )
 
     def test_python_dunder_function(self, analyzer):
         """Python function with double underscore is private."""
-        assert analyzer._is_public_api("__private_function", "function", "python") is False
+        assert (
+            analyzer._is_public_api("__private_function", "function", "python") is False
+        )
 
     def test_javascript_public_function(self, analyzer):
         """JavaScript function without underscore is public."""
-        assert analyzer._is_public_api("publicFunction", "function", "javascript") is True
+        assert (
+            analyzer._is_public_api("publicFunction", "function", "javascript") is True
+        )
 
     def test_javascript_private_function(self, analyzer):
         """JavaScript function with underscore is private."""
-        assert analyzer._is_public_api("_privateFunction", "function", "javascript") is False
+        assert (
+            analyzer._is_public_api("_privateFunction", "function", "javascript")
+            is False
+        )
 
     def test_go_exported_function(self, analyzer):
         """Go function with uppercase first letter is exported."""
@@ -234,7 +265,9 @@ function MainComponent() {}
 
 export default MainComponent;
 """
-        assert analyzer._is_exported("MainComponent", file_content, "javascript") is True
+        assert (
+            analyzer._is_exported("MainComponent", file_content, "javascript") is True
+        )
 
     def test_java_public_method(self, analyzer):
         """Java public method detection."""
@@ -335,8 +368,18 @@ class TestUsageAnalysis:
     def test_analyze_with_all_units(self, analyzer):
         """Analyze with full unit list (builds call graph)."""
         all_units = [
-            {"name": "caller", "content": "def caller():\n    return callee()", "unit_type": "function", "language": "python"},
-            {"name": "callee", "content": "def callee():\n    return 42", "unit_type": "function", "language": "python"},
+            {
+                "name": "caller",
+                "content": "def caller():\n    return callee()",
+                "unit_type": "function",
+                "language": "python",
+            },
+            {
+                "name": "callee",
+                "content": "def callee():\n    return 42",
+                "unit_type": "function",
+                "language": "python",
+            },
         ]
         code_unit = all_units[1]  # Analyze callee
         metrics = analyzer.analyze(code_unit, all_units=all_units)
@@ -399,8 +442,18 @@ class TestEdgeCases:
     def test_malformed_units(self, analyzer):
         """Malformed units don't crash call graph construction."""
         units = [
-            {"name": "valid", "content": "def valid(): pass", "unit_type": "function", "language": "python"},
-            {"name": None, "content": "", "unit_type": "function", "language": "python"},  # Malformed
+            {
+                "name": "valid",
+                "content": "def valid(): pass",
+                "unit_type": "function",
+                "language": "python",
+            },
+            {
+                "name": None,
+                "content": "",
+                "unit_type": "function",
+                "language": "python",
+            },  # Malformed
         ]
         analyzer._build_call_graph(units, "python")
         # Should complete without error

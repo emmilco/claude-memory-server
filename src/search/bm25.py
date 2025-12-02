@@ -3,7 +3,7 @@
 import math
 import re
 from collections import defaultdict, Counter
-from typing import List, Dict, Tuple, Set, Any
+from typing import List, Dict, Tuple, Any
 import logging
 
 logger = logging.getLogger(__name__)
@@ -93,7 +93,7 @@ class BM25:
         text = text.lower()
 
         # Split on non-alphanumeric (but preserve underscores)
-        tokens = re.findall(r'[a-z0-9_]+', text)
+        tokens = re.findall(r"[a-z0-9_]+", text)
 
         # Filter very short tokens
         tokens = [t for t in tokens if len(t) >= 2]
@@ -107,9 +107,7 @@ class BM25:
         for term, df in self.doc_freqs.items():
             # BM25 IDF formula: log((N - df + 0.5) / (df + 0.5))
             # Add 1 to avoid log(0)
-            self.idf[term] = math.log(
-                (self.num_docs - df + 0.5) / (df + 0.5) + 1.0
-            )
+            self.idf[term] = math.log((self.num_docs - df + 0.5) / (df + 0.5) + 1.0)
 
     def get_scores(self, query: str) -> List[float]:
         """
@@ -160,19 +158,13 @@ class BM25:
             # BM25 formula
             idf = self.idf[term]
             numerator = tf * (self.k1 + 1)
-            denominator = tf + self.k1 * (
-                1 - self.b + self.b * (doc_len / self.avgdl)
-            )
+            denominator = tf + self.k1 * (1 - self.b + self.b * (doc_len / self.avgdl))
 
             score += idf * (numerator / denominator)
 
         return score
 
-    def search(
-        self,
-        query: str,
-        top_k: int = 10
-    ) -> List[Tuple[int, float]]:
+    def search(self, query: str, top_k: int = 10) -> List[Tuple[int, float]]:
         """
         Search for documents matching query.
 
@@ -195,10 +187,7 @@ class BM25:
         return doc_scores[:top_k]
 
     def get_top_k_documents(
-        self,
-        query: str,
-        documents: List[str],
-        top_k: int = 10
+        self, query: str, documents: List[str], top_k: int = 10
     ) -> List[Tuple[str, float]]:
         """
         Convenience method to search and return actual documents.
@@ -271,9 +260,7 @@ class BM25Plus(BM25):
 
             # BM25+ formula: adds delta to ensure minimum contribution
             numerator = tf * (self.k1 + 1)
-            denominator = tf + self.k1 * (
-                1 - self.b + self.b * (doc_len / self.avgdl)
-            )
+            denominator = tf + self.k1 * (1 - self.b + self.b * (doc_len / self.avgdl))
 
             score += idf * ((numerator / denominator) + self.delta)
 

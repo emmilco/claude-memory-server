@@ -75,30 +75,39 @@ class CrossProjectConsentManager:
         now = datetime.now(UTC).isoformat()
 
         # Check if record exists
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT opted_in FROM project_consent
             WHERE project_name = ?
-        """, (project_name,))
+        """,
+            (project_name,),
+        )
 
         existing = cursor.fetchone()
 
         if existing:
             # Update existing record
-            cursor.execute("""
+            cursor.execute(
+                """
                 UPDATE project_consent
                 SET opted_in = 1,
                     opted_in_at = ?,
                     updated_at = ?
                 WHERE project_name = ?
-            """, (now, now, project_name))
+            """,
+                (now, now, project_name),
+            )
 
             was_opted_in = bool(existing[0])
         else:
             # Insert new record
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT INTO project_consent (project_name, opted_in, opted_in_at, updated_at)
                 VALUES (?, 1, ?, ?)
-            """, (project_name, now, now))
+            """,
+                (project_name, now, now),
+            )
 
             was_opted_in = False
 
@@ -130,30 +139,39 @@ class CrossProjectConsentManager:
         now = datetime.now(UTC).isoformat()
 
         # Check if record exists
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT opted_in FROM project_consent
             WHERE project_name = ?
-        """, (project_name,))
+        """,
+            (project_name,),
+        )
 
         existing = cursor.fetchone()
 
         if existing:
             # Update existing record
-            cursor.execute("""
+            cursor.execute(
+                """
                 UPDATE project_consent
                 SET opted_in = 0,
                     opted_out_at = ?,
                     updated_at = ?
                 WHERE project_name = ?
-            """, (now, now, project_name))
+            """,
+                (now, now, project_name),
+            )
 
             was_opted_in = bool(existing[0])
         else:
             # Insert new record as opted-out
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT INTO project_consent (project_name, opted_in, opted_out_at, updated_at)
                 VALUES (?, 0, ?, ?)
-            """, (project_name, now, now))
+            """,
+                (project_name, now, now),
+            )
 
             was_opted_in = True  # Default is opted-in
 
@@ -182,10 +200,13 @@ class CrossProjectConsentManager:
         conn = sqlite3.connect(str(self.db_path))
         cursor = conn.cursor()
 
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT opted_in FROM project_consent
             WHERE project_name = ?
-        """, (project_name,))
+        """,
+            (project_name,),
+        )
 
         result = cursor.fetchone()
         conn.close()
@@ -283,11 +304,14 @@ class CrossProjectConsentManager:
         conn = sqlite3.connect(str(self.db_path))
         cursor = conn.cursor()
 
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT opted_in, opted_in_at, opted_out_at, updated_at
             FROM project_consent
             WHERE project_name = ?
-        """, (project_name,))
+        """,
+            (project_name,),
+        )
 
         result = cursor.fetchone()
         conn.close()

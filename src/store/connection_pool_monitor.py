@@ -13,7 +13,6 @@ PERF-007: Connection Pooling - Day 2 Monitoring
 import asyncio
 import logging
 import threading
-import time
 from dataclasses import dataclass, field
 from datetime import datetime, UTC
 from typing import Optional, List, Callable, Awaitable
@@ -226,7 +225,9 @@ class ConnectionPoolMonitor:
 
             if utilization >= self.exhaustion_threshold:
                 await self._raise_alert(
-                    AlertSeverity.WARNING if utilization < 0.95 else AlertSeverity.CRITICAL,
+                    AlertSeverity.WARNING
+                    if utilization < 0.95
+                    else AlertSeverity.CRITICAL,
                     f"Pool exhaustion: {utilization*100:.1f}% utilization "
                     f"({metrics.active_connections}/{metrics.total_connections} active)",
                     metric_name="pool_utilization",
@@ -259,7 +260,9 @@ class ConnectionPoolMonitor:
         # Check for health check failures
         if len(self._metrics_history) > 1:
             prev_metrics = self._metrics_history[-2]
-            new_failures = metrics.total_health_failures - prev_metrics.total_health_failures
+            new_failures = (
+                metrics.total_health_failures - prev_metrics.total_health_failures
+            )
 
             if new_failures > 0:
                 await self._raise_alert(
@@ -300,7 +303,9 @@ class ConnectionPoolMonitor:
             self._alerts = self._alerts[-1000:]
 
         # Log alert
-        log_func = logger.critical if severity == AlertSeverity.CRITICAL else logger.warning
+        log_func = (
+            logger.critical if severity == AlertSeverity.CRITICAL else logger.warning
+        )
         log_func(f"Pool alert: {alert}")
 
         # Invoke callback if configured
@@ -354,13 +359,17 @@ class ConnectionPoolMonitor:
             "total_alerts": self.total_alerts,
             "metrics_history_size": len(self._metrics_history),
             "alerts_history_size": len(self._alerts),
-            "last_collection": self._last_collection.isoformat() if self._last_collection else None,
+            "last_collection": self._last_collection.isoformat()
+            if self._last_collection
+            else None,
             "current_metrics": {
                 "active_connections": current.active_connections,
                 "idle_connections": current.idle_connections,
                 "total_connections": current.total_connections,
                 "acquire_latency_p95_ms": current.acquire_latency_p95_ms,
-            } if current else None,
+            }
+            if current
+            else None,
         }
 
     def reset_stats(self) -> None:

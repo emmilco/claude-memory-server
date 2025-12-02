@@ -92,7 +92,9 @@ async def export_command(
         if until:
             config_table.add_row("[cyan]Until Date:[/cyan]", until)
 
-        console.print(Panel(config_table, title="Export Configuration", border_style="blue"))
+        console.print(
+            Panel(config_table, title="Export Configuration", border_style="blue")
+        )
         console.print()
 
         # Perform export with progress indicator
@@ -137,14 +139,23 @@ async def export_command(
         results_table = Table(show_header=False, box=None)
         results_table.add_row("[green]✓[/green] Export completed successfully")
         results_table.add_row("")
-        results_table.add_row("[cyan]Memories Exported:[/cyan]", str(stats["memory_count"]))
+        results_table.add_row(
+            "[cyan]Memories Exported:[/cyan]", str(stats["memory_count"])
+        )
         results_table.add_row("[cyan]Output File:[/cyan]", stats["output_path"])
-        results_table.add_row("[cyan]File Size:[/cyan]", f"{stats['file_size_bytes']:,} bytes")
+        results_table.add_row(
+            "[cyan]File Size:[/cyan]", f"{stats['file_size_bytes']:,} bytes"
+        )
 
         if format == "archive":
-            results_table.add_row("[cyan]Includes Embeddings:[/cyan]", "Yes" if stats["includes_embeddings"] else "No")
+            results_table.add_row(
+                "[cyan]Includes Embeddings:[/cyan]",
+                "Yes" if stats["includes_embeddings"] else "No",
+            )
 
-        console.print(Panel(results_table, title="Export Results", border_style="green"))
+        console.print(
+            Panel(results_table, title="Export Results", border_style="green")
+        )
         console.print()
 
         # Cleanup
@@ -168,30 +179,30 @@ def main():
         "--format",
         choices=["json", "markdown", "archive"],
         default="json",
-        help="Export format (default: json)"
+        help="Export format (default: json)",
     )
     parser.add_argument("--project", help="Filter by project name")
     parser.add_argument(
         "--category",
         choices=["preference", "fact", "event", "workflow", "context"],
-        help="Filter by category"
+        help="Filter by category",
     )
     parser.add_argument(
         "--context-level",
         choices=["USER_PREFERENCE", "PROJECT_CONTEXT", "SESSION_STATE"],
-        help="Filter by context level"
+        help="Filter by context level",
     )
     parser.add_argument("--since", help="Filter by creation date (after), ISO format")
     parser.add_argument("--until", help="Filter by creation date (before), ISO format")
     parser.add_argument(
         "--no-embeddings",
         action="store_true",
-        help="Exclude embeddings from archive (archive format only)"
+        help="Exclude embeddings from archive (archive format only)",
     )
     parser.add_argument(
         "--no-metadata",
         action="store_true",
-        help="Exclude metadata from markdown (markdown format only)"
+        help="Exclude metadata from markdown (markdown format only)",
     )
 
     args = parser.parse_args()

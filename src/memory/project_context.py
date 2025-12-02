@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 
 try:
     from git import Repo, InvalidGitRepositoryError
+
     GIT_AVAILABLE = True
 except ImportError:
     GIT_AVAILABLE = False
@@ -61,7 +62,9 @@ class ProjectContextDetector:
 
         logger.info("ProjectContextDetector initialized")
 
-    def detect_from_git(self, directory: Optional[str] = None) -> Optional[ProjectContext]:
+    def detect_from_git(
+        self, directory: Optional[str] = None
+    ) -> Optional[ProjectContext]:
         """
         Detect project context from git repository.
 
@@ -224,7 +227,10 @@ class ProjectContextDetector:
             return
 
         # Update current context if matches
-        if self.current_context and self.current_context.project_name == detected.project_name:
+        if (
+            self.current_context
+            and self.current_context.project_name == detected.project_name
+        ):
             self.current_context.last_activity = datetime.now(UTC)
             self.current_context.file_activity_count += 1
             logger.debug(
@@ -260,7 +266,9 @@ class ProjectContextDetector:
             # Other projects get penalty
             return 0.3
 
-    def should_archive_project(self, project_name: str, last_activity: datetime) -> bool:
+    def should_archive_project(
+        self, project_name: str, last_activity: datetime
+    ) -> bool:
         """
         Check if a project should be archived due to inactivity.
 
@@ -316,10 +324,16 @@ class ProjectContextDetector:
         recent = self.get_recent_projects()
 
         stats = {
-            "current_project": self.current_context.project_name if self.current_context else None,
+            "current_project": self.current_context.project_name
+            if self.current_context
+            else None,
             "total_projects": len(set(p.project_name for p in recent)),
-            "active_since": self.current_context.last_activity.isoformat() if self.current_context else None,
-            "file_activity_count": self.current_context.file_activity_count if self.current_context else 0,
+            "active_since": self.current_context.last_activity.isoformat()
+            if self.current_context
+            else None,
+            "file_activity_count": self.current_context.file_activity_count
+            if self.current_context
+            else 0,
             "recent_projects": [
                 {
                     "name": p.project_name,

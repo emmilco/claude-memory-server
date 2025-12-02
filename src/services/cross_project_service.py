@@ -8,10 +8,9 @@ Responsibilities:
 - Track opted-in projects
 """
 
-import logging
 import threading
 import time
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 
 from src.config import ServerConfig
 from src.store import MemoryStore
@@ -91,7 +90,7 @@ class CrossProjectService:
         if not self.consent:
             return {
                 "error": "Cross-project consent manager not configured",
-                "status": "disabled"
+                "status": "disabled",
             }
 
         try:
@@ -155,7 +154,9 @@ class CrossProjectService:
                     projects_searched.append(project)
 
                 except Exception as e:
-                    logger.error(f"Failed to search project {project}: {e}", exc_info=True)
+                    logger.error(
+                        f"Failed to search project {project}: {e}", exc_info=True
+                    )
                     failed_projects.append({"project": project, "error": str(e)})
                     continue
 
@@ -168,12 +169,17 @@ class CrossProjectService:
                 self.stats["cross_project_searches"] += 1
 
             if self.metrics_collector:
-                avg_relevance = sum(r.get("relevance_score", 0) for r in all_results) / len(all_results) if all_results else 0.0
+                avg_relevance = (
+                    sum(r.get("relevance_score", 0) for r in all_results)
+                    / len(all_results)
+                    if all_results
+                    else 0.0
+                )
                 self.metrics_collector.log_query(
                     query=query,
                     latency_ms=query_time_ms,
                     result_count=len(all_results),
-                    avg_relevance=avg_relevance
+                    avg_relevance=avg_relevance,
                 )
 
             logger.info(
@@ -192,7 +198,9 @@ class CrossProjectService:
 
             if failed_projects:
                 response["failed_projects"] = failed_projects
-                logger.warning(f"Cross-project search had {len(failed_projects)} project failures")
+                logger.warning(
+                    f"Cross-project search had {len(failed_projects)} project failures"
+                )
 
             return response
 
@@ -213,7 +221,7 @@ class CrossProjectService:
         if not self.consent:
             return {
                 "error": "Cross-project consent manager not configured",
-                "status": "disabled"
+                "status": "disabled",
             }
 
         try:
@@ -246,7 +254,7 @@ class CrossProjectService:
         if not self.consent:
             return {
                 "error": "Cross-project consent manager not configured",
-                "status": "disabled"
+                "status": "disabled",
             }
 
         try:
@@ -276,7 +284,7 @@ class CrossProjectService:
         if not self.consent:
             return {
                 "error": "Cross-project consent manager not configured",
-                "status": "disabled"
+                "status": "disabled",
             }
 
         try:

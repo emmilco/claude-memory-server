@@ -15,14 +15,13 @@ used for supported languages.
 """
 
 import pytest
-from pathlib import Path
 from mcp_performance_core import parse_source_file
 
 
 # Skip all tests in this module - Swift is not supported
 pytestmark = pytest.mark.skip(
     reason="Swift (.swift) is not supported by the Rust parser. "
-           "See rust_core/src/parsing.rs for supported languages."
+    "See rust_core/src/parsing.rs for supported languages."
 )
 
 
@@ -83,7 +82,7 @@ class TestSwiftFileRecognition:
         test_file.write_text("func test() {}")
         content = test_file.read_text()
         result = parse_source_file(str(test_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
         assert units is not None
 
 
@@ -99,7 +98,7 @@ class TestSwiftStructExtraction:
         """Test extraction of Swift structs."""
         content = sample_swift_file.read_text()
         result = parse_source_file(str(sample_swift_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
 
         # Find structs
         structs = [u for u in units if u.unit_type == "class" and "Point" in u.name]
@@ -113,7 +112,7 @@ class TestSwiftClassExtraction:
         """Test extraction of Swift classes."""
         content = sample_swift_file.read_text()
         result = parse_source_file(str(sample_swift_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
 
         # Find classes
         classes = [u for u in units if u.unit_type == "class" and "Shape" in u.name]
@@ -127,10 +126,12 @@ class TestSwiftProtocolExtraction:
         """Test extraction of Swift protocols."""
         content = sample_swift_file.read_text()
         result = parse_source_file(str(sample_swift_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
 
         # Find protocols
-        protocols = [u for u in units if u.unit_type == "class" and "Drawable" in u.name]
+        protocols = [
+            u for u in units if u.unit_type == "class" and "Drawable" in u.name
+        ]
         assert len(protocols) > 0, "Should extract Drawable protocol"
 
 
@@ -141,16 +142,18 @@ class TestSwiftComplexScenarios:
         """Test that multiple semantic units are extracted."""
         content = sample_swift_file.read_text()
         result = parse_source_file(str(sample_swift_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
 
         # Should extract protocols, structs, classes, and functions
-        assert len(units) >= 3, "Should extract multiple semantic units (classes/structs/protocols)"
+        assert (
+            len(units) >= 3
+        ), "Should extract multiple semantic units (classes/structs/protocols)"
 
     def test_unit_metadata(self, sample_swift_file):
         """Test that unit metadata is correctly populated."""
         content = sample_swift_file.read_text()
         result = parse_source_file(str(sample_swift_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
 
         # Check that units have required metadata
         for unit in units:
@@ -170,7 +173,7 @@ class TestSwiftEdgeCases:
         content = ""
         empty_file.write_text(content)
         result = parse_source_file(str(empty_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
         assert units == [] or len(units) == 0, "Empty file should produce no units"
 
     def test_swift_file_with_only_comments(self, tmp_path):
@@ -184,5 +187,5 @@ class TestSwiftEdgeCases:
 """
         comment_file.write_text(content)
         result = parse_source_file(str(comment_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
         assert len(units) == 0, "File with only comments should produce no units"

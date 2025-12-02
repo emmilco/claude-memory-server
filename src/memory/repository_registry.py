@@ -48,40 +48,46 @@ class Repository:
     unit_count: int = 0
 
     # Organization
-    workspace_ids: List[str] = field(default_factory=list)  # Workspaces this repo belongs to
+    workspace_ids: List[str] = field(
+        default_factory=list
+    )  # Workspaces this repo belongs to
     tags: List[str] = field(default_factory=list)  # User-defined tags
 
     # Relationships
-    depends_on: List[str] = field(default_factory=list)  # Repository IDs this depends on
-    depended_by: List[str] = field(default_factory=list)  # Repository IDs that depend on this
+    depends_on: List[str] = field(
+        default_factory=list
+    )  # Repository IDs this depends on
+    depended_by: List[str] = field(
+        default_factory=list
+    )  # Repository IDs that depend on this
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         data = asdict(self)
         # Convert enums to strings
-        data['repo_type'] = self.repo_type.value
-        data['status'] = self.status.value
+        data["repo_type"] = self.repo_type.value
+        data["status"] = self.status.value
         # Convert datetimes to ISO format
         if self.indexed_at:
-            data['indexed_at'] = self.indexed_at.isoformat()
+            data["indexed_at"] = self.indexed_at.isoformat()
         if self.last_updated:
-            data['last_updated'] = self.last_updated.isoformat()
+            data["last_updated"] = self.last_updated.isoformat()
         return data
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'Repository':
+    def from_dict(cls, data: Dict[str, Any]) -> "Repository":
         """Create Repository from dictionary."""
         # Convert enum strings back to enums
-        if 'repo_type' in data and isinstance(data['repo_type'], str):
-            data['repo_type'] = RepositoryType(data['repo_type'])
-        if 'status' in data and isinstance(data['status'], str):
-            data['status'] = RepositoryStatus(data['status'])
+        if "repo_type" in data and isinstance(data["repo_type"], str):
+            data["repo_type"] = RepositoryType(data["repo_type"])
+        if "status" in data and isinstance(data["status"], str):
+            data["status"] = RepositoryStatus(data["status"])
 
         # Convert ISO datetime strings back to datetime objects
-        if 'indexed_at' in data and isinstance(data['indexed_at'], str):
-            data['indexed_at'] = datetime.fromisoformat(data['indexed_at'])
-        if 'last_updated' in data and isinstance(data['last_updated'], str):
-            data['last_updated'] = datetime.fromisoformat(data['last_updated'])
+        if "indexed_at" in data and isinstance(data["indexed_at"], str):
+            data["indexed_at"] = datetime.fromisoformat(data["indexed_at"])
+        if "last_updated" in data and isinstance(data["last_updated"], str):
+            data["last_updated"] = datetime.fromisoformat(data["last_updated"])
 
         return cls(**data)
 
@@ -106,15 +112,17 @@ class RepositoryRegistry:
         self.repositories: Dict[str, Repository] = {}
         self._load()
 
-        logger.info(f"RepositoryRegistry initialized with {len(self.repositories)} repositories")
+        logger.info(
+            f"RepositoryRegistry initialized with {len(self.repositories)} repositories"
+        )
 
     def _load(self) -> None:
         """Load registry data from JSON file."""
         if self.storage_path.exists():
             try:
-                with open(self.storage_path, 'r') as f:
+                with open(self.storage_path, "r") as f:
                     data = json.load(f)
-                    repos_data = data.get('repositories', {})
+                    repos_data = data.get("repositories", {})
 
                     for repo_id, repo_data in repos_data.items():
                         try:
@@ -122,7 +130,9 @@ class RepositoryRegistry:
                         except Exception as e:
                             logger.error(f"Failed to load repository {repo_id}: {e}")
 
-                logger.info(f"Loaded {len(self.repositories)} repositories from {self.storage_path}")
+                logger.info(
+                    f"Loaded {len(self.repositories)} repositories from {self.storage_path}"
+                )
             except Exception as e:
                 logger.error(f"Failed to load registry file: {e}")
                 self.repositories = {}
@@ -134,17 +144,19 @@ class RepositoryRegistry:
         """Save registry data to JSON file."""
         try:
             data = {
-                'repositories': {
+                "repositories": {
                     repo_id: repo.to_dict()
                     for repo_id, repo in self.repositories.items()
                 },
-                'last_updated': datetime.now(UTC).isoformat(),
+                "last_updated": datetime.now(UTC).isoformat(),
             }
 
-            with open(self.storage_path, 'w') as f:
+            with open(self.storage_path, "w") as f:
                 json.dump(data, f, indent=2)
 
-            logger.info(f"Saved {len(self.repositories)} repositories to {self.storage_path}")
+            logger.info(
+                f"Saved {len(self.repositories)} repositories to {self.storage_path}"
+            )
         except Exception as e:
             logger.error(f"Failed to save registry file: {e}")
             raise
@@ -155,7 +167,7 @@ class RepositoryRegistry:
         name: Optional[str] = None,
         repo_type: RepositoryType = RepositoryType.STANDALONE,
         git_url: Optional[str] = None,
-        tags: Optional[List[str]] = None
+        tags: Optional[List[str]] = None,
     ) -> str:
         """
         Register a new repository.
@@ -287,7 +299,7 @@ class RepositoryRegistry:
         status: Optional[RepositoryStatus] = None,
         workspace_id: Optional[str] = None,
         tags: Optional[List[str]] = None,
-        repo_type: Optional[RepositoryType] = None
+        repo_type: Optional[RepositoryType] = None,
     ) -> List[Repository]:
         """
         List repositories with optional filtering.
@@ -322,11 +334,7 @@ class RepositoryRegistry:
 
         return results
 
-    async def update_repository(
-        self,
-        repo_id: str,
-        updates: Dict[str, Any]
-    ) -> None:
+    async def update_repository(self, repo_id: str, updates: Dict[str, Any]) -> None:
         """
         Update repository metadata.
 
@@ -345,23 +353,32 @@ class RepositoryRegistry:
 
         # Validate and apply updates
         valid_fields = {
-            'name', 'git_url', 'repo_type', 'status', 'indexed_at',
-            'last_updated', 'file_count', 'unit_count', 'tags'
+            "name",
+            "git_url",
+            "repo_type",
+            "status",
+            "indexed_at",
+            "last_updated",
+            "file_count",
+            "unit_count",
+            "tags",
         }
 
-        for field, value in updates.items():
-            if field not in valid_fields:
-                raise ValueError(f"Invalid field: {field}")
+        for field_name, value in updates.items():
+            if field_name not in valid_fields:
+                raise ValueError(f"Invalid field: {field_name}")
 
             # Convert enum strings to enums
-            if field == 'repo_type' and isinstance(value, str):
+            if field_name == "repo_type" and isinstance(value, str):
                 value = RepositoryType(value)
-            elif field == 'status' and isinstance(value, str):
+            elif field_name == "status" and isinstance(value, str):
                 value = RepositoryStatus(value)
-            elif field in ('indexed_at', 'last_updated') and isinstance(value, str):
+            elif field_name in ("indexed_at", "last_updated") and isinstance(
+                value, str
+            ):
                 value = datetime.fromisoformat(value)
 
-            setattr(repo, field, value)
+            setattr(repo, field_name, value)
 
         # Update last_updated timestamp
         repo.last_updated = datetime.now(UTC)
@@ -409,9 +426,7 @@ class RepositoryRegistry:
 
         self._save()
 
-        logger.info(
-            f"Added dependency: {repo.name} depends on {dep_repo.name}"
-        )
+        logger.info(f"Added dependency: {repo.name} depends on {dep_repo.name}")
 
     async def remove_dependency(self, repo_id: str, depends_on_id: str) -> None:
         """
@@ -446,10 +461,7 @@ class RepositoryRegistry:
         )
 
     async def get_dependencies(
-        self,
-        repo_id: str,
-        max_depth: int = 3,
-        _visited: Optional[Set[str]] = None
+        self, repo_id: str, max_depth: int = 3, _visited: Optional[Set[str]] = None
     ) -> Dict[str, List[str]]:
         """
         Get all dependencies of a repository (transitive).
@@ -493,9 +505,7 @@ class RepositoryRegistry:
                 for dep_id in direct_deps:
                     if dep_id not in _visited:
                         transitive = await self.get_dependencies(
-                            dep_id,
-                            max_depth - 1,
-                            _visited
+                            dep_id, max_depth - 1, _visited
                         )
                         # Shift depth levels and merge
                         for depth, repos in transitive.items():
@@ -506,11 +516,7 @@ class RepositoryRegistry:
 
         return result
 
-    async def _would_create_cycle(
-        self,
-        repo_id: str,
-        new_dependency_id: str
-    ) -> bool:
+    async def _would_create_cycle(self, repo_id: str, new_dependency_id: str) -> bool:
         """
         Check if adding a dependency would create a cycle.
 
@@ -641,10 +647,10 @@ class RepositoryRegistry:
             total_units += repo.unit_count
 
         return {
-            'total_repositories': total,
-            'by_status': by_status,
-            'by_type': by_type,
-            'total_files_indexed': total_files,
-            'total_units_indexed': total_units,
-            'storage_path': str(self.storage_path),
+            "total_repositories": total,
+            "by_status": by_status,
+            "by_type": by_type,
+            "total_files_indexed": total_files,
+            "total_units_indexed": total_units,
+            "storage_path": str(self.storage_path),
         }

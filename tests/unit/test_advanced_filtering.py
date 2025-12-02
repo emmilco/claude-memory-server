@@ -12,12 +12,12 @@ are not yet implemented in search_code(). Tests are skipped pending implementati
 import pytest
 
 # Skip all tests in this file - FEAT-056 not fully implemented
-pytestmark = pytest.mark.skip(reason="FEAT-056 advanced filtering not fully implemented yet")
+pytestmark = pytest.mark.skip(
+    reason="FEAT-056 advanced filtering not fully implemented yet"
+)
 from datetime import datetime, timedelta, UTC
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from src.core.server import MemoryRAGServer
-from src.core.models import MemoryCategory, MemoryScope, ContextLevel
 from tests.conftest import mock_embedding
 
 
@@ -38,13 +38,15 @@ def mock_server():
     server.search_code = MemoryRAGServer.search_code.__get__(server, type(server))
     server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
     server._get_confidence_label = staticmethod(MemoryRAGServer._get_confidence_label)
-    server._analyze_search_quality = MagicMock(return_value={
-        "quality": "good",
-        "confidence": "high",
-        "suggestions": [],
-        "interpretation": "Test query",
-        "matched_keywords": []
-    })
+    server._analyze_search_quality = MagicMock(
+        return_value={
+            "quality": "good",
+            "confidence": "high",
+            "suggestions": [],
+            "interpretation": "Test query",
+            "matched_keywords": [],
+        }
+    )
 
     return server
 
@@ -86,17 +88,18 @@ class TestGlobPatternMatching:
     async def test_glob_pattern_matches_nested_paths(self, mock_server):
         """Test that glob patterns match nested directory structures."""
         # Mock retrieve to return multiple files
-        mock_server.store.retrieve = AsyncMock(return_value=[
-            (create_mock_memory("/src/auth/validator.py", "validate_token"), 0.9),
-            (create_mock_memory("/src/api/routes.py", "get_user"), 0.8),
-            (create_mock_memory("/tests/test_auth.py", "test_validator"), 0.7),
-        ])
+        mock_server.store.retrieve = AsyncMock(
+            return_value=[
+                (create_mock_memory("/src/auth/validator.py", "validate_token"), 0.9),
+                (create_mock_memory("/src/api/routes.py", "get_user"), 0.8),
+                (create_mock_memory("/tests/test_auth.py", "test_validator"), 0.7),
+            ]
+        )
         mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         # Search with glob pattern for auth files only
         result = await mock_server.search_code(
-            query="authentication",
-            file_pattern="**/auth/*.py"
+            query="authentication", file_pattern="**/auth/*.py"
         )
 
         # Should only return auth directory files
@@ -106,16 +109,20 @@ class TestGlobPatternMatching:
     @pytest.mark.asyncio
     async def test_glob_pattern_matches_test_files(self, mock_server):
         """Test glob pattern for test files (*.test.py)."""
-        mock_server.store.retrieve = AsyncMock(return_value=[
-            (create_mock_memory("/src/utils.py", "helper"), 0.9),
-            (create_mock_memory("/tests/utils.test.py", "test_helper"), 0.8),
-            (create_mock_memory("/tests/integration/auth.test.py", "test_auth"), 0.7),
-        ])
+        mock_server.store.retrieve = AsyncMock(
+            return_value=[
+                (create_mock_memory("/src/utils.py", "helper"), 0.9),
+                (create_mock_memory("/tests/utils.test.py", "test_helper"), 0.8),
+                (
+                    create_mock_memory("/tests/integration/auth.test.py", "test_auth"),
+                    0.7,
+                ),
+            ]
+        )
         mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
-            query="helper functions",
-            file_pattern="**/*.test.py"
+            query="helper functions", file_pattern="**/*.test.py"
         )
 
         assert result["total_found"] == 2
@@ -124,15 +131,16 @@ class TestGlobPatternMatching:
     @pytest.mark.asyncio
     async def test_glob_pattern_with_specific_extension(self, mock_server):
         """Test glob pattern matching specific file extensions."""
-        mock_server.store.retrieve = AsyncMock(return_value=[
-            (create_mock_memory("/src/app.ts", "main", language="typescript"), 0.9),
-            (create_mock_memory("/src/utils.py", "helper", language="python"), 0.8),
-        ])
+        mock_server.store.retrieve = AsyncMock(
+            return_value=[
+                (create_mock_memory("/src/app.ts", "main", language="typescript"), 0.9),
+                (create_mock_memory("/src/utils.py", "helper", language="python"), 0.8),
+            ]
+        )
         mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
-            query="utilities",
-            file_pattern="**/*.ts"
+            query="utilities", file_pattern="**/*.ts"
         )
 
         assert result["total_found"] == 1
@@ -145,16 +153,17 @@ class TestExclusionPatterns:
     @pytest.mark.asyncio
     async def test_exclude_test_files(self, mock_server):
         """Test excluding test files from results."""
-        mock_server.store.retrieve = AsyncMock(return_value=[
-            (create_mock_memory("/src/auth.py", "authenticate"), 0.9),
-            (create_mock_memory("/tests/test_auth.py", "test_authenticate"), 0.8),
-            (create_mock_memory("/src/auth_helper.py", "validate"), 0.7),
-        ])
+        mock_server.store.retrieve = AsyncMock(
+            return_value=[
+                (create_mock_memory("/src/auth.py", "authenticate"), 0.9),
+                (create_mock_memory("/tests/test_auth.py", "test_authenticate"), 0.8),
+                (create_mock_memory("/src/auth_helper.py", "validate"), 0.7),
+            ]
+        )
         mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
-            query="authentication",
-            exclude_patterns=["**/tests/**", "**/*.test.py"]
+            query="authentication", exclude_patterns=["**/tests/**", "**/*.test.py"]
         )
 
         assert result["total_found"] == 2
@@ -163,16 +172,17 @@ class TestExclusionPatterns:
     @pytest.mark.asyncio
     async def test_exclude_generated_files(self, mock_server):
         """Test excluding generated code directories."""
-        mock_server.store.retrieve = AsyncMock(return_value=[
-            (create_mock_memory("/src/models.py", "User"), 0.9),
-            (create_mock_memory("/generated/models_pb2.py", "UserProto"), 0.8),
-            (create_mock_memory("/build/dist/main.py", "Main"), 0.7),
-        ])
+        mock_server.store.retrieve = AsyncMock(
+            return_value=[
+                (create_mock_memory("/src/models.py", "User"), 0.9),
+                (create_mock_memory("/generated/models_pb2.py", "UserProto"), 0.8),
+                (create_mock_memory("/build/dist/main.py", "Main"), 0.7),
+            ]
+        )
         mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
-            query="user model",
-            exclude_patterns=["**/generated/**", "**/build/**"]
+            query="user model", exclude_patterns=["**/generated/**", "**/build/**"]
         )
 
         assert result["total_found"] == 1
@@ -181,17 +191,19 @@ class TestExclusionPatterns:
     @pytest.mark.asyncio
     async def test_exclude_multiple_patterns(self, mock_server):
         """Test multiple exclusion patterns together."""
-        mock_server.store.retrieve = AsyncMock(return_value=[
-            (create_mock_memory("/src/core.py", "process"), 0.9),
-            (create_mock_memory("/tests/test_core.py", "test_process"), 0.8),
-            (create_mock_memory("/node_modules/lib.js", "external"), 0.7),
-            (create_mock_memory("/.venv/site-packages/pkg.py", "package"), 0.6),
-        ])
+        mock_server.store.retrieve = AsyncMock(
+            return_value=[
+                (create_mock_memory("/src/core.py", "process"), 0.9),
+                (create_mock_memory("/tests/test_core.py", "test_process"), 0.8),
+                (create_mock_memory("/node_modules/lib.js", "external"), 0.7),
+                (create_mock_memory("/.venv/site-packages/pkg.py", "package"), 0.6),
+            ]
+        )
         mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
             query="processing",
-            exclude_patterns=["**/tests/**", "**/node_modules/**", "**/.venv/**"]
+            exclude_patterns=["**/tests/**", "**/node_modules/**", "**/.venv/**"],
         )
 
         assert result["total_found"] == 1
@@ -204,58 +216,106 @@ class TestComplexityFiltering:
     @pytest.mark.asyncio
     async def test_complexity_min_filter(self, mock_server):
         """Test minimum complexity filter."""
-        mock_server.store.retrieve = AsyncMock(return_value=[
-            (create_mock_memory("/src/simple.py", "simple_func", complexity=2), 0.9),
-            (create_mock_memory("/src/complex.py", "complex_func", complexity=12), 0.8),
-            (create_mock_memory("/src/moderate.py", "moderate_func", complexity=6), 0.7),
-        ])
+        mock_server.store.retrieve = AsyncMock(
+            return_value=[
+                (
+                    create_mock_memory("/src/simple.py", "simple_func", complexity=2),
+                    0.9,
+                ),
+                (
+                    create_mock_memory(
+                        "/src/complex.py", "complex_func", complexity=12
+                    ),
+                    0.8,
+                ),
+                (
+                    create_mock_memory(
+                        "/src/moderate.py", "moderate_func", complexity=6
+                    ),
+                    0.7,
+                ),
+            ]
+        )
         mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
-        result = await mock_server.search_code(
-            query="functions",
-            complexity_min=5
-        )
+        result = await mock_server.search_code(query="functions", complexity_min=5)
 
         assert result["total_found"] == 2
-        assert all(r["metadata"]["cyclomatic_complexity"] >= 5 for r in result["results"])
+        assert all(
+            r["metadata"]["cyclomatic_complexity"] >= 5 for r in result["results"]
+        )
 
     @pytest.mark.asyncio
     async def test_complexity_max_filter(self, mock_server):
         """Test maximum complexity filter."""
-        mock_server.store.retrieve = AsyncMock(return_value=[
-            (create_mock_memory("/src/simple.py", "simple_func", complexity=2), 0.9),
-            (create_mock_memory("/src/complex.py", "complex_func", complexity=12), 0.8),
-            (create_mock_memory("/src/moderate.py", "moderate_func", complexity=6), 0.7),
-        ])
+        mock_server.store.retrieve = AsyncMock(
+            return_value=[
+                (
+                    create_mock_memory("/src/simple.py", "simple_func", complexity=2),
+                    0.9,
+                ),
+                (
+                    create_mock_memory(
+                        "/src/complex.py", "complex_func", complexity=12
+                    ),
+                    0.8,
+                ),
+                (
+                    create_mock_memory(
+                        "/src/moderate.py", "moderate_func", complexity=6
+                    ),
+                    0.7,
+                ),
+            ]
+        )
         mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
-        result = await mock_server.search_code(
-            query="functions",
-            complexity_max=10
-        )
+        result = await mock_server.search_code(query="functions", complexity_max=10)
 
         assert result["total_found"] == 2
-        assert all(r["metadata"]["cyclomatic_complexity"] <= 10 for r in result["results"])
+        assert all(
+            r["metadata"]["cyclomatic_complexity"] <= 10 for r in result["results"]
+        )
 
     @pytest.mark.asyncio
     async def test_complexity_range_filter(self, mock_server):
         """Test complexity range (min and max together)."""
-        mock_server.store.retrieve = AsyncMock(return_value=[
-            (create_mock_memory("/src/simple.py", "simple_func", complexity=2), 0.9),
-            (create_mock_memory("/src/complex.py", "complex_func", complexity=12), 0.8),
-            (create_mock_memory("/src/moderate1.py", "moderate_func1", complexity=6), 0.7),
-            (create_mock_memory("/src/moderate2.py", "moderate_func2", complexity=9), 0.6),
-        ])
+        mock_server.store.retrieve = AsyncMock(
+            return_value=[
+                (
+                    create_mock_memory("/src/simple.py", "simple_func", complexity=2),
+                    0.9,
+                ),
+                (
+                    create_mock_memory(
+                        "/src/complex.py", "complex_func", complexity=12
+                    ),
+                    0.8,
+                ),
+                (
+                    create_mock_memory(
+                        "/src/moderate1.py", "moderate_func1", complexity=6
+                    ),
+                    0.7,
+                ),
+                (
+                    create_mock_memory(
+                        "/src/moderate2.py", "moderate_func2", complexity=9
+                    ),
+                    0.6,
+                ),
+            ]
+        )
         mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
-            query="functions",
-            complexity_min=5,
-            complexity_max=10
+            query="functions", complexity_min=5, complexity_max=10
         )
 
         assert result["total_found"] == 2
-        assert all(5 <= r["metadata"]["cyclomatic_complexity"] <= 10 for r in result["results"])
+        assert all(
+            5 <= r["metadata"]["cyclomatic_complexity"] <= 10 for r in result["results"]
+        )
 
 
 class TestLineCountFiltering:
@@ -264,17 +324,19 @@ class TestLineCountFiltering:
     @pytest.mark.asyncio
     async def test_line_count_min_filter(self, mock_server):
         """Test minimum line count filter."""
-        mock_server.store.retrieve = AsyncMock(return_value=[
-            (create_mock_memory("/src/short.py", "short_func", line_count=20), 0.9),
-            (create_mock_memory("/src/long.py", "long_func", line_count=150), 0.8),
-            (create_mock_memory("/src/medium.py", "medium_func", line_count=80), 0.7),
-        ])
+        mock_server.store.retrieve = AsyncMock(
+            return_value=[
+                (create_mock_memory("/src/short.py", "short_func", line_count=20), 0.9),
+                (create_mock_memory("/src/long.py", "long_func", line_count=150), 0.8),
+                (
+                    create_mock_memory("/src/medium.py", "medium_func", line_count=80),
+                    0.7,
+                ),
+            ]
+        )
         mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
-        result = await mock_server.search_code(
-            query="functions",
-            line_count_min=100
-        )
+        result = await mock_server.search_code(query="functions", line_count_min=100)
 
         assert result["total_found"] == 1
         assert result["results"][0]["metadata"]["line_count"] >= 100
@@ -282,18 +344,28 @@ class TestLineCountFiltering:
     @pytest.mark.asyncio
     async def test_line_count_range_filter(self, mock_server):
         """Test line count range filter."""
-        mock_server.store.retrieve = AsyncMock(return_value=[
-            (create_mock_memory("/src/short.py", "short_func", line_count=20), 0.9),
-            (create_mock_memory("/src/long.py", "long_func", line_count=150), 0.8),
-            (create_mock_memory("/src/medium1.py", "medium_func1", line_count=60), 0.7),
-            (create_mock_memory("/src/medium2.py", "medium_func2", line_count=90), 0.6),
-        ])
+        mock_server.store.retrieve = AsyncMock(
+            return_value=[
+                (create_mock_memory("/src/short.py", "short_func", line_count=20), 0.9),
+                (create_mock_memory("/src/long.py", "long_func", line_count=150), 0.8),
+                (
+                    create_mock_memory(
+                        "/src/medium1.py", "medium_func1", line_count=60
+                    ),
+                    0.7,
+                ),
+                (
+                    create_mock_memory(
+                        "/src/medium2.py", "medium_func2", line_count=90
+                    ),
+                    0.6,
+                ),
+            ]
+        )
         mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
-            query="functions",
-            line_count_min=50,
-            line_count_max=100
+            query="functions", line_count_min=50, line_count_max=100
         )
 
         assert result["total_found"] == 2
@@ -310,16 +382,36 @@ class TestDateFiltering:
         thirty_days_ago = now - timedelta(days=30)
         sixty_days_ago = now - timedelta(days=60)
 
-        mock_server.store.retrieve = AsyncMock(return_value=[
-            (create_mock_memory("/src/old.py", "old_func", modified_at=sixty_days_ago.timestamp()), 0.9),
-            (create_mock_memory("/src/recent.py", "recent_func", modified_at=now.timestamp()), 0.8),
-            (create_mock_memory("/src/medium.py", "medium_func", modified_at=thirty_days_ago.timestamp()), 0.7),
-        ])
+        mock_server.store.retrieve = AsyncMock(
+            return_value=[
+                (
+                    create_mock_memory(
+                        "/src/old.py",
+                        "old_func",
+                        modified_at=sixty_days_ago.timestamp(),
+                    ),
+                    0.9,
+                ),
+                (
+                    create_mock_memory(
+                        "/src/recent.py", "recent_func", modified_at=now.timestamp()
+                    ),
+                    0.8,
+                ),
+                (
+                    create_mock_memory(
+                        "/src/medium.py",
+                        "medium_func",
+                        modified_at=thirty_days_ago.timestamp(),
+                    ),
+                    0.7,
+                ),
+            ]
+        )
         mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
-            query="functions",
-            modified_after=thirty_days_ago
+            query="functions", modified_after=thirty_days_ago
         )
 
         # Should include files modified after thirty_days_ago (recent and medium)
@@ -332,16 +424,36 @@ class TestDateFiltering:
         thirty_days_ago = now - timedelta(days=30)
         sixty_days_ago = now - timedelta(days=60)
 
-        mock_server.store.retrieve = AsyncMock(return_value=[
-            (create_mock_memory("/src/old.py", "old_func", modified_at=sixty_days_ago.timestamp()), 0.9),
-            (create_mock_memory("/src/recent.py", "recent_func", modified_at=now.timestamp()), 0.8),
-            (create_mock_memory("/src/medium.py", "medium_func", modified_at=thirty_days_ago.timestamp()), 0.7),
-        ])
+        mock_server.store.retrieve = AsyncMock(
+            return_value=[
+                (
+                    create_mock_memory(
+                        "/src/old.py",
+                        "old_func",
+                        modified_at=sixty_days_ago.timestamp(),
+                    ),
+                    0.9,
+                ),
+                (
+                    create_mock_memory(
+                        "/src/recent.py", "recent_func", modified_at=now.timestamp()
+                    ),
+                    0.8,
+                ),
+                (
+                    create_mock_memory(
+                        "/src/medium.py",
+                        "medium_func",
+                        modified_at=thirty_days_ago.timestamp(),
+                    ),
+                    0.7,
+                ),
+            ]
+        )
         mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
-            query="functions",
-            modified_before=thirty_days_ago
+            query="functions", modified_before=thirty_days_ago
         )
 
         # Should include files modified before thirty_days_ago (old only)
@@ -356,18 +468,46 @@ class TestDateFiltering:
         thirty_days_ago = now - timedelta(days=30)
         sixty_days_ago = now - timedelta(days=60)
 
-        mock_server.store.retrieve = AsyncMock(return_value=[
-            (create_mock_memory("/src/old.py", "old_func", modified_at=sixty_days_ago.timestamp()), 0.9),
-            (create_mock_memory("/src/recent.py", "recent_func", modified_at=now.timestamp()), 0.8),
-            (create_mock_memory("/src/inrange1.py", "inrange_func1", modified_at=(now - timedelta(days=20)).timestamp()), 0.7),
-            (create_mock_memory("/src/inrange2.py", "inrange_func2", modified_at=(now - timedelta(days=10)).timestamp()), 0.6),
-        ])
+        mock_server.store.retrieve = AsyncMock(
+            return_value=[
+                (
+                    create_mock_memory(
+                        "/src/old.py",
+                        "old_func",
+                        modified_at=sixty_days_ago.timestamp(),
+                    ),
+                    0.9,
+                ),
+                (
+                    create_mock_memory(
+                        "/src/recent.py", "recent_func", modified_at=now.timestamp()
+                    ),
+                    0.8,
+                ),
+                (
+                    create_mock_memory(
+                        "/src/inrange1.py",
+                        "inrange_func1",
+                        modified_at=(now - timedelta(days=20)).timestamp(),
+                    ),
+                    0.7,
+                ),
+                (
+                    create_mock_memory(
+                        "/src/inrange2.py",
+                        "inrange_func2",
+                        modified_at=(now - timedelta(days=10)).timestamp(),
+                    ),
+                    0.6,
+                ),
+            ]
+        )
         mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
             query="functions",
             modified_after=thirty_days_ago,
-            modified_before=seven_days_ago
+            modified_before=seven_days_ago,
         )
 
         # Should include files modified between 30 and 7 days ago
@@ -380,55 +520,88 @@ class TestSorting:
     @pytest.mark.asyncio
     async def test_sort_by_complexity_desc(self, mock_server):
         """Test sorting by complexity descending."""
-        mock_server.store.retrieve = AsyncMock(return_value=[
-            (create_mock_memory("/src/simple.py", "simple_func", complexity=2), 0.9),
-            (create_mock_memory("/src/complex.py", "complex_func", complexity=12), 0.8),
-            (create_mock_memory("/src/moderate.py", "moderate_func", complexity=6), 0.7),
-        ])
+        mock_server.store.retrieve = AsyncMock(
+            return_value=[
+                (
+                    create_mock_memory("/src/simple.py", "simple_func", complexity=2),
+                    0.9,
+                ),
+                (
+                    create_mock_memory(
+                        "/src/complex.py", "complex_func", complexity=12
+                    ),
+                    0.8,
+                ),
+                (
+                    create_mock_memory(
+                        "/src/moderate.py", "moderate_func", complexity=6
+                    ),
+                    0.7,
+                ),
+            ]
+        )
         mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
-            query="functions",
-            sort_by="complexity",
-            sort_order="desc"
+            query="functions", sort_by="complexity", sort_order="desc"
         )
 
-        complexities = [r["metadata"]["cyclomatic_complexity"] for r in result["results"]]
+        complexities = [
+            r["metadata"]["cyclomatic_complexity"] for r in result["results"]
+        ]
         assert complexities == [12, 6, 2]
 
     @pytest.mark.asyncio
     async def test_sort_by_complexity_asc(self, mock_server):
         """Test sorting by complexity ascending."""
-        mock_server.store.retrieve = AsyncMock(return_value=[
-            (create_mock_memory("/src/simple.py", "simple_func", complexity=2), 0.9),
-            (create_mock_memory("/src/complex.py", "complex_func", complexity=12), 0.8),
-            (create_mock_memory("/src/moderate.py", "moderate_func", complexity=6), 0.7),
-        ])
+        mock_server.store.retrieve = AsyncMock(
+            return_value=[
+                (
+                    create_mock_memory("/src/simple.py", "simple_func", complexity=2),
+                    0.9,
+                ),
+                (
+                    create_mock_memory(
+                        "/src/complex.py", "complex_func", complexity=12
+                    ),
+                    0.8,
+                ),
+                (
+                    create_mock_memory(
+                        "/src/moderate.py", "moderate_func", complexity=6
+                    ),
+                    0.7,
+                ),
+            ]
+        )
         mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
-            query="functions",
-            sort_by="complexity",
-            sort_order="asc"
+            query="functions", sort_by="complexity", sort_order="asc"
         )
 
-        complexities = [r["metadata"]["cyclomatic_complexity"] for r in result["results"]]
+        complexities = [
+            r["metadata"]["cyclomatic_complexity"] for r in result["results"]
+        ]
         assert complexities == [2, 6, 12]
 
     @pytest.mark.asyncio
     async def test_sort_by_size(self, mock_server):
         """Test sorting by size (line count)."""
-        mock_server.store.retrieve = AsyncMock(return_value=[
-            (create_mock_memory("/src/short.py", "short_func", line_count=20), 0.9),
-            (create_mock_memory("/src/long.py", "long_func", line_count=150), 0.8),
-            (create_mock_memory("/src/medium.py", "medium_func", line_count=80), 0.7),
-        ])
+        mock_server.store.retrieve = AsyncMock(
+            return_value=[
+                (create_mock_memory("/src/short.py", "short_func", line_count=20), 0.9),
+                (create_mock_memory("/src/long.py", "long_func", line_count=150), 0.8),
+                (
+                    create_mock_memory("/src/medium.py", "medium_func", line_count=80),
+                    0.7,
+                ),
+            ]
+        )
         mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
-            query="functions",
-            sort_by="size",
-            sort_order="desc"
+            query="functions", sort_by="size", sort_order="desc"
         )
 
         line_counts = [r["metadata"]["line_count"] for r in result["results"]]
@@ -444,17 +617,32 @@ class TestSorting:
             (now - timedelta(days=30)).timestamp(),
         ]
 
-        mock_server.store.retrieve = AsyncMock(return_value=[
-            (create_mock_memory("/src/old.py", "old_func", modified_at=timestamps[0]), 0.9),
-            (create_mock_memory("/src/recent.py", "recent_func", modified_at=timestamps[1]), 0.8),
-            (create_mock_memory("/src/medium.py", "medium_func", modified_at=timestamps[2]), 0.7),
-        ])
+        mock_server.store.retrieve = AsyncMock(
+            return_value=[
+                (
+                    create_mock_memory(
+                        "/src/old.py", "old_func", modified_at=timestamps[0]
+                    ),
+                    0.9,
+                ),
+                (
+                    create_mock_memory(
+                        "/src/recent.py", "recent_func", modified_at=timestamps[1]
+                    ),
+                    0.8,
+                ),
+                (
+                    create_mock_memory(
+                        "/src/medium.py", "medium_func", modified_at=timestamps[2]
+                    ),
+                    0.7,
+                ),
+            ]
+        )
         mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
-            query="functions",
-            sort_by="recency",
-            sort_order="desc"
+            query="functions", sort_by="recency", sort_order="desc"
         )
 
         # Most recent first
@@ -464,17 +652,17 @@ class TestSorting:
     @pytest.mark.asyncio
     async def test_sort_by_importance(self, mock_server):
         """Test sorting by importance (relevance score)."""
-        mock_server.store.retrieve = AsyncMock(return_value=[
-            (create_mock_memory("/src/low.py", "low_func"), 0.5),
-            (create_mock_memory("/src/high.py", "high_func"), 0.95),
-            (create_mock_memory("/src/medium.py", "medium_func"), 0.75),
-        ])
+        mock_server.store.retrieve = AsyncMock(
+            return_value=[
+                (create_mock_memory("/src/low.py", "low_func"), 0.5),
+                (create_mock_memory("/src/high.py", "high_func"), 0.95),
+                (create_mock_memory("/src/medium.py", "medium_func"), 0.75),
+            ]
+        )
         mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
-            query="functions",
-            sort_by="importance",
-            sort_order="desc"
+            query="functions", sort_by="importance", sort_order="desc"
         )
 
         scores = [r["relevance_score"] for r in result["results"]]
@@ -483,11 +671,13 @@ class TestSorting:
     @pytest.mark.asyncio
     async def test_default_relevance_sorting(self, mock_server):
         """Test that default sorting is by relevance."""
-        mock_server.store.retrieve = AsyncMock(return_value=[
-            (create_mock_memory("/src/low.py", "low_func"), 0.5),
-            (create_mock_memory("/src/high.py", "high_func"), 0.95),
-            (create_mock_memory("/src/medium.py", "medium_func"), 0.75),
-        ])
+        mock_server.store.retrieve = AsyncMock(
+            return_value=[
+                (create_mock_memory("/src/low.py", "low_func"), 0.5),
+                (create_mock_memory("/src/high.py", "high_func"), 0.95),
+                (create_mock_memory("/src/medium.py", "medium_func"), 0.75),
+            ]
+        )
         mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
@@ -509,18 +699,60 @@ class TestCombinedFiltersAndSorting:
         now = datetime.now(UTC)
         seven_days_ago = now - timedelta(days=7)
 
-        mock_server.store.retrieve = AsyncMock(return_value=[
-            # Matches: auth path, complexity >= 5, recent
-            (create_mock_memory("/src/auth/validator.py", "validate_token", complexity=8, modified_at=now.timestamp()), 0.9),
-            # Matches: auth path, complexity >= 5, recent
-            (create_mock_memory("/src/auth/handler.py", "handle_auth", complexity=10, modified_at=now.timestamp()), 0.8),
-            # Does not match: not auth path
-            (create_mock_memory("/src/api/routes.py", "get_user", complexity=7, modified_at=now.timestamp()), 0.7),
-            # Does not match: too simple
-            (create_mock_memory("/src/auth/utils.py", "simple_util", complexity=2, modified_at=now.timestamp()), 0.6),
-            # Does not match: too old
-            (create_mock_memory("/src/auth/legacy.py", "old_auth", complexity=9, modified_at=(now - timedelta(days=30)).timestamp()), 0.5),
-        ])
+        mock_server.store.retrieve = AsyncMock(
+            return_value=[
+                # Matches: auth path, complexity >= 5, recent
+                (
+                    create_mock_memory(
+                        "/src/auth/validator.py",
+                        "validate_token",
+                        complexity=8,
+                        modified_at=now.timestamp(),
+                    ),
+                    0.9,
+                ),
+                # Matches: auth path, complexity >= 5, recent
+                (
+                    create_mock_memory(
+                        "/src/auth/handler.py",
+                        "handle_auth",
+                        complexity=10,
+                        modified_at=now.timestamp(),
+                    ),
+                    0.8,
+                ),
+                # Does not match: not auth path
+                (
+                    create_mock_memory(
+                        "/src/api/routes.py",
+                        "get_user",
+                        complexity=7,
+                        modified_at=now.timestamp(),
+                    ),
+                    0.7,
+                ),
+                # Does not match: too simple
+                (
+                    create_mock_memory(
+                        "/src/auth/utils.py",
+                        "simple_util",
+                        complexity=2,
+                        modified_at=now.timestamp(),
+                    ),
+                    0.6,
+                ),
+                # Does not match: too old
+                (
+                    create_mock_memory(
+                        "/src/auth/legacy.py",
+                        "old_auth",
+                        complexity=9,
+                        modified_at=(now - timedelta(days=30)).timestamp(),
+                    ),
+                    0.5,
+                ),
+            ]
+        )
         mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
@@ -529,7 +761,7 @@ class TestCombinedFiltersAndSorting:
             complexity_min=5,
             modified_after=seven_days_ago,
             sort_by="complexity",
-            sort_order="desc"
+            sort_order="desc",
         )
 
         # Should return 2 results (validator and handler), sorted by complexity desc
@@ -549,17 +781,25 @@ class TestCombinedFiltersAndSorting:
     @pytest.mark.asyncio
     async def test_exclude_tests_with_complexity_filter(self, mock_server):
         """Test exclusion patterns combined with complexity filtering."""
-        mock_server.store.retrieve = AsyncMock(return_value=[
-            (create_mock_memory("/src/core.py", "complex_logic", complexity=12), 0.9),
-            (create_mock_memory("/tests/test_core.py", "test_complex", complexity=15), 0.8),
-            (create_mock_memory("/src/utils.py", "helper", complexity=3), 0.7),
-        ])
+        mock_server.store.retrieve = AsyncMock(
+            return_value=[
+                (
+                    create_mock_memory("/src/core.py", "complex_logic", complexity=12),
+                    0.9,
+                ),
+                (
+                    create_mock_memory(
+                        "/tests/test_core.py", "test_complex", complexity=15
+                    ),
+                    0.8,
+                ),
+                (create_mock_memory("/src/utils.py", "helper", complexity=3), 0.7),
+            ]
+        )
         mock_server._get_embedding = AsyncMock(return_value=mock_embedding(value=0.1))
 
         result = await mock_server.search_code(
-            query="logic",
-            exclude_patterns=["**/tests/**"],
-            complexity_min=10
+            query="logic", exclude_patterns=["**/tests/**"], complexity_min=10
         )
 
         # Should only return src/core.py (excludes tests, filters by complexity)

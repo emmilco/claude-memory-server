@@ -2,7 +2,6 @@
 
 import re
 from dataclasses import dataclass
-from pathlib import Path
 from typing import List, Optional
 
 
@@ -64,7 +63,11 @@ class CodeAnalyzer:
 
         # For simple MVP, analyze the whole code as one unit if no AST
         # In production, we'd use tree-sitter to parse and analyze each function
-        lines = [line for line in code.split("\n") if line.strip() and not line.strip().startswith("#")]
+        lines = [
+            line
+            for line in code.split("\n")
+            if line.strip() and not line.strip().startswith("#")
+        ]
 
         # Calculate basic metrics
         loc = len(lines)
@@ -145,7 +148,6 @@ class CodeAnalyzer:
         Counts maximum depth of nested blocks (braces, indentation).
         """
         max_depth = 0
-        current_depth = 0
 
         # For Python, use indentation
         lines = code.split("\n")
@@ -253,7 +255,9 @@ class CodeAnalyzer:
         # Detect issues for each code unit
         for metrics in metrics_list:
             # Check for long parameter lists
-            suggestion = self.detect_long_parameter_list(metrics, file_path, line_number)
+            suggestion = self.detect_long_parameter_list(
+                metrics, file_path, line_number
+            )
             if suggestion:
                 suggestions.append(suggestion)
 

@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class RerankingWeights:
     """Weights for different ranking signals."""
+
     similarity: float = 0.6  # Vector similarity score
     recency: float = 0.2  # How recent the memory is
     usage: float = 0.2  # How frequently accessed
@@ -55,9 +56,7 @@ class ResultReranker:
 
         # Validate weights sum to reasonable range
         total_weight = (
-            self.weights.similarity +
-            self.weights.recency +
-            self.weights.usage
+            self.weights.similarity + self.weights.recency + self.weights.usage
         )
         if total_weight < 0.9 or total_weight > 1.1:
             logger.warning(
@@ -112,11 +111,11 @@ class ResultReranker:
 
             # Combined score
             combined_score = (
-                self.weights.similarity * similarity_score +
-                self.weights.recency * recency_score +
-                self.weights.usage * usage_score +
-                self.weights.length_penalty * length_penalty +
-                self.weights.keyword_boost * keyword_boost
+                self.weights.similarity * similarity_score
+                + self.weights.recency * recency_score
+                + self.weights.usage * usage_score
+                + self.weights.length_penalty * length_penalty
+                + self.weights.keyword_boost * keyword_boost
             )
 
             reranked.append((memory, combined_score))
@@ -192,8 +191,7 @@ class ResultReranker:
         # Logarithmic scaling: score = log(count + 1) / log(max + 1)
         # This prevents very frequently used items from dominating
         max_use_count = max(
-            (s.get("use_count", 0) for s in usage_data.values()),
-            default=1
+            (s.get("use_count", 0) for s in usage_data.values()), default=1
         )
 
         if max_use_count == 0:
@@ -256,15 +254,14 @@ class ResultReranker:
             return 0.0
 
         # Extract keywords from query
-        keywords = re.findall(r'\w+', query.lower())
+        keywords = re.findall(r"\w+", query.lower())
         if not keywords:
             return 0.0
 
         # Count exact matches in content using word boundaries
         content_lower = memory.content.lower()
         matches = sum(
-            1 for kw in keywords
-            if re.search(rf'\b{re.escape(kw)}\b', content_lower)
+            1 for kw in keywords if re.search(rf"\b{re.escape(kw)}\b", content_lower)
         )
 
         # Boost based on match percentage (guard against division by zero)
@@ -304,7 +301,7 @@ class ResultReranker:
                 similarity = self._simple_similarity(signature, seen_sig)
                 if similarity > 0.8:  # Very similar
                     # Apply diversity penalty
-                    score *= (1.0 - self.diversity_penalty)
+                    score *= 1.0 - self.diversity_penalty
                     is_duplicate = True
                     self.stats["diversity_dedupes"] += 1
                     break
@@ -331,8 +328,8 @@ class ResultReranker:
             Similarity score (0-1)
         """
         # Tokenize
-        tokens1 = set(re.findall(r'\w+', text1.lower()))
-        tokens2 = set(re.findall(r'\w+', text2.lower()))
+        tokens1 = set(re.findall(r"\w+", text1.lower()))
+        tokens2 = set(re.findall(r"\w+", text2.lower()))
 
         if not tokens1 or not tokens2:
             return 0.0
@@ -359,9 +356,7 @@ class ResultReranker:
             return
 
         # Build position maps
-        original_positions = {
-            mem.id: i for i, (mem, _) in enumerate(original)
-        }
+        original_positions = {mem.id: i for i, (mem, _) in enumerate(original)}
 
         total_change = 0
         for new_pos, (mem, _) in enumerate(reranked):
@@ -373,8 +368,8 @@ class ResultReranker:
         count = self.stats["reranks_performed"]
         current_avg = self.stats["avg_position_change"]
         self.stats["avg_position_change"] = (
-            (current_avg * (count - 1) + total_change / len(reranked)) / count
-        )
+            current_avg * (count - 1) + total_change / len(reranked)
+        ) / count
 
     def get_stats(self) -> dict:
         """Get reranking statistics."""
@@ -428,7 +423,7 @@ class MMRReranker:
 
             # Calculate MMR score for each remaining result
             best_idx = 0
-            best_score = float('-inf')
+            best_score = float("-inf")
 
             for idx, (memory, relevance) in enumerate(remaining):
                 # Relevance component
@@ -445,8 +440,8 @@ class MMRReranker:
 
                 # MMR formula: λ * relevance - (1-λ) * max_similarity
                 mmr_score = (
-                    self.lambda_param * relevance_score -
-                    (1 - self.lambda_param) * max_similarity
+                    self.lambda_param * relevance_score
+                    - (1 - self.lambda_param) * max_similarity
                 )
 
                 if mmr_score > best_score:
@@ -472,8 +467,8 @@ class MMRReranker:
             Similarity score (0-1)
         """
         # Simple Jaccard similarity
-        tokens1 = set(re.findall(r'\w+', mem1.content.lower()))
-        tokens2 = set(re.findall(r'\w+', mem2.content.lower()))
+        tokens1 = set(re.findall(r"\w+", mem1.content.lower()))
+        tokens2 = set(re.findall(r"\w+", mem2.content.lower()))
 
         if not tokens1 or not tokens2:
             return 0.0
@@ -498,10 +493,7 @@ def rerank_with_custom_function(
     Returns:
         Reranked results
     """
-    rescored = [
-        (memory, scoring_fn(memory, score))
-        for memory, score in results
-    ]
+    rescored = [(memory, scoring_fn(memory, score)) for memory, score in results]
 
     rescored.sort(key=lambda x: x[1], reverse=True)
     return rescored

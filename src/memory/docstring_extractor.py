@@ -15,17 +15,19 @@ logger = logging.getLogger(__name__)
 
 class DocstringStyle(Enum):
     """Docstring styles for different languages."""
-    PYTHON = "python"          # Triple quotes: """...""" or '''...'''
-    JSDOC = "jsdoc"            # /** ... */
-    JAVADOC = "javadoc"        # /** ... */
-    GODOC = "godoc"            # // ... (consecutive single-line comments)
-    RUSTDOC = "rustdoc"        # /// ... or //! ...
-    MARKDOWN = "markdown"      # # ... (for some languages)
+
+    PYTHON = "python"  # Triple quotes: """...""" or '''...'''
+    JSDOC = "jsdoc"  # /** ... */
+    JAVADOC = "javadoc"  # /** ... */
+    GODOC = "godoc"  # // ... (consecutive single-line comments)
+    RUSTDOC = "rustdoc"  # /// ... or //! ...
+    MARKDOWN = "markdown"  # # ... (for some languages)
 
 
 @dataclass
 class Docstring:
     """Represents an extracted docstring."""
+
     content: str
     style: DocstringStyle
     start_line: int
@@ -52,8 +54,8 @@ class DocstringExtractor:
 
     # Language-specific patterns
     PYTHON_DOCSTRING_PATTERN = r'(?:"""[\s\S]*?"""|\'\'\'[\s\S]*?\'\'\')'
-    JSDOC_PATTERN = r'/\*\*[\s\S]*?\*/'
-    SINGLE_LINE_COMMENT_PATTERN = r'//[/!].*?$'
+    JSDOC_PATTERN = r"/\*\*[\s\S]*?\*/"
+    SINGLE_LINE_COMMENT_PATTERN = r"//[/!].*?$"
 
     def __init__(self):
         """Initialize docstring extractor."""
@@ -99,7 +101,7 @@ class DocstringExtractor:
     def _extract_python_docstrings(self, source_code: str) -> List[Docstring]:
         """Extract Python docstrings (triple-quoted strings)."""
         docstrings = []
-        lines = source_code.split('\n')
+        lines = source_code.split("\n")
 
         i = 0
         while i < len(lines):
@@ -115,12 +117,14 @@ class DocstringExtractor:
                 if line.count(quote_char) >= 2:
                     content = line[3:-3].strip()
                     if content:
-                        docstrings.append(Docstring(
-                            content=content,
-                            style=DocstringStyle.PYTHON,
-                            start_line=start_line,
-                            end_line=start_line,
-                        ))
+                        docstrings.append(
+                            Docstring(
+                                content=content,
+                                style=DocstringStyle.PYTHON,
+                                start_line=start_line,
+                                end_line=start_line,
+                            )
+                        )
                     i += 1
                     continue
 
@@ -139,14 +143,16 @@ class DocstringExtractor:
                     doc_lines.append(line)
                     i += 1
 
-                content = '\n'.join(doc_lines).strip()
+                content = "\n".join(doc_lines).strip()
                 if content:
-                    docstrings.append(Docstring(
-                        content=content,
-                        style=DocstringStyle.PYTHON,
-                        start_line=start_line,
-                        end_line=i + 1,
-                    ))
+                    docstrings.append(
+                        Docstring(
+                            content=content,
+                            style=DocstringStyle.PYTHON,
+                            start_line=start_line,
+                            end_line=i + 1,
+                        )
+                    )
 
             i += 1
 
@@ -158,17 +164,17 @@ class DocstringExtractor:
         docstrings = []
 
         # Find all /** ... */ blocks
-        pattern = re.compile(r'/\*\*([\s\S]*?)\*/', re.MULTILINE)
+        pattern = re.compile(r"/\*\*([\s\S]*?)\*/", re.MULTILINE)
 
         for match in pattern.finditer(source_code):
             content = match.group(1)
 
             # Clean up the content (remove leading * from each line)
-            lines = content.split('\n')
+            lines = content.split("\n")
             cleaned_lines = []
             for line in lines:
                 line = line.strip()
-                if line.startswith('*'):
+                if line.startswith("*"):
                     line = line[1:].strip()
                 if line:
                     cleaned_lines.append(line)
@@ -176,15 +182,17 @@ class DocstringExtractor:
             if cleaned_lines:
                 # Calculate line numbers
                 start_pos = match.start()
-                start_line = source_code[:start_pos].count('\n') + 1
-                end_line = start_line + content.count('\n')
+                start_line = source_code[:start_pos].count("\n") + 1
+                end_line = start_line + content.count("\n")
 
-                docstrings.append(Docstring(
-                    content='\n'.join(cleaned_lines),
-                    style=DocstringStyle.JSDOC,
-                    start_line=start_line,
-                    end_line=end_line,
-                ))
+                docstrings.append(
+                    Docstring(
+                        content="\n".join(cleaned_lines),
+                        style=DocstringStyle.JSDOC,
+                        start_line=start_line,
+                        end_line=end_line,
+                    )
+                )
 
         self.stats["docstrings_extracted"] += len(docstrings)
         return docstrings
@@ -202,31 +210,33 @@ class DocstringExtractor:
     def _extract_godoc_docstrings(self, source_code: str) -> List[Docstring]:
         """Extract GoDoc-style comments (consecutive // lines)."""
         docstrings = []
-        lines = source_code.split('\n')
+        lines = source_code.split("\n")
 
         i = 0
         while i < len(lines):
             line = lines[i].strip()
 
             # Check for comment block
-            if line.startswith('//'):
+            if line.startswith("//"):
                 start_line = i + 1
                 doc_lines = []
 
                 # Collect consecutive comment lines
-                while i < len(lines) and lines[i].strip().startswith('//'):
+                while i < len(lines) and lines[i].strip().startswith("//"):
                     comment = lines[i].strip()[2:].strip()
                     if comment:
                         doc_lines.append(comment)
                     i += 1
 
                 if doc_lines:
-                    docstrings.append(Docstring(
-                        content='\n'.join(doc_lines),
-                        style=DocstringStyle.GODOC,
-                        start_line=start_line,
-                        end_line=i,
-                    ))
+                    docstrings.append(
+                        Docstring(
+                            content="\n".join(doc_lines),
+                            style=DocstringStyle.GODOC,
+                            start_line=start_line,
+                            end_line=i,
+                        )
+                    )
                 continue
 
             i += 1
@@ -237,17 +247,17 @@ class DocstringExtractor:
     def _extract_rustdoc_docstrings(self, source_code: str) -> List[Docstring]:
         """Extract RustDoc-style comments (/// or //!)."""
         docstrings = []
-        lines = source_code.split('\n')
+        lines = source_code.split("\n")
 
         i = 0
         while i < len(lines):
             line = lines[i].strip()
 
             # Check for doc comment
-            if line.startswith('///') or line.startswith('//!'):
+            if line.startswith("///") or line.startswith("//!"):
                 start_line = i + 1
                 doc_lines = []
-                marker = '///' if line.startswith('///') else '//!'
+                marker = "///" if line.startswith("///") else "//!"
 
                 # Collect consecutive doc comment lines
                 while i < len(lines):
@@ -261,12 +271,14 @@ class DocstringExtractor:
                         break
 
                 if doc_lines:
-                    docstrings.append(Docstring(
-                        content='\n'.join(doc_lines),
-                        style=DocstringStyle.RUSTDOC,
-                        start_line=start_line,
-                        end_line=i,
-                    ))
+                    docstrings.append(
+                        Docstring(
+                            content="\n".join(doc_lines),
+                            style=DocstringStyle.RUSTDOC,
+                            start_line=start_line,
+                            end_line=i,
+                        )
+                    )
                 continue
 
             i += 1
@@ -306,8 +318,10 @@ class DocstringExtractor:
                     # For other languages (docstrings before the unit)
                     # Docstring should be right before the unit
                     # Allow a small gap (e.g., decorators, annotations)
-                    if unit.start_line >= docstring.end_line and \
-                       unit.start_line <= docstring.end_line + 5:
+                    if (
+                        unit.start_line >= docstring.end_line
+                        and unit.start_line <= docstring.end_line + 5
+                    ):
                         matching_unit = unit
                         break
 
@@ -367,7 +381,7 @@ def format_docstring_for_search(docstring: Docstring, unit_name: str = "") -> st
 
     parts.append(docstring.clean_content())
 
-    return '\n'.join(parts)
+    return "\n".join(parts)
 
 
 def extract_summary(docstring_content: str, max_length: int = 200) -> str:
@@ -382,15 +396,15 @@ def extract_summary(docstring_content: str, max_length: int = 200) -> str:
         Summary string
     """
     # Get first paragraph or sentence
-    paragraphs = docstring_content.split('\n\n')
+    paragraphs = docstring_content.split("\n\n")
     first_para = paragraphs[0].strip() if paragraphs else docstring_content
 
     # Take first sentence
-    sentences = re.split(r'[.!?]\s+', first_para)
+    sentences = re.split(r"[.!?]\s+", first_para)
     summary = sentences[0] if sentences else first_para
 
     # Truncate if too long
     if len(summary) > max_length:
-        summary = summary[:max_length-3] + "..."
+        summary = summary[: max_length - 3] + "..."
 
     return summary

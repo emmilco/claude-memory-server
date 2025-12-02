@@ -20,7 +20,13 @@ import uuid
 from datetime import datetime, UTC
 
 from src.backup.exporter import DataExporter
-from src.core.models import MemoryUnit, MemoryCategory, ContextLevel, MemoryScope, LifecycleState
+from src.core.models import (
+    MemoryUnit,
+    MemoryCategory,
+    ContextLevel,
+    MemoryScope,
+    LifecycleState,
+)
 from src.store.qdrant_store import QdrantMemoryStore
 from src.config import ServerConfig
 
@@ -34,6 +40,7 @@ async def temp_store(qdrant_client, unique_qdrant_collection):
     Qdrant deadlocks during parallel test execution.
     """
     import os
+
     qdrant_url = os.getenv("CLAUDE_RAG_QDRANT_URL", "http://localhost:6333")
     config = ServerConfig(
         storage_backend="qdrant",
@@ -45,34 +52,34 @@ async def temp_store(qdrant_client, unique_qdrant_collection):
 
     # Add some test memories
     memories = [
-            MemoryUnit(
-                id=str(uuid.uuid4()),
-                content="Test memory 1",
-                category=MemoryCategory.PREFERENCE,
-                context_level=ContextLevel.USER_PREFERENCE,
-                scope=MemoryScope.GLOBAL,
-                project_name="test-project",
-                importance=0.8,
-                embedding_model="test-model",
-                created_at=datetime.now(UTC),
-                updated_at=datetime.now(UTC),
-                last_accessed=datetime.now(UTC),
-                lifecycle_state=LifecycleState.ACTIVE,
-            ),
-            MemoryUnit(
-                id=str(uuid.uuid4()),
-                content="Test memory 2",
-                category=MemoryCategory.FACT,
-                context_level=ContextLevel.PROJECT_CONTEXT,
-                scope=MemoryScope.PROJECT,
-                project_name="test-project",
-                importance=0.6,
-                embedding_model="test-model",
-                created_at=datetime.now(UTC),
-                updated_at=datetime.now(UTC),
-                last_accessed=datetime.now(UTC),
-                lifecycle_state=LifecycleState.ACTIVE,
-            ),
+        MemoryUnit(
+            id=str(uuid.uuid4()),
+            content="Test memory 1",
+            category=MemoryCategory.PREFERENCE,
+            context_level=ContextLevel.USER_PREFERENCE,
+            scope=MemoryScope.GLOBAL,
+            project_name="test-project",
+            importance=0.8,
+            embedding_model="test-model",
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+            last_accessed=datetime.now(UTC),
+            lifecycle_state=LifecycleState.ACTIVE,
+        ),
+        MemoryUnit(
+            id=str(uuid.uuid4()),
+            content="Test memory 2",
+            category=MemoryCategory.FACT,
+            context_level=ContextLevel.PROJECT_CONTEXT,
+            scope=MemoryScope.PROJECT,
+            project_name="test-project",
+            importance=0.6,
+            embedding_model="test-model",
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+            last_accessed=datetime.now(UTC),
+            lifecycle_state=LifecycleState.ACTIVE,
+        ),
     ]
 
     # Embeddings stored separately
@@ -94,7 +101,7 @@ async def temp_store(qdrant_client, unique_qdrant_collection):
                 "updated_at": memory.updated_at.isoformat(),
                 "last_accessed": memory.last_accessed.isoformat(),
                 "lifecycle_state": memory.lifecycle_state.value,
-            }
+            },
         )
 
     yield store
@@ -120,7 +127,7 @@ async def test_export_to_json(temp_store):
         assert output_path.exists()
 
         # Verify JSON content
-        with open(output_path, 'r') as f:
+        with open(output_path, "r") as f:
             data = json.load(f)
 
         assert data["version"] == "1.0.0"
@@ -150,7 +157,9 @@ async def test_create_portable_archive(temp_store):
     with tempfile.TemporaryDirectory() as tmpdir:
         output_path = Path(tmpdir) / "backup.tar.gz"
 
-        stats = await exporter.create_portable_archive(output_path, include_embeddings=True)
+        stats = await exporter.create_portable_archive(
+            output_path, include_embeddings=True
+        )
 
         # Verify archive created
         assert stats["format"] == "archive"
@@ -160,7 +169,8 @@ async def test_create_portable_archive(temp_store):
 
         # Verify archive contains expected files
         import tarfile
-        with tarfile.open(output_path, 'r:gz') as tar:
+
+        with tarfile.open(output_path, "r:gz") as tar:
             names = tar.getnames()
             assert "memories.json" in names
             assert "embeddings.npz" in names

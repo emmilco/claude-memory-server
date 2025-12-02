@@ -6,10 +6,6 @@ embedding behavior, ProcessPoolExecutor creation, and worker distribution.
 
 import pytest
 import pytest_asyncio
-import asyncio
-from typing import List
-from unittest.mock import Mock, patch
-import os
 
 # Mark all tests in this module as requiring real embeddings
 pytestmark = pytest.mark.real_embeddings
@@ -110,15 +106,9 @@ class TestParallelEmbeddingGenerator:
     async def test_batch_generate_large(self, parallel_generator):
         """Test batch generation for large batch (parallel mode)."""
         # Generate 20 different texts to trigger parallel mode
-        texts = [
-            f"def function_{i}(): return {i}"
-            for i in range(20)
-        ]
+        texts = [f"def function_{i}(): return {i}" for i in range(20)]
 
-        embeddings = await parallel_generator.batch_generate(
-            texts,
-            show_progress=True
-        )
+        embeddings = await parallel_generator.batch_generate(texts, show_progress=True)
 
         assert len(embeddings) == len(texts)
         assert all(len(emb) == 384 for emb in embeddings)
@@ -215,10 +205,7 @@ class TestParallelEmbeddingGenerator:
         # Mock to track which worker processes were used
         # This is tricky to test directly, but we can verify no errors occur
         # and all texts are processed
-        embeddings = await parallel_generator.batch_generate(
-            texts,
-            show_progress=True
-        )
+        embeddings = await parallel_generator.batch_generate(texts, show_progress=True)
 
         assert len(embeddings) == 50
         assert all(len(emb) == 384 for emb in embeddings)
@@ -278,6 +265,7 @@ class TestParallelEmbeddingGenerator:
         """Test that cache hits occur when re-embedding same texts."""
         # Use unique texts to avoid cross-test cache pollution
         import uuid
+
         test_id = str(uuid.uuid4())[:8]
 
         generator = ParallelEmbeddingGenerator(config, max_workers=2)
@@ -301,7 +289,9 @@ class TestParallelEmbeddingGenerator:
             assert len(e1) == len(e2)
             # Use floating point tolerance for comparison (cache may serialize differently)
             for i, (v1, v2) in enumerate(zip(e1, e2)):
-                assert abs(v1 - v2) < 1e-6, f"Embedding mismatch at dimension {i}: {v1} vs {v2}"
+                assert (
+                    abs(v1 - v2) < 1e-6
+                ), f"Embedding mismatch at dimension {i}: {v1} vs {v2}"
 
         # Verify cache was actually used (cache stats should show hits)
         if generator.cache:
@@ -354,7 +344,9 @@ class TestParallelEmbeddingGenerator:
 
         # Should have at least 20 hits (one per text)
         cache_hit_increase = final_hits - initial_hits
-        assert cache_hit_increase >= 20, f"Expected at least 20 cache hits, got {cache_hit_increase}"
+        assert (
+            cache_hit_increase >= 20
+        ), f"Expected at least 20 cache hits, got {cache_hit_increase}"
 
         await generator.close()
 

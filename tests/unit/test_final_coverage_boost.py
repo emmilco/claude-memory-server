@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from src.core.models import MemoryUnit, MemoryCategory, MemoryScope, ContextLevel, QueryRequest
+from src.core.models import MemoryUnit, MemoryCategory, MemoryScope, QueryRequest
 from src.core.exceptions import CollectionNotFoundError, MemoryNotFoundError
 
 

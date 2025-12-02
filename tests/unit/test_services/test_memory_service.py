@@ -13,7 +13,7 @@ This test suite covers:
 
 import pytest
 from datetime import datetime, timedelta, UTC
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 import json
 
 from src.services.memory_service import MemoryService
@@ -25,10 +25,8 @@ from src.core.models import (
     MemoryScope,
 )
 from src.core.exceptions import (
-    StorageError,
     ValidationError,
     ReadOnlyError,
-    RetrievalError,
 )
 from tests.conftest import mock_embedding
 
@@ -141,8 +139,7 @@ class TestContextLevelClassification:
     def test_classify_preference_category(self, service):
         """Test preference category yields USER_PREFERENCE level."""
         result = service._classify_context_level(
-            content="Some content",
-            category=MemoryCategory.PREFERENCE
+            content="Some content", category=MemoryCategory.PREFERENCE
         )
         assert result == ContextLevel.USER_PREFERENCE
 
@@ -158,8 +155,7 @@ class TestContextLevelClassification:
         ]
         for content in test_cases:
             result = service._classify_context_level(
-                content=content,
-                category=MemoryCategory.FACT
+                content=content, category=MemoryCategory.FACT
             )
             assert result == ContextLevel.USER_PREFERENCE, f"Failed for: {content}"
 
@@ -174,16 +170,14 @@ class TestContextLevelClassification:
         ]
         for content in test_cases:
             result = service._classify_context_level(
-                content=content,
-                category=MemoryCategory.FACT
+                content=content, category=MemoryCategory.FACT
             )
             assert result == ContextLevel.SESSION_STATE, f"Failed for: {content}"
 
     def test_classify_default_to_project_context(self, service):
         """Test default classification is PROJECT_CONTEXT."""
         result = service._classify_context_level(
-            content="The database uses PostgreSQL",
-            category=MemoryCategory.FACT
+            content="The database uses PostgreSQL", category=MemoryCategory.FACT
         )
         assert result == ContextLevel.PROJECT_CONTEXT
 
@@ -761,9 +755,11 @@ class TestFindDuplicateMemories:
     def service(self):
         """Create service instance for duplicate detection tests."""
         store = AsyncMock()
-        store.find_duplicate_memories = AsyncMock(return_value=[
-            {"group_id": 1, "memories": ["mem_1", "mem_2"]},
-        ])
+        store.find_duplicate_memories = AsyncMock(
+            return_value=[
+                {"group_id": 1, "memories": ["mem_1", "mem_2"]},
+            ]
+        )
 
         return MemoryService(
             store=store,
@@ -925,11 +921,7 @@ class TestImportMemories:
         """Test importing with skip conflict mode."""
         service.store.get_by_id = AsyncMock(return_value=MagicMock())  # Exists
 
-        import_data = {
-            "memories": [
-                {"memory_id": "existing", "content": "Test"}
-            ]
-        }
+        import_data = {"memories": [{"memory_id": "existing", "content": "Test"}]}
 
         result = await service.import_memories(
             content=json.dumps(import_data),
@@ -1022,12 +1014,14 @@ class TestDashboardStats:
         store = AsyncMock()
         store.count = AsyncMock(return_value=100)
         store.get_all_projects = AsyncMock(return_value=["project1", "project2"])
-        store.get_project_stats = AsyncMock(return_value={
-            "project_name": "project1",
-            "memory_count": 50,
-            "categories": {"fact": 30, "preference": 20},
-            "lifecycle_states": {"active": 40, "archived": 10},
-        })
+        store.get_project_stats = AsyncMock(
+            return_value={
+                "project_name": "project1",
+                "memory_count": 50,
+                "categories": {"fact": 30, "preference": 20},
+                "lifecycle_states": {"active": 40, "archived": 10},
+            }
+        )
 
         return MemoryService(
             store=store,
@@ -1053,10 +1047,12 @@ class TestRecentActivity:
     def service(self):
         """Create service instance for recent activity tests."""
         store = AsyncMock()
-        store.get_recent_activity = AsyncMock(return_value={
-            "recent_searches": [],
-            "recent_additions": [],
-        })
+        store.get_recent_activity = AsyncMock(
+            return_value={
+                "recent_searches": [],
+                "recent_additions": [],
+            }
+        )
 
         return MemoryService(
             store=store,
@@ -1098,7 +1094,7 @@ class TestEmbeddingCaching:
         """Test cache miss generates embedding and stores in cache."""
         service.embedding_cache.get = AsyncMock(return_value=None)
 
-        result = await service._get_embedding("test text")
+        await service._get_embedding("test text")
 
         service.embedding_cache.get.assert_called_once()
         service.embedding_generator.generate.assert_called_once()

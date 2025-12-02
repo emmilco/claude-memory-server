@@ -60,6 +60,7 @@ class ResultSummarizer:
 
                 # Extract directory
                 import os
+
                 dir_path = os.path.dirname(file_path)
                 if dir_path:
                     directories[dir_path] += 1

@@ -83,7 +83,9 @@ class MemoryUnit(BaseModel):
     """Core memory record with metadata."""
 
     id: str = Field(default_factory=lambda: str(uuid4()))
-    content: str = Field(..., min_length=1, max_length=50000)  # Increased for code indexing
+    content: str = Field(
+        ..., min_length=1, max_length=50000
+    )  # Increased for code indexing
     category: MemoryCategory
     context_level: ContextLevel = ContextLevel.PROJECT_CONTEXT
     scope: MemoryScope = MemoryScope.GLOBAL
@@ -109,8 +111,8 @@ class MemoryUnit(BaseModel):
             raise ValueError("Content exceeds maximum size of 50KB")
         return v
 
-    @model_validator(mode='after')
-    def validate_project_name(self) -> 'MemoryUnit':
+    @model_validator(mode="after")
+    def validate_project_name(self) -> "MemoryUnit":
         """Validate project_name is required when scope is PROJECT."""
         if self.scope == MemoryScope.PROJECT and not self.project_name:
             raise ValueError("project_name is required when scope is PROJECT")
@@ -135,14 +137,16 @@ class MemoryUnit(BaseModel):
                 "importance": 0.9,
                 "tags": ["language", "preference"],
             }
-        }
+        },
     )
 
 
 class StoreMemoryRequest(BaseModel):
     """Request model for storing a new memory."""
 
-    content: str = Field(..., min_length=1, max_length=50000)  # Increased for code indexing
+    content: str = Field(
+        ..., min_length=1, max_length=50000
+    )  # Increased for code indexing
     category: MemoryCategory
     scope: MemoryScope = MemoryScope.GLOBAL
     project_name: Optional[str] = None
@@ -178,7 +182,7 @@ class QueryRequest(BaseModel):
     category: Optional[MemoryCategory] = None
     min_importance: float = Field(default=0.0, ge=0.0, le=1.0)
     tags: List[str] = Field(default_factory=list)
-    advanced_filters: Optional['AdvancedSearchFilters'] = None  # Forward reference
+    advanced_filters: Optional["AdvancedSearchFilters"] = None  # Forward reference
 
     @field_validator("query")
     @classmethod
@@ -239,25 +243,21 @@ class CodeSearchFilters(BaseModel):
     # Glob pattern matching (NOT substring)
     file_pattern: Optional[str] = Field(
         default=None,
-        description="Glob pattern for file paths (e.g., '**/*.test.py', 'src/**/auth*.ts')"
+        description="Glob pattern for file paths (e.g., '**/*.test.py', 'src/**/auth*.ts')",
     )
 
     # Exclusion patterns
     exclude_patterns: Optional[List[str]] = Field(
         default=None,
-        description="Glob patterns to exclude (e.g., ['**/*.test.py', '**/generated/**'])"
+        description="Glob patterns to exclude (e.g., ['**/*.test.py', '**/generated/**'])",
     )
 
     # Complexity filters
     complexity_min: Optional[int] = Field(
-        default=None,
-        ge=0,
-        description="Minimum cyclomatic complexity"
+        default=None, ge=0, description="Minimum cyclomatic complexity"
     )
     complexity_max: Optional[int] = Field(
-        default=None,
-        ge=0,
-        description="Maximum cyclomatic complexity"
+        default=None, ge=0, description="Maximum cyclomatic complexity"
     )
 
     # Line count filters
@@ -266,22 +266,19 @@ class CodeSearchFilters(BaseModel):
 
     # Date range filters (file modification time)
     modified_after: Optional[datetime] = Field(
-        default=None,
-        description="Filter by file modification time (after this date)"
+        default=None, description="Filter by file modification time (after this date)"
     )
     modified_before: Optional[datetime] = Field(
-        default=None,
-        description="Filter by file modification time (before this date)"
+        default=None, description="Filter by file modification time (before this date)"
     )
 
     # Sorting
     sort_by: Optional[str] = Field(
         default="relevance",
-        description="Sort order: relevance, complexity, size, recency, importance"
+        description="Sort order: relevance, complexity, size, recency, importance",
     )
     sort_order: Optional[str] = Field(
-        default="desc",
-        description="Sort direction: asc or desc"
+        default="desc", description="Sort direction: asc or desc"
     )
 
     model_config = ConfigDict(use_enum_values=False)
@@ -327,7 +324,9 @@ class CodeSearchFilters(BaseModel):
 class TrustSignals(BaseModel):
     """Trust signals and explanations for a search result."""
 
-    why_shown: List[str] = Field(default_factory=list)  # Reasons why this result matched
+    why_shown: List[str] = Field(
+        default_factory=list
+    )  # Reasons why this result matched
     trust_score: float = Field(ge=0.0, le=1.0)  # Overall trust score (0-1)
     confidence_level: str  # "excellent", "good", "fair", "poor"
     last_verified: Optional[str] = None  # Human-readable time since verification
@@ -446,8 +445,7 @@ class SuccessResponse(BaseModel):
     message: Optional[str] = Field(default=None, description="Success message")
     data: Optional[Dict[str, Any]] = Field(default=None, description="Response data")
     timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(UTC),
-        description="Response timestamp"
+        default_factory=lambda: datetime.now(UTC), description="Response timestamp"
     )
 
 
@@ -458,16 +456,13 @@ class ErrorResponse(BaseModel):
     error_code: str = Field(..., description="Machine-readable error code")
     message: str = Field(..., description="Human-readable error message")
     details: Optional[Dict[str, Any]] = Field(
-        default=None,
-        description="Additional error details"
+        default=None, description="Additional error details"
     )
     request_id: Optional[str] = Field(
-        default=None,
-        description="Request ID for tracking"
+        default=None, description="Request ID for tracking"
     )
     timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(UTC),
-        description="Error timestamp"
+        default_factory=lambda: datetime.now(UTC), description="Error timestamp"
     )
 
 
@@ -490,16 +485,14 @@ class UpdateMemoryRequest(BaseModel):
 
     # Update behavior flags
     preserve_timestamps: bool = Field(
-        default=True,
-        description="Keep created_at, update modified_at"
+        default=True, description="Keep created_at, update modified_at"
     )
     regenerate_embedding: bool = Field(
-        default=True,
-        description="Auto-regenerate embedding if content changes"
+        default=True, description="Auto-regenerate embedding if content changes"
     )
 
-    @model_validator(mode='after')
-    def validate_has_updates(self) -> 'UpdateMemoryRequest':
+    @model_validator(mode="after")
+    def validate_has_updates(self) -> "UpdateMemoryRequest":
         """Validate at least one field is being updated."""
         update_fields = [
             self.content,
@@ -507,7 +500,7 @@ class UpdateMemoryRequest(BaseModel):
             self.importance,
             self.tags,
             self.metadata,
-            self.context_level
+            self.context_level,
         ]
 
         if all(field is None for field in update_fields):
@@ -547,17 +540,14 @@ class UpdateMemoryResponse(BaseModel):
     memory_id: str = Field(..., description="ID of updated memory")
     status: str = Field(default="updated", description="Update status")
     updated_fields: List[str] = Field(
-        default_factory=list,
-        description="List of fields that were changed"
+        default_factory=list, description="List of fields that were changed"
     )
     embedding_regenerated: bool = Field(
-        default=False,
-        description="Whether embedding was regenerated"
+        default=False, description="Whether embedding was regenerated"
     )
     updated_at: str = Field(..., description="ISO timestamp of update")
     previous_version: Optional[Dict[str, Any]] = Field(
-        default=None,
-        description="Previous values for audit trail (optional)"
+        default=None, description="Previous values for audit trail (optional)"
     )
 
     model_config = ConfigDict(use_enum_values=False)
@@ -579,13 +569,14 @@ class Suggestion(BaseModel):
 
     memory_id: str = Field(..., description="ID of suggested memory/code")
     content: str = Field(..., description="Memory/code content")
-    confidence: float = Field(..., ge=0.0, le=1.0, description="Overall confidence score")
+    confidence: float = Field(
+        ..., ge=0.0, le=1.0, description="Overall confidence score"
+    )
     reason: str = Field(..., description="Explanation of why this was suggested")
     source_type: str = Field(..., description="Type: 'memory' or 'code'")
     relevance_factors: RelevanceFactors = Field(..., description="Scoring breakdown")
     metadata: Dict[str, Any] = Field(
-        default_factory=dict,
-        description="Additional metadata (file_path, tags, etc.)"
+        default_factory=dict, description="Additional metadata (file_path, tags, etc.)"
     )
 
     model_config = ConfigDict(use_enum_values=False)
@@ -596,7 +587,9 @@ class DetectedIntentInfo(BaseModel):
 
     intent_type: str = Field(..., description="Type of intent detected")
     keywords: List[str] = Field(default_factory=list, description="Extracted keywords")
-    confidence: float = Field(..., ge=0.0, le=1.0, description="Intent detection confidence")
+    confidence: float = Field(
+        ..., ge=0.0, le=1.0, description="Intent detection confidence"
+    )
     search_query: str = Field(..., description="Synthesized search query")
 
     model_config = ConfigDict(use_enum_values=False)
@@ -606,11 +599,14 @@ class SuggestionResponse(BaseModel):
     """Response from proactive suggestion request."""
 
     suggestions: List[Suggestion] = Field(
-        default_factory=list,
-        description="List of suggestions ordered by confidence"
+        default_factory=list, description="List of suggestions ordered by confidence"
     )
-    detected_intent: DetectedIntentInfo = Field(..., description="Detected intent information")
-    confidence_threshold: float = Field(..., ge=0.0, le=1.0, description="Minimum confidence threshold used")
+    detected_intent: DetectedIntentInfo = Field(
+        ..., description="Detected intent information"
+    )
+    confidence_threshold: float = Field(
+        ..., ge=0.0, le=1.0, description="Minimum confidence threshold used"
+    )
     total_suggestions: int = Field(..., description="Number of suggestions returned")
     session_id: str = Field(..., description="Conversation session ID")
 
@@ -628,15 +624,21 @@ class SearchFeedback(BaseModel):
     """User feedback for a search query and its results."""
 
     id: str = Field(default_factory=lambda: str(uuid4()))
-    search_id: str = Field(..., description="Unique ID of the search this feedback relates to")
+    search_id: str = Field(
+        ..., description="Unique ID of the search this feedback relates to"
+    )
     query: str = Field(..., description="Original search query")
-    result_ids: List[str] = Field(default_factory=list, description="IDs of results returned")
-    rating: FeedbackRating = Field(..., description="User rating: helpful or not_helpful")
+    result_ids: List[str] = Field(
+        default_factory=list, description="IDs of results returned"
+    )
+    rating: FeedbackRating = Field(
+        ..., description="User rating: helpful or not_helpful"
+    )
     comment: Optional[str] = Field(None, description="Optional user comment")
     project_name: Optional[str] = Field(None, description="Project context")
     timestamp: str = Field(
         default_factory=lambda: datetime.now(UTC).isoformat(),
-        description="When feedback was submitted"
+        description="When feedback was submitted",
     )
     user_id: Optional[str] = Field(None, description="Optional user identifier")
 
@@ -651,12 +653,16 @@ class QualityMetrics(BaseModel):
     window_start: str = Field(..., description="Start of time window (ISO format)")
     total_searches: int = Field(default=0, description="Total number of searches")
     helpful_count: int = Field(default=0, description="Number of helpful ratings")
-    not_helpful_count: int = Field(default=0, description="Number of not helpful ratings")
-    avg_result_count: float = Field(default=0.0, description="Average number of results returned")
+    not_helpful_count: int = Field(
+        default=0, description="Number of not helpful ratings"
+    )
+    avg_result_count: float = Field(
+        default=0.0, description="Average number of results returned"
+    )
     project_name: Optional[str] = Field(None, description="Project filter")
     updated_at: str = Field(
         default_factory=lambda: datetime.now(UTC).isoformat(),
-        description="Last update timestamp"
+        description="Last update timestamp",
     )
 
     @property
@@ -680,7 +686,7 @@ class GetUsageStatisticsRequest(BaseModel):
         default=30,
         ge=1,
         le=365,
-        description="Number of days to look back for statistics"
+        description="Number of days to look back for statistics",
     )
 
     model_config = ConfigDict(use_enum_values=False)
@@ -692,13 +698,23 @@ class GetUsageStatisticsResponse(BaseModel):
     period_days: int = Field(..., description="Number of days covered")
     total_queries: int = Field(default=0, description="Total number of queries")
     unique_queries: int = Field(default=0, description="Number of unique query texts")
-    avg_query_time_ms: float = Field(default=0.0, description="Average query execution time")
-    avg_result_count: float = Field(default=0.0, description="Average number of results per query")
-    total_code_accesses: int = Field(default=0, description="Total code file/function accesses")
+    avg_query_time_ms: float = Field(
+        default=0.0, description="Average query execution time"
+    )
+    avg_result_count: float = Field(
+        default=0.0, description="Average number of results per query"
+    )
+    total_code_accesses: int = Field(
+        default=0, description="Total code file/function accesses"
+    )
     unique_files: int = Field(default=0, description="Number of unique files accessed")
-    unique_functions: int = Field(default=0, description="Number of unique functions accessed")
+    unique_functions: int = Field(
+        default=0, description="Number of unique functions accessed"
+    )
     most_active_day: Optional[str] = Field(None, description="Date of most activity")
-    most_active_day_count: int = Field(default=0, description="Query count on most active day")
+    most_active_day_count: int = Field(
+        default=0, description="Query count on most active day"
+    )
 
     model_config = ConfigDict(use_enum_values=False)
 
@@ -707,16 +723,10 @@ class GetTopQueriesRequest(BaseModel):
     """Request for most frequent queries."""
 
     limit: int = Field(
-        default=10,
-        ge=1,
-        le=100,
-        description="Maximum number of queries to return"
+        default=10, ge=1, le=100, description="Maximum number of queries to return"
     )
     days: int = Field(
-        default=30,
-        ge=1,
-        le=365,
-        description="Number of days to look back"
+        default=30, ge=1, le=365, description="Number of days to look back"
     )
 
     model_config = ConfigDict(use_enum_values=False)
@@ -727,8 +737,12 @@ class QueryStatistics(BaseModel):
 
     query: str = Field(..., description="The query text")
     count: int = Field(..., description="Number of times queried")
-    avg_result_count: float = Field(default=0.0, description="Average number of results")
-    avg_execution_time_ms: float = Field(default=0.0, description="Average execution time")
+    avg_result_count: float = Field(
+        default=0.0, description="Average number of results"
+    )
+    avg_execution_time_ms: float = Field(
+        default=0.0, description="Average execution time"
+    )
     last_used: str = Field(..., description="ISO timestamp of last use")
 
     model_config = ConfigDict(use_enum_values=False)
@@ -739,7 +753,7 @@ class GetTopQueriesResponse(BaseModel):
 
     queries: List[QueryStatistics] = Field(
         default_factory=list,
-        description="List of query statistics ordered by frequency"
+        description="List of query statistics ordered by frequency",
     )
     period_days: int = Field(..., description="Number of days covered")
     total_returned: int = Field(..., description="Number of queries returned")
@@ -751,16 +765,10 @@ class GetFrequentlyAccessedCodeRequest(BaseModel):
     """Request for most frequently accessed code."""
 
     limit: int = Field(
-        default=10,
-        ge=1,
-        le=100,
-        description="Maximum number of items to return"
+        default=10, ge=1, le=100, description="Maximum number of items to return"
     )
     days: int = Field(
-        default=30,
-        ge=1,
-        le=365,
-        description="Number of days to look back"
+        default=30, ge=1, le=365, description="Number of days to look back"
     )
 
     model_config = ConfigDict(use_enum_values=False)
@@ -770,7 +778,9 @@ class CodeAccessStatistics(BaseModel):
     """Statistics for accessed code files/functions."""
 
     file_path: str = Field(..., description="Path to the code file")
-    function_name: Optional[str] = Field(None, description="Function/method name if applicable")
+    function_name: Optional[str] = Field(
+        None, description="Function/method name if applicable"
+    )
     access_count: int = Field(..., description="Number of times accessed")
     last_accessed: str = Field(..., description="ISO timestamp of last access")
 
@@ -782,7 +792,7 @@ class GetFrequentlyAccessedCodeResponse(BaseModel):
 
     code_items: List[CodeAccessStatistics] = Field(
         default_factory=list,
-        description="List of code access statistics ordered by frequency"
+        description="List of code access statistics ordered by frequency",
     )
     period_days: int = Field(..., description="Number of days covered")
     total_returned: int = Field(..., description="Number of items returned")

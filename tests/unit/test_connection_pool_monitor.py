@@ -13,7 +13,7 @@ PERF-007: Connection Pooling - Day 2 Monitoring
 import pytest
 import asyncio
 from datetime import datetime, UTC
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import Mock
 
 from src.store.connection_pool_monitor import (
     ConnectionPoolMonitor,
@@ -87,6 +87,7 @@ class TestMonitorInitialization:
 
     def test_initialization_with_callback(self, mock_pool):
         """Test monitor initialization with alert callback."""
+
         async def alert_handler(alert):
             pass
 
@@ -212,7 +213,9 @@ class TestMetricsCollection:
 
         assert len(history) >= 1
         # Should be newest first
-        assert history[0].timestamp >= history[-1].timestamp if len(history) > 1 else True
+        assert (
+            history[0].timestamp >= history[-1].timestamp if len(history) > 1 else True
+        )
 
 
 class TestAlertGeneration:
@@ -231,7 +234,8 @@ class TestAlertGeneration:
         alerts = monitor.get_recent_alerts()
         assert len(alerts) > 0
         assert any(
-            alert.severity == AlertSeverity.WARNING and "exhaustion" in alert.message.lower()
+            alert.severity == AlertSeverity.WARNING
+            and "exhaustion" in alert.message.lower()
             for alert in alerts
         )
 
@@ -248,7 +252,8 @@ class TestAlertGeneration:
         alerts = monitor.get_recent_alerts()
         assert len(alerts) > 0
         assert any(
-            alert.severity == AlertSeverity.CRITICAL and "exhaustion" in alert.message.lower()
+            alert.severity == AlertSeverity.CRITICAL
+            and "exhaustion" in alert.message.lower()
             for alert in alerts
         )
 
@@ -263,10 +268,7 @@ class TestAlertGeneration:
         # Should have generated a latency alert
         alerts = monitor.get_recent_alerts()
         assert len(alerts) > 0
-        assert any(
-            "latency" in alert.message.lower()
-            for alert in alerts
-        )
+        assert any("latency" in alert.message.lower() for alert in alerts)
 
     @pytest.mark.asyncio
     async def test_timeout_alert(self, monitor, mock_pool):
@@ -282,10 +284,7 @@ class TestAlertGeneration:
         # Should have generated a timeout alert
         alerts = monitor.get_recent_alerts()
         assert len(alerts) > 0
-        assert any(
-            "timeout" in alert.message.lower()
-            for alert in alerts
-        )
+        assert any("timeout" in alert.message.lower() for alert in alerts)
 
     @pytest.mark.asyncio
     async def test_health_failure_alert(self, monitor, mock_pool):

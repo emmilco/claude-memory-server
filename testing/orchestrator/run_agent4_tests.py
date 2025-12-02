@@ -52,29 +52,29 @@ def main():
                 result = executor.execute_test(test_id)
                 all_results.append(result)
 
-                status = result['status']
+                status = result["status"]
                 status_emoji = {
-                    'PASS': '✅',
-                    'FAIL': '❌',
-                    'ERROR': '⚠️',
-                    'MANUAL_REQUIRED': '👤'
-                }.get(status, '❓')
+                    "PASS": "✅",
+                    "FAIL": "❌",
+                    "ERROR": "⚠️",
+                    "MANUAL_REQUIRED": "👤",
+                }.get(status, "❓")
 
                 print(f"{status_emoji} [{test_id}] {status}")
                 print(f"   Notes: {result['notes'][:200]}...")
 
-                if result.get('bugs_found'):
+                if result.get("bugs_found"):
                     print(f"   🐛 Bugs Found: {len(result['bugs_found'])}")
-                    for bug in result['bugs_found']:
+                    for bug in result["bugs_found"]:
                         print(f"      - [{bug['severity']}] {bug['description'][:80]}")
-                    total_bugs += len(result['bugs_found'])
+                    total_bugs += len(result["bugs_found"])
 
                 # Update counters
-                if status == 'PASS':
+                if status == "PASS":
                     total_pass += 1
-                elif status == 'FAIL':
+                elif status == "FAIL":
                     total_fail += 1
-                elif status == 'ERROR':
+                elif status == "ERROR":
                     total_error += 1
 
             except Exception as e:
@@ -96,17 +96,22 @@ def main():
     results_file = project_root / "testing" / "results" / "agent4_results.json"
     results_file.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(results_file, 'w') as f:
-        json.dump({
-            'summary': {
-                'total': len(all_results),
-                'passed': total_pass,
-                'failed': total_fail,
-                'errors': total_error,
-                'bugs_found': total_bugs
+    with open(results_file, "w") as f:
+        json.dump(
+            {
+                "summary": {
+                    "total": len(all_results),
+                    "passed": total_pass,
+                    "failed": total_fail,
+                    "errors": total_error,
+                    "bugs_found": total_bugs,
+                },
+                "results": all_results,
             },
-            'results': all_results
-        }, f, indent=2, default=str)
+            f,
+            indent=2,
+            default=str,
+        )
 
     print(f"📊 Detailed results saved to: {results_file}")
     print()

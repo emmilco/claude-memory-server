@@ -1,7 +1,7 @@
 """Query DSL parser for advanced search filtering (FEAT-018)."""
 
 import re
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Tuple
 from datetime import datetime
 from dataclasses import dataclass, field
 
@@ -48,32 +48,35 @@ class QueryDSLParser:
     """
 
     # Filter patterns
-    FILTER_PATTERN = re.compile(
-        r'(-)?(\w+):((?:"[^"]+"|[^\s]+))',
-        re.IGNORECASE
-    )
+    FILTER_PATTERN = re.compile(r'(-)?(\w+):((?:"[^"]+"|[^\s]+))', re.IGNORECASE)
 
     # Date operators
     DATE_OPERATORS = {
-        '>': 'gt',
-        '>=': 'gte',
-        '<': 'lt',
-        '<=': 'lte',
-        '=': 'eq',
+        ">": "gt",
+        ">=": "gte",
+        "<": "lt",
+        "<=": "lte",
+        "=": "eq",
     }
 
     # Filter aliases
     FILTER_ALIASES = {
-        'lang': 'language',
-        'path': 'file',
-        'proj': 'project',
-        'cat': 'category',
+        "lang": "language",
+        "path": "file",
+        "proj": "project",
+        "cat": "category",
     }
 
     # Supported filters
     SUPPORTED_FILTERS = {
-        'language', 'file', 'project', 'created', 'modified',
-        'author', 'category', 'scope'
+        "language",
+        "file",
+        "project",
+        "created",
+        "modified",
+        "author",
+        "category",
+        "scope",
     }
 
     def parse(self, query_string: str) -> ParsedQuery:
@@ -104,9 +107,7 @@ class QueryDSLParser:
         semantic_query = " ".join(semantic_terms).strip()
 
         return ParsedQuery(
-            semantic_query=semantic_query,
-            filters=filters,
-            exclusions=exclusions
+            semantic_query=semantic_query, filters=filters, exclusions=exclusions
         )
 
     def _extract_filters(
@@ -126,12 +127,12 @@ class QueryDSLParser:
         last_end = 0
         for match in self.FILTER_PATTERN.finditer(query_string):
             # Extract semantic terms between filters
-            semantic_part = query_string[last_end:match.start()].strip()
+            semantic_part = query_string[last_end : match.start()].strip()
             if semantic_part:
                 semantic_terms.append(semantic_part)
 
             # Parse filter
-            is_exclusion = match.group(1) == '-'
+            is_exclusion = match.group(1) == "-"
             filter_key = match.group(2).lower()
             filter_value = match.group(3)
 
@@ -151,7 +152,7 @@ class QueryDSLParser:
 
             # Handle exclusions
             if is_exclusion:
-                if filter_key == 'file':
+                if filter_key == "file":
                     exclusions.append(filter_value)
                 # Other exclusions not yet supported
                 last_end = match.end()
@@ -161,7 +162,7 @@ class QueryDSLParser:
             parsed_value = self._parse_filter_value(filter_key, filter_value)
 
             # Store filter (merge for date ranges)
-            if filter_key in ('created', 'modified'):
+            if filter_key in ("created", "modified"):
                 if filter_key not in filters:
                     filters[filter_key] = {}
                 filters[filter_key].update(parsed_value)
@@ -192,7 +193,7 @@ class QueryDSLParser:
             Parsed filter value
         """
         # Date filters
-        if filter_key in ('created', 'modified'):
+        if filter_key in ("created", "modified"):
             return self._parse_date_filter(value)
 
         # String filters
@@ -214,26 +215,24 @@ class QueryDSLParser:
             Dict with operator and date value
         """
         # Check for range
-        if '..' in value:
-            start, end = value.split('..', 1)
+        if ".." in value:
+            start, end = value.split("..", 1)
             return {
-                'gte': self._validate_date(start.strip()),
-                'lte': self._validate_date(end.strip())
+                "gte": self._validate_date(start.strip()),
+                "lte": self._validate_date(end.strip()),
             }
 
         # Check for operator prefix (check longer operators first)
         operators_sorted = sorted(
-            self.DATE_OPERATORS.items(),
-            key=lambda x: len(x[0]),
-            reverse=True
+            self.DATE_OPERATORS.items(), key=lambda x: len(x[0]), reverse=True
         )
         for op_str, op_key in operators_sorted:
             if value.startswith(op_str):
-                date_str = value[len(op_str):].strip()
+                date_str = value[len(op_str) :].strip()
                 return {op_key: self._validate_date(date_str)}
 
         # Default to exact match
-        return {'eq': self._validate_date(value)}
+        return {"eq": self._validate_date(value)}
 
     def _validate_date(self, date_str: str) -> str:
         """
@@ -255,7 +254,9 @@ class QueryDSLParser:
             ValueError: If date format is invalid
         """
         # Normalize 'Z' suffix to '+00:00' for fromisoformat compatibility
-        normalized = date_str.replace('Z', '+00:00') if date_str.endswith('Z') else date_str
+        normalized = (
+            date_str.replace("Z", "+00:00") if date_str.endswith("Z") else date_str
+        )
 
         try:
             # Try ISO format first (handles most ISO 8601 variants)
@@ -264,7 +265,7 @@ class QueryDSLParser:
         except ValueError:
             # Fallback to strict YYYY-MM-DD format
             try:
-                datetime.strptime(date_str, '%Y-%m-%d')
+                datetime.strptime(date_str, "%Y-%m-%d")
                 return date_str
             except ValueError:
                 raise ValueError(
@@ -284,7 +285,7 @@ class QueryDSLParser:
         Raises:
             ValueError: If date range is impossible (start > end)
         """
-        for filter_key in ('created', 'modified'):
+        for filter_key in ("created", "modified"):
             if filter_key not in filters:
                 continue
 
@@ -297,32 +298,40 @@ class QueryDSLParser:
             end_date = None
 
             # Get start boundary (gte or gt)
-            if 'gte' in date_filter:
-                start_date = date_filter['gte']
-            elif 'gt' in date_filter:
-                start_date = date_filter['gt']
+            if "gte" in date_filter:
+                start_date = date_filter["gte"]
+            elif "gt" in date_filter:
+                start_date = date_filter["gt"]
 
             # Get end boundary (lte or lt)
-            if 'lte' in date_filter:
-                end_date = date_filter['lte']
-            elif 'lt' in date_filter:
-                end_date = date_filter['lt']
+            if "lte" in date_filter:
+                end_date = date_filter["lte"]
+            elif "lt" in date_filter:
+                end_date = date_filter["lt"]
 
             # Validate range if both boundaries exist
             if start_date and end_date:
                 # Normalize dates for comparison
-                start_normalized = start_date.replace('Z', '+00:00') if start_date.endswith('Z') else start_date
-                end_normalized = end_date.replace('Z', '+00:00') if end_date.endswith('Z') else end_date
+                start_normalized = (
+                    start_date.replace("Z", "+00:00")
+                    if start_date.endswith("Z")
+                    else start_date
+                )
+                end_normalized = (
+                    end_date.replace("Z", "+00:00")
+                    if end_date.endswith("Z")
+                    else end_date
+                )
 
                 try:
                     start_dt = datetime.fromisoformat(start_normalized)
                 except ValueError:
-                    start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+                    start_dt = datetime.strptime(start_date, "%Y-%m-%d")
 
                 try:
                     end_dt = datetime.fromisoformat(end_normalized)
                 except ValueError:
-                    end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+                    end_dt = datetime.strptime(end_date, "%Y-%m-%d")
 
                 if start_dt > end_dt:
                     raise ValueError(

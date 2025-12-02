@@ -3,9 +3,8 @@
 import pytest
 import tempfile
 from pathlib import Path
-from datetime import datetime, UTC
 
-from src.memory.job_state_manager import JobStateManager, JobStatus, IndexingJob
+from src.memory.job_state_manager import JobStateManager, JobStatus
 
 
 @pytest.fixture
@@ -267,9 +266,9 @@ def test_job_to_dict(manager):
 
     job_dict = job.to_dict()
     assert isinstance(job_dict, dict)
-    assert job_dict['id'] == job.id
-    assert job_dict['project_name'] == "test-project"
-    assert job_dict['status'] == JobStatus.QUEUED.value
+    assert job_dict["id"] == job.id
+    assert job_dict["project_name"] == "test-project"
+    assert job_dict["status"] == JobStatus.QUEUED.value
 
 
 def test_job_persistence(manager):

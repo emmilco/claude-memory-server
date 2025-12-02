@@ -2,7 +2,6 @@
 
 import logging
 from datetime import datetime, UTC
-from pathlib import Path
 from typing import Dict, List, Optional, Callable
 from dataclasses import dataclass
 
@@ -113,25 +112,29 @@ class BulkArchivalManager:
                 if current_state == ProjectState.ARCHIVED:
                     logger.info(f"Project {project_name} already archived, skipping")
                     skipped += 1
-                    results.append({
-                        "project": project_name,
-                        "status": "skipped",
-                        "reason": "Already archived",
-                    })
+                    results.append(
+                        {
+                            "project": project_name,
+                            "status": "skipped",
+                            "reason": "Already archived",
+                        }
+                    )
                     continue
 
                 if dry_run:
                     logger.info(f"[DRY RUN] Would archive project: {project_name}")
                     successful += 1
-                    results.append({
-                        "project": project_name,
-                        "status": "would_archive",
-                        "current_state": current_state.value,
-                    })
+                    results.append(
+                        {
+                            "project": project_name,
+                            "status": "would_archive",
+                            "current_state": current_state.value,
+                        }
+                    )
                 else:
                     # Get project info for compression
                     # NOTE: This assumes projects have index paths - may need to be configurable
-                    project_info = self.archival_manager.project_states.get(project_name, {})
+                    self.archival_manager.project_states.get(project_name, {})
 
                     # Archive the project (set state to ARCHIVED)
                     result = self.archival_manager.archive_project(project_name)
@@ -139,31 +142,37 @@ class BulkArchivalManager:
                     if result["success"]:
                         logger.info(f"Successfully archived project: {project_name}")
                         successful += 1
-                        results.append({
-                            "project": project_name,
-                            "status": "archived",
-                            "previous_state": current_state.value,
-                            "archived_at": datetime.now(UTC).isoformat(),
-                        })
+                        results.append(
+                            {
+                                "project": project_name,
+                                "status": "archived",
+                                "previous_state": current_state.value,
+                                "archived_at": datetime.now(UTC).isoformat(),
+                            }
+                        )
                     else:
                         logger.error(f"Failed to archive project: {project_name}")
                         failed += 1
                         errors.append(f"Failed to archive {project_name}")
-                        results.append({
-                            "project": project_name,
-                            "status": "failed",
-                            "reason": "Archival operation failed",
-                        })
+                        results.append(
+                            {
+                                "project": project_name,
+                                "status": "failed",
+                                "reason": "Archival operation failed",
+                            }
+                        )
 
             except Exception as e:
                 logger.error(f"Error archiving project {project_name}: {e}")
                 failed += 1
                 errors.append(f"Error archiving {project_name}: {str(e)}")
-                results.append({
-                    "project": project_name,
-                    "status": "error",
-                    "error": str(e),
-                })
+                results.append(
+                    {
+                        "project": project_name,
+                        "status": "error",
+                        "error": str(e),
+                    }
+                )
 
         execution_time = (datetime.now(UTC) - start_time).total_seconds()
 
@@ -227,23 +236,29 @@ class BulkArchivalManager:
                 current_state = self.archival_manager.get_project_state(project_name)
 
                 if current_state != ProjectState.ARCHIVED:
-                    logger.info(f"Project {project_name} not archived (state: {current_state.value}), skipping")
+                    logger.info(
+                        f"Project {project_name} not archived (state: {current_state.value}), skipping"
+                    )
                     skipped += 1
-                    results.append({
-                        "project": project_name,
-                        "status": "skipped",
-                        "reason": f"Not archived (current state: {current_state.value})",
-                    })
+                    results.append(
+                        {
+                            "project": project_name,
+                            "status": "skipped",
+                            "reason": f"Not archived (current state: {current_state.value})",
+                        }
+                    )
                     continue
 
                 if dry_run:
                     logger.info(f"[DRY RUN] Would reactivate project: {project_name}")
                     successful += 1
-                    results.append({
-                        "project": project_name,
-                        "status": "would_reactivate",
-                        "current_state": current_state.value,
-                    })
+                    results.append(
+                        {
+                            "project": project_name,
+                            "status": "would_reactivate",
+                            "current_state": current_state.value,
+                        }
+                    )
                 else:
                     # Reactivate the project
                     result = self.archival_manager.reactivate_project(project_name)
@@ -251,31 +266,37 @@ class BulkArchivalManager:
                     if result["success"]:
                         logger.info(f"Successfully reactivated project: {project_name}")
                         successful += 1
-                        results.append({
-                            "project": project_name,
-                            "status": "reactivated",
-                            "previous_state": current_state.value,
-                            "reactivated_at": datetime.now(UTC).isoformat(),
-                        })
+                        results.append(
+                            {
+                                "project": project_name,
+                                "status": "reactivated",
+                                "previous_state": current_state.value,
+                                "reactivated_at": datetime.now(UTC).isoformat(),
+                            }
+                        )
                     else:
                         logger.error(f"Failed to reactivate project: {project_name}")
                         failed += 1
                         errors.append(f"Failed to reactivate {project_name}")
-                        results.append({
-                            "project": project_name,
-                            "status": "failed",
-                            "reason": "Reactivation operation failed",
-                        })
+                        results.append(
+                            {
+                                "project": project_name,
+                                "status": "failed",
+                                "reason": "Reactivation operation failed",
+                            }
+                        )
 
             except Exception as e:
                 logger.error(f"Error reactivating project {project_name}: {e}")
                 failed += 1
                 errors.append(f"Error reactivating {project_name}: {str(e)}")
-                results.append({
-                    "project": project_name,
-                    "status": "error",
-                    "error": str(e),
-                })
+                results.append(
+                    {
+                        "project": project_name,
+                        "status": "error",
+                        "error": str(e),
+                    }
+                )
 
         execution_time = (datetime.now(UTC) - start_time).total_seconds()
 
@@ -319,8 +340,12 @@ class BulkArchivalManager:
             inactive_project_names = self.archival_manager.get_inactive_projects()
 
             if not inactive_project_names:
-                threshold = days_threshold if days_threshold is not None else original_threshold
-                logger.info(f"No inactive projects found with threshold {threshold} days")
+                threshold = (
+                    days_threshold if days_threshold is not None else original_threshold
+                )
+                logger.info(
+                    f"No inactive projects found with threshold {threshold} days"
+                )
                 return BulkArchivalResult(
                     dry_run=dry_run,
                     total_projects=0,
@@ -336,7 +361,8 @@ class BulkArchivalManager:
             archivable_projects = [
                 project_name
                 for project_name in inactive_project_names
-                if self.archival_manager.get_project_state(project_name) in [
+                if self.archival_manager.get_project_state(project_name)
+                in [
                     ProjectState.ACTIVE,
                     ProjectState.PAUSED,
                 ]
@@ -346,7 +372,11 @@ class BulkArchivalManager:
             self.archival_manager.inactivity_threshold_days = original_threshold
 
         # Limit to max_projects
-        limit = max_projects if max_projects is not None else self.max_projects_per_operation
+        limit = (
+            max_projects
+            if max_projects is not None
+            else self.max_projects_per_operation
+        )
         if len(archivable_projects) > limit:
             logger.warning(
                 f"Found {len(archivable_projects)} archivable projects, limiting to {limit}"
@@ -395,14 +425,18 @@ class BulkArchivalManager:
 
                 # Only suggest ACTIVE or PAUSED projects
                 if state in [ProjectState.ACTIVE, ProjectState.PAUSED]:
-                    days_inactive = self.archival_manager.get_days_since_activity(project_name)
-                    candidates.append({
-                        "project_name": project_name,
-                        "current_state": state.value,
-                        "days_inactive": days_inactive,
-                        "recommendation": "archive",
-                        "reason": f"Inactive for {days_inactive:.1f} days",
-                    })
+                    days_inactive = self.archival_manager.get_days_since_activity(
+                        project_name
+                    )
+                    candidates.append(
+                        {
+                            "project_name": project_name,
+                            "current_state": state.value,
+                            "days_inactive": days_inactive,
+                            "recommendation": "archive",
+                            "reason": f"Inactive for {days_inactive:.1f} days",
+                        }
+                    )
 
             return candidates[:max_results]
         finally:

@@ -7,13 +7,18 @@ import re
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple, Callable
-from datetime import datetime, UTC
 
 # Rust parser is REQUIRED - no Python fallback (it was broken and returned 0 units)
 try:
-    from mcp_performance_core import parse_source_file, batch_parse_files, ParseResult, SemanticUnit
+    from mcp_performance_core import (
+        parse_source_file,
+        batch_parse_files,
+        ParseResult,
+        SemanticUnit,
+    )
+
     RUST_AVAILABLE = True
-except ImportError as e:
+except ImportError:
     RUST_AVAILABLE = False
     logging.error(
         "Rust parser (mcp_performance_core) is required but not installed.\n"
@@ -27,6 +32,7 @@ except ImportError as e:
     @dataclass
     class SemanticUnit:
         """Semantic unit (function, class, method)."""
+
         unit_type: str
         name: str
         signature: str
@@ -41,6 +47,7 @@ except ImportError as e:
     @dataclass
     class ParseResult:
         """Result of parsing a file."""
+
         units: List[SemanticUnit]
         parse_time_ms: float
         language: str
@@ -59,6 +66,7 @@ except ImportError as e:
             "Rust parser (mcp_performance_core) is required for code indexing.\n"
             "Install with: cd rust_core && maturin build --release && pip install target/wheels/*.whl"
         )
+
 
 from src.config import ServerConfig, get_config, DEFAULT_EMBEDDING_DIM
 from src.embeddings.generator import EmbeddingGenerator
@@ -162,11 +170,33 @@ class IncrementalIndexer(BaseCodeIndexer):
 
     # Supported file extensions
     SUPPORTED_EXTENSIONS = {
-        ".py", ".js", ".jsx", ".ts", ".tsx", ".java", ".go", ".rs",
-        ".rb", ".swift", ".kt", ".kts", ".php",
-        ".json", ".yaml", ".yml", ".toml",
-        ".c", ".h", ".cpp", ".cc", ".cxx", ".hpp", ".hxx", ".hh",
-        ".cs", ".sql"
+        ".py",
+        ".js",
+        ".jsx",
+        ".ts",
+        ".tsx",
+        ".java",
+        ".go",
+        ".rs",
+        ".rb",
+        ".swift",
+        ".kt",
+        ".kts",
+        ".php",
+        ".json",
+        ".yaml",
+        ".yml",
+        ".toml",
+        ".c",
+        ".h",
+        ".cpp",
+        ".cc",
+        ".cxx",
+        ".hpp",
+        ".hxx",
+        ".hh",
+        ".cs",
+        ".sql",
     }
 
     def __init__(
@@ -200,6 +230,7 @@ class IncrementalIndexer(BaseCodeIndexer):
         # Use factory function to respect config.storage_backend
         if store is None:
             from src.store import create_memory_store
+
             store = create_memory_store(config=config)
 
         self.store = store
@@ -227,6 +258,7 @@ class IncrementalIndexer(BaseCodeIndexer):
         # Importance scorer for intelligent code importance (FEAT-049)
         if config.performance.importance_scoring:
             from src.analysis.importance_scorer import ImportanceScorer
+
             self.importance_scorer = ImportanceScorer(
                 complexity_weight=config.importance_complexity_weight,
                 usage_weight=config.importance_usage_weight,
@@ -247,7 +279,7 @@ class IncrementalIndexer(BaseCodeIndexer):
         await self.call_graph_store.initialize()
 
         # Initialize embedding generator (especially important for parallel generator)
-        if hasattr(self.embedding_generator, 'initialize'):
+        if hasattr(self.embedding_generator, "initialize"):
             await self.embedding_generator.initialize()
 
         logger.info("Incremental indexer ready")
@@ -284,13 +316,13 @@ class IncrementalIndexer(BaseCodeIndexer):
                 source_code = f.read()
 
             parse_result = parse_source_file(str(file_path), source_code)
-            logger.debug(f"Parsed {len(parse_result.units)} units in {parse_result.parse_time_ms:.2f}ms")
+            logger.debug(
+                f"Parsed {len(parse_result.units)} units in {parse_result.parse_time_ms:.2f}ms"
+            )
 
             # Extract imports for dependency tracking
             imports = self.import_extractor.extract_imports(
-                str(file_path),
-                source_code,
-                parse_result.language
+                str(file_path), source_code, parse_result.language
             )
             import_metadata = build_dependency_metadata(imports)
             logger.debug(f"Extracted {len(imports)} imports from {file_path.name}")
@@ -300,17 +332,18 @@ class IncrementalIndexer(BaseCodeIndexer):
             if call_extractor:
                 try:
                     call_sites = call_extractor.extract_calls(
-                        str(file_path),
-                        source_code,
-                        parse_result
+                        str(file_path), source_code, parse_result
                     )
                     implementations = call_extractor.extract_implementations(
-                        str(file_path),
-                        source_code
+                        str(file_path), source_code
                     )
-                    logger.debug(f"Extracted {len(call_sites)} call sites and {len(implementations)} implementations from {file_path.name}")
+                    logger.debug(
+                        f"Extracted {len(call_sites)} call sites and {len(implementations)} implementations from {file_path.name}"
+                    )
                 except Exception as e:
-                    logger.warning(f"Failed to extract calls from {file_path.name}: {e}")
+                    logger.warning(
+                        f"Failed to extract calls from {file_path.name}: {e}"
+                    )
                     call_sites = []
                     implementations = []
             else:
@@ -363,7 +396,9 @@ class IncrementalIndexer(BaseCodeIndexer):
                     implementations,
                     parse_result.language,
                 )
-                logger.debug(f"Stored call graph: {len(call_sites)} calls, {len(implementations)} implementations")
+                logger.debug(
+                    f"Stored call graph: {len(call_sites)} calls, {len(implementations)} implementations"
+                )
 
             logger.info(
                 f"Indexed {len(stored_ids)} units from {file_path.name} "
@@ -423,15 +458,22 @@ class IncrementalIndexer(BaseCodeIndexer):
         # Filter out common unwanted directories (but allow other dot-prefixed paths)
         # BUG-022: Previous logic filtered ALL paths with dots (broke git worktrees, .config dirs, etc)
         EXCLUDED_DIRS = {
-            ".git", ".venv", "venv", ".virtualenv", "__pycache__",
-            "node_modules", ".pytest_cache", ".mypy_cache", ".tox",
+            ".git",
+            ".venv",
+            "venv",
+            ".virtualenv",
+            "__pycache__",
+            "node_modules",
+            ".pytest_cache",
+            ".mypy_cache",
+            ".tox",
             ".worktrees",  # Git worktrees for parallel development
         }
 
         def should_include_file(file_path: Path) -> bool:
             """Check if file should be indexed (not in excluded directories or hidden)."""
             # Skip hidden files (files starting with .)
-            if file_path.name.startswith('.'):
+            if file_path.name.startswith("."):
                 return False
 
             # Get relative path from dir_path to check only subdirectories being indexed
@@ -464,17 +506,23 @@ class IncrementalIndexer(BaseCodeIndexer):
         semaphore = asyncio.Semaphore(max_concurrent)
         completed_count = 0
 
-        async def index_with_semaphore(i: int, file_path: Path) -> Tuple[str, Dict[str, Any]]:
+        async def index_with_semaphore(
+            i: int, file_path: Path
+        ) -> Tuple[str, Dict[str, Any]]:
             """Index a file with semaphore-controlled concurrency."""
             nonlocal completed_count
 
             async with semaphore:
                 # Notify callback of current file
                 if progress_callback:
-                    progress_callback(completed_count, len(files_to_index), file_path.name, None)
+                    progress_callback(
+                        completed_count, len(files_to_index), file_path.name, None
+                    )
 
                 if show_progress:
-                    logger.info(f"Indexing [{i}/{len(files_to_index)}]: {file_path.name}")
+                    logger.info(
+                        f"Indexing [{i}/{len(files_to_index)}]: {file_path.name}"
+                    )
 
                 try:
                     result = await self.index_file(file_path)
@@ -482,7 +530,9 @@ class IncrementalIndexer(BaseCodeIndexer):
 
                     # Update progress on success
                     if progress_callback:
-                        progress_callback(completed_count, len(files_to_index), file_path.name, None)
+                        progress_callback(
+                            completed_count, len(files_to_index), file_path.name, None
+                        )
 
                     return "success", result
                 except Exception as e:
@@ -492,7 +542,12 @@ class IncrementalIndexer(BaseCodeIndexer):
                     # Update progress with error
                     error_info = {"file": file_path.name, "error": str(e)}
                     if progress_callback:
-                        progress_callback(completed_count, len(files_to_index), file_path.name, error_info)
+                        progress_callback(
+                            completed_count,
+                            len(files_to_index),
+                            file_path.name,
+                            error_info,
+                        )
 
                     return "error", {"path": str(file_path), "error": str(e)}
 
@@ -572,11 +627,13 @@ class IncrementalIndexer(BaseCodeIndexer):
 
         try:
             # Check if store has client attribute (Qdrant) or conn attribute (SQLite)
-            has_client = hasattr(self.store, 'client')
-            has_conn = hasattr(self.store, 'conn')
+            has_client = hasattr(self.store, "client")
+            has_conn = hasattr(self.store, "conn")
 
             if not has_client and not has_conn:
-                logger.warning(f"Store type not supported for deletion, skipping cleanup for {file_path}")
+                logger.warning(
+                    f"Store type not supported for deletion, skipping cleanup for {file_path}"
+                )
                 return 0
 
             # Handle Qdrant store
@@ -584,14 +641,18 @@ class IncrementalIndexer(BaseCodeIndexer):
                 # Get client - either directly or from pool
                 client = None
                 # Check if store uses connection pool (must be explicit bool True)
-                use_pool = getattr(self.store, 'use_pool', None)
-                use_pool = use_pool is True  # Ensure it's explicitly True, not just truthy
+                use_pool = getattr(self.store, "use_pool", None)
+                use_pool = (
+                    use_pool is True
+                )  # Ensure it's explicitly True, not just truthy
 
                 if use_pool:
                     # Acquire client from pool
                     client = await self.store._get_client()
                     if client is None:
-                        logger.warning(f"Could not acquire client from pool, skipping cleanup for {file_path}")
+                        logger.warning(
+                            f"Could not acquire client from pool, skipping cleanup for {file_path}"
+                        )
                         return 0
                 else:
                     # Initialize store if needed
@@ -600,7 +661,9 @@ class IncrementalIndexer(BaseCodeIndexer):
 
                     # Check again after initialization
                     if self.store.client is None:
-                        logger.warning(f"Store not initialized, skipping cleanup for {file_path}")
+                        logger.warning(
+                            f"Store not initialized, skipping cleanup for {file_path}"
+                        )
                         return 0
                     client = self.store.client
 
@@ -679,7 +742,9 @@ class IncrementalIndexer(BaseCodeIndexer):
             logger.warning(f"Failed to delete units for {file_path}: {e}")
             return 0
 
-    async def _cleanup_stale_entries(self, dir_path: Path, current_files: List[Path]) -> int:
+    async def _cleanup_stale_entries(
+        self, dir_path: Path, current_files: List[Path]
+    ) -> int:
         """
         Remove index entries for files that no longer exist on disk.
 
@@ -716,7 +781,9 @@ class IncrementalIndexer(BaseCodeIndexer):
             # Delete stale entries
             total_cleaned = 0
             for stale_file in stale_files:
-                logger.debug(f"Cleaning up stale index for deleted file: {stale_file.name}")
+                logger.debug(
+                    f"Cleaning up stale index for deleted file: {stale_file.name}"
+                )
                 count = await self._delete_file_units(stale_file)
                 total_cleaned += count
 
@@ -735,8 +802,8 @@ class IncrementalIndexer(BaseCodeIndexer):
         """
         try:
             # Check if store has client attribute (Qdrant) or conn attribute (SQLite)
-            has_client = hasattr(self.store, 'client')
-            has_conn = hasattr(self.store, 'conn')
+            has_client = hasattr(self.store, "client")
+            has_conn = hasattr(self.store, "conn")
 
             if not has_client and not has_conn:
                 logger.warning("Store type not supported for listing files")
@@ -880,7 +947,7 @@ class IncrementalIndexer(BaseCodeIndexer):
 
         # Read file content for export detection (used by importance scorer)
         try:
-            file_content = file_path.read_text(encoding='utf-8', errors='ignore')
+            file_content = file_path.read_text(encoding="utf-8", errors="ignore")
         except Exception as e:
             logger.warning(f"Failed to read file content for importance scoring: {e}")
             file_content = None
@@ -903,14 +970,18 @@ class IncrementalIndexer(BaseCodeIndexer):
                     unit_dicts, file_path, file_content
                 )
             except Exception as e:
-                logger.warning(f"Failed to calculate importance scores: {e}, using default 0.5")
+                logger.warning(
+                    f"Failed to calculate importance scores: {e}, using default 0.5"
+                )
                 importance_scores = [None] * len(units)
         else:
             importance_scores = [None] * len(units)
 
         # Build batch store items
         items = []
-        for unit, embedding, importance_score in zip(units, embeddings, importance_scores):
+        for unit, embedding, importance_score in zip(
+            units, embeddings, importance_scores
+        ):
             # Build content for storage
             content = self._build_indexable_content(file_path, unit)
 
@@ -935,7 +1006,9 @@ class IncrementalIndexer(BaseCodeIndexer):
             try:
                 # Complexity metrics (from ImportanceScore if available)
                 if importance_score:
-                    unit_metadata["cyclomatic_complexity"] = importance_score.cyclomatic_complexity
+                    unit_metadata["cyclomatic_complexity"] = (
+                        importance_score.cyclomatic_complexity
+                    )
                     unit_metadata["line_count"] = importance_score.line_count
                     unit_metadata["nesting_depth"] = importance_score.nesting_depth
                     unit_metadata["parameter_count"] = importance_score.parameter_count
@@ -948,15 +1021,20 @@ class IncrementalIndexer(BaseCodeIndexer):
 
                 # File metadata (modification time, size, indexed timestamp)
                 file_stats = file_path.stat()
-                unit_metadata["file_modified_at"] = file_stats.st_mtime  # Unix timestamp
+                unit_metadata["file_modified_at"] = (
+                    file_stats.st_mtime
+                )  # Unix timestamp
                 unit_metadata["file_size_bytes"] = file_stats.st_size
 
                 # Add indexed timestamp
                 from datetime import datetime, UTC
+
                 unit_metadata["indexed_at"] = datetime.now(UTC).isoformat()
             except (OSError, IOError) as e:
                 # If file stats fail, use fallback values
-                logger.warning(f"Failed to get file stats for {file_path}: {e}, using defaults")
+                logger.warning(
+                    f"Failed to get file stats for {file_path}: {e}, using defaults"
+                )
                 if not importance_score:
                     unit_metadata["cyclomatic_complexity"] = 0
                     unit_metadata["line_count"] = len(unit.content.splitlines())
@@ -965,6 +1043,7 @@ class IncrementalIndexer(BaseCodeIndexer):
                 unit_metadata["file_modified_at"] = 0
                 unit_metadata["file_size_bytes"] = 0
                 from datetime import datetime, UTC
+
                 unit_metadata["indexed_at"] = datetime.now(UTC).isoformat()
 
             # Generate deterministic ID for this code unit
@@ -1053,7 +1132,9 @@ class IncrementalIndexer(BaseCodeIndexer):
             # Step 1: Store function nodes for all units FIRST
             # (must exist before we can attach call sites to them)
             for unit in units:
-                qualified_name = unit_qualified_names.get(unit, self._extract_function_name(unit.name))
+                qualified_name = unit_qualified_names.get(
+                    unit, self._extract_function_name(unit.name)
+                )
                 func_name = self._extract_function_name(unit.name)
 
                 # Determine if function is exported (heuristic: not starting with _)
@@ -1103,7 +1184,9 @@ class IncrementalIndexer(BaseCodeIndexer):
                         project_name=self.project_name,
                     )
                 except Exception as e:
-                    logger.warning(f"Failed to store call sites for {caller_function}: {e}")
+                    logger.warning(
+                        f"Failed to store call sites for {caller_function}: {e}"
+                    )
 
             # Store implementations grouped by interface
             impl_groups = {}
@@ -1120,7 +1203,9 @@ class IncrementalIndexer(BaseCodeIndexer):
                         project_name=self.project_name,
                     )
                 except Exception as e:
-                    logger.warning(f"Failed to store implementations for {interface_name}: {e}")
+                    logger.warning(
+                        f"Failed to store implementations for {interface_name}: {e}"
+                    )
 
             logger.debug(
                 f"Stored call graph for {file_path.name}: "
@@ -1142,22 +1227,22 @@ class IncrementalIndexer(BaseCodeIndexer):
             Clean function name (e.g., "add", "foo", "MyClass")
         """
         # Handle class definitions
-        if signature.startswith('class '):
-            signature = signature.replace('class ', '').strip(':')
-            match = re.match(r'([a-zA-Z_][a-zA-Z0-9_]*)', signature)
+        if signature.startswith("class "):
+            signature = signature.replace("class ", "").strip(":")
+            match = re.match(r"([a-zA-Z_][a-zA-Z0-9_]*)", signature)
             if match:
                 return match.group(1)
 
         # Remove 'def' or 'async def' prefix
-        signature = re.sub(r'^(async\s+)?def\s+', '', signature)
+        signature = re.sub(r"^(async\s+)?def\s+", "", signature)
 
         # Extract function name (everything before the opening parenthesis)
-        match = re.match(r'([a-zA-Z_][a-zA-Z0-9_\.]*)', signature)
+        match = re.match(r"([a-zA-Z_][a-zA-Z0-9_\.]*)", signature)
         if match:
             # Handle qualified names (e.g., "Calculator.add_numbers")
             # Use the last component (method name)
             full_name = match.group(1)
-            return full_name.split('.')[-1] if '.' in full_name else full_name
+            return full_name.split(".")[-1] if "." in full_name else full_name
 
         # Fallback: return the signature as-is
         return signature
@@ -1174,7 +1259,7 @@ class IncrementalIndexer(BaseCodeIndexer):
         """
         # Simple regex to extract parameters from signature
         # Handles: def func(a, b, c=1, *args, **kwargs)
-        match = re.search(r'\((.*?)\)', signature)
+        match = re.search(r"\((.*?)\)", signature)
         if not match:
             return []
 
@@ -1184,15 +1269,15 @@ class IncrementalIndexer(BaseCodeIndexer):
 
         # Split by comma and extract parameter names
         params = []
-        for param in params_str.split(','):
+        for param in params_str.split(","):
             param = param.strip()
             if not param:
                 continue
 
             # Remove default values, type hints, *args, **kwargs
-            param = re.sub(r':\s*[^=]+', '', param)  # Remove type hints
-            param = re.sub(r'=.*$', '', param)  # Remove default values
-            param = param.strip('*').strip()  # Remove *, **
+            param = re.sub(r":\s*[^=]+", "", param)  # Remove type hints
+            param = re.sub(r"=.*$", "", param)  # Remove default values
+            param = param.strip("*").strip()  # Remove *, **
 
             if param:
                 params.append(param)

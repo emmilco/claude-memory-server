@@ -1,0 +1,45 @@
+# Ruff configuration
+# https://docs.astral.sh/ruff/configuration/
+
+[lint]
+# Enable these rules by default
+select = [
+    "E",      # pycodestyle errors
+    "F",      # Pyflakes
+    "W",      # pycodestyle warnings
+]
+
+# Ignore these rules
+ignore = [
+    "E501",   # Line too long (let formatter handle it)
+    "E402",   # Module level import not at top of file (common in tests)
+    "E741",   # Ambiguous variable name (too strict for scripts)
+]
+
+# Allow autofix for all enabled rules
+fixable = ["ALL"]
+unfixable = []
+
+[lint.per-file-ignores]
+# Scripts and examples can be more relaxed
+"scripts/*" = ["F401", "F841", "F821"]
+"examples/*" = ["F401", "F841"]
+"tests/*" = ["F401", "F841", "E402"]
+"setup.py" = ["F401"]
+
+# Files checking for optional dependencies
+"src/cli/health_command.py" = ["F401"]
+"src/cli/validate_install.py" = ["F401"]
+
+# Forward references in type annotations (these use string quotes)
+"src/core/server.py" = ["F821"]  # DependencyGraph forward ref
+"src/memory/docstring_extractor.py" = ["F821"]  # SemanticUnit forward ref
+"src/memory/incremental_indexer.py" = ["F821"]  # PYTHON_PARSER_AVAILABLE, CallSite, InterfaceImplementation
+"src/store/connection_pool_monitor.py" = ["F821"]  # QdrantConnectionPool forward ref
+
+[format]
+# Use double quotes for strings
+quote-style = "double"
+
+# Indent with spaces
+indent-style = "space"

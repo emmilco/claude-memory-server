@@ -9,8 +9,7 @@ import json
 import logging
 import tempfile
 from pathlib import Path
-from datetime import datetime, UTC
-from unittest.mock import MagicMock, patch
+from datetime import datetime
 
 from src.core.security_logger import (
     SecurityLogger,
@@ -94,7 +93,7 @@ class TestSecurityEventLogging:
         temp_logger.log_validation_failure(
             endpoint="/api/store",
             error="Invalid category",
-            payload_preview="test payload"
+            payload_preview="test payload",
         )
 
         # Read log file
@@ -114,8 +113,7 @@ class TestSecurityEventLogging:
     def test_log_validation_failure_without_payload(self, temp_logger):
         """Test validation failure without payload preview."""
         temp_logger.log_validation_failure(
-            endpoint="/api/retrieve",
-            error="Missing query parameter"
+            endpoint="/api/retrieve", error="Missing query parameter"
         )
 
         with open(temp_logger.log_file, "r") as f:
@@ -133,7 +131,7 @@ class TestSecurityEventLogging:
             pattern_type="SQL",
             pattern="DROP TABLE",
             content_preview="'; DROP TABLE users; --",
-            endpoint="/api/query"
+            endpoint="/api/query",
         )
 
         with open(temp_logger.log_file, "r") as f:
@@ -156,7 +154,7 @@ class TestSecurityEventLogging:
         temp_logger.log_injection_attempt(
             pattern_type="prompt",
             pattern="Ignore instructions",
-            content_preview="Ignore all previous instructions and..."
+            content_preview="Ignore all previous instructions and...",
         )
 
         with open(temp_logger.log_file, "r") as f:
@@ -172,7 +170,7 @@ class TestSecurityEventLogging:
         temp_logger.log_readonly_violation(
             operation="store_memory",
             endpoint="/api/store",
-            details={"user": "test_user"}
+            details={"user": "test_user"},
         )
 
         with open(temp_logger.log_file, "r") as f:
@@ -182,7 +180,10 @@ class TestSecurityEventLogging:
         event = json.loads(json_part)
 
         assert event["event_type"] == "readonly_violation"
-        assert event["message"] == "Read-only mode violation: store_memory attempted on /api/store"
+        assert (
+            event["message"]
+            == "Read-only mode violation: store_memory attempted on /api/store"
+        )
         assert event["details"]["operation"] == "store_memory"
         assert event["details"]["endpoint"] == "/api/store"
         assert event["details"]["user"] == "test_user"
@@ -192,7 +193,7 @@ class TestSecurityEventLogging:
         temp_logger.log_suspicious_pattern(
             pattern="base64_encoded_data",
             content_preview="YmFzZTY0IGVuY29kZWQ=",
-            reason="Unusual base64 encoding in user input"
+            reason="Unusual base64 encoding in user input",
         )
 
         with open(temp_logger.log_file, "r") as f:
@@ -210,7 +211,7 @@ class TestSecurityEventLogging:
         temp_logger.log_invalid_input(
             field="importance",
             value_preview="-5",
-            error="Importance must be between 0 and 10"
+            error="Importance must be between 0 and 10",
         )
 
         with open(temp_logger.log_file, "r") as f:
@@ -223,16 +224,17 @@ class TestSecurityEventLogging:
         event = json.loads(json_part)
 
         assert event["event_type"] == "invalid_input"
-        assert event["message"] == "Invalid input in field 'importance': Importance must be between 0 and 10"
+        assert (
+            event["message"]
+            == "Invalid input in field 'importance': Importance must be between 0 and 10"
+        )
         assert event["details"]["field"] == "importance"
         assert event["details"]["value_preview"] == "-5"
 
     def test_log_size_limit_exceeded(self, temp_logger):
         """Test size limit violations logged with actual/max sizes."""
         temp_logger.log_size_limit_exceeded(
-            actual_size=1048576,
-            max_size=524288,
-            content_type="metadata"
+            actual_size=1048576, max_size=524288, content_type="metadata"
         )
 
         with open(temp_logger.log_file, "r") as f:
@@ -250,8 +252,7 @@ class TestSecurityEventLogging:
     def test_log_unauthorized_access(self, temp_logger):
         """Test unauthorized access attempts logged as ERROR."""
         temp_logger.log_unauthorized_access(
-            resource="/admin/settings",
-            reason="User not authenticated"
+            resource="/admin/settings", reason="User not authenticated"
         )
 
         with open(temp_logger.log_file, "r") as f:
@@ -264,7 +265,10 @@ class TestSecurityEventLogging:
         event = json.loads(json_part)
 
         assert event["event_type"] == "unauthorized_access"
-        assert event["message"] == "Unauthorized access to /admin/settings: User not authenticated"
+        assert (
+            event["message"]
+            == "Unauthorized access to /admin/settings: User not authenticated"
+        )
 
 
 class TestEventTruncation:
@@ -281,9 +285,7 @@ class TestEventTruncation:
         """Test payload preview truncated to 200 chars."""
         long_payload = "A" * 300
         temp_logger.log_validation_failure(
-            endpoint="/test",
-            error="Test error",
-            payload_preview=long_payload
+            endpoint="/test", error="Test error", payload_preview=long_payload
         )
 
         with open(temp_logger.log_file, "r") as f:
@@ -298,9 +300,7 @@ class TestEventTruncation:
         """Test injection content preview truncated to 200 chars."""
         long_content = "B" * 300
         temp_logger.log_injection_attempt(
-            pattern_type="test",
-            pattern="test",
-            content_preview=long_content
+            pattern_type="test", pattern="test", content_preview=long_content
         )
 
         with open(temp_logger.log_file, "r") as f:
@@ -315,9 +315,7 @@ class TestEventTruncation:
         """Test suspicious pattern content truncated to 200 chars."""
         long_content = "C" * 300
         temp_logger.log_suspicious_pattern(
-            pattern="test",
-            content_preview=long_content,
-            reason="test"
+            pattern="test", content_preview=long_content, reason="test"
         )
 
         with open(temp_logger.log_file, "r") as f:
@@ -332,9 +330,7 @@ class TestEventTruncation:
         """Test invalid input value preview truncated to 100 chars."""
         long_value = "D" * 150
         temp_logger.log_invalid_input(
-            field="test",
-            value_preview=long_value,
-            error="test"
+            field="test", value_preview=long_value, error="test"
         )
 
         with open(temp_logger.log_file, "r") as f:

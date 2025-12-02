@@ -1,10 +1,8 @@
 """Tests for code analyzer module."""
 
-import pytest
 from src.refactoring.code_analyzer import (
     CodeAnalyzer,
     CodeMetrics,
-    RefactoringSuggestion,
 )
 
 
@@ -94,6 +92,7 @@ function calculateTotal(items, discount, tax) {
         assert metrics.parameter_count == 0
         assert metrics.cyclomatic_complexity == 1  # Base complexity
 
+
 class TestLongParameterListDetection:
     """Test detection of long parameter lists."""
 
@@ -109,9 +108,7 @@ class TestLongParameterListDetection:
             return_count=1,
         )
 
-        suggestion = analyzer.detect_long_parameter_list(
-            metrics, "/test/file.py", 10
-        )
+        suggestion = analyzer.detect_long_parameter_list(metrics, "/test/file.py", 10)
 
         assert suggestion is not None
         assert suggestion.issue_type == "Long Parameter List"
@@ -131,9 +128,7 @@ class TestLongParameterListDetection:
             return_count=1,
         )
 
-        suggestion = analyzer.detect_long_parameter_list(
-            metrics, "/test/file.py", 10
-        )
+        suggestion = analyzer.detect_long_parameter_list(metrics, "/test/file.py", 10)
 
         assert suggestion is None
 
@@ -230,7 +225,10 @@ class TestDeepNestingDetection:
         assert suggestion is not None
         assert suggestion.issue_type == "Deep Nesting"
         assert "nesting depth of 6" in suggestion.description.lower()
-        assert "early return" in suggestion.suggested_fix.lower() or "guard clause" in suggestion.suggested_fix.lower()
+        assert (
+            "early return" in suggestion.suggested_fix.lower()
+            or "guard clause" in suggestion.suggested_fix.lower()
+        )
 
     def test_accepts_reasonable_nesting(self):
         """Test that reasonable nesting passes."""

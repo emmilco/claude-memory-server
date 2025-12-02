@@ -1,10 +1,8 @@
 """Scheduler for automated health maintenance jobs."""
 
-import asyncio
 import logging
 from pathlib import Path
 from typing import Optional, Dict, Any, Callable
-from datetime import datetime, UTC
 from dataclasses import dataclass
 import json
 
@@ -33,7 +31,9 @@ class HealthScheduleConfig:
     monthly_cleanup_enabled: bool = True
     monthly_cleanup_day: int = 1  # 1st of month
     monthly_cleanup_time: str = "02:00"
-    monthly_cleanup_threshold_days: int = 180  # Delete stale memories older than 180 days
+    monthly_cleanup_threshold_days: int = (
+        180  # Delete stale memories older than 180 days
+    )
 
     weekly_report_enabled: bool = True
     weekly_report_day: int = 0  # Monday
@@ -132,11 +132,17 @@ class HealthJobScheduler:
 
         logger.info("Health job scheduler started with jobs:")
         if self.config.weekly_archival_enabled:
-            logger.info(f"  - Weekly archival: Day {self.config.weekly_archival_day} at {self.config.weekly_archival_time}")
+            logger.info(
+                f"  - Weekly archival: Day {self.config.weekly_archival_day} at {self.config.weekly_archival_time}"
+            )
         if self.config.monthly_cleanup_enabled:
-            logger.info(f"  - Monthly cleanup: Day {self.config.monthly_cleanup_day} at {self.config.monthly_cleanup_time}")
+            logger.info(
+                f"  - Monthly cleanup: Day {self.config.monthly_cleanup_day} at {self.config.monthly_cleanup_time}"
+            )
         if self.config.weekly_report_enabled:
-            logger.info(f"  - Weekly report: Day {self.config.weekly_report_day} at {self.config.weekly_report_time}")
+            logger.info(
+                f"  - Weekly report: Day {self.config.weekly_report_day} at {self.config.weekly_report_time}"
+            )
 
     async def stop(self):
         """Stop the health job scheduler."""
@@ -171,7 +177,9 @@ class HealthJobScheduler:
 
             # Notify if callback provided
             if self.config.notification_callback:
-                await self.config.notification_callback("archival_completed", result.to_dict())
+                await self.config.notification_callback(
+                    "archival_completed", result.to_dict()
+                )
 
         except Exception as e:
             logger.error(f"Weekly archival job failed: {e}", exc_info=True)
@@ -185,7 +193,9 @@ class HealthJobScheduler:
             self._job_history.append(result)
 
             if self.config.notification_callback:
-                await self.config.notification_callback("archival_failed", result.to_dict())
+                await self.config.notification_callback(
+                    "archival_failed", result.to_dict()
+                )
 
     async def _run_monthly_cleanup(self):
         """Execute monthly cleanup job."""
@@ -206,7 +216,9 @@ class HealthJobScheduler:
 
             # Notify if callback provided
             if self.config.notification_callback:
-                await self.config.notification_callback("cleanup_completed", result.to_dict())
+                await self.config.notification_callback(
+                    "cleanup_completed", result.to_dict()
+                )
 
         except Exception as e:
             logger.error(f"Monthly cleanup job failed: {e}", exc_info=True)
@@ -220,7 +232,9 @@ class HealthJobScheduler:
             self._job_history.append(result)
 
             if self.config.notification_callback:
-                await self.config.notification_callback("cleanup_failed", result.to_dict())
+                await self.config.notification_callback(
+                    "cleanup_failed", result.to_dict()
+                )
 
     async def _run_weekly_report(self):
         """Execute weekly health report job."""
@@ -238,7 +252,9 @@ class HealthJobScheduler:
 
             # Notify if callback provided
             if self.config.notification_callback:
-                await self.config.notification_callback("report_completed", result.to_dict())
+                await self.config.notification_callback(
+                    "report_completed", result.to_dict()
+                )
 
         except Exception as e:
             logger.error(f"Weekly health report job failed: {e}", exc_info=True)
@@ -252,7 +268,9 @@ class HealthJobScheduler:
             self._job_history.append(result)
 
             if self.config.notification_callback:
-                await self.config.notification_callback("report_failed", result.to_dict())
+                await self.config.notification_callback(
+                    "report_failed", result.to_dict()
+                )
 
     async def trigger_archival_now(self, dry_run: bool = False) -> JobResult:
         """Manually trigger archival job immediately."""
@@ -280,12 +298,18 @@ class HealthJobScheduler:
         jobs_status = {}
 
         if self.is_running and self.scheduler.get_jobs():
-            for job_id in ["weekly_archival", "monthly_cleanup", "weekly_health_report"]:
+            for job_id in [
+                "weekly_archival",
+                "monthly_cleanup",
+                "weekly_health_report",
+            ]:
                 job = self.scheduler.get_job(job_id)
                 if job:
                     jobs_status[job_id] = {
                         "enabled": True,
-                        "next_run": job.next_run_time.isoformat() if job.next_run_time else None,
+                        "next_run": job.next_run_time.isoformat()
+                        if job.next_run_time
+                        else None,
                     }
                 else:
                     jobs_status[job_id] = {"enabled": False}
@@ -294,7 +318,9 @@ class HealthJobScheduler:
             "enabled": self.config.enabled,
             "running": self.is_running,
             "jobs": jobs_status,
-            "last_job_results": [r.to_dict() for r in self._job_history[-10:]],  # Last 10 results
+            "last_job_results": [
+                r.to_dict() for r in self._job_history[-10:]
+            ],  # Last 10 results
         }
 
     def get_job_history(self, limit: int = 50) -> list[Dict[str, Any]]:
@@ -326,7 +352,9 @@ class HealthJobScheduler:
         with open(config_path) as f:
             data = json.load(f)
 
-        return HealthScheduleConfig(**{k: v for k, v in data.items() if k != "notification_callback"})
+        return HealthScheduleConfig(
+            **{k: v for k, v in data.items() if k != "notification_callback"}
+        )
 
     @staticmethod
     def save_config_to_file(config: HealthScheduleConfig, config_path: Path):

@@ -5,7 +5,6 @@ based on detected patterns, with an adaptive threshold that learns from user fee
 """
 
 import logging
-import asyncio
 from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime, UTC
 from dataclasses import dataclass, field
@@ -14,7 +13,7 @@ from uuid import uuid4
 from src.config import ServerConfig
 from src.store import MemoryStore
 from src.core.models import SearchFilters, MemoryResult
-from src.memory.pattern_detector import PatternDetector, DetectedPattern, PatternType
+from src.memory.pattern_detector import PatternDetector, DetectedPattern
 from src.memory.feedback_tracker import FeedbackTracker
 
 logger = logging.getLogger(__name__)
@@ -181,9 +180,7 @@ class SuggestionEngine:
             or primary_pattern.confidence >= self.medium_confidence_threshold
         ):
             # Perform search
-            search_results = await self._perform_search(
-                primary_pattern, project_name
-            )
+            search_results = await self._perform_search(primary_pattern, project_name)
             search_performed = True
             self.stats["searches_performed"] += 1
 
@@ -300,7 +297,7 @@ class SuggestionEngine:
             notification += f" ({similarity_pct}% match)\n"
 
         # Footer with metadata
-        notification += f"\n   Search: \"{pattern.search_query}\"\n"
+        notification += f'\n   Search: "{pattern.search_query}"\n'
         notification += f"   Confidence: {int(pattern.confidence * 100)}% (high)\n"
 
         return notification

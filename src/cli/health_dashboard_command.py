@@ -6,14 +6,10 @@ formatted dashboard view.
 
 import asyncio
 import json
-import sys
-from typing import Optional
 
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
-from rich.progress import Progress, BarColumn, TextColumn
-from rich.layout import Layout
 from rich.text import Text
 
 from src.config import get_config
@@ -64,7 +60,7 @@ def get_metric_bar(value: float, threshold: float, good_low: bool = True) -> str
     Returns:
         String representation
     """
-    percentage = value * 100
+    value * 100
     width = 10
 
     if good_low:
@@ -323,32 +319,22 @@ async def lifecycle_cleanup(dry_run: bool = True, min_age_days: int = 180) -> No
 
         # Display results
         if result.success:
-            console.print(
-                f"[green]✓[/green] Cleanup completed successfully"
-            )
-            console.print(
-                f"  Processed: {result.memories_processed} memories"
-            )
+            console.print("[green]✓[/green] Cleanup completed successfully")
+            console.print(f"  Processed: {result.memories_processed} memories")
             if dry_run:
                 console.print(
                     f"  [yellow]Would delete:[/yellow] {result.memories_deleted} memories"
                 )
             else:
-                console.print(
-                    f"  Deleted: {result.memories_deleted} memories"
-                )
+                console.print(f"  Deleted: {result.memories_deleted} memories")
 
             if result.errors:
-                console.print(
-                    f"  [red]Errors:[/red] {len(result.errors)}"
-                )
+                console.print(f"  [red]Errors:[/red] {len(result.errors)}")
                 for error in result.errors[:5]:
                     console.print(f"    • {error}")
 
         else:
-            console.print(
-                f"[red]✗[/red] Cleanup failed"
-            )
+            console.print("[red]✗[/red] Cleanup failed")
             for error in result.errors:
                 console.print(f"  • {error}")
 
@@ -374,27 +360,17 @@ async def lifecycle_archive_stale() -> None:
 
         # Display results
         if result.success:
-            console.print(
-                f"[green]✓[/green] Archival completed successfully"
-            )
-            console.print(
-                f"  Processed: {result.memories_processed} memories"
-            )
-            console.print(
-                f"  Archived: {result.memories_archived} memories"
-            )
+            console.print("[green]✓[/green] Archival completed successfully")
+            console.print(f"  Processed: {result.memories_processed} memories")
+            console.print(f"  Archived: {result.memories_archived} memories")
 
             if result.errors:
-                console.print(
-                    f"  [red]Errors:[/red] {len(result.errors)}"
-                )
+                console.print(f"  [red]Errors:[/red] {len(result.errors)}")
                 for error in result.errors[:5]:
                     console.print(f"    • {error}")
 
         else:
-            console.print(
-                f"[red]✗[/red] Archival failed"
-            )
+            console.print("[red]✗[/red] Archival failed")
             for error in result.errors:
                 console.print(f"  • {error}")
 
@@ -407,9 +383,7 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="Memory System Health Dashboard")
-    parser.add_argument(
-        "--detailed", action="store_true", help="Show detailed metrics"
-    )
+    parser.add_argument("--detailed", action="store_true", help="Show detailed metrics")
     parser.add_argument("--json", action="store_true", help="Output as JSON")
 
     args = parser.parse_args()

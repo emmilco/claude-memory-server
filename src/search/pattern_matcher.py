@@ -6,7 +6,7 @@ Supports three modes: filter, boost, and require.
 
 import re
 import logging
-from typing import List, Dict, Any, Optional, Pattern
+from typing import List, Dict, Optional, Pattern
 from dataclasses import dataclass
 
 from src.core.exceptions import ValidationError
@@ -21,24 +21,19 @@ PATTERN_PRESETS = {
     "bare_except": r"except\s*:",  # Python code smell
     "broad_catch": r"catch\s*\(\s*Exception",  # Java/C# code smell
     "empty_catch": r"catch\s*\([^)]+\)\s*\{\s*\}",  # Empty catch blocks
-
     # Code Comments
     "TODO_comments": r"(TODO|FIXME|HACK|XXX|NOTE)[:|\s]",
     "deprecated_markers": r"@deprecated|@Deprecated|DEPRECATED",
-
     # Security Keywords
     "security_keywords": r"(password|secret|token|api[_-]?key|private[_-]?key)",
     "auth_patterns": r"(authenticate|authorize|permission|access[_-]?control)",
-
     # API Patterns
     "deprecated_apis": r"(deprecated\(|@Deprecated|__deprecated__|OBSOLETE)",
     "async_patterns": r"(async\s+def|await\s+|Promise\.|async\s+function)",
-
     # Code Smells
     "magic_numbers": r"\b\d{3,}\b",  # Numbers > 100 (likely magic numbers)
     "long_lines": r"^.{120,}$",  # Lines > 120 chars
     "multiple_returns": r"return\s+.*\n.*return\s+",  # Multiple returns
-
     # Configuration
     "config_keys": r"(config\.|env\[|process\.env\.|getenv\()",
     "hardcoded_urls": r"https?://[^\s\"']+",
@@ -94,8 +89,7 @@ class PatternMatcher:
         if cache_key not in self._pattern_cache:
             try:
                 self._pattern_cache[cache_key] = re.compile(
-                    pattern,
-                    re.MULTILINE | re.DOTALL
+                    pattern, re.MULTILINE | re.DOTALL
                 )
                 logger.debug(f"Compiled and cached pattern: {cache_key}")
             except re.error as e:
@@ -144,11 +138,7 @@ class PatternMatcher:
         """
         return len(self.find_matches(pattern, content))
 
-    def get_match_locations(
-        self,
-        pattern: str,
-        content: str
-    ) -> List[MatchLocation]:
+    def get_match_locations(self, pattern: str, content: str) -> List[MatchLocation]:
         """
         Get detailed match locations with line numbers.
 
@@ -235,8 +225,7 @@ class PatternMatcher:
         if len(lines) >= 2:
             signature_text = "\n".join(lines[:2])
             signature_matches = sum(
-                1 for m in matches
-                if m.start() < len(signature_text)
+                1 for m in matches if m.start() < len(signature_text)
             )
             if signature_matches > 0:
                 score += 0.2

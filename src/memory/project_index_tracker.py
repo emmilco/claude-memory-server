@@ -126,8 +126,8 @@ class ProjectIndexTracker:
             raise StorageError(
                 f"Failed to initialize project index tracker: {e}",
                 solution="Check database permissions and disk space. "
-                        "Ensure SQLite database is not corrupted.",
-                docs_url="https://docs.claude-memory.com/troubleshooting#storage-errors"
+                "Ensure SQLite database is not corrupted.",
+                docs_url="https://docs.claude-memory.com/troubleshooting#storage-errors",
             ) from e
 
     async def is_indexed(self, project_name: str) -> bool:
@@ -146,7 +146,7 @@ class ProjectIndexTracker:
         try:
             cursor = self.conn.execute(
                 "SELECT 1 FROM project_index_metadata WHERE project_name = ? LIMIT 1",
-                (project_name,)
+                (project_name,),
             )
             return cursor.fetchone() is not None
 
@@ -154,7 +154,7 @@ class ProjectIndexTracker:
             raise StorageError(
                 f"Failed to check if project is indexed: {e}",
                 solution="Check database connection and query syntax.",
-                docs_url="https://docs.claude-memory.com/troubleshooting#storage-errors"
+                docs_url="https://docs.claude-memory.com/troubleshooting#storage-errors",
             ) from e
 
     async def get_metadata(self, project_name: str) -> Optional[ProjectIndexMetadata]:
@@ -178,7 +178,7 @@ class ProjectIndexTracker:
                 FROM project_index_metadata
                 WHERE project_name = ?
                 """,
-                (project_name,)
+                (project_name,),
             )
 
             row = cursor.fetchone()
@@ -199,7 +199,7 @@ class ProjectIndexTracker:
             raise StorageError(
                 f"Failed to get project metadata: {e}",
                 solution="Check database connection and data integrity.",
-                docs_url="https://docs.claude-memory.com/troubleshooting#storage-errors"
+                docs_url="https://docs.claude-memory.com/troubleshooting#storage-errors",
             ) from e
 
     async def update_metadata(
@@ -239,7 +239,7 @@ class ProjectIndexTracker:
                             is_watching = ?
                         WHERE project_name = ?
                         """,
-                        (now, total_files, total_units, int(is_watching), project_name)
+                        (now, total_files, total_units, int(is_watching), project_name),
                     )
                 else:
                     self.conn.execute(
@@ -250,7 +250,7 @@ class ProjectIndexTracker:
                             total_units = ?
                         WHERE project_name = ?
                         """,
-                        (now, total_files, total_units, project_name)
+                        (now, total_files, total_units, project_name),
                     )
             else:
                 # Insert new record
@@ -262,7 +262,7 @@ class ProjectIndexTracker:
                          total_files, total_units, is_watching, index_version)
                     VALUES (?, ?, ?, ?, ?, ?, '1.0')
                     """,
-                    (project_name, now, now, total_files, total_units, watching)
+                    (project_name, now, now, total_files, total_units, watching),
                 )
 
             self.conn.commit()
@@ -273,7 +273,7 @@ class ProjectIndexTracker:
             raise StorageError(
                 f"Failed to update project metadata: {e}",
                 solution="Check database connection and permissions.",
-                docs_url="https://docs.claude-memory.com/troubleshooting#storage-errors"
+                docs_url="https://docs.claude-memory.com/troubleshooting#storage-errors",
             ) from e
 
     async def set_watching(self, project_name: str, is_watching: bool) -> None:
@@ -290,7 +290,7 @@ class ProjectIndexTracker:
         try:
             self.conn.execute(
                 "UPDATE project_index_metadata SET is_watching = ? WHERE project_name = ?",
-                (int(is_watching), project_name)
+                (int(is_watching), project_name),
             )
             self.conn.commit()
             logger.debug(f"Set watching={is_watching} for project: {project_name}")
@@ -300,7 +300,7 @@ class ProjectIndexTracker:
             raise StorageError(
                 f"Failed to update watching status: {e}",
                 solution="Check database connection.",
-                docs_url="https://docs.claude-memory.com/troubleshooting#storage-errors"
+                docs_url="https://docs.claude-memory.com/troubleshooting#storage-errors",
             ) from e
 
     async def is_stale(self, project_name: str, project_path: Path) -> bool:
@@ -328,7 +328,7 @@ class ProjectIndexTracker:
         try:
             # Find most recently modified file in project
             latest_mtime = 0.0
-            for file_path in project_path.rglob('*'):
+            for file_path in project_path.rglob("*"):
                 if file_path.is_file():
                     try:
                         mtime = file_path.stat().st_mtime
@@ -364,7 +364,7 @@ class ProjectIndexTracker:
         try:
             self.conn.execute(
                 "DELETE FROM project_index_metadata WHERE project_name = ?",
-                (project_name,)
+                (project_name,),
             )
             self.conn.commit()
             logger.info(f"Deleted metadata for project: {project_name}")
@@ -374,7 +374,7 @@ class ProjectIndexTracker:
             raise StorageError(
                 f"Failed to delete project metadata: {e}",
                 solution="Check database connection.",
-                docs_url="https://docs.claude-memory.com/troubleshooting#storage-errors"
+                docs_url="https://docs.claude-memory.com/troubleshooting#storage-errors",
             ) from e
 
     async def close(self) -> None:

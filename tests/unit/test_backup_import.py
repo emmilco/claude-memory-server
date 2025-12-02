@@ -22,7 +22,7 @@ from datetime import datetime, UTC
 
 from src.backup.exporter import DataExporter
 from src.backup.importer import DataImporter, ConflictStrategy
-from src.core.models import MemoryUnit, MemoryCategory, ContextLevel, MemoryScope, LifecycleState
+from src.core.models import MemoryCategory, ContextLevel, MemoryScope, LifecycleState
 from src.store.qdrant_store import QdrantMemoryStore
 from src.config import ServerConfig
 
@@ -36,6 +36,7 @@ async def temp_store(qdrant_client, unique_qdrant_collection):
     Qdrant deadlocks during parallel test execution.
     """
     import os
+
     qdrant_url = os.getenv("CLAUDE_RAG_QDRANT_URL", "http://localhost:6333")
     config = ServerConfig(
         storage_backend="qdrant",
@@ -89,7 +90,7 @@ async def test_import_from_json(temp_store):
     with tempfile.TemporaryDirectory() as tmpdir:
         # Write test JSON
         input_path = Path(tmpdir) / "import.json"
-        with open(input_path, 'w') as f:
+        with open(input_path, "w") as f:
             json.dump(test_data, f)
 
         # Import
@@ -131,7 +132,7 @@ async def test_import_conflict_keep_newer(temp_store):
             "updated_at": old_time.isoformat(),
             "last_accessed": old_time.isoformat(),
             "lifecycle_state": LifecycleState.ACTIVE.value,
-        }
+        },
     )
 
     # Create import data with newer memory
@@ -166,7 +167,7 @@ async def test_import_conflict_keep_newer(temp_store):
 
     with tempfile.TemporaryDirectory() as tmpdir:
         input_path = Path(tmpdir) / "import.json"
-        with open(input_path, 'w') as f:
+        with open(input_path, "w") as f:
             json.dump(test_data, f)
 
         # Import with KEEP_NEWER strategy
@@ -218,7 +219,7 @@ async def test_import_dry_run(temp_store):
 
     with tempfile.TemporaryDirectory() as tmpdir:
         input_path = Path(tmpdir) / "import.json"
-        with open(input_path, 'w') as f:
+        with open(input_path, "w") as f:
             json.dump(test_data, f)
 
         # Dry run import
@@ -257,7 +258,7 @@ async def test_import_from_archive(temp_store):
             "updated_at": now.isoformat(),
             "last_accessed": now.isoformat(),
             "lifecycle_state": LifecycleState.ACTIVE.value,
-        }
+        },
     )
 
     with tempfile.TemporaryDirectory() as tmpdir:

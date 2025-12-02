@@ -2,7 +2,7 @@
 
 import logging
 from datetime import datetime, timedelta, UTC
-from typing import List, Dict, Optional, Tuple, Callable, Any
+from typing import List, Dict, Optional, Callable, Any
 from dataclasses import dataclass, field
 from collections import defaultdict
 
@@ -24,13 +24,13 @@ class OptimizationOpportunity:
     action: Optional[Callable] = None  # Function to execute optimization
     details: Dict[str, Any] = field(default_factory=dict)  # Additional context
 
-    def __lt__(self, other: 'OptimizationOpportunity') -> bool:
+    def __lt__(self, other: "OptimizationOpportunity") -> bool:
         """Sort by storage savings (descending) then risk level."""
         if self.storage_savings_mb != other.storage_savings_mb:
             return self.storage_savings_mb > other.storage_savings_mb
 
         # Lower risk first
-        risk_order = {'safe': 0, 'low': 1, 'medium': 2, 'high': 3}
+        risk_order = {"safe": 0, "low": 1, "medium": 2, "high": 3}
         return risk_order.get(self.risk_level, 3) < risk_order.get(other.risk_level, 3)
 
 
@@ -56,18 +56,26 @@ class StorageAnalysisResult:
             "Lifecycle Distribution:",
         ]
 
-        for state in ['ACTIVE', 'RECENT', 'ARCHIVED', 'STALE']:
+        for state in ["ACTIVE", "RECENT", "ARCHIVED", "STALE"]:
             count = self.by_lifecycle_state.get(state, 0)
             size = self.by_lifecycle_size_mb.get(state, 0.0)
             if count > 0:
-                pct = (count / self.total_memories * 100) if self.total_memories > 0 else 0
-                lines.append(f"  {state}: {count:,} memories ({pct:.1f}%), {size:.2f} MB")
+                pct = (
+                    (count / self.total_memories * 100)
+                    if self.total_memories > 0
+                    else 0
+                )
+                lines.append(
+                    f"  {state}: {count:,} memories ({pct:.1f}%), {size:.2f} MB"
+                )
 
-        lines.extend([
-            "",
-            f"Optimization Opportunities: {len(self.opportunities)}",
-            f"Potential Savings: {self.potential_savings_mb:.2f} MB",
-        ])
+        lines.extend(
+            [
+                "",
+                f"Optimization Opportunities: {len(self.opportunities)}",
+                f"Potential Savings: {self.potential_savings_mb:.2f} MB",
+            ]
+        )
 
         return "\n".join(lines)
 
@@ -191,6 +199,7 @@ class StorageOptimizer:
         """Get all memories from the store."""
         # Use search with no filters to get all
         from src.core.models import SearchFilters
+
         filters = SearchFilters()
         results = await self.store.search("", top_k=100000, filters=filters)
         return [result.memory for result in results]
@@ -206,20 +215,21 @@ class StorageOptimizer:
             Estimated size in MB
         """
         # Content size (UTF-8 encoded)
-        content_size = len(memory.content.encode('utf-8'))
+        content_size = len(memory.content.encode("utf-8"))
 
         # Embedding size (384 dimensions * 4 bytes per float32)
         embedding_size = 384 * 4
 
         # Metadata size (rough estimate)
-        metadata_size = len(str(memory.metadata).encode('utf-8')) if memory.metadata else 0
+        metadata_size = (
+            len(str(memory.metadata).encode("utf-8")) if memory.metadata else 0
+        )
 
         total_bytes = content_size + embedding_size + metadata_size
         return total_bytes / (1024 * 1024)  # Convert to MB
 
     async def _find_large_memory_opportunities(
-        self,
-        memories: List[MemoryUnit]
+        self, memories: List[MemoryUnit]
     ) -> List[OptimizationOpportunity]:
         """
         Find memories larger than threshold that could be compressed.
@@ -234,8 +244,7 @@ class StorageOptimizer:
         threshold_bytes = self.config.compression_size_threshold_kb * 1024
 
         large_memories = [
-            m for m in memories
-            if len(m.content.encode('utf-8')) > threshold_bytes
+            m for m in memories if len(m.content.encode("utf-8")) > threshold_bytes
         ]
 
         if not large_memories:
@@ -254,28 +263,27 @@ class StorageOptimizer:
             # Estimate 30-50% compression ratio
             estimated_savings = total_size * 0.4
 
-            risk = 'low' if state in ['ARCHIVED', 'STALE'] else 'medium'
+            risk = "low" if state in ["ARCHIVED", "STALE"] else "medium"
 
             opportunities.append(
                 OptimizationOpportunity(
-                    type='compress',
+                    type="compress",
                     description=f"Compress {len(state_memories)} large {state} memories (>{self.config.compression_size_threshold_kb}KB each)",
                     affected_count=len(state_memories),
                     storage_savings_mb=estimated_savings,
                     risk_level=risk,
                     details={
-                        'state': state,
-                        'memory_ids': [m.id for m in state_memories[:10]],  # First 10
-                        'total_memories': len(state_memories),
-                    }
+                        "state": state,
+                        "memory_ids": [m.id for m in state_memories[:10]],  # First 10
+                        "total_memories": len(state_memories),
+                    },
                 )
             )
 
         return opportunities
 
     async def _find_duplicate_opportunities(
-        self,
-        memories: List[MemoryUnit]
+        self, memories: List[MemoryUnit]
     ) -> List[OptimizationOpportunity]:
         """
         Find potential duplicate memories.
@@ -295,13 +303,14 @@ class StorageOptimizer:
         for memory in memories:
             # Create a signature: category + rough content length
             length_bucket = (len(memory.content) // 100) * 100
-            signature = f"{memory.category.value}_{memory.context_level.value}_{length_bucket}"
+            signature = (
+                f"{memory.category.value}_{memory.context_level.value}_{length_bucket}"
+            )
             by_signature[signature].append(memory)
 
         # Find buckets with multiple memories
         potential_duplicates = {
-            sig: mems for sig, mems in by_signature.items()
-            if len(mems) >= 2
+            sig: mems for sig, mems in by_signature.items() if len(mems) >= 2
         }
 
         if potential_duplicates:
@@ -314,23 +323,22 @@ class StorageOptimizer:
 
             opportunities.append(
                 OptimizationOpportunity(
-                    type='deduplicate',
+                    type="deduplicate",
                     description=f"Review {total_count} potential duplicate memories across {len(potential_duplicates)} groups",
                     affected_count=total_count,
                     storage_savings_mb=total_savings,
-                    risk_level='medium',
+                    risk_level="medium",
                     details={
-                        'groups': len(potential_duplicates),
-                        'sample_signatures': list(potential_duplicates.keys())[:5],
-                    }
+                        "groups": len(potential_duplicates),
+                        "sample_signatures": list(potential_duplicates.keys())[:5],
+                    },
                 )
             )
 
         return opportunities
 
     async def _find_stale_opportunities(
-        self,
-        memories: List[MemoryUnit]
+        self, memories: List[MemoryUnit]
     ) -> List[OptimizationOpportunity]:
         """
         Find stale memories that haven't been accessed in threshold days.
@@ -346,7 +354,8 @@ class StorageOptimizer:
         threshold = timedelta(days=self.config.auto_archive_threshold_days)
 
         stale_memories = [
-            m for m in memories
+            m
+            for m in memories
             if (now - m.last_accessed) > threshold
             and m.lifecycle_state == LifecycleState.STALE
         ]
@@ -358,23 +367,24 @@ class StorageOptimizer:
 
         opportunities.append(
             OptimizationOpportunity(
-                type='delete',
+                type="delete",
                 description=f"Delete {len(stale_memories)} STALE memories unused for {self.config.auto_archive_threshold_days}+ days",
                 affected_count=len(stale_memories),
                 storage_savings_mb=total_size,
-                risk_level='low',  # STALE memories are expected to be deleted
+                risk_level="low",  # STALE memories are expected to be deleted
                 details={
-                    'memory_ids': [m.id for m in stale_memories[:10]],
-                    'oldest_access': min(m.last_accessed for m in stale_memories).isoformat(),
-                }
+                    "memory_ids": [m.id for m in stale_memories[:10]],
+                    "oldest_access": min(
+                        m.last_accessed for m in stale_memories
+                    ).isoformat(),
+                },
             )
         )
 
         return opportunities
 
     async def _find_session_expiry_opportunities(
-        self,
-        memories: List[MemoryUnit]
+        self, memories: List[MemoryUnit]
     ) -> List[OptimizationOpportunity]:
         """
         Find SESSION_STATE memories that should be expired.
@@ -392,7 +402,8 @@ class StorageOptimizer:
         threshold = timedelta(hours=self.config.session_expiry_hours)
 
         expired_sessions = [
-            m for m in memories
+            m
+            for m in memories
             if m.context_level == ContextLevel.SESSION_STATE
             and (now - m.last_accessed) > threshold
         ]
@@ -404,24 +415,22 @@ class StorageOptimizer:
 
         opportunities.append(
             OptimizationOpportunity(
-                type='delete',
+                type="delete",
                 description=f"Delete {len(expired_sessions)} expired SESSION_STATE memories (>{self.config.session_expiry_hours}h old)",
                 affected_count=len(expired_sessions),
                 storage_savings_mb=total_size,
-                risk_level='safe',  # Session state is temporary by definition
+                risk_level="safe",  # Session state is temporary by definition
                 details={
-                    'memory_ids': [m.id for m in expired_sessions[:10]],
-                    'threshold_hours': self.config.session_expiry_hours,
-                }
+                    "memory_ids": [m.id for m in expired_sessions[:10]],
+                    "threshold_hours": self.config.session_expiry_hours,
+                },
             )
         )
 
         return opportunities
 
     async def apply_optimization(
-        self,
-        opportunity: OptimizationOpportunity,
-        dry_run: bool = True
+        self, opportunity: OptimizationOpportunity, dry_run: bool = True
     ) -> int:
         """
         Apply an optimization opportunity.
@@ -439,8 +448,8 @@ class StorageOptimizer:
 
         logger.info(f"Applying optimization: {opportunity.description}")
 
-        if opportunity.type == 'delete':
-            memory_ids = opportunity.details.get('memory_ids', [])
+        if opportunity.type == "delete":
+            memory_ids = opportunity.details.get("memory_ids", [])
             for memory_id in memory_ids:
                 try:
                     await self.store.delete(memory_id)
@@ -449,12 +458,14 @@ class StorageOptimizer:
 
             return len(memory_ids)
 
-        elif opportunity.type == 'compress':
+        elif opportunity.type == "compress":
             logger.warning("Compression not yet implemented")
             return 0
 
-        elif opportunity.type == 'deduplicate':
-            logger.warning("Deduplication not yet implemented (use FEAT-035 consolidation)")
+        elif opportunity.type == "deduplicate":
+            logger.warning(
+                "Deduplication not yet implemented (use FEAT-035 consolidation)"
+            )
             return 0
 
         else:
@@ -462,8 +473,7 @@ class StorageOptimizer:
             return 0
 
     async def get_safe_optimizations(
-        self,
-        analysis: StorageAnalysisResult
+        self, analysis: StorageAnalysisResult
     ) -> List[OptimizationOpportunity]:
         """
         Filter analysis for only safe optimizations that can be auto-applied.
@@ -474,10 +484,7 @@ class StorageOptimizer:
         Returns:
             List of safe optimization opportunities
         """
-        return [
-            opp for opp in analysis.opportunities
-            if opp.risk_level == 'safe'
-        ]
+        return [opp for opp in analysis.opportunities if opp.risk_level == "safe"]
 
     async def auto_optimize(self, dry_run: bool = True) -> Dict[str, Any]:
         """
@@ -500,11 +507,11 @@ class StorageOptimizer:
         if not safe_opps:
             logger.info("No safe optimizations found")
             return {
-                'total_memories': analysis.total_memories,
-                'opportunities_found': len(analysis.opportunities),
-                'safe_opportunities': 0,
-                'applied': 0,
-                'savings_mb': 0.0,
+                "total_memories": analysis.total_memories,
+                "opportunities_found": len(analysis.opportunities),
+                "safe_opportunities": 0,
+                "applied": 0,
+                "savings_mb": 0.0,
             }
 
         # Apply safe optimizations
@@ -522,10 +529,10 @@ class StorageOptimizer:
         )
 
         return {
-            'total_memories': analysis.total_memories,
-            'opportunities_found': len(analysis.opportunities),
-            'safe_opportunities': len(safe_opps),
-            'applied': total_applied,
-            'savings_mb': total_savings,
-            'dry_run': dry_run,
+            "total_memories": analysis.total_memories,
+            "opportunities_found": len(analysis.opportunities),
+            "safe_opportunities": len(safe_opps),
+            "applied": total_applied,
+            "savings_mb": total_savings,
+            "dry_run": dry_run,
         }

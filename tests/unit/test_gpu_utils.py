@@ -1,6 +1,5 @@
 """Tests for GPU detection utilities."""
 
-import pytest
 from unittest.mock import Mock, patch, MagicMock
 
 from src.embeddings.gpu_utils import detect_cuda, get_gpu_info, get_optimal_device
@@ -35,6 +34,7 @@ class TestDetectCuda:
         """Test when PyTorch is not installed."""
         # Temporarily remove torch from sys.modules
         import sys
+
         torch_backup = sys.modules.get("torch")
 
         if "torch" in sys.modules:
@@ -42,7 +42,10 @@ class TestDetectCuda:
 
         try:
             with patch.dict("sys.modules", {"torch": None}):
-                with patch("builtins.__import__", side_effect=ImportError("No module named 'torch'")):
+                with patch(
+                    "builtins.__import__",
+                    side_effect=ImportError("No module named 'torch'"),
+                ):
                     result = detect_cuda()
                     assert result is False
         finally:
@@ -76,9 +79,10 @@ class TestGetGpuInfo:
         mock_torch.__version__ = "2.0.0"
         mock_torch.version.cuda = "11.8"
 
-        with patch("src.embeddings.gpu_utils.detect_cuda", return_value=True), \
-             patch.dict("sys.modules", {"torch": mock_torch}):
-
+        with (
+            patch("src.embeddings.gpu_utils.detect_cuda", return_value=True),
+            patch.dict("sys.modules", {"torch": mock_torch}),
+        ):
             result = get_gpu_info()
 
             assert result is not None
@@ -91,8 +95,10 @@ class TestGetGpuInfo:
 
     def test_get_gpu_info_no_cuda(self):
         """Test getting GPU info when CUDA is not available (and no MPS)."""
-        with patch("src.embeddings.gpu_utils.detect_cuda", return_value=False), \
-             patch("src.embeddings.gpu_utils.detect_mps", return_value=False):
+        with (
+            patch("src.embeddings.gpu_utils.detect_cuda", return_value=False),
+            patch("src.embeddings.gpu_utils.detect_mps", return_value=False),
+        ):
             result = get_gpu_info()
 
             assert result is None
@@ -102,9 +108,11 @@ class TestGetGpuInfo:
         mock_torch = MagicMock()
         mock_torch.__version__ = "2.0.0"
 
-        with patch("src.embeddings.gpu_utils.detect_cuda", return_value=False), \
-             patch("src.embeddings.gpu_utils.detect_mps", return_value=True), \
-             patch.dict("sys.modules", {"torch": mock_torch}):
+        with (
+            patch("src.embeddings.gpu_utils.detect_cuda", return_value=False),
+            patch("src.embeddings.gpu_utils.detect_mps", return_value=True),
+            patch.dict("sys.modules", {"torch": mock_torch}),
+        ):
             result = get_gpu_info()
 
             assert result is not None
@@ -117,9 +125,10 @@ class TestGetGpuInfo:
         mock_torch = MagicMock()
         mock_torch.cuda.device_count.return_value = 0
 
-        with patch("src.embeddings.gpu_utils.detect_cuda", return_value=True), \
-             patch.dict("sys.modules", {"torch": mock_torch}):
-
+        with (
+            patch("src.embeddings.gpu_utils.detect_cuda", return_value=True),
+            patch.dict("sys.modules", {"torch": mock_torch}),
+        ):
             result = get_gpu_info()
 
             assert result is None
@@ -129,9 +138,10 @@ class TestGetGpuInfo:
         mock_torch = MagicMock()
         mock_torch.cuda.device_count.side_effect = RuntimeError("CUDA error")
 
-        with patch("src.embeddings.gpu_utils.detect_cuda", return_value=True), \
-             patch.dict("sys.modules", {"torch": mock_torch}):
-
+        with (
+            patch("src.embeddings.gpu_utils.detect_cuda", return_value=True),
+            patch.dict("sys.modules", {"torch": mock_torch}),
+        ):
             result = get_gpu_info()
 
             assert result is None
@@ -149,16 +159,20 @@ class TestGetOptimalDevice:
 
     def test_get_optimal_device_mps(self):
         """Test when CUDA is not available but MPS is."""
-        with patch("src.embeddings.gpu_utils.detect_cuda", return_value=False), \
-             patch("src.embeddings.gpu_utils.detect_mps", return_value=True):
+        with (
+            patch("src.embeddings.gpu_utils.detect_cuda", return_value=False),
+            patch("src.embeddings.gpu_utils.detect_mps", return_value=True),
+        ):
             result = get_optimal_device()
 
             assert result == "mps"
 
     def test_get_optimal_device_cpu(self):
         """Test when neither CUDA nor MPS is available."""
-        with patch("src.embeddings.gpu_utils.detect_cuda", return_value=False), \
-             patch("src.embeddings.gpu_utils.detect_mps", return_value=False):
+        with (
+            patch("src.embeddings.gpu_utils.detect_cuda", return_value=False),
+            patch("src.embeddings.gpu_utils.detect_mps", return_value=False),
+        ):
             result = get_optimal_device()
 
             assert result == "cpu"

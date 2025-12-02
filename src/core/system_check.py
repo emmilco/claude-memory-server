@@ -31,7 +31,6 @@ class SystemChecker:
     def check_python_version(self) -> SystemRequirement:
         """Check Python version meets requirements."""
         version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-        major_minor = f"{sys.version_info.major}.{sys.version_info.minor}"
         meets_requirements = sys.version_info >= (3, 9)
 
         if self.os_type == "Darwin":
@@ -312,7 +311,7 @@ class SystemChecker:
             print(f"{status} {req.name}{version_str} [{priority_str}]")
 
             if not req.installed and show_install_commands:
-                print(f"\n   📦 Install:")
+                print("\n   📦 Install:")
                 for line in req.install_command.split("\n"):
                     print(f"   {line}")
                 print()
@@ -337,7 +336,9 @@ class SystemChecker:
 
     def has_critical_failures(self, requirements: List[SystemRequirement]) -> bool:
         """Check if there are any critical (required) failures."""
-        return any(not req.installed for req in requirements if req.priority == "required")
+        return any(
+            not req.installed for req in requirements if req.priority == "required"
+        )
 
     def get_summary(self, requirements: List[SystemRequirement]) -> str:
         """

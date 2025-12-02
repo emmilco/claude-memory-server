@@ -1,7 +1,7 @@
 """Programming-specific synonyms and query expansion for code search."""
 
 import logging
-from typing import Set, List, Dict
+from typing import Set, Dict
 import re
 
 logger = logging.getLogger(__name__)
@@ -16,13 +16,11 @@ PROGRAMMING_SYNONYMS: Dict[str, Set[str]] = {
     "password": {"credentials", "secret", "passphrase"},
     "token": {"jwt", "session", "credential"},
     "permission": {"authorization", "access", "privilege", "rights"},
-
     # Functions & Methods
     "function": {"method", "procedure", "routine", "func", "def"},
     "method": {"function", "procedure", "routine"},
     "procedure": {"function", "method", "routine"},
     "callback": {"handler", "hook", "listener"},
-
     # Data Structures
     "array": {"list", "collection", "vector"},
     "list": {"array", "collection", "sequence"},
@@ -32,7 +30,6 @@ PROGRAMMING_SYNONYMS: Dict[str, Set[str]] = {
     "queue": {"buffer", "fifo"},
     "stack": {"lifo"},
     "tree": {"hierarchy", "graph"},
-
     # Database
     "database": {"db", "datastore", "storage", "persistence"},
     "db": {"database", "datastore"},
@@ -42,7 +39,6 @@ PROGRAMMING_SYNONYMS: Dict[str, Set[str]] = {
     "delete": {"remove", "destroy", "drop"},
     "table": {"relation", "entity", "collection"},
     "index": {"key", "lookup"},
-
     # API & Web
     "api": {"endpoint", "service", "interface"},
     "endpoint": {"route", "path", "url", "api"},
@@ -51,7 +47,6 @@ PROGRAMMING_SYNONYMS: Dict[str, Set[str]] = {
     "response": {"resp", "reply", "result"},
     "http": {"web", "rest", "api"},
     "rest": {"api", "http", "restful"},
-
     # Configuration
     "config": {"configuration", "settings", "options", "preferences"},
     "configuration": {"config", "settings", "setup"},
@@ -60,7 +55,6 @@ PROGRAMMING_SYNONYMS: Dict[str, Set[str]] = {
     "parameter": {"param", "argument", "option", "setting"},
     "param": {"parameter", "argument", "option"},
     "argument": {"param", "parameter", "arg"},
-
     # Error Handling
     "error": {"exception", "fault", "failure", "bug"},
     "exception": {"error", "fault", "failure"},
@@ -69,7 +63,6 @@ PROGRAMMING_SYNONYMS: Dict[str, Set[str]] = {
     "catch": {"handle", "trap", "intercept"},
     "throw": {"raise", "emit", "trigger"},
     "log": {"record", "trace", "debug"},
-
     # Async & Concurrency
     "async": {"asynchronous", "concurrent", "parallel"},
     "asynchronous": {"async", "concurrent", "nonblocking"},
@@ -77,7 +70,6 @@ PROGRAMMING_SYNONYMS: Dict[str, Set[str]] = {
     "synchronous": {"sync", "blocking", "sequential"},
     "thread": {"worker", "task", "process"},
     "lock": {"mutex", "semaphore", "synchronize"},
-
     # Classes & OOP
     "class": {"type", "object", "entity", "model"},
     "object": {"instance", "entity"},
@@ -85,23 +77,20 @@ PROGRAMMING_SYNONYMS: Dict[str, Set[str]] = {
     "inherit": {"extend", "derive", "subclass"},
     "interface": {"contract", "protocol", "api"},
     "abstract": {"base", "virtual"},
-
     # Testing
     "test": {"spec", "check", "verify", "assert"},
     "mock": {"stub", "fake", "dummy"},
     "assert": {"check", "verify", "ensure"},
-
     # File & I/O
     "file": {"document", "path", "stream"},
     "read": {"load", "fetch", "get", "input"},
     "write": {"save", "store", "output"},
     "parse": {"decode", "deserialize", "read"},
     "serialize": {"encode", "stringify"},
-
     # Common Actions
     "create": {"make", "build", "generate", "new"},
     "get": {"fetch", "retrieve", "obtain", "read"},
-    "set": {"update", "assign", "write"},
+    "set_value": {"update", "assign", "write"},
     "find": {"search", "query", "locate", "lookup"},
     "search": {"find", "query", "lookup", "filter"},
     "filter": {"select", "search", "where"},
@@ -112,7 +101,6 @@ PROGRAMMING_SYNONYMS: Dict[str, Set[str]] = {
     "stop": {"end", "terminate", "kill", "shutdown"},
     "run": {"execute", "perform", "invoke", "call"},
     "execute": {"run", "perform", "invoke"},
-
     # Variables & State
     "variable": {"var", "field", "property", "attribute"},
     "var": {"variable", "field"},
@@ -120,20 +108,17 @@ PROGRAMMING_SYNONYMS: Dict[str, Set[str]] = {
     "property": {"field", "attribute", "member"},
     "state": {"status", "condition", "context"},
     "value": {"data", "content", "result"},
-
     # Networking
     "client": {"consumer", "requester"},
     "server": {"service", "provider", "backend"},
     "socket": {"connection", "stream"},
     "port": {"endpoint", "address"},
     "host": {"server", "domain", "address"},
-
     # Security
     "encrypt": {"encode", "cipher", "secure"},
     "decrypt": {"decode", "decipher"},
     "hash": {"digest", "checksum"},
     "secure": {"safe", "protected", "authenticated"},
-
     # Common Prefixes/Patterns
     "user": {"account", "profile", "customer"},
     "session": {"context", "state", "connection"},
@@ -147,39 +132,49 @@ PROGRAMMING_SYNONYMS: Dict[str, Set[str]] = {
 # Code context patterns - domain-specific expansions
 CODE_CONTEXT_PATTERNS: Dict[str, Set[str]] = {
     # When user searches for "auth", add these related concepts
-    "auth": {"user", "login", "password", "token", "session", "permission", "role", "access"},
-    "authentication": {"user", "login", "password", "credentials", "token", "session", "verify"},
+    "auth": {
+        "user",
+        "login",
+        "password",
+        "token",
+        "session",
+        "permission",
+        "role",
+        "access",
+    },
+    "authentication": {
+        "user",
+        "login",
+        "password",
+        "credentials",
+        "token",
+        "session",
+        "verify",
+    },
     "authorization": {"permission", "access", "role", "rights", "privilege", "acl"},
-
     # Database operations
     "database": {"connection", "query", "transaction", "schema", "table", "index"},
     "sql": {"query", "select", "insert", "update", "delete", "join", "where"},
     "orm": {"model", "entity", "mapping", "relation", "query"},
-
     # API patterns
     "api": {"endpoint", "route", "request", "response", "http", "rest", "json"},
     "rest": {"get", "post", "put", "delete", "endpoint", "resource"},
     "graphql": {"query", "mutation", "schema", "resolver", "type"},
-
     # Frontend
     "react": {"component", "hook", "state", "props", "jsx"},
     "vue": {"component", "template", "reactive", "computed"},
     "angular": {"component", "directive", "service", "module"},
-
     # Testing
     "test": {"spec", "assert", "mock", "fixture", "setup", "teardown"},
     "unittest": {"assert", "test", "case", "suite", "fixture"},
     "integration": {"test", "e2e", "end to end"},
-
     # Error handling
     "error": {"exception", "try", "catch", "finally", "throw", "handle"},
     "exception": {"try", "catch", "throw", "error", "fault"},
     "exceptions": {"try", "catch", "throw", "error", "fault"},  # plural form
-
     # Async patterns
     "async": {"await", "promise", "future", "callback", "concurrent"},
     "promise": {"then", "catch", "async", "await", "resolve", "reject"},
-
     # Configuration
     "config": {"environment", "settings", "yaml", "json", "toml", "env"},
     "environment": {"config", "env", "variable", "settings"},
@@ -209,7 +204,7 @@ def expand_with_synonyms(query: str, max_synonyms: int = 3) -> str:
         Expanded query with synonyms
     """
     # Extract words from query
-    words = re.findall(r'\w+', query.lower())
+    words = re.findall(r"\w+", query.lower())
 
     # Collect synonyms
     synonyms_to_add = []
@@ -226,7 +221,7 @@ def expand_with_synonyms(query: str, max_synonyms: int = 3) -> str:
 
     # Build expanded query
     if synonyms_to_add:
-        expansion = ' '.join(synonyms_to_add)
+        expansion = " ".join(synonyms_to_add)
         return f"{query} {expansion}"
 
     return query
@@ -244,7 +239,7 @@ def expand_with_code_context(query: str, max_context_terms: int = 5) -> str:
         Expanded query with code context
     """
     # Extract words from query
-    words = re.findall(r'\w+', query.lower())
+    words = re.findall(r"\w+", query.lower())
 
     # Collect context terms
     context_terms = set()
@@ -262,7 +257,7 @@ def expand_with_code_context(query: str, max_context_terms: int = 5) -> str:
     # Limit to max_context_terms
     if context_terms:
         terms_to_add = sorted(context_terms)[:max_context_terms]
-        expansion = ' '.join(terms_to_add)
+        expansion = " ".join(terms_to_add)
         return f"{query} {expansion}"
 
     return query

@@ -116,3 +116,20 @@ Third retrospective. The dominant pattern was debugging inefficiency - running 2
 | LP-009 (Real usage validation) | V-003 (covered) |
 | LP-010 (Fail fast) | V-001 (covered) + calibration |
 | LP-011 (Stay skeptical) | V-005 calibration |
+
+---
+
+## Retro: 2025-12-01
+
+**Feedback analyzed:** 15 entries (5 genuine, 10 filtered)
+**Date range:** 2025-11-29T17:57:05Z to 2025-12-02T01:16:00Z
+
+### Patterns Identified
+- Document/tracking file hygiene (4+ signals) → Process issue, addressed in ORCHESTRATION.md
+- Consistency checking after changes (2 signals) → Maps to V-008
+
+### Changes Made
+- Added calibration to V-008: Check related files for consistency after doc updates
+
+### Notes
+Light retro - most feedback was operational/workflow-related rather than behavioral. The main insight was that updating one doc file should trigger checking related files for consistency. This session itself demonstrated this pattern by updating CLAUDE.md, TASK_WORKFLOW.md, and ADVANCED.md to match ORCHESTRATION.md.

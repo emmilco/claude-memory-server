@@ -36,8 +36,7 @@ class TestMigrateMemoryScope:
 
         # Execute
         result = await server.migrate_memory_scope(
-            memory_id="mem-123",
-            new_project_name="my-project"
+            memory_id="mem-123", new_project_name="my-project"
         )
 
         # Verify
@@ -65,8 +64,7 @@ class TestMigrateMemoryScope:
 
         # Execute
         result = await server.migrate_memory_scope(
-            memory_id="mem-123",
-            new_project_name=None
+            memory_id="mem-123", new_project_name=None
         )
 
         # Verify
@@ -90,8 +88,7 @@ class TestMigrateMemoryScope:
 
         # Execute
         result = await server.migrate_memory_scope(
-            memory_id="nonexistent",
-            new_project_name="my-project"
+            memory_id="nonexistent", new_project_name="my-project"
         )
 
         # Verify
@@ -153,8 +150,7 @@ class TestBulkReclassify:
 
         # Execute
         result = await server.bulk_reclassify(
-            new_context_level="ARCHIVE",
-            project_name="old-project"
+            new_context_level="ARCHIVE", project_name="old-project"
         )
 
         # Verify
@@ -188,7 +184,7 @@ class TestBulkReclassify:
             new_context_level="CORE",
             project_name="my-project",
             current_context_level="DETAIL",
-            category="CODE"
+            category="CODE",
         )
 
         # Verify
@@ -212,8 +208,7 @@ class TestBulkReclassify:
 
         # Execute
         result = await server.bulk_reclassify(
-            new_context_level="ARCHIVE",
-            project_name="nonexistent"
+            new_context_level="ARCHIVE", project_name="nonexistent"
         )
 
         # Verify
@@ -247,10 +242,7 @@ class TestFindDuplicateMemories:
         from src.core.server import MemoryRAGServer
 
         # Setup
-        duplicate_groups = [
-            ["mem-1", "mem-2"],
-            ["mem-3", "mem-4", "mem-5"]
-        ]
+        duplicate_groups = [["mem-1", "mem-2"], ["mem-3", "mem-4", "mem-5"]]
         mock_server.store.find_duplicate_memories.return_value = duplicate_groups
 
         # Create real instance with mocked store
@@ -289,8 +281,7 @@ class TestFindDuplicateMemories:
 
         # Execute
         result = await server.find_duplicate_memories(
-            project_name="my-project",
-            similarity_threshold=0.90
+            project_name="my-project", similarity_threshold=0.90
         )
 
         # Verify
@@ -337,9 +328,7 @@ class TestMergeMemories:
         server.stats = mock_server.stats
 
         # Execute
-        result = await server.merge_memories(
-            memory_ids=["mem-1", "mem-2"]
-        )
+        result = await server.merge_memories(memory_ids=["mem-1", "mem-2"])
 
         # Verify
         assert result["status"] == "success"
@@ -367,8 +356,7 @@ class TestMergeMemories:
 
         # Execute
         result = await server.merge_memories(
-            memory_ids=["mem-1", "mem-2", "mem-3"],
-            keep_id="mem-2"
+            memory_ids=["mem-1", "mem-2", "mem-3"], keep_id="mem-2"
         )
 
         # Verify
@@ -461,8 +449,7 @@ class TestMigrationIntegration:
 
         # Step 3: Reclassify merged memory
         reclassify_result = await server.bulk_reclassify(
-            new_context_level="CORE",
-            project_name="test"
+            new_context_level="CORE", project_name="test"
         )
         assert reclassify_result["count"] == 1
 

@@ -17,23 +17,29 @@ from src.core.models import (
 )
 
 
-@pytest.mark.parametrize("enum_value,expected_str", [
-    (ContextLevel.USER_PREFERENCE, "USER_PREFERENCE"),
-    (ContextLevel.PROJECT_CONTEXT, "PROJECT_CONTEXT"),
-    (ContextLevel.SESSION_STATE, "SESSION_STATE"),
-])
+@pytest.mark.parametrize(
+    "enum_value,expected_str",
+    [
+        (ContextLevel.USER_PREFERENCE, "USER_PREFERENCE"),
+        (ContextLevel.PROJECT_CONTEXT, "PROJECT_CONTEXT"),
+        (ContextLevel.SESSION_STATE, "SESSION_STATE"),
+    ],
+)
 def test_context_level_enum(enum_value, expected_str):
     """Test ContextLevel enum values."""
     assert enum_value == expected_str
 
 
-@pytest.mark.parametrize("enum_value,expected_str", [
-    (MemoryCategory.PREFERENCE, "preference"),
-    (MemoryCategory.FACT, "fact"),
-    (MemoryCategory.EVENT, "event"),
-    (MemoryCategory.WORKFLOW, "workflow"),
-    (MemoryCategory.CONTEXT, "context"),
-])
+@pytest.mark.parametrize(
+    "enum_value,expected_str",
+    [
+        (MemoryCategory.PREFERENCE, "preference"),
+        (MemoryCategory.FACT, "fact"),
+        (MemoryCategory.EVENT, "event"),
+        (MemoryCategory.WORKFLOW, "workflow"),
+        (MemoryCategory.CONTEXT, "context"),
+    ],
+)
 def test_memory_category_enum(enum_value, expected_str):
     """Test MemoryCategory enum values."""
     assert enum_value == expected_str
@@ -108,7 +114,9 @@ def test_memory_unit_importance_valid(importance_value):
 def test_memory_unit_importance_invalid(invalid_importance):
     """Test invalid importance values raise errors."""
     with pytest.raises(ValueError):
-        MemoryUnit(content="Test", category=MemoryCategory.FACT, importance=invalid_importance)
+        MemoryUnit(
+            content="Test", category=MemoryCategory.FACT, importance=invalid_importance
+        )
 
 
 def test_memory_unit_tags_validation():
@@ -124,7 +132,9 @@ def test_memory_unit_tags_validation():
     # Too many tags should fail
     with pytest.raises(ValueError, match="Maximum 20 tags"):
         MemoryUnit(
-            content="Test", category=MemoryCategory.FACT, tags=[f"tag{i}" for i in range(25)]
+            content="Test",
+            category=MemoryCategory.FACT,
+            tags=[f"tag{i}" for i in range(25)],
         )
 
 
@@ -142,11 +152,15 @@ def test_store_memory_request():
     assert request.scope == MemoryScope.GLOBAL  # default
 
 
-@pytest.mark.parametrize("dangerous_input,attack_type", [
-    ("'; DROP TABLE memories; --", "SQL DROP"),
-    ("UNION SELECT * FROM passwords", "SQL UNION"),
-    ("DELETE FROM users", "SQL DELETE"),
-], ids=["sql_drop", "sql_union", "sql_delete"])
+@pytest.mark.parametrize(
+    "dangerous_input,attack_type",
+    [
+        ("'; DROP TABLE memories; --", "SQL DROP"),
+        ("UNION SELECT * FROM passwords", "SQL UNION"),
+        ("DELETE FROM users", "SQL DELETE"),
+    ],
+    ids=["sql_drop", "sql_union", "sql_delete"],
+)
 def test_store_memory_request_injection_detection(dangerous_input, attack_type):
     """Test that StoreMemoryRequest detects SQL injection patterns."""
     with pytest.raises(ValueError, match="suspicious pattern"):
@@ -169,9 +183,12 @@ def test_query_request():
     assert query.min_importance == 0.0  # default
 
 
-@pytest.mark.parametrize("invalid_query,error_match", [
-    ("   ", "Query cannot be empty"),
-])
+@pytest.mark.parametrize(
+    "invalid_query,error_match",
+    [
+        ("   ", "Query cannot be empty"),
+    ],
+)
 def test_query_request_empty_query(invalid_query, error_match):
     """Test QueryRequest validation for empty queries."""
     with pytest.raises(ValueError, match=error_match):
@@ -187,9 +204,7 @@ def test_query_request_limit_validation(invalid_limit):
 
 def test_memory_result():
     """Test MemoryResult model."""
-    memory = MemoryUnit(
-        content="Test memory", category=MemoryCategory.FACT
-    )
+    memory = MemoryUnit(content="Test memory", category=MemoryCategory.FACT)
     result = MemoryResult(memory=memory, score=0.95, relevance_reason="High similarity")
     assert result.memory.content == "Test memory"
     assert result.score == 0.95

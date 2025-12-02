@@ -2,12 +2,10 @@
 
 import pytest
 import pytest_asyncio
-import uuid
 from datetime import datetime, UTC, timedelta
 
 from src.config import ServerConfig
 from src.core.server import MemoryRAGServer
-from src.core.models import MemoryCategory, ContextLevel, MemoryScope
 
 # Run sequentially on single worker - Qdrant connection sensitive under parallel execution
 pytestmark = pytest.mark.xdist_group("qdrant_sequential")
@@ -48,18 +46,41 @@ async def server(config, list_memories_project_name):
     # Create test memories with different attributes
     # Use unique project_name for isolation in parallel execution
     test_memories = [
-        {"content": "Python is my preferred language", "category": "preference", "importance": 0.9, "tags": ["python", "languages"]},
-        {"content": "Use tabs for indentation", "category": "preference", "importance": 0.7, "tags": ["formatting", "style"]},
-        {"content": "Project deadline is next week", "category": "event", "importance": 0.8, "tags": ["deadline", "project"]},
-        {"content": "API key is stored in .env", "category": "fact", "importance": 0.6, "tags": ["security", "config"]},
-        {"content": "Always write tests first", "category": "workflow", "importance": 0.9, "tags": ["testing", "tdd"]},
+        {
+            "content": "Python is my preferred language",
+            "category": "preference",
+            "importance": 0.9,
+            "tags": ["python", "languages"],
+        },
+        {
+            "content": "Use tabs for indentation",
+            "category": "preference",
+            "importance": 0.7,
+            "tags": ["formatting", "style"],
+        },
+        {
+            "content": "Project deadline is next week",
+            "category": "event",
+            "importance": 0.8,
+            "tags": ["deadline", "project"],
+        },
+        {
+            "content": "API key is stored in .env",
+            "category": "fact",
+            "importance": 0.6,
+            "tags": ["security", "config"],
+        },
+        {
+            "content": "Always write tests first",
+            "category": "workflow",
+            "importance": 0.9,
+            "tags": ["testing", "tdd"],
+        },
     ]
 
     for mem in test_memories:
         await srv.store_memory(
-            **mem,
-            project_name=list_memories_project_name,
-            scope="project"
+            **mem, project_name=list_memories_project_name, scope="project"
         )
 
     yield srv
@@ -74,8 +95,7 @@ async def test_list_all_memories(server, list_memories_project_name):
     """Test listing all memories without filters."""
     # Filter by project name for test isolation in parallel execution
     result = await server.list_memories(
-        project_name=list_memories_project_name,
-        limit=100
+        project_name=list_memories_project_name, limit=100
     )
 
     assert result["total_count"] >= 5
@@ -89,9 +109,7 @@ async def test_filter_by_category(server, list_memories_project_name):
     """Test filtering memories by category."""
     # Filter by project name for test isolation in parallel execution
     result = await server.list_memories(
-        project_name=list_memories_project_name,
-        category="preference",
-        limit=100
+        project_name=list_memories_project_name, category="preference", limit=100
     )
 
     # At least 2 from our test data
@@ -107,9 +125,7 @@ async def test_filter_by_tags(server, list_memories_project_name):
     """Test filtering memories by tags."""
     # Filter by project name for test isolation in parallel execution
     result = await server.list_memories(
-        project_name=list_memories_project_name,
-        tags=["python"],
-        limit=100
+        project_name=list_memories_project_name, tags=["python"], limit=100
     )
 
     assert result["total_count"] >= 1
@@ -121,9 +137,7 @@ async def test_filter_by_importance(server, list_memories_project_name):
     """Test filtering memories by importance range."""
     # Filter by project name for test isolation in parallel execution
     result = await server.list_memories(
-        project_name=list_memories_project_name,
-        min_importance=0.8,
-        limit=100
+        project_name=list_memories_project_name, min_importance=0.8, limit=100
     )
 
     assert result["total_count"] >= 3
@@ -138,7 +152,7 @@ async def test_sort_by_importance_desc(server, list_memories_project_name):
         project_name=list_memories_project_name,
         sort_by="importance",
         sort_order="desc",
-        limit=100
+        limit=100,
     )
 
     importances = [mem["importance"] for mem in result["memories"]]
@@ -152,7 +166,7 @@ async def test_sort_by_importance_asc(server, list_memories_project_name):
         project_name=list_memories_project_name,
         sort_by="importance",
         sort_order="asc",
-        limit=100
+        limit=100,
     )
 
     importances = [mem["importance"] for mem in result["memories"]]
@@ -163,9 +177,7 @@ async def test_sort_by_importance_asc(server, list_memories_project_name):
 async def test_pagination_first_page(server, list_memories_project_name):
     """Test pagination - first page."""
     result = await server.list_memories(
-        project_name=list_memories_project_name,
-        limit=2,
-        offset=0
+        project_name=list_memories_project_name, limit=2, offset=0
     )
 
     assert result["returned_count"] == 2
@@ -179,9 +191,7 @@ async def test_pagination_first_page(server, list_memories_project_name):
 async def test_pagination_second_page(server, list_memories_project_name):
     """Test pagination - second page."""
     result = await server.list_memories(
-        project_name=list_memories_project_name,
-        limit=2,
-        offset=2
+        project_name=list_memories_project_name, limit=2, offset=2
     )
 
     assert result["returned_count"] >= 1
@@ -196,7 +206,7 @@ async def test_combined_filters(server, list_memories_project_name):
         project_name=list_memories_project_name,
         category="preference",
         min_importance=0.7,
-        limit=100
+        limit=100,
     )
 
     for mem in result["memories"]:
@@ -211,7 +221,7 @@ async def test_empty_results(server, list_memories_project_name):
         project_name=list_memories_project_name,
         category="preference",
         tags=["nonexistent-tag"],
-        limit=100
+        limit=100,
     )
 
     assert result["total_count"] == 0
@@ -257,8 +267,7 @@ async def test_sort_order_validation(server):
 async def test_memory_content_in_response(server, list_memories_project_name):
     """Test that memory details are included in response."""
     result = await server.list_memories(
-        project_name=list_memories_project_name,
-        limit=1
+        project_name=list_memories_project_name, limit=1
     )
 
     assert len(result["memories"]) >= 1
@@ -289,7 +298,7 @@ async def test_date_filtering(server, list_memories_project_name):
         project_name=list_memories_project_name,
         date_from=yesterday,
         date_to=tomorrow,
-        limit=100
+        limit=100,
     )
 
     assert result["total_count"] >= 5  # All test memories should be in this range

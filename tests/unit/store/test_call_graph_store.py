@@ -1,12 +1,10 @@
 """Unit tests for QdrantCallGraphStore."""
 
-import asyncio
 import pytest
 import pytest_asyncio
-from datetime import datetime, UTC
 from src.store.call_graph_store import QdrantCallGraphStore
-from src.graph.call_graph import CallGraph, CallSite, FunctionNode, InterfaceImplementation
-from src.core.exceptions import StorageError, MemoryNotFoundError
+from src.graph.call_graph import CallSite, FunctionNode, InterfaceImplementation
+from src.core.exceptions import MemoryNotFoundError
 from src.config import ServerConfig
 
 
@@ -31,7 +29,7 @@ async def store(config, worker_id):
     # Clean up test data
     try:
         await store.delete_project_call_graph("test_project")
-    except:
+    except Exception:
         pass
 
     yield store
@@ -41,7 +39,7 @@ async def store(config, worker_id):
         await store.delete_project_call_graph("test_project")
         if store.client:
             store.client.delete_collection(collection_name)
-    except:
+    except Exception:
         pass
 
 
@@ -143,7 +141,9 @@ class TestFunctionNodeStorage:
         assert len(node_id) == 36  # UUID format
 
         # Verify stored
-        retrieved = await store.find_function_by_name("MyClass.test_func", "test_project")
+        retrieved = await store.find_function_by_name(
+            "MyClass.test_func", "test_project"
+        )
         assert retrieved is not None
         assert retrieved.name == "test_func"
         assert retrieved.qualified_name == "MyClass.test_func"
@@ -151,7 +151,9 @@ class TestFunctionNodeStorage:
         assert retrieved.parameters == ["self", "arg1"]
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="Known limitation: store_function_node creates duplicates instead of updating existing records (see test_call_graph_store_edge_cases.py::test_update_function_preserves_call_sites for workaround pattern)")
+    @pytest.mark.skip(
+        reason="Known limitation: store_function_node creates duplicates instead of updating existing records (see test_call_graph_store_edge_cases.py::test_update_function_preserves_call_sites for workaround pattern)"
+    )
     async def test_store_function_node_upsert(self, store):
         """Test that storing same function twice updates it.
 
@@ -196,7 +198,9 @@ class TestFunctionNodeStorage:
         )
 
         # Verify updated (THIS WILL FAIL - implementation doesn't support true upsert)
-        retrieved = await store.find_function_by_name("MyClass.test_func", "test_project")
+        retrieved = await store.find_function_by_name(
+            "MyClass.test_func", "test_project"
+        )
         assert retrieved.end_line == 25
 
     @pytest.mark.asyncio
@@ -206,7 +210,9 @@ class TestFunctionNodeStorage:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_find_function_by_name_wrong_project(self, store, sample_function_node):
+    async def test_find_function_by_name_wrong_project(
+        self, store, sample_function_node
+    ):
         """Test finding function in wrong project returns None."""
         await store.store_function_node(
             node=sample_function_node,
@@ -221,7 +227,9 @@ class TestCallSiteStorage:
     """Test call site storage operations."""
 
     @pytest.mark.asyncio
-    async def test_store_call_sites(self, store, sample_function_node, sample_call_sites):
+    async def test_store_call_sites(
+        self, store, sample_function_node, sample_call_sites
+    ):
         """Test storing call sites for a function."""
         # First store the function node
         await store.store_function_node(
@@ -305,7 +313,9 @@ class TestImplementationStorage:
         assert result == []
 
     @pytest.mark.asyncio
-    async def test_get_implementations_wrong_project(self, store, sample_implementations):
+    async def test_get_implementations_wrong_project(
+        self, store, sample_implementations
+    ):
         """Test getting implementations filters by project."""
         await store.store_implementations(
             interface_name="Storage",

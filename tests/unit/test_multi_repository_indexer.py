@@ -3,8 +3,7 @@
 import pytest
 import pytest_asyncio
 from datetime import datetime, timedelta, UTC
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 from src.memory.multi_repository_indexer import (
     MultiRepositoryIndexer,
@@ -12,12 +11,11 @@ from src.memory.multi_repository_indexer import (
     BatchIndexResult,
 )
 from src.memory.repository_registry import (
-    Repository,
     RepositoryRegistry,
     RepositoryType,
     RepositoryStatus,
 )
-from src.memory.workspace_manager import Workspace, WorkspaceManager
+from src.memory.workspace_manager import WorkspaceManager
 from src.memory.incremental_indexer import IncrementalIndexer
 from tests.conftest import mock_embedding
 
@@ -25,6 +23,7 @@ from tests.conftest import mock_embedding
 # ============================================================================
 # Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def temp_registry_file(tmp_path):
@@ -141,6 +140,7 @@ async def multi_repo_indexer(
 # Result Model Tests
 # ============================================================================
 
+
 class TestRepositoryIndexResult:
     """Test RepositoryIndexResult dataclass."""
 
@@ -240,12 +240,17 @@ class TestBatchIndexResult:
 # Initialization Tests
 # ============================================================================
 
+
 class TestMultiRepositoryIndexerInit:
     """Test multi-repository indexer initialization."""
 
     @pytest.mark.asyncio
     async def test_initialization(
-        self, repository_registry, workspace_manager, mock_store, mock_embedding_generator
+        self,
+        repository_registry,
+        workspace_manager,
+        mock_store,
+        mock_embedding_generator,
     ):
         """Test initializing multi-repository indexer."""
         indexer = MultiRepositoryIndexer(
@@ -281,7 +286,11 @@ class TestMultiRepositoryIndexerInit:
 
     @pytest.mark.asyncio
     async def test_close_cleans_up(
-        self, repository_registry, workspace_manager, mock_store, mock_embedding_generator
+        self,
+        repository_registry,
+        workspace_manager,
+        mock_store,
+        mock_embedding_generator,
     ):
         """Test close cleans up resources."""
         # Create indexer without using fixture (to avoid double-close)
@@ -314,6 +323,7 @@ class TestMultiRepositoryIndexerInit:
 # Single Repository Indexing Tests
 # ============================================================================
 
+
 class TestSingleRepositoryIndexing:
     """Test indexing single repositories."""
 
@@ -324,7 +334,7 @@ class TestSingleRepositoryIndexing:
         repo_id = repos[0].id
 
         # Mock the indexer
-        with patch.object(IncrementalIndexer, 'index_directory') as mock_index:
+        with patch.object(IncrementalIndexer, "index_directory") as mock_index:
             mock_index.return_value = {
                 "total_files": 10,
                 "total_units": 25,
@@ -380,7 +390,7 @@ class TestSingleRepositoryIndexing:
         repo_id = repos[0].id
 
         # Mock indexer to raise error
-        with patch.object(IncrementalIndexer, 'index_directory') as mock_index:
+        with patch.object(IncrementalIndexer, "index_directory") as mock_index:
             mock_index.side_effect = Exception("Indexing failed")
 
             result = await multi_repo_indexer.index_repository(repo_id)
@@ -411,7 +421,7 @@ class TestSingleRepositoryIndexing:
 
         multi_repo_indexer.repository_registry.update_repository = track_updates
 
-        with patch.object(IncrementalIndexer, 'index_directory') as mock_index:
+        with patch.object(IncrementalIndexer, "index_directory") as mock_index:
             mock_index.return_value = {"total_files": 5, "total_units": 10}
             await multi_repo_indexer.index_repository(repo_id)
 
@@ -430,12 +440,11 @@ class TestSingleRepositoryIndexing:
         def progress_callback(data):
             progress_updates.append(data)
 
-        with patch.object(IncrementalIndexer, 'index_directory') as mock_index:
+        with patch.object(IncrementalIndexer, "index_directory") as mock_index:
             mock_index.return_value = {"total_files": 5, "total_units": 10}
 
             await multi_repo_indexer.index_repository(
-                repo_id,
-                progress_callback=progress_callback
+                repo_id, progress_callback=progress_callback
             )
 
         # Callback should have been passed to indexer
@@ -447,6 +456,7 @@ class TestSingleRepositoryIndexing:
 # Batch Indexing Tests
 # ============================================================================
 
+
 class TestBatchIndexing:
     """Test batch indexing operations."""
 
@@ -456,7 +466,7 @@ class TestBatchIndexing:
         repos = await multi_repo_indexer.repository_registry.list_repositories()
         repo_ids = [repo.id for repo in repos[:2]]
 
-        with patch.object(IncrementalIndexer, 'index_directory') as mock_index:
+        with patch.object(IncrementalIndexer, "index_directory") as mock_index:
             mock_index.return_value = {"total_files": 5, "total_units": 10}
 
             result = await multi_repo_indexer.index_repositories(repo_ids)
@@ -482,7 +492,7 @@ class TestBatchIndexing:
                 raise Exception("Indexing failed")
             return {"total_files": 5, "total_units": 10}
 
-        with patch.object(IncrementalIndexer, 'index_directory') as mock_index:
+        with patch.object(IncrementalIndexer, "index_directory") as mock_index:
             mock_index.side_effect = mock_index_side_effect
 
             result = await multi_repo_indexer.index_repositories(repo_ids)
@@ -511,12 +521,13 @@ class TestBatchIndexing:
 
             # Simulate some work
             import asyncio
+
             await asyncio.sleep(0.01)
 
             concurrent_calls[0] -= 1
             return {"total_files": 5, "total_units": 10}
 
-        with patch.object(IncrementalIndexer, 'index_directory') as mock_index_patch:
+        with patch.object(IncrementalIndexer, "index_directory") as mock_index_patch:
             mock_index_patch.side_effect = mock_index
 
             await multi_repo_indexer.index_repositories(repo_ids)
@@ -539,13 +550,14 @@ class TestBatchIndexing:
 # Workspace Indexing Tests
 # ============================================================================
 
+
 class TestWorkspaceIndexing:
     """Test workspace-based indexing."""
 
     @pytest.mark.asyncio
     async def test_index_workspace(self, multi_repo_indexer):
         """Test indexing all repositories in a workspace."""
-        with patch.object(IncrementalIndexer, 'index_directory') as mock_index:
+        with patch.object(IncrementalIndexer, "index_directory") as mock_index:
             mock_index.return_value = {"total_files": 5, "total_units": 10}
 
             result = await multi_repo_indexer.index_workspace("ws-1")
@@ -584,6 +596,7 @@ class TestWorkspaceIndexing:
 # Stale Repository Re-indexing Tests
 # ============================================================================
 
+
 class TestStaleRepositoryReindexing:
     """Test re-indexing stale repositories."""
 
@@ -596,17 +609,15 @@ class TestStaleRepositoryReindexing:
 
         # Mark first repo as STALE
         await repository_registry.update_repository(
-            repos[0].id,
-            {"status": RepositoryStatus.STALE}
+            repos[0].id, {"status": RepositoryStatus.STALE}
         )
 
         # Mark second repo as ERROR
         await repository_registry.update_repository(
-            repos[1].id,
-            {"status": RepositoryStatus.ERROR}
+            repos[1].id, {"status": RepositoryStatus.ERROR}
         )
 
-        with patch.object(IncrementalIndexer, 'index_directory') as mock_index:
+        with patch.object(IncrementalIndexer, "index_directory") as mock_index:
             mock_index.return_value = {"total_files": 5, "total_units": 10}
 
             result = await multi_repo_indexer.reindex_stale_repositories()
@@ -637,13 +648,11 @@ class TestStaleRepositoryReindexing:
         repository_registry.repositories[repos[1].id] = repos[1]
         repository_registry._save()
 
-        with patch.object(IncrementalIndexer, 'index_directory') as mock_index:
+        with patch.object(IncrementalIndexer, "index_directory") as mock_index:
             mock_index.return_value = {"total_files": 5, "total_units": 10}
 
             # Re-index repos older than 7 days
-            result = await multi_repo_indexer.reindex_stale_repositories(
-                max_age_days=7
-            )
+            result = await multi_repo_indexer.reindex_stale_repositories(max_age_days=7)
 
         # Should only re-index old repo
         assert result.total_repositories == 1
@@ -663,6 +672,7 @@ class TestStaleRepositoryReindexing:
 # ============================================================================
 # Indexer Caching Tests
 # ============================================================================
+
 
 class TestIndexerCaching:
     """Test IncrementalIndexer caching."""
@@ -687,9 +697,7 @@ class TestIndexerCaching:
         assert len(multi_repo_indexer._indexer_cache) == 1
 
     @pytest.mark.asyncio
-    async def test_get_indexer_uses_repo_id_as_project_name(
-        self, multi_repo_indexer
-    ):
+    async def test_get_indexer_uses_repo_id_as_project_name(self, multi_repo_indexer):
         """Test that indexer uses repository ID as project name."""
         repos = await multi_repo_indexer.repository_registry.list_repositories()
         repo = repos[0]
@@ -719,6 +727,7 @@ class TestIndexerCaching:
 # Status Tracking Tests
 # ============================================================================
 
+
 class TestIndexingStatus:
     """Test indexing status tracking."""
 
@@ -734,7 +743,7 @@ class TestIndexingStatus:
                 "status": RepositoryStatus.INDEXED,
                 "file_count": 10,
                 "unit_count": 25,
-            }
+            },
         )
         await repository_registry.update_repository(
             repos[1].id,
@@ -742,11 +751,10 @@ class TestIndexingStatus:
                 "status": RepositoryStatus.STALE,
                 "file_count": 5,
                 "unit_count": 12,
-            }
+            },
         )
         await repository_registry.update_repository(
-            repos[2].id,
-            {"status": RepositoryStatus.ERROR}
+            repos[2].id, {"status": RepositoryStatus.ERROR}
         )
 
         status = await multi_repo_indexer.get_indexing_status()
@@ -759,9 +767,7 @@ class TestIndexingStatus:
         assert status["total_units_indexed"] == 37  # 25 + 12 + 0
 
     @pytest.mark.asyncio
-    async def test_get_indexing_status_includes_cache_size(
-        self, multi_repo_indexer
-    ):
+    async def test_get_indexing_status_includes_cache_size(self, multi_repo_indexer):
         """Test that status includes indexer cache size."""
         repos = await multi_repo_indexer.repository_registry.list_repositories()
 
@@ -780,6 +786,7 @@ class TestIndexingStatus:
         """Test getting status with no repositories."""
         # Create registry with no repositories
         import tempfile
+
         with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
             registry_path = f.name
 

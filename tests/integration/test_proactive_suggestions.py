@@ -2,7 +2,6 @@
 
 import pytest
 import pytest_asyncio
-import uuid
 from src.core.server import MemoryRAGServer
 from src.config import ServerConfig
 from src.memory.pattern_detector import PatternType
@@ -115,9 +114,7 @@ class TestProactiveSuggestionsIntegration:
         assert result["enabled"] is False
 
         # Analyzing should still work but return disabled status
-        analysis = await server.analyze_conversation(
-            message="I need to add a feature"
-        )
+        analysis = await server.analyze_conversation(message="I need to add a feature")
         # Should return empty or minimal result when disabled
         assert analysis["enabled"] is True  # Server-level enabled
         # But no patterns should be returned when engine is disabled
@@ -130,7 +127,9 @@ class TestProactiveSuggestionsIntegration:
         assert result["enabled"] is True
         assert result["high_confidence_threshold"] == 0.85
 
-    async def test_disabled_server_returns_disabled_message(self, tmp_path, unique_qdrant_collection):
+    async def test_disabled_server_returns_disabled_message(
+        self, tmp_path, unique_qdrant_collection
+    ):
         """Test that disabled server returns appropriate message."""
         config = ServerConfig(
             storage_backend="qdrant",
@@ -190,4 +189,7 @@ class TestProactiveSuggestionsIntegration:
 
         # Primary pattern (first one) should have highest confidence
         if len(result["patterns"]) > 1:
-            assert result["patterns"][0]["confidence"] >= result["patterns"][1]["confidence"]
+            assert (
+                result["patterns"][0]["confidence"]
+                >= result["patterns"][1]["confidence"]
+            )

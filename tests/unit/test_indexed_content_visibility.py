@@ -5,11 +5,9 @@ These tests require real embedding model loading to verify actual indexing behav
 
 import pytest
 import pytest_asyncio
-import uuid
 from pathlib import Path
 import tempfile
 import shutil
-from datetime import datetime, UTC
 
 from src.config import ServerConfig
 from src.core.server import MemoryRAGServer
@@ -17,7 +15,9 @@ from src.memory.incremental_indexer import IncrementalIndexer
 
 # Skip entire module in CI and mark as requiring real embeddings for indexing
 pytestmark = [
-    pytest.mark.skip_ci(reason="Flaky under parallel execution - Qdrant timing sensitive"),
+    pytest.mark.skip_ci(
+        reason="Flaky under parallel execution - Qdrant timing sensitive"
+    ),
     pytest.mark.real_embeddings,
 ]
 
@@ -93,14 +93,9 @@ async def server_with_indexed_code(config, test_project_dir, indexed_project_nam
 
     # Index the test project with unique project name for isolation
     indexer = IncrementalIndexer(
-        srv.store,
-        srv.embedding_generator,
-        project_name=indexed_project_name
+        srv.store, srv.embedding_generator, project_name=indexed_project_name
     )
-    await indexer.index_directory(
-        dir_path=Path(test_project_dir),
-        show_progress=False
-    )
+    await indexer.index_directory(dir_path=Path(test_project_dir), show_progress=False)
 
     yield srv
 
@@ -114,8 +109,7 @@ async def test_get_indexed_files_all(server_with_indexed_code, indexed_project_n
     """Test getting all indexed files."""
     # Filter by project name for test isolation in parallel execution
     result = await server_with_indexed_code.get_indexed_files(
-        project_name=indexed_project_name,
-        limit=100
+        project_name=indexed_project_name, limit=100
     )
 
     assert "files" in result
@@ -143,11 +137,12 @@ async def test_get_indexed_files_all(server_with_indexed_code, indexed_project_n
 
 
 @pytest.mark.asyncio
-async def test_get_indexed_files_by_project(server_with_indexed_code, indexed_project_name):
+async def test_get_indexed_files_by_project(
+    server_with_indexed_code, indexed_project_name
+):
     """Test filtering indexed files by project name."""
     result = await server_with_indexed_code.get_indexed_files(
-        project_name=indexed_project_name,
-        limit=100
+        project_name=indexed_project_name, limit=100
     )
 
     assert result["total"] >= 3
@@ -157,13 +152,13 @@ async def test_get_indexed_files_by_project(server_with_indexed_code, indexed_pr
 
 
 @pytest.mark.asyncio
-async def test_get_indexed_files_pagination(server_with_indexed_code, indexed_project_name):
+async def test_get_indexed_files_pagination(
+    server_with_indexed_code, indexed_project_name
+):
     """Test pagination of indexed files."""
     # Get first page - filter by project name for test isolation in parallel execution
     page1 = await server_with_indexed_code.get_indexed_files(
-        project_name=indexed_project_name,
-        limit=2,
-        offset=0
+        project_name=indexed_project_name, limit=2, offset=0
     )
 
     assert page1["limit"] == 2
@@ -176,9 +171,7 @@ async def test_get_indexed_files_pagination(server_with_indexed_code, indexed_pr
 
         # Get second page
         page2 = await server_with_indexed_code.get_indexed_files(
-            project_name=indexed_project_name,
-            limit=2,
-            offset=2
+            project_name=indexed_project_name, limit=2, offset=2
         )
         assert page2["offset"] == 2
         assert len(page2["files"]) >= 1
@@ -188,8 +181,7 @@ async def test_get_indexed_files_pagination(server_with_indexed_code, indexed_pr
 async def test_get_indexed_files_empty_project(server_with_indexed_code):
     """Test getting indexed files for non-existent project."""
     result = await server_with_indexed_code.get_indexed_files(
-        project_name="nonexistent-project",
-        limit=100
+        project_name="nonexistent-project", limit=100
     )
 
     assert result["total"] == 0
@@ -202,8 +194,7 @@ async def test_list_indexed_units_all(server_with_indexed_code, indexed_project_
     """Test listing all indexed units."""
     # Filter by project name for test isolation in parallel execution
     result = await server_with_indexed_code.list_indexed_units(
-        project_name=indexed_project_name,
-        limit=100
+        project_name=indexed_project_name, limit=100
     )
 
     assert "units" in result
@@ -236,11 +227,12 @@ async def test_list_indexed_units_all(server_with_indexed_code, indexed_project_
 
 
 @pytest.mark.asyncio
-async def test_list_indexed_units_by_project(server_with_indexed_code, indexed_project_name):
+async def test_list_indexed_units_by_project(
+    server_with_indexed_code, indexed_project_name
+):
     """Test filtering units by project name."""
     result = await server_with_indexed_code.list_indexed_units(
-        project_name=indexed_project_name,
-        limit=100
+        project_name=indexed_project_name, limit=100
     )
 
     assert result["total"] >= 5
@@ -250,13 +242,13 @@ async def test_list_indexed_units_by_project(server_with_indexed_code, indexed_p
 
 
 @pytest.mark.asyncio
-async def test_list_indexed_units_by_language(server_with_indexed_code, indexed_project_name):
+async def test_list_indexed_units_by_language(
+    server_with_indexed_code, indexed_project_name
+):
     """Test filtering units by language."""
     # Filter by project name for test isolation in parallel execution
     result = await server_with_indexed_code.list_indexed_units(
-        project_name=indexed_project_name,
-        language="Python",
-        limit=100
+        project_name=indexed_project_name, language="Python", limit=100
     )
 
     assert result["total"] >= 5
@@ -266,13 +258,13 @@ async def test_list_indexed_units_by_language(server_with_indexed_code, indexed_
 
 
 @pytest.mark.asyncio
-async def test_list_indexed_units_by_type_function(server_with_indexed_code, indexed_project_name):
+async def test_list_indexed_units_by_type_function(
+    server_with_indexed_code, indexed_project_name
+):
     """Test filtering units by type (functions only)."""
     # Filter by project name for test isolation in parallel execution
     result = await server_with_indexed_code.list_indexed_units(
-        project_name=indexed_project_name,
-        unit_type="function",
-        limit=100
+        project_name=indexed_project_name, unit_type="function", limit=100
     )
 
     # Should have at least 3 functions
@@ -283,13 +275,13 @@ async def test_list_indexed_units_by_type_function(server_with_indexed_code, ind
 
 
 @pytest.mark.asyncio
-async def test_list_indexed_units_by_type_class(server_with_indexed_code, indexed_project_name):
+async def test_list_indexed_units_by_type_class(
+    server_with_indexed_code, indexed_project_name
+):
     """Test filtering units by type (classes only)."""
     # Filter by project name for test isolation in parallel execution
     result = await server_with_indexed_code.list_indexed_units(
-        project_name=indexed_project_name,
-        unit_type="class",
-        limit=100
+        project_name=indexed_project_name, unit_type="class", limit=100
     )
 
     # Should have at least 2 classes
@@ -300,13 +292,13 @@ async def test_list_indexed_units_by_type_class(server_with_indexed_code, indexe
 
 
 @pytest.mark.asyncio
-async def test_list_indexed_units_pagination(server_with_indexed_code, indexed_project_name):
+async def test_list_indexed_units_pagination(
+    server_with_indexed_code, indexed_project_name
+):
     """Test pagination of indexed units."""
     # Get first page - filter by project name for test isolation in parallel execution
     page1 = await server_with_indexed_code.list_indexed_units(
-        project_name=indexed_project_name,
-        limit=3,
-        offset=0
+        project_name=indexed_project_name, limit=3, offset=0
     )
 
     assert page1["limit"] == 3
@@ -319,22 +311,22 @@ async def test_list_indexed_units_pagination(server_with_indexed_code, indexed_p
 
         # Get second page
         page2 = await server_with_indexed_code.list_indexed_units(
-            project_name=indexed_project_name,
-            limit=3,
-            offset=3
+            project_name=indexed_project_name, limit=3, offset=3
         )
         assert page2["offset"] == 3
         assert len(page2["units"]) >= 1
 
 
 @pytest.mark.asyncio
-async def test_list_indexed_units_combined_filters(server_with_indexed_code, indexed_project_name):
+async def test_list_indexed_units_combined_filters(
+    server_with_indexed_code, indexed_project_name
+):
     """Test combining multiple filters."""
     result = await server_with_indexed_code.list_indexed_units(
         project_name=indexed_project_name,
         language="Python",
         unit_type="function",
-        limit=100
+        limit=100,
     )
 
     # All units should match all filters
@@ -348,8 +340,7 @@ async def test_list_indexed_units_combined_filters(server_with_indexed_code, ind
 async def test_list_indexed_units_empty_results(server_with_indexed_code):
     """Test filtering with no matches."""
     result = await server_with_indexed_code.list_indexed_units(
-        project_name="nonexistent-project",
-        limit=100
+        project_name="nonexistent-project", limit=100
     )
 
     assert result["total"] == 0
@@ -420,24 +411,19 @@ async def test_has_more_flag_accuracy(server_with_indexed_code, indexed_project_
     """Test accuracy of has_more flag."""
     # Get total count first - filter by project name for test isolation in parallel execution
     all_files = await server_with_indexed_code.get_indexed_files(
-        project_name=indexed_project_name,
-        limit=500
+        project_name=indexed_project_name, limit=500
     )
     total_files = all_files["total"]
 
     # Test with limit less than total
     if total_files > 1:
         result = await server_with_indexed_code.get_indexed_files(
-            project_name=indexed_project_name,
-            limit=1,
-            offset=0
+            project_name=indexed_project_name, limit=1, offset=0
         )
         assert result["has_more"] is True
 
     # Test with limit + offset >= total
     result = await server_with_indexed_code.get_indexed_files(
-        project_name=indexed_project_name,
-        limit=total_files,
-        offset=0
+        project_name=indexed_project_name, limit=total_files, offset=0
     )
     assert result["has_more"] is False

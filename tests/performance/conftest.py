@@ -2,11 +2,8 @@
 
 import pytest
 import pytest_asyncio
-import time
 import statistics
-import asyncio
 from pathlib import Path
-from typing import List
 
 from src.core.server import MemoryRAGServer
 from src.config import get_config
@@ -116,9 +113,7 @@ class Service{i}:
 
     # Index the project
     await server.index_codebase(
-        directory_path=str(project_dir),
-        project_name="perf_test",
-        recursive=True
+        directory_path=str(project_dir), project_name="perf_test", recursive=True
     )
 
     yield server
@@ -155,6 +150,7 @@ def temp_code_directory(tmp_path):
 
     Creates specified number of Python files for indexing performance tests.
     """
+
     def create_files(count: int = 100) -> Path:
         """Create test files.
 

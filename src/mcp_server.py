@@ -51,7 +51,9 @@ from src.core.exceptions import (
 # Initialize MCP server
 app = Server("claude-memory-rag")
 memory_server: MemoryRAGServer = None
-_init_task: asyncio.Task = None  # Track background initialization task for proper cleanup
+_init_task: asyncio.Task = (
+    None  # Track background initialization task for proper cleanup
+)
 
 
 @app.list_tools()
@@ -129,7 +131,11 @@ async def list_tools() -> List[Tool]:
                         "items": {"type": "string"},
                         "description": "Filter by tags (ANY match)",
                     },
-                    "min_importance": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+                    "min_importance": {
+                        "type": "number",
+                        "minimum": 0.0,
+                        "maximum": 1.0,
+                    },
                     "limit": {"type": "number", "minimum": 1, "maximum": 100},
                     "offset": {"type": "number", "minimum": 0},
                 },
@@ -150,18 +156,62 @@ async def list_tools() -> List[Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "category": {"type": "string", "description": "Filter by category (case-insensitive): preference, fact, event, workflow, context, code"},
-                    "project_name": {"type": "string", "description": "Filter by project (use to clear entire project index)"},
-                    "tags": {"type": "array", "items": {"type": "string"}, "description": "Filter by tags (matches ANY)"},
-                    "date_from": {"type": "string", "description": "Delete memories created after this date (ISO format)"},
-                    "date_to": {"type": "string", "description": "Delete memories created before this date (ISO format)"},
-                    "min_importance": {"type": "number", "minimum": 0.0, "maximum": 1.0, "description": "Minimum importance threshold"},
-                    "max_importance": {"type": "number", "minimum": 0.0, "maximum": 1.0, "description": "Maximum importance threshold"},
-                    "lifecycle_state": {"type": "string", "description": "Filter by lifecycle state (case-insensitive): active, recent, archived, stale"},
-                    "scope": {"type": "string", "description": "Filter by scope (case-insensitive): global, project, session"},
-                    "context_level": {"type": "string", "description": "Filter by context level (case-insensitive): user_preference, project_context, session_state"},
-                    "dry_run": {"type": "boolean", "description": "If true, preview only (default: true)", "default": True},
-                    "max_count": {"type": "number", "minimum": 1, "maximum": 1000, "description": "Maximum memories to delete (default: 1000)"},
+                    "category": {
+                        "type": "string",
+                        "description": "Filter by category (case-insensitive): preference, fact, event, workflow, context, code",
+                    },
+                    "project_name": {
+                        "type": "string",
+                        "description": "Filter by project (use to clear entire project index)",
+                    },
+                    "tags": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Filter by tags (matches ANY)",
+                    },
+                    "date_from": {
+                        "type": "string",
+                        "description": "Delete memories created after this date (ISO format)",
+                    },
+                    "date_to": {
+                        "type": "string",
+                        "description": "Delete memories created before this date (ISO format)",
+                    },
+                    "min_importance": {
+                        "type": "number",
+                        "minimum": 0.0,
+                        "maximum": 1.0,
+                        "description": "Minimum importance threshold",
+                    },
+                    "max_importance": {
+                        "type": "number",
+                        "minimum": 0.0,
+                        "maximum": 1.0,
+                        "description": "Maximum importance threshold",
+                    },
+                    "lifecycle_state": {
+                        "type": "string",
+                        "description": "Filter by lifecycle state (case-insensitive): active, recent, archived, stale",
+                    },
+                    "scope": {
+                        "type": "string",
+                        "description": "Filter by scope (case-insensitive): global, project, session",
+                    },
+                    "context_level": {
+                        "type": "string",
+                        "description": "Filter by context level (case-insensitive): user_preference, project_context, session_state",
+                    },
+                    "dry_run": {
+                        "type": "boolean",
+                        "description": "If true, preview only (default: true)",
+                        "default": True,
+                    },
+                    "max_count": {
+                        "type": "number",
+                        "minimum": 1,
+                        "maximum": 1000,
+                        "description": "Maximum memories to delete (default: 1000)",
+                    },
                 },
             },
         ),
@@ -171,7 +221,10 @@ async def list_tools() -> List[Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "output_path": {"type": "string", "description": "File path to export to"},
+                    "output_path": {
+                        "type": "string",
+                        "description": "File path to export to",
+                    },
                     "format": {"type": "string", "enum": ["json", "markdown"]},
                     "category": {"type": "string"},
                     "scope": {"type": "string"},
@@ -205,68 +258,77 @@ async def list_tools() -> List[Tool]:
                 "properties": {
                     "query": {"type": "string", "description": "Search query"},
                     "project_name": {"type": "string", "description": "Project filter"},
-                    "limit": {"type": "number", "description": "Max results (default: 5)"},
+                    "limit": {
+                        "type": "number",
+                        "description": "Max results (default: 5)",
+                    },
                     "file_pattern": {
                         "type": "string",
-                        "description": "Glob pattern for file paths (e.g., '**/*.test.py', 'src/**/auth*.ts')"
+                        "description": "Glob pattern for file paths (e.g., '**/*.test.py', 'src/**/auth*.ts')",
                     },
                     "language": {"type": "string", "description": "Language filter"},
                     "search_mode": {
                         "type": "string",
                         "enum": ["semantic", "keyword", "hybrid"],
-                        "description": "Search mode (default: semantic)"
+                        "description": "Search mode (default: semantic)",
                     },
                     # FEAT-058: Pattern matching parameters
                     "pattern": {
                         "type": "string",
-                        "description": "Optional regex pattern or @preset:name for code pattern matching"
+                        "description": "Optional regex pattern or @preset:name for code pattern matching",
                     },
                     "pattern_mode": {
                         "type": "string",
                         "enum": ["filter", "boost", "require"],
-                        "description": "How to apply pattern: filter, boost, or require (default: filter)"
+                        "description": "How to apply pattern: filter, boost, or require (default: filter)",
                     },
                     # FEAT-056: Advanced filtering parameters
                     "exclude_patterns": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "Glob patterns to exclude (e.g., ['**/*.test.py', '**/generated/**'])"
+                        "description": "Glob patterns to exclude (e.g., ['**/*.test.py', '**/generated/**'])",
                     },
                     "complexity_min": {
                         "type": "integer",
-                        "description": "Minimum cyclomatic complexity"
+                        "description": "Minimum cyclomatic complexity",
                     },
                     "complexity_max": {
                         "type": "integer",
-                        "description": "Maximum cyclomatic complexity"
+                        "description": "Maximum cyclomatic complexity",
                     },
                     "line_count_min": {
                         "type": "integer",
-                        "description": "Minimum line count"
+                        "description": "Minimum line count",
                     },
                     "line_count_max": {
                         "type": "integer",
-                        "description": "Maximum line count"
+                        "description": "Maximum line count",
                     },
                     "modified_after": {
                         "type": "string",
                         "format": "date-time",
-                        "description": "Filter by file modification time (ISO 8601 format)"
+                        "description": "Filter by file modification time (ISO 8601 format)",
                     },
                     "modified_before": {
                         "type": "string",
                         "format": "date-time",
-                        "description": "Filter by file modification time (ISO 8601 format)"
+                        "description": "Filter by file modification time (ISO 8601 format)",
                     },
                     "sort_by": {
                         "type": "string",
-                        "enum": ["relevance", "complexity", "size", "recency", "importance"],
-                        "description": "Sort order (default: relevance)"
+                        "enum": [
+                            "relevance",
+                            "complexity",
+                            "size",
+                            "recency",
+                            "importance",
+                        ],
+                        "description": "Sort order (default: relevance)",
                     },
                     "sort_order": {
                         "type": "string",
                         "enum": ["asc", "desc"],
-                        "description": "Sort direction (default: desc)"
+                        "description": "Sort direction (default: desc)",
                     },
                 },
                 "required": ["query"],
@@ -283,21 +345,27 @@ async def list_tools() -> List[Tool]:
                 "properties": {
                     "intent": {
                         "type": "string",
-                        "enum": ["implementation", "debugging", "learning", "exploration", "refactoring"],
-                        "description": "User's current intent or task"
+                        "enum": [
+                            "implementation",
+                            "debugging",
+                            "learning",
+                            "exploration",
+                            "refactoring",
+                        ],
+                        "description": "User's current intent or task",
                     },
                     "project_name": {
                         "type": "string",
-                        "description": "Project to scope suggestions to"
+                        "description": "Project to scope suggestions to",
                     },
                     "context": {
                         "type": "string",
-                        "description": "Additional context from conversation"
+                        "description": "Additional context from conversation",
                     },
                     "max_suggestions": {
                         "type": "integer",
                         "default": 8,
-                        "description": "Maximum suggestions to return"
+                        "description": "Maximum suggestions to return",
                     },
                 },
             },
@@ -787,10 +855,10 @@ async def list_tools() -> List[Tool]:
                         "type": "number",
                         "description": "Number of days to look back (1-365, default: 30)",
                         "minimum": 1,
-                        "maximum": 365
+                        "maximum": 365,
                     }
-                }
-            }
+                },
+            },
         ),
         Tool(
             name="get_top_queries",
@@ -802,16 +870,16 @@ async def list_tools() -> List[Tool]:
                         "type": "number",
                         "description": "Maximum number of queries to return (1-100, default: 10)",
                         "minimum": 1,
-                        "maximum": 100
+                        "maximum": 100,
                     },
                     "days": {
                         "type": "number",
                         "description": "Number of days to look back (1-365, default: 30)",
                         "minimum": 1,
-                        "maximum": 365
-                    }
-                }
-            }
+                        "maximum": 365,
+                    },
+                },
+            },
         ),
         Tool(
             name="get_frequently_accessed_code",
@@ -823,17 +891,17 @@ async def list_tools() -> List[Tool]:
                         "type": "number",
                         "description": "Maximum number of items to return (1-100, default: 10)",
                         "minimum": 1,
-                        "maximum": 100
+                        "maximum": 100,
                     },
                     "days": {
                         "type": "number",
                         "description": "Number of days to look back (1-365, default: 30)",
                         "minimum": 1,
-                        "maximum": 365
-                    }
-                }
-            }
-        )
+                        "maximum": 365,
+                    },
+                },
+            },
+        ),
     ]
 
 
@@ -878,7 +946,7 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
 
             output = f"Found {result['total_found']} memories:\n\n"
             for i, mem in enumerate(result["results"], 1):
-                memory = mem['memory']
+                memory = mem["memory"]
                 output += f"{i}. [{memory['category']}] {memory['content'][:100]}...\n"
                 output += f"   Relevance: {mem['score']:.2%} | "
                 output += f"Importance: {memory['importance']:.2f}\n\n"
@@ -906,9 +974,17 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
         elif name == "delete_memory":
             result = await memory_server.delete_memory(arguments["memory_id"])
             if result["status"] == "success":
-                return [TextContent(type="text", text=f"✅ Memory deleted: {result['memory_id']}")]
+                return [
+                    TextContent(
+                        type="text", text=f"✅ Memory deleted: {result['memory_id']}"
+                    )
+                ]
             else:
-                return [TextContent(type="text", text=f"❌ Memory not found: {result['memory_id']}")]
+                return [
+                    TextContent(
+                        type="text", text=f"❌ Memory not found: {result['memory_id']}"
+                    )
+                ]
 
         elif name == "delete_memories_by_query":
             result = await memory_server.delete_memories_by_query(
@@ -928,11 +1004,11 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
 
             # Format output
             if result["preview"]:
-                output = f"🔍 PREVIEW MODE (dry_run=True)\n\n"
+                output = "🔍 PREVIEW MODE (dry_run=True)\n\n"
                 output += f"Total matches: {result['total_matches']}\n"
                 output += f"Will delete: {result['total_matches']} memories\n\n"
             else:
-                output = f"✅ DELETION COMPLETE\n\n"
+                output = "✅ DELETION COMPLETE\n\n"
                 output += f"Deleted: {result['deleted_count']} memories\n\n"
 
             output += "Breakdown by category:\n"
@@ -976,14 +1052,25 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
         elif name == "search_code":
             # FEAT-056: Parse datetime strings for modified_after/modified_before
             from datetime import datetime
-            if "modified_after" in arguments and isinstance(arguments["modified_after"], str):
-                arguments["modified_after"] = datetime.fromisoformat(arguments["modified_after"])
-            if "modified_before" in arguments and isinstance(arguments["modified_before"], str):
-                arguments["modified_before"] = datetime.fromisoformat(arguments["modified_before"])
+
+            if "modified_after" in arguments and isinstance(
+                arguments["modified_after"], str
+            ):
+                arguments["modified_after"] = datetime.fromisoformat(
+                    arguments["modified_after"]
+                )
+            if "modified_before" in arguments and isinstance(
+                arguments["modified_before"], str
+            ):
+                arguments["modified_before"] = datetime.fromisoformat(
+                    arguments["modified_before"]
+                )
 
             result = await memory_server.search_code(**arguments)
             if not result["results"]:
-                return [TextContent(type="text", text="No code found matching your query.")]
+                return [
+                    TextContent(type="text", text="No code found matching your query.")
+                ]
 
             output = f"✅ Found {result['total_found']} code snippets"
             # FEAT-056: Show applied filters
@@ -997,24 +1084,34 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
                 output += f"   Relevance: {code['relevance_score']:.2%}"
                 # FEAT-056: Show complexity if available
                 if "metadata" in code and code["metadata"].get("cyclomatic_complexity"):
-                    output += f" | Complexity: {code['metadata']['cyclomatic_complexity']}"
+                    output += (
+                        f" | Complexity: {code['metadata']['cyclomatic_complexity']}"
+                    )
                 output += "\n\n"
 
             # FEAT-056: Show sort info if not default
-            if result.get("sort_info") and result["sort_info"].get("sort_by") != "relevance":
+            if (
+                result.get("sort_info")
+                and result["sort_info"].get("sort_by") != "relevance"
+            ):
                 output += f"\n(Sorted by: {result['sort_info']['sort_by']} {result['sort_info']['sort_order']})\n"
 
             return [TextContent(type="text", text=output)]
 
         elif name == "suggest_queries":
             result = await memory_server.suggest_queries(**arguments)
-            output = f"✅ Query Suggestions ({result['total_suggestions']} suggestions):\n\n"
+            output = (
+                f"✅ Query Suggestions ({result['total_suggestions']} suggestions):\n\n"
+            )
 
             # Show indexed stats
             stats = result["indexed_stats"]
             output += f"Indexed: {stats.get('total_units', 0)} code units in {stats.get('total_files', 0)} files\n"
             if stats.get("languages"):
-                langs = ", ".join(f"{lang} ({count})" for lang, count in list(stats["languages"].items())[:3])
+                langs = ", ".join(
+                    f"{lang} ({count})"
+                    for lang, count in list(stats["languages"].items())[:3]
+                )
                 output += f"Languages: {langs}\n"
             output += "\n"
 
@@ -1029,7 +1126,7 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
                 "template": "Intent-Based Suggestions",
                 "project": "Project-Specific Suggestions",
                 "domain": "Domain Presets",
-                "general": "General Discovery"
+                "general": "General Discovery",
             }
 
             for cat in ["template", "project", "domain", "general"]:
@@ -1068,7 +1165,9 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
         elif name == "search_all_projects":
             result = await memory_server.search_all_projects(**arguments)
             if not result["results"]:
-                return [TextContent(type="text", text="No results found across projects.")]
+                return [
+                    TextContent(type="text", text="No results found across projects.")
+                ]
 
             output = f"✅ Found {result['total_found']} results across {len(result['projects_searched'])} projects:\n\n"
             for i, code in enumerate(result["results"], 1):
@@ -1079,15 +1178,19 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
 
         elif name == "opt_in_cross_project":
             result = await memory_server.opt_in_cross_project(arguments["project_name"])
-            status_msg = f"Project '{result['project_name']}' opted-in for cross-project search"
-            if result['was_opted_in']:
+            status_msg = (
+                f"Project '{result['project_name']}' opted-in for cross-project search"
+            )
+            if result["was_opted_in"]:
                 status_msg += " (already opted-in)"
             return [TextContent(type="text", text=f"✅ {status_msg}")]
 
         elif name == "opt_out_cross_project":
-            result = await memory_server.opt_out_cross_project(arguments["project_name"])
+            result = await memory_server.opt_out_cross_project(
+                arguments["project_name"]
+            )
             status_msg = f"Project '{result['project_name']}' opted-out from cross-project search"
-            if not result.get('was_opted_in', True):
+            if not result.get("was_opted_in", True):
                 status_msg += " (already opted-out)"
             return [TextContent(type="text", text=f"✅ {status_msg}")]
 
@@ -1095,11 +1198,23 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
             result = await memory_server.list_opted_in_projects()
             projects = result.get("opted_in_projects", [])
             if not projects:
-                return [TextContent(type="text", text="No projects opted in for cross-project search.")]
-            return [TextContent(type="text", text=f"Opted-in projects:\n" + "\n".join(f"  - {p}" for p in projects))]
+                return [
+                    TextContent(
+                        type="text",
+                        text="No projects opted in for cross-project search.",
+                    )
+                ]
+            return [
+                TextContent(
+                    type="text",
+                    text="Opted-in projects:\n"
+                    + "\n".join(f"  - {p}" for p in projects),
+                )
+            ]
 
         elif name == "search_git_commits":
             from datetime import datetime
+
             # Convert date strings to datetime if provided
             kwargs = {}
             if "query" in arguments:
@@ -1118,14 +1233,22 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
             result = await memory_server.search_git_commits(**kwargs)
             commits = result.get("commits", [])
             if not commits:
-                return [TextContent(type="text", text="No commits found matching your criteria.")]
+                return [
+                    TextContent(
+                        type="text", text="No commits found matching your criteria."
+                    )
+                ]
 
             output = f"Found {len(commits)} commit(s):\n\n"
             for i, commit in enumerate(commits[:10], 1):
-                output += f"{i}. {commit['commit_hash'][:8]} - {commit['message'][:60]}\n"
-                output += f"   Author: {commit['author_name']} <{commit['author_email']}>\n"
+                output += (
+                    f"{i}. {commit['commit_hash'][:8]} - {commit['message'][:60]}\n"
+                )
+                output += (
+                    f"   Author: {commit['author_name']} <{commit['author_email']}>\n"
+                )
                 output += f"   Date: {commit['author_date']}\n"
-                if commit.get('repository_path'):
+                if commit.get("repository_path"):
                     output += f"   Repo: {commit['repository_path']}\n"
                 output += "\n"
 
@@ -1136,16 +1259,22 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
 
         elif name == "get_file_history":
             result = await memory_server.get_file_history(
-                file_path=arguments["file_path"],
-                limit=arguments.get("limit", 100)
+                file_path=arguments["file_path"], limit=arguments.get("limit", 100)
             )
             commits = result.get("commits", [])
             if not commits:
-                return [TextContent(type="text", text=f"No commit history found for {arguments['file_path']}.")]
+                return [
+                    TextContent(
+                        type="text",
+                        text=f"No commit history found for {arguments['file_path']}.",
+                    )
+                ]
 
             output = f"Commit history for {arguments['file_path']}:\n\n"
             for i, commit in enumerate(commits[:10], 1):
-                output += f"{i}. {commit['commit_hash'][:8]} - {commit['message'][:60]}\n"
+                output += (
+                    f"{i}. {commit['commit_hash'][:8]} - {commit['message'][:60]}\n"
+                )
                 output += f"   Author: {commit['author_name']}\n"
                 output += f"   Date: {commit['author_date']}\n\n"
 
@@ -1157,7 +1286,12 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
         elif name == "get_change_frequency":
             result = await memory_server.get_change_frequency(**arguments)
             if result["total_changes"] == 0:
-                return [TextContent(type="text", text=f"No changes found for {arguments['file_or_function']}.")]
+                return [
+                    TextContent(
+                        type="text",
+                        text=f"No changes found for {arguments['file_or_function']}.",
+                    )
+                ]
 
             output = f"Change frequency for {result['file_path']}:\n\n"
             output += f"Total changes: {result['total_changes']}\n"
@@ -1180,7 +1314,9 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
 
             if not hotspots:
                 note = result.get("note", "")
-                return [TextContent(type="text", text=f"No churn hotspots found. {note}")]
+                return [
+                    TextContent(type="text", text=f"No churn hotspots found. {note}")
+                ]
 
             output = f"Churn hotspots (last {result['analysis_period_days']} days):\n\n"
             for i, hotspot in enumerate(hotspots[:20], 1):
@@ -1197,17 +1333,26 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
             changes = result.get("changes", [])
 
             if not changes:
-                return [TextContent(type="text", text=f"No recent changes found in last {result['period_days']} days.")]
+                return [
+                    TextContent(
+                        type="text",
+                        text=f"No recent changes found in last {result['period_days']} days.",
+                    )
+                ]
 
             output = f"Recent changes (last {result['period_days']} days):\n\n"
             for i, change in enumerate(changes[:20], 1):
-                output += f"{i}. {change['commit_hash'][:8]} - {change['days_ago']}d ago\n"
+                output += (
+                    f"{i}. {change['commit_hash'][:8]} - {change['days_ago']}d ago\n"
+                )
                 output += f"   {change['author']}\n"
                 output += f"   {change['message'][:60]}\n"
                 stats = change.get("stats", {})
                 if stats:
                     output += f"   Files: {stats.get('files_changed', 0)}, "
-                    output += f"+{stats.get('insertions', 0)} -{stats.get('deletions', 0)}\n"
+                    output += (
+                        f"+{stats.get('insertions', 0)} -{stats.get('deletions', 0)}\n"
+                    )
                 output += "\n"
 
             if result["total_changes"] > 20:
@@ -1220,7 +1365,12 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
             results = result.get("results", [])
 
             if not results:
-                return [TextContent(type="text", text=f"No matches found for pattern: {result['pattern']}")]
+                return [
+                    TextContent(
+                        type="text",
+                        text=f"No matches found for pattern: {result['pattern']}",
+                    )
+                ]
 
             output = f"Blame search results for '{result['pattern']}':\n\n"
             for i, match in enumerate(results[:10], 1):
@@ -1239,13 +1389,19 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
             authors = result.get("authors", [])
 
             if not authors:
-                return [TextContent(type="text", text=f"No authors found for {result['file_path']}.")]
+                return [
+                    TextContent(
+                        type="text", text=f"No authors found for {result['file_path']}."
+                    )
+                ]
 
             output = f"Code authors for {result['file_path']}:\n\n"
             for i, author in enumerate(authors[:10], 1):
                 output += f"{i}. {author['author_name']} <{author['author_email']}>\n"
                 output += f"   Commits: {author['commit_count']}\n"
-                output += f"   Lines: +{author['lines_added']} -{author['lines_deleted']}\n"
+                output += (
+                    f"   Lines: +{author['lines_added']} -{author['lines_deleted']}\n"
+                )
                 if author.get("first_commit"):
                     output += f"   First: {author['first_commit']}\n"
                 if author.get("last_commit"):
@@ -1262,7 +1418,7 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
                 include_history_days=arguments.get("include_history_days", 1)
             )
             current = result["current_metrics"]
-            output = f"📊 Performance Metrics:\n\n"
+            output = "📊 Performance Metrics:\n\n"
             output += f"Avg Search Latency: {current['avg_search_latency_ms']:.2f}ms\n"
             output += f"Cache Hit Rate: {current['cache_hit_rate']:.1%}\n"
             output += f"Queries/Day: {current['queries_per_day']:.1f}\n"
@@ -1278,7 +1434,11 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
                 output += f"Quality: {health['quality_score']}/100\n"
                 return [TextContent(type="text", text=output)]
             else:
-                return [TextContent(type="text", text=f"Unexpected health score format: {result}")]
+                return [
+                    TextContent(
+                        type="text", text=f"Unexpected health score format: {result}"
+                    )
+                ]
 
         elif name == "get_active_alerts":
             result = await memory_server.get_active_alerts(
@@ -1302,7 +1462,7 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
                     text=f"✅ Dashboard server started at {result['url']}\n"
                     f"Process ID: {result['pid']}\n\n"
                     f"Open {result['url']} in your browser to view the dashboard.\n"
-                    f"The server is running in the background."
+                    f"The server is running in the background.",
                 )
             ]
 
@@ -1317,7 +1477,12 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
             )
 
             if result["total_count"] == 0:
-                return [TextContent(type="text", text=f"No callers found for '{result['function_name']}'")]
+                return [
+                    TextContent(
+                        type="text",
+                        text=f"No callers found for '{result['function_name']}'",
+                    )
+                ]
 
             output = f"📞 Found {result['total_count']} caller(s) for '{result['function_name']}':\n\n"
 
@@ -1326,7 +1491,7 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
                 for i, caller in enumerate(result["direct_callers"][:10], 1):
                     output += f"{i}. {caller['qualified_name']}\n"
                     output += f"   File: {caller['file_path']}:{caller['line_range']}\n"
-                    if caller['is_async']:
+                    if caller["is_async"]:
                         output += "   [async]\n"
                 output += "\n"
 
@@ -1348,7 +1513,12 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
             )
 
             if result["total_count"] == 0:
-                return [TextContent(type="text", text=f"No callees found for '{result['function_name']}'")]
+                return [
+                    TextContent(
+                        type="text",
+                        text=f"No callees found for '{result['function_name']}'",
+                    )
+                ]
 
             output = f"📞 Found {result['total_count']} callee(s) for '{result['function_name']}':\n\n"
 
@@ -1357,7 +1527,7 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
                 for i, callee in enumerate(result["direct_callees"][:10], 1):
                     output += f"{i}. {callee['qualified_name']}\n"
                     output += f"   File: {callee['file_path']}:{callee['line_range']}\n"
-                    if callee['is_async']:
+                    if callee["is_async"]:
                         output += "   [async]\n"
                 output += "\n"
 
@@ -1379,16 +1549,21 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
             )
 
             if result["path_count"] == 0:
-                return [TextContent(type="text", text=f"No call path found from '{result['from_function']}' to '{result['to_function']}'")]
+                return [
+                    TextContent(
+                        type="text",
+                        text=f"No call path found from '{result['from_function']}' to '{result['to_function']}'",
+                    )
+                ]
 
             output = f"🔗 Found {result['path_count']} call path(s) from '{result['from_function']}' to '{result['to_function']}':\n\n"
 
             for i, path_info in enumerate(result["paths"], 1):
                 output += f"Path {i} (length: {path_info['length']}):\n"
-                output += "  " + " → ".join(path_info['path']) + "\n\n"
+                output += "  " + " → ".join(path_info["path"]) + "\n\n"
 
                 # Show file locations
-                for detail in path_info['details']:
+                for detail in path_info["details"]:
                     output += f"  • {detail['qualified_name']}\n"
                     output += f"    {detail['file_path']}:{detail['line_range']}\n"
                 output += "\n"
@@ -1404,8 +1579,13 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
             )
 
             if result["total_count"] == 0:
-                lang_str = f" in {result['language']}" if result.get('language') else ""
-                return [TextContent(type="text", text=f"No implementations found for '{result['interface_name']}'{lang_str}")]
+                lang_str = f" in {result['language']}" if result.get("language") else ""
+                return [
+                    TextContent(
+                        type="text",
+                        text=f"No implementations found for '{result['interface_name']}'{lang_str}",
+                    )
+                ]
 
             output = f"🏗️ Found {result['total_count']} implementation(s) of '{result['interface_name']}':\n\n"
 
@@ -1413,7 +1593,7 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
                 output += f"{i}. {impl['implementation_name']} [{impl['language']}]\n"
                 output += f"   File: {impl['file_path']}\n"
                 output += f"   Methods: {', '.join(impl['methods'][:5])}"
-                if len(impl['methods']) > 5:
+                if len(impl["methods"]) > 5:
                     output += f" ... ({impl['method_count']} total)"
                 output += "\n\n"
 
@@ -1428,7 +1608,12 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
             )
 
             if result["total_count"] == 0:
-                return [TextContent(type="text", text=f"No dependencies found for '{result['file_path']}'")]
+                return [
+                    TextContent(
+                        type="text",
+                        text=f"No dependencies found for '{result['file_path']}'",
+                    )
+                ]
 
             output = f"📦 Found {result['total_count']} dependenc(ies) for '{result['file_path']}':\n\n"
 
@@ -1436,7 +1621,9 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
                 output += "Direct Dependencies:\n"
                 for i, dep in enumerate(result["direct_dependencies"][:15], 1):
                     output += f"{i}. {dep['file_path']}\n"
-                    output += f"   Type: {dep['import_type']} | Language: {dep['language']}\n"
+                    output += (
+                        f"   Type: {dep['import_type']} | Language: {dep['language']}\n"
+                    )
                 output += "\n"
 
             if result.get("transitive_dependencies"):
@@ -1456,7 +1643,12 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
             )
 
             if result["total_count"] == 0:
-                return [TextContent(type="text", text=f"No dependents found for '{result['file_path']}'")]
+                return [
+                    TextContent(
+                        type="text",
+                        text=f"No dependents found for '{result['file_path']}'",
+                    )
+                ]
 
             output = f"📦 Found {result['total_count']} dependent(s) on '{result['file_path']}':\n\n"
 
@@ -1464,7 +1656,9 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
                 output += "Direct Dependents:\n"
                 for i, dep in enumerate(result["direct_dependents"][:15], 1):
                     output += f"{i}. {dep['file_path']}\n"
-                    output += f"   Type: {dep['import_type']} | Language: {dep['language']}\n"
+                    output += (
+                        f"   Type: {dep['import_type']} | Language: {dep['language']}\n"
+                    )
                 output += "\n"
 
             if result.get("transitive_dependents"):
@@ -1478,19 +1672,19 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
         # FEAT-020: Usage Pattern Analytics Handlers
         elif name == "get_usage_statistics":
             days = arguments.get("days", 30)
-            result = await memory_rag_server.get_usage_statistics(days=days)
+            result = await memory_server.get_usage_statistics(days=days)
 
             output = f"📊 Usage Statistics (Last {result['period_days']} days)\n\n"
-            output += f"**Query Metrics:**\n"
+            output += "**Query Metrics:**\n"
             output += f"  • Total Queries: {result['total_queries']}\n"
             output += f"  • Unique Queries: {result['unique_queries']}\n"
             output += f"  • Avg Query Time: {result['avg_query_time_ms']:.2f}ms\n"
             output += f"  • Avg Results: {result['avg_result_count']:.1f}\n\n"
-            output += f"**Code Access Metrics:**\n"
+            output += "**Code Access Metrics:**\n"
             output += f"  • Total Accesses: {result['total_code_accesses']}\n"
             output += f"  • Unique Files: {result['unique_files']}\n"
             output += f"  • Unique Functions: {result['unique_functions']}\n\n"
-            if result['most_active_day']:
+            if result["most_active_day"]:
                 output += f"**Most Active Day:** {result['most_active_day']} "
                 output += f"({result['most_active_day_count']} queries)\n"
 
@@ -1499,16 +1693,20 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
         elif name == "get_top_queries":
             limit = arguments.get("limit", 10)
             days = arguments.get("days", 30)
-            result = await memory_rag_server.get_top_queries(limit=limit, days=days)
+            result = await memory_server.get_top_queries(limit=limit, days=days)
 
             output = f"🔍 Top {result['total_returned']} Queries (Last {result['period_days']} days)\n\n"
 
-            if result['queries']:
-                for i, query_stat in enumerate(result['queries'], 1):
+            if result["queries"]:
+                for i, query_stat in enumerate(result["queries"], 1):
                     output += f"{i}. **{query_stat['query']}**\n"
                     output += f"   • Count: {query_stat['count']}\n"
-                    output += f"   • Avg Results: {query_stat['avg_result_count']:.1f}\n"
-                    output += f"   • Avg Time: {query_stat['avg_execution_time_ms']:.2f}ms\n"
+                    output += (
+                        f"   • Avg Results: {query_stat['avg_result_count']:.1f}\n"
+                    )
+                    output += (
+                        f"   • Avg Time: {query_stat['avg_execution_time_ms']:.2f}ms\n"
+                    )
                     output += f"   • Last Used: {query_stat['last_used']}\n\n"
             else:
                 output += "No queries found in the specified time period.\n"
@@ -1518,18 +1716,18 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
         elif name == "get_frequently_accessed_code":
             limit = arguments.get("limit", 10)
             days = arguments.get("days", 30)
-            result = await memory_rag_server.get_frequently_accessed_code(
+            result = await memory_server.get_frequently_accessed_code(
                 limit=limit, days=days
             )
 
             output = f"💻 Top {result['total_returned']} Accessed Code (Last {result['period_days']} days)\n\n"
 
-            if result['code_items']:
-                for i, code_stat in enumerate(result['code_items'], 1):
+            if result["code_items"]:
+                for i, code_stat in enumerate(result["code_items"], 1):
                     output += f"{i}. **{code_stat['file_path']}**"
-                    if code_stat['function_name']:
+                    if code_stat["function_name"]:
                         output += f" :: {code_stat['function_name']}"
-                    output += f"\n"
+                    output += "\n"
                     output += f"   • Access Count: {code_stat['access_count']}\n"
                     output += f"   • Last Accessed: {code_stat['last_accessed']}\n\n"
             else:
@@ -1544,9 +1742,9 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
         """Catch validation errors and preserve error code and solution."""
         logger.exception(f"Validation error in tool call: {name}")
         error_msg = f"[{e.error_code}] Validation Error: {str(e)}"
-        if hasattr(e, 'solution') and e.solution:
+        if hasattr(e, "solution") and e.solution:
             error_msg += f"\n\nSolution: {e.solution}"
-        if hasattr(e, 'docs_url') and e.docs_url:
+        if hasattr(e, "docs_url") and e.docs_url:
             error_msg += f"\nDocs: {e.docs_url}"
         return [TextContent(type="text", text=error_msg)]
 
@@ -1554,9 +1752,9 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
         """Catch storage errors and preserve error code and solution."""
         logger.exception(f"Storage error in tool call: {name}")
         error_msg = f"[{e.error_code}] Storage Error: {str(e)}"
-        if hasattr(e, 'solution') and e.solution:
+        if hasattr(e, "solution") and e.solution:
             error_msg += f"\n\nSolution: {e.solution}"
-        if hasattr(e, 'docs_url') and e.docs_url:
+        if hasattr(e, "docs_url") and e.docs_url:
             error_msg += f"\nDocs: {e.docs_url}"
         return [TextContent(type="text", text=error_msg)]
 
@@ -1564,9 +1762,9 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
         """Catch retrieval errors and preserve error code and solution."""
         logger.exception(f"Retrieval error in tool call: {name}")
         error_msg = f"[{e.error_code}] Retrieval Error: {str(e)}"
-        if hasattr(e, 'solution') and e.solution:
+        if hasattr(e, "solution") and e.solution:
             error_msg += f"\n\nSolution: {e.solution}"
-        if hasattr(e, 'docs_url') and e.docs_url:
+        if hasattr(e, "docs_url") and e.docs_url:
             error_msg += f"\nDocs: {e.docs_url}"
         return [TextContent(type="text", text=error_msg)]
 
@@ -1574,9 +1772,9 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
         """Catch embedding errors and preserve error code and solution."""
         logger.exception(f"Embedding error in tool call: {name}")
         error_msg = f"[{e.error_code}] Embedding Error: {str(e)}"
-        if hasattr(e, 'solution') and e.solution:
+        if hasattr(e, "solution") and e.solution:
             error_msg += f"\n\nSolution: {e.solution}"
-        if hasattr(e, 'docs_url') and e.docs_url:
+        if hasattr(e, "docs_url") and e.docs_url:
             error_msg += f"\nDocs: {e.docs_url}"
         return [TextContent(type="text", text=error_msg)]
 
@@ -1584,9 +1782,9 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
         """Catch other MemoryRAG errors and preserve error code and solution."""
         logger.exception(f"MemoryRAG error in tool call: {name}")
         error_msg = f"[{e.error_code}] Error: {str(e)}"
-        if hasattr(e, 'solution') and e.solution:
+        if hasattr(e, "solution") and e.solution:
             error_msg += f"\n\nSolution: {e.solution}"
-        if hasattr(e, 'docs_url') and e.docs_url:
+        if hasattr(e, "docs_url") and e.docs_url:
             error_msg += f"\nDocs: {e.docs_url}"
         return [TextContent(type="text", text=error_msg)]
 
@@ -1620,9 +1818,13 @@ async def _startup_health_check(config, memory_server) -> bool:
         # Check 2: Embedding model
         logger.info("✓ Checking embedding model...")
         try:
-            test_embedding = await memory_server.embedding_generator.generate_embedding("test")
+            test_embedding = await memory_server.embedding_generator.generate_embedding(
+                "test"
+            )
             if test_embedding and len(test_embedding) > 0:
-                logger.info(f"✓ Embedding model loaded successfully ({len(test_embedding)} dims)")
+                logger.info(
+                    f"✓ Embedding model loaded successfully ({len(test_embedding)} dims)"
+                )
             else:
                 logger.error("✗ Embedding generation returned empty result")
                 return False
@@ -1662,7 +1864,10 @@ async def main():
     # virtual memory to balloon (each thread reserves ~8MB stack space on macOS).
     # Limit to 8 workers to cap memory usage while allowing reasonable concurrency.
     from concurrent.futures import ThreadPoolExecutor
-    default_executor = ThreadPoolExecutor(max_workers=8, thread_name_prefix="mcp_async_")
+
+    default_executor = ThreadPoolExecutor(
+        max_workers=8, thread_name_prefix="mcp_async_"
+    )
     asyncio.get_event_loop().set_default_executor(default_executor)
     logger.info("PERF-009: Set bounded default executor (max_workers=8)")
 
@@ -1673,7 +1878,9 @@ async def main():
     # Fast initialization - defer expensive operations until after MCP is listening
     await memory_server.initialize(defer_preload=True, defer_auto_index=True)
 
-    logger.info(f"Server initialized (project: {memory_server.project_name or 'global'})")
+    logger.info(
+        f"Server initialized (project: {memory_server.project_name or 'global'})"
+    )
     logger.info(f"Storage backend: {config.storage_backend}")
 
     try:
@@ -1692,19 +1899,37 @@ async def main():
                     if memory_server.metrics_collector:
                         logger.info("Background: Collecting initial metrics...")
                         try:
-                            initial_metrics = await memory_server.metrics_collector.collect_metrics()
-                            initial_metrics.health_score = memory_server._calculate_simple_health_score(initial_metrics)
-                            memory_server.metrics_collector.store_metrics(initial_metrics)
-                            logger.info(f"Background: Initial metrics collected (health: {initial_metrics.health_score}/100)")
+                            initial_metrics = (
+                                await memory_server.metrics_collector.collect_metrics()
+                            )
+                            initial_metrics.health_score = (
+                                memory_server._calculate_simple_health_score(
+                                    initial_metrics
+                                )
+                            )
+                            memory_server.metrics_collector.store_metrics(
+                                initial_metrics
+                            )
+                            logger.info(
+                                f"Background: Initial metrics collected (health: {initial_metrics.health_score}/100)"
+                            )
                         except Exception as e:
-                            logger.warning(f"Background: Failed to collect initial metrics: {e}")
+                            logger.warning(
+                                f"Background: Failed to collect initial metrics: {e}"
+                            )
 
                     # Perform startup health check
                     if not await _startup_health_check(config, memory_server):
-                        logger.warning("⚠️ Startup health check failed - server running in degraded mode")
-                        logger.warning("Some features may not work correctly. See docs/TROUBLESHOOTING.md")
+                        logger.warning(
+                            "⚠️ Startup health check failed - server running in degraded mode"
+                        )
+                        logger.warning(
+                            "Some features may not work correctly. See docs/TROUBLESHOOTING.md"
+                        )
                     else:
-                        logger.info("✅ Background initialization complete - all systems ready")
+                        logger.info(
+                            "✅ Background initialization complete - all systems ready"
+                        )
 
                     # Start deferred auto-indexing (runs in background, non-blocking)
                     try:
@@ -1729,7 +1954,10 @@ async def main():
                 try:
                     task.result()
                 except Exception as e:
-                    logger.error(f"Background initialization task failed with exception: {e}", exc_info=True)
+                    logger.error(
+                        f"Background initialization task failed with exception: {e}",
+                        exc_info=True,
+                    )
 
             _init_task.add_done_callback(_on_init_task_done)
 

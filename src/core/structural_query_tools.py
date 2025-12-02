@@ -2,8 +2,8 @@
 
 import logging
 import time
-from typing import Dict, Any, List, Optional
-from src.core.exceptions import RetrievalError, ValidationError
+from typing import Dict, Any, Optional
+from src.core.exceptions import RetrievalError
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +81,7 @@ class StructuralQueryMixin:
             caller_nodes = call_graph.find_callers(
                 function_name=function_name,
                 include_indirect=include_indirect,
-                max_depth=max_depth
+                max_depth=max_depth,
             )
 
             # Build response with caller details
@@ -92,27 +92,31 @@ class StructuralQueryMixin:
 
                 # Filter to sites that call our target function
                 relevant_sites = [
-                    cs for cs in call_sites
-                    if cs.callee_function == function_name
+                    cs for cs in call_sites if cs.callee_function == function_name
                 ]
 
                 for site in relevant_sites:
-                    callers.append({
-                        "caller_function": caller.qualified_name,
-                        "caller_file": caller.file_path,
-                        "caller_line": site.caller_line,
-                        "call_type": site.call_type,
-                        "language": caller.language,
-                        "is_async": caller.is_async,
-                    })
+                    callers.append(
+                        {
+                            "caller_function": caller.qualified_name,
+                            "caller_file": caller.file_path,
+                            "caller_line": site.caller_line,
+                            "call_type": site.call_type,
+                            "language": caller.language,
+                            "is_async": caller.is_async,
+                        }
+                    )
 
             # Count direct vs indirect
-            direct_count = len([
-                c for c in callers
-                if call_graph.reverse_index.get(function_name, set()).intersection(
-                    {c["caller_function"]}
-                )
-            ])
+            direct_count = len(
+                [
+                    c
+                    for c in callers
+                    if call_graph.reverse_index.get(function_name, set()).intersection(
+                        {c["caller_function"]}
+                    )
+                ]
+            )
             indirect_count = len(callers) - direct_count
 
             analysis_time_ms = (time.time() - start_time) * 1000
@@ -133,7 +137,9 @@ class StructuralQueryMixin:
             }
 
         except Exception as e:
-            logger.error(f"Failed to find callers for {function_name}: {e}", exc_info=True)
+            logger.error(
+                f"Failed to find callers for {function_name}: {e}", exc_info=True
+            )
             raise RetrievalError(f"Failed to find callers: {e}")
 
     async def find_callees(
@@ -196,7 +202,7 @@ class StructuralQueryMixin:
             callee_nodes = call_graph.find_callees(
                 function_name=function_name,
                 include_indirect=include_indirect,
-                max_depth=max_depth
+                max_depth=max_depth,
             )
 
             # Get call sites from this function
@@ -208,29 +214,35 @@ class StructuralQueryMixin:
                 # Find the callee node
                 callee = call_graph.nodes.get(site.callee_function)
                 if callee:
-                    callees.append({
-                        "callee_function": callee.qualified_name,
-                        "callee_file": callee.file_path,
-                        "callee_line": callee.start_line,
-                        "call_site_line": site.caller_line,
-                        "call_type": site.call_type,
-                        "language": callee.language,
-                        "is_async": callee.is_async,
-                    })
+                    callees.append(
+                        {
+                            "callee_function": callee.qualified_name,
+                            "callee_file": callee.file_path,
+                            "callee_line": callee.start_line,
+                            "call_site_line": site.caller_line,
+                            "call_type": site.call_type,
+                            "language": callee.language,
+                            "is_async": callee.is_async,
+                        }
+                    )
 
             # If indirect, include transitive callees
             if include_indirect:
                 for callee_node in callee_nodes:
-                    if callee_node.qualified_name not in [c["callee_function"] for c in callees]:
-                        callees.append({
-                            "callee_function": callee_node.qualified_name,
-                            "callee_file": callee_node.file_path,
-                            "callee_line": callee_node.start_line,
-                            "call_site_line": 0,  # Indirect call
-                            "call_type": "indirect",
-                            "language": callee_node.language,
-                            "is_async": callee_node.is_async,
-                        })
+                    if callee_node.qualified_name not in [
+                        c["callee_function"] for c in callees
+                    ]:
+                        callees.append(
+                            {
+                                "callee_function": callee_node.qualified_name,
+                                "callee_file": callee_node.file_path,
+                                "callee_line": callee_node.start_line,
+                                "call_site_line": 0,  # Indirect call
+                                "call_type": "indirect",
+                                "language": callee_node.language,
+                                "is_async": callee_node.is_async,
+                            }
+                        )
 
             # Count direct vs indirect
             direct_count = len([c for c in callees if c["call_type"] != "indirect"])
@@ -254,7 +266,9 @@ class StructuralQueryMixin:
             }
 
         except Exception as e:
-            logger.error(f"Failed to find callees for {function_name}: {e}", exc_info=True)
+            logger.error(
+                f"Failed to find callees for {function_name}: {e}", exc_info=True
+            )
             raise RetrievalError(f"Failed to find callees: {e}")
 
     async def find_implementations(
@@ -309,13 +323,14 @@ class StructuralQueryMixin:
             # Get implementations from store
             implementations = await call_graph_store.get_implementations(
                 interface_name=interface_name,
-                project_name=project if project != "global" else None
+                project_name=project if project != "global" else None,
             )
 
             # Filter by language if specified
             if language:
                 implementations = [
-                    impl for impl in implementations
+                    impl
+                    for impl in implementations
                     if impl.language.lower() == language.lower()
                 ]
 
@@ -325,13 +340,15 @@ class StructuralQueryMixin:
 
             for impl in implementations[:limit]:
                 languages_set.add(impl.language)
-                impl_list.append({
-                    "class_name": impl.implementation_name,
-                    "file_path": impl.file_path,
-                    "language": impl.language,
-                    "methods": impl.methods,
-                    "method_count": len(impl.methods),
-                })
+                impl_list.append(
+                    {
+                        "class_name": impl.implementation_name,
+                        "file_path": impl.file_path,
+                        "language": impl.language,
+                        "methods": impl.methods,
+                        "method_count": len(impl.methods),
+                    }
+                )
 
             analysis_time_ms = (time.time() - start_time) * 1000
 
@@ -350,7 +367,10 @@ class StructuralQueryMixin:
             }
 
         except Exception as e:
-            logger.error(f"Failed to find implementations for {interface_name}: {e}", exc_info=True)
+            logger.error(
+                f"Failed to find implementations for {interface_name}: {e}",
+                exc_info=True,
+            )
             raise RetrievalError(f"Failed to find implementations: {e}")
 
     async def find_dependencies(
@@ -401,7 +421,7 @@ class StructuralQueryMixin:
             result = await self.get_file_dependencies(
                 file_path=file_path,
                 project_name=project_name,
-                include_transitive=include_transitive
+                include_transitive=include_transitive,
             )
 
             analysis_time_ms = (time.time() - start_time) * 1000
@@ -411,17 +431,31 @@ class StructuralQueryMixin:
                 "project": result.get("project", project_name or self.project_name),
                 "dependencies": result.get("dependencies", []),
                 "total_dependencies": result.get("dependency_count", 0),
-                "direct_dependencies": result.get("dependency_count", 0) if not include_transitive else len(
-                    [d for d in result.get("dependencies", []) if not d.get("transitive", False)]
+                "direct_dependencies": result.get("dependency_count", 0)
+                if not include_transitive
+                else len(
+                    [
+                        d
+                        for d in result.get("dependencies", [])
+                        if not d.get("transitive", False)
+                    ]
                 ),
                 "transitive_dependencies": len(
-                    [d for d in result.get("dependencies", []) if d.get("transitive", False)]
-                ) if include_transitive else 0,
+                    [
+                        d
+                        for d in result.get("dependencies", [])
+                        if d.get("transitive", False)
+                    ]
+                )
+                if include_transitive
+                else 0,
                 "analysis_time_ms": round(analysis_time_ms, 2),
             }
 
         except Exception as e:
-            logger.error(f"Failed to find dependencies for {file_path}: {e}", exc_info=True)
+            logger.error(
+                f"Failed to find dependencies for {file_path}: {e}", exc_info=True
+            )
             raise RetrievalError(f"Failed to find dependencies: {e}")
 
     async def find_dependents(
@@ -472,7 +506,7 @@ class StructuralQueryMixin:
             result = await self.get_file_dependents(
                 file_path=file_path,
                 project_name=project_name,
-                include_transitive=include_transitive
+                include_transitive=include_transitive,
             )
 
             total = result.get("dependent_count", 0)
@@ -492,18 +526,23 @@ class StructuralQueryMixin:
                 "project": result.get("project", project_name or self.project_name),
                 "dependents": result.get("dependents", []),
                 "total_dependents": total,
-                "direct_dependents": total if not include_transitive else len(
+                "direct_dependents": total
+                if not include_transitive
+                else len(
                     [d for d in result.get("dependents", []) if isinstance(d, str)]
                 ),
-                "transitive_dependents": 0 if not include_transitive else total - len(
-                    [d for d in result.get("dependents", []) if isinstance(d, str)]
-                ),
+                "transitive_dependents": 0
+                if not include_transitive
+                else total
+                - len([d for d in result.get("dependents", []) if isinstance(d, str)]),
                 "impact_radius": impact_radius,
                 "analysis_time_ms": round(analysis_time_ms, 2),
             }
 
         except Exception as e:
-            logger.error(f"Failed to find dependents for {file_path}: {e}", exc_info=True)
+            logger.error(
+                f"Failed to find dependents for {file_path}: {e}", exc_info=True
+            )
             raise RetrievalError(f"Failed to find dependents: {e}")
 
     async def get_call_chain(
@@ -568,7 +607,7 @@ class StructuralQueryMixin:
                 from_func=from_function,
                 to_func=to_function,
                 max_depth=max_depth,
-                max_paths=max_paths
+                max_paths=max_paths,
             )
 
             # Build detailed path information
@@ -582,22 +621,28 @@ class StructuralQueryMixin:
 
                     # Find call site
                     call_sites = call_graph.get_call_sites_for_caller(caller)
-                    site = next((cs for cs in call_sites if cs.callee_function == callee), None)
+                    site = next(
+                        (cs for cs in call_sites if cs.callee_function == callee), None
+                    )
 
                     if site:
-                        call_details.append({
-                            "caller": caller,
-                            "callee": callee,
-                            "file": site.caller_file,
-                            "line": site.caller_line,
-                            "call_type": site.call_type,
-                        })
+                        call_details.append(
+                            {
+                                "caller": caller,
+                                "callee": callee,
+                                "file": site.caller_file,
+                                "line": site.caller_line,
+                                "call_type": site.call_type,
+                            }
+                        )
 
-                path_details.append({
-                    "path": path,
-                    "length": len(path),
-                    "call_details": call_details,
-                })
+                path_details.append(
+                    {
+                        "path": path,
+                        "length": len(path),
+                        "call_details": call_details,
+                    }
+                )
 
             # Calculate statistics
             if paths:
@@ -626,5 +671,8 @@ class StructuralQueryMixin:
             }
 
         except Exception as e:
-            logger.error(f"Failed to find call chain from {from_function} to {to_function}: {e}", exc_info=True)
+            logger.error(
+                f"Failed to find call chain from {from_function} to {to_function}: {e}",
+                exc_info=True,
+            )
             raise RetrievalError(f"Failed to find call chain: {e}")

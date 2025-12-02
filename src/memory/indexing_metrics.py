@@ -3,7 +3,6 @@
 import sqlite3
 from typing import Optional, List, Dict
 from datetime import datetime, UTC
-from pathlib import Path
 
 
 class IndexingMetricsStore:
@@ -59,7 +58,9 @@ class IndexingMetricsStore:
             project_name: Optional project name
             total_size_bytes: Optional total size of indexed files
         """
-        avg_time_per_file_ms = (total_time_seconds / files_indexed) * 1000 if files_indexed > 0 else 0
+        avg_time_per_file_ms = (
+            (total_time_seconds / files_indexed) * 1000 if files_indexed > 0 else 0
+        )
 
         with sqlite3.connect(self.db_path) as conn:
             conn.execute(

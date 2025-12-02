@@ -9,10 +9,8 @@ Consider moving these to tests/integration/ if flaky behavior persists.
 
 import pytest
 import pytest_asyncio
-import tempfile
 import uuid
 from datetime import datetime, UTC, timedelta
-from pathlib import Path
 
 from src.store.qdrant_store import QdrantMemoryStore
 from src.config import ServerConfig
@@ -24,7 +22,7 @@ from tests.conftest import mock_embedding
 # Skip entire file if Qdrant is overloaded or unresponsive
 pytestmark = pytest.mark.skipif(
     True,  # Temporarily skip - tests timeout due to Qdrant connection issues
-    reason="Git storage tests require stable Qdrant connection - skipped to avoid timeouts"
+    reason="Git storage tests require stable Qdrant connection - skipped to avoid timeouts",
 )
 
 
@@ -122,21 +120,23 @@ class TestStoreGitCommits:
         """Test storing multiple commits."""
         commits = []
         for i in range(5):
-            commits.append({
-                "commit_hash": f"commit{i}",
-                "repository_path": "/repo",
-                "author_name": f"Author {i}",
-                "author_email": f"author{i}@example.com",
-                "author_date": datetime.now(UTC) - timedelta(days=i),
-                "committer_name": f"Committer {i}",
-                "committer_date": datetime.now(UTC) - timedelta(days=i),
-                "message": f"Commit {i}",
-                "message_embedding": mock_embedding(value=0.1 * i),
-                "branch_names": ["main"],
-                "tags": [],
-                "parent_hashes": [],
-                "stats": {"files_changed": i, "insertions": i * 2, "deletions": i},
-            })
+            commits.append(
+                {
+                    "commit_hash": f"commit{i}",
+                    "repository_path": "/repo",
+                    "author_name": f"Author {i}",
+                    "author_email": f"author{i}@example.com",
+                    "author_date": datetime.now(UTC) - timedelta(days=i),
+                    "committer_name": f"Committer {i}",
+                    "committer_date": datetime.now(UTC) - timedelta(days=i),
+                    "message": f"Commit {i}",
+                    "message_embedding": mock_embedding(value=0.1 * i),
+                    "branch_names": ["main"],
+                    "tags": [],
+                    "parent_hashes": [],
+                    "stats": {"files_changed": i, "insertions": i * 2, "deletions": i},
+                }
+            )
 
         count = await store.store_git_commits(commits)
         assert count == 5
@@ -179,7 +179,6 @@ class TestStoreGitCommits:
     @pytest.mark.asyncio
     async def test_store_commit_fts_index(self, store, sample_commit):
         """Test FTS index is created for commit message."""
-        import uuid
         # Use unique commit hash to avoid conflicts in parallel execution
         unique_hash = f"test{uuid.uuid4().hex[:32]}"
         unique_commit = {**sample_commit, "commit_hash": unique_hash}
@@ -198,7 +197,9 @@ class TestStoreGitFileChanges:
     """Test storing git file changes."""
 
     @pytest.mark.asyncio
-    async def test_store_single_file_change(self, store, sample_commit, sample_file_change):
+    async def test_store_single_file_change(
+        self, store, sample_commit, sample_file_change
+    ):
         """Test storing a single file change."""
         # Store commit first
         await store.store_git_commits([sample_commit])
@@ -214,16 +215,18 @@ class TestStoreGitFileChanges:
 
         file_changes = []
         for i in range(3):
-            file_changes.append({
-                "id": f"{sample_commit['commit_hash']}:file{i}.py",
-                "commit_hash": sample_commit["commit_hash"],
-                "file_path": f"src/file{i}.py",
-                "change_type": "modified",
-                "lines_added": i * 2,
-                "lines_deleted": i,
-                "diff_content": f"diff {i}",
-                "diff_embedding": mock_embedding(value=0.1 * i),
-            })
+            file_changes.append(
+                {
+                    "id": f"{sample_commit['commit_hash']}:file{i}.py",
+                    "commit_hash": sample_commit["commit_hash"],
+                    "file_path": f"src/file{i}.py",
+                    "change_type": "modified",
+                    "lines_added": i * 2,
+                    "lines_deleted": i,
+                    "diff_content": f"diff {i}",
+                    "diff_embedding": mock_embedding(value=0.1 * i),
+                }
+            )
 
         count = await store.store_git_file_changes(file_changes)
         assert count == 3
@@ -248,7 +251,9 @@ class TestStoreGitFileChanges:
         assert count == 1
 
     @pytest.mark.asyncio
-    async def test_store_file_change_replace(self, store, sample_commit, sample_file_change):
+    async def test_store_file_change_replace(
+        self, store, sample_commit, sample_file_change
+    ):
         """Test replacing an existing file change."""
         await store.store_git_commits([sample_commit])
         await store.store_git_file_changes([sample_file_change])
@@ -269,21 +274,23 @@ class TestSearchGitCommits:
         """Test searching without filters returns all commits."""
         commits = []
         for i in range(3):
-            commits.append({
-                "commit_hash": f"commit{i}",
-                "repository_path": "/repo",
-                "author_name": f"Author {i}",
-                "author_email": f"author{i}@example.com",
-                "author_date": datetime.now(UTC) - timedelta(days=i),
-                "committer_name": f"Committer {i}",
-                "committer_date": datetime.now(UTC),
-                "message": f"Message {i}",
-                "message_embedding": mock_embedding(value=0.1),
-                "branch_names": [],
-                "tags": [],
-                "parent_hashes": [],
-                "stats": {},
-            })
+            commits.append(
+                {
+                    "commit_hash": f"commit{i}",
+                    "repository_path": "/repo",
+                    "author_name": f"Author {i}",
+                    "author_email": f"author{i}@example.com",
+                    "author_date": datetime.now(UTC) - timedelta(days=i),
+                    "committer_name": f"Committer {i}",
+                    "committer_date": datetime.now(UTC),
+                    "message": f"Message {i}",
+                    "message_embedding": mock_embedding(value=0.1),
+                    "branch_names": [],
+                    "tags": [],
+                    "parent_hashes": [],
+                    "stats": {},
+                }
+            )
 
         await store.store_git_commits(commits)
 
@@ -340,21 +347,23 @@ class TestSearchGitCommits:
         """Test filtering by repository path."""
         commits = []
         for i, repo in enumerate(["/repo1", "/repo2"]):
-            commits.append({
-                "commit_hash": f"commit{i}",
-                "repository_path": repo,
-                "author_name": "Author",
-                "author_email": "author@example.com",
-                "author_date": datetime.now(UTC),
-                "committer_name": "Committer",
-                "committer_date": datetime.now(UTC),
-                "message": f"Commit {i}",
-                "message_embedding": mock_embedding(value=0.1),
-                "branch_names": [],
-                "tags": [],
-                "parent_hashes": [],
-                "stats": {},
-            })
+            commits.append(
+                {
+                    "commit_hash": f"commit{i}",
+                    "repository_path": repo,
+                    "author_name": "Author",
+                    "author_email": "author@example.com",
+                    "author_date": datetime.now(UTC),
+                    "committer_name": "Committer",
+                    "committer_date": datetime.now(UTC),
+                    "message": f"Commit {i}",
+                    "message_embedding": mock_embedding(value=0.1),
+                    "branch_names": [],
+                    "tags": [],
+                    "parent_hashes": [],
+                    "stats": {},
+                }
+            )
 
         await store.store_git_commits(commits)
 
@@ -367,21 +376,23 @@ class TestSearchGitCommits:
         """Test filtering by author email."""
         commits = []
         for i, email in enumerate(["alice@example.com", "bob@example.com"]):
-            commits.append({
-                "commit_hash": f"commit{i}",
-                "repository_path": "/repo",
-                "author_name": f"Author {i}",
-                "author_email": email,
-                "author_date": datetime.now(UTC),
-                "committer_name": "Committer",
-                "committer_date": datetime.now(UTC),
-                "message": f"Commit {i}",
-                "message_embedding": mock_embedding(value=0.1),
-                "branch_names": [],
-                "tags": [],
-                "parent_hashes": [],
-                "stats": {},
-            })
+            commits.append(
+                {
+                    "commit_hash": f"commit{i}",
+                    "repository_path": "/repo",
+                    "author_name": f"Author {i}",
+                    "author_email": email,
+                    "author_date": datetime.now(UTC),
+                    "committer_name": "Committer",
+                    "committer_date": datetime.now(UTC),
+                    "message": f"Commit {i}",
+                    "message_embedding": mock_embedding(value=0.1),
+                    "branch_names": [],
+                    "tags": [],
+                    "parent_hashes": [],
+                    "stats": {},
+                }
+            )
 
         await store.store_git_commits(commits)
 
@@ -395,21 +406,23 @@ class TestSearchGitCommits:
         now = datetime.now(UTC)
         commits = []
         for i in range(5):
-            commits.append({
-                "commit_hash": f"commit{i}",
-                "repository_path": "/repo",
-                "author_name": "Author",
-                "author_email": "author@example.com",
-                "author_date": now - timedelta(days=i * 2),
-                "committer_name": "Committer",
-                "committer_date": now,
-                "message": f"Commit {i}",
-                "message_embedding": mock_embedding(value=0.1),
-                "branch_names": [],
-                "tags": [],
-                "parent_hashes": [],
-                "stats": {},
-            })
+            commits.append(
+                {
+                    "commit_hash": f"commit{i}",
+                    "repository_path": "/repo",
+                    "author_name": "Author",
+                    "author_email": "author@example.com",
+                    "author_date": now - timedelta(days=i * 2),
+                    "committer_name": "Committer",
+                    "committer_date": now,
+                    "message": f"Commit {i}",
+                    "message_embedding": mock_embedding(value=0.1),
+                    "branch_names": [],
+                    "tags": [],
+                    "parent_hashes": [],
+                    "stats": {},
+                }
+            )
 
         await store.store_git_commits(commits)
 
@@ -425,21 +438,23 @@ class TestSearchGitCommits:
         """Test result limit."""
         commits = []
         for i in range(10):
-            commits.append({
-                "commit_hash": f"commit{i}",
-                "repository_path": "/repo",
-                "author_name": "Author",
-                "author_email": "author@example.com",
-                "author_date": datetime.now(UTC) - timedelta(days=i),
-                "committer_name": "Committer",
-                "committer_date": datetime.now(UTC),
-                "message": f"Commit {i}",
-                "message_embedding": mock_embedding(value=0.1),
-                "branch_names": [],
-                "tags": [],
-                "parent_hashes": [],
-                "stats": {},
-            })
+            commits.append(
+                {
+                    "commit_hash": f"commit{i}",
+                    "repository_path": "/repo",
+                    "author_name": "Author",
+                    "author_email": "author@example.com",
+                    "author_date": datetime.now(UTC) - timedelta(days=i),
+                    "committer_name": "Committer",
+                    "committer_date": datetime.now(UTC),
+                    "message": f"Commit {i}",
+                    "message_embedding": mock_embedding(value=0.1),
+                    "branch_names": [],
+                    "tags": [],
+                    "parent_hashes": [],
+                    "stats": {},
+                }
+            )
 
         await store.store_git_commits(commits)
 
@@ -454,39 +469,43 @@ class TestSearchGitCommits:
 
         # Alice's commits
         for i in range(3):
-            commits.append({
-                "commit_hash": f"alice{i}",
-                "repository_path": "/repo1",
-                "author_name": "Alice",
-                "author_email": "alice@example.com",
-                "author_date": now - timedelta(days=i),
-                "committer_name": "Alice",
-                "committer_date": now,
-                "message": f"Fix bug {i}",
-                "message_embedding": mock_embedding(value=0.1),
-                "branch_names": [],
-                "tags": [],
-                "parent_hashes": [],
-                "stats": {},
-            })
+            commits.append(
+                {
+                    "commit_hash": f"alice{i}",
+                    "repository_path": "/repo1",
+                    "author_name": "Alice",
+                    "author_email": "alice@example.com",
+                    "author_date": now - timedelta(days=i),
+                    "committer_name": "Alice",
+                    "committer_date": now,
+                    "message": f"Fix bug {i}",
+                    "message_embedding": mock_embedding(value=0.1),
+                    "branch_names": [],
+                    "tags": [],
+                    "parent_hashes": [],
+                    "stats": {},
+                }
+            )
 
         # Bob's commits
         for i in range(3):
-            commits.append({
-                "commit_hash": f"bob{i}",
-                "repository_path": "/repo2",
-                "author_name": "Bob",
-                "author_email": "bob@example.com",
-                "author_date": now - timedelta(days=i),
-                "committer_name": "Bob",
-                "committer_date": now,
-                "message": f"Add feature {i}",
-                "message_embedding": mock_embedding(value=0.1),
-                "branch_names": [],
-                "tags": [],
-                "parent_hashes": [],
-                "stats": {},
-            })
+            commits.append(
+                {
+                    "commit_hash": f"bob{i}",
+                    "repository_path": "/repo2",
+                    "author_name": "Bob",
+                    "author_email": "bob@example.com",
+                    "author_date": now - timedelta(days=i),
+                    "committer_name": "Bob",
+                    "committer_date": now,
+                    "message": f"Add feature {i}",
+                    "message_embedding": mock_embedding(value=0.1),
+                    "branch_names": [],
+                    "tags": [],
+                    "parent_hashes": [],
+                    "stats": {},
+                }
+            )
 
         await store.store_git_commits(commits)
 
@@ -505,21 +524,23 @@ class TestSearchGitCommits:
         now = datetime.now(UTC)
         commits = []
         for i in range(5):
-            commits.append({
-                "commit_hash": f"commit{i}",
-                "repository_path": "/repo",
-                "author_name": "Author",
-                "author_email": "author@example.com",
-                "author_date": now - timedelta(days=i),
-                "committer_name": "Committer",
-                "committer_date": now,
-                "message": f"Commit {i}",
-                "message_embedding": mock_embedding(value=0.1),
-                "branch_names": [],
-                "tags": [],
-                "parent_hashes": [],
-                "stats": {},
-            })
+            commits.append(
+                {
+                    "commit_hash": f"commit{i}",
+                    "repository_path": "/repo",
+                    "author_name": "Author",
+                    "author_email": "author@example.com",
+                    "author_date": now - timedelta(days=i),
+                    "committer_name": "Committer",
+                    "committer_date": now,
+                    "message": f"Commit {i}",
+                    "message_embedding": mock_embedding(value=0.1),
+                    "branch_names": [],
+                    "tags": [],
+                    "parent_hashes": [],
+                    "stats": {},
+                }
+            )
 
         await store.store_git_commits(commits)
 
@@ -593,34 +614,38 @@ class TestGetCommitsByFile:
         """Test getting multiple commits for a file."""
         commits = []
         for i in range(3):
-            commits.append({
-                "commit_hash": f"commit{i}",
-                "repository_path": "/repo",
-                "author_name": f"Author {i}",
-                "author_email": f"author{i}@example.com",
-                "author_date": datetime.now(UTC) - timedelta(days=i),
-                "committer_name": "Committer",
-                "committer_date": datetime.now(UTC),
-                "message": f"Update file {i}",
-                "message_embedding": mock_embedding(value=0.1),
-                "branch_names": [],
-                "tags": [],
-                "parent_hashes": [],
-                "stats": {},
-            })
+            commits.append(
+                {
+                    "commit_hash": f"commit{i}",
+                    "repository_path": "/repo",
+                    "author_name": f"Author {i}",
+                    "author_email": f"author{i}@example.com",
+                    "author_date": datetime.now(UTC) - timedelta(days=i),
+                    "committer_name": "Committer",
+                    "committer_date": datetime.now(UTC),
+                    "message": f"Update file {i}",
+                    "message_embedding": mock_embedding(value=0.1),
+                    "branch_names": [],
+                    "tags": [],
+                    "parent_hashes": [],
+                    "stats": {},
+                }
+            )
 
         await store.store_git_commits(commits)
 
         file_changes = []
         for i in range(3):
-            file_changes.append({
-                "id": f"commit{i}:file.py",
-                "commit_hash": f"commit{i}",
-                "file_path": "file.py",
-                "change_type": "modified",
-                "lines_added": i * 5,
-                "lines_deleted": i * 2,
-            })
+            file_changes.append(
+                {
+                    "id": f"commit{i}:file.py",
+                    "commit_hash": f"commit{i}",
+                    "file_path": "file.py",
+                    "change_type": "modified",
+                    "lines_added": i * 5,
+                    "lines_deleted": i * 2,
+                }
+            )
 
         await store.store_git_file_changes(file_changes)
 
@@ -634,34 +659,38 @@ class TestGetCommitsByFile:
         """Test limiting results."""
         commits = []
         for i in range(10):
-            commits.append({
-                "commit_hash": f"commit{i}",
-                "repository_path": "/repo",
-                "author_name": "Author",
-                "author_email": "author@example.com",
-                "author_date": datetime.now(UTC) - timedelta(days=i),
-                "committer_name": "Committer",
-                "committer_date": datetime.now(UTC),
-                "message": f"Update {i}",
-                "message_embedding": mock_embedding(value=0.1),
-                "branch_names": [],
-                "tags": [],
-                "parent_hashes": [],
-                "stats": {},
-            })
+            commits.append(
+                {
+                    "commit_hash": f"commit{i}",
+                    "repository_path": "/repo",
+                    "author_name": "Author",
+                    "author_email": "author@example.com",
+                    "author_date": datetime.now(UTC) - timedelta(days=i),
+                    "committer_name": "Committer",
+                    "committer_date": datetime.now(UTC),
+                    "message": f"Update {i}",
+                    "message_embedding": mock_embedding(value=0.1),
+                    "branch_names": [],
+                    "tags": [],
+                    "parent_hashes": [],
+                    "stats": {},
+                }
+            )
 
         await store.store_git_commits(commits)
 
         file_changes = []
         for i in range(10):
-            file_changes.append({
-                "id": f"commit{i}:file.py",
-                "commit_hash": f"commit{i}",
-                "file_path": "file.py",
-                "change_type": "modified",
-                "lines_added": 1,
-                "lines_deleted": 0,
-            })
+            file_changes.append(
+                {
+                    "id": f"commit{i}:file.py",
+                    "commit_hash": f"commit{i}",
+                    "file_path": "file.py",
+                    "change_type": "modified",
+                    "lines_added": 1,
+                    "lines_deleted": 0,
+                }
+            )
 
         await store.store_git_file_changes(file_changes)
 
@@ -717,6 +746,6 @@ class TestErrorHandling:
         await store.store_git_commits([commit])
 
         # Invalid FTS query syntax should return empty list (not crash)
-        results = await store.search_git_commits(query="\"")
+        results = await store.search_git_commits(query='"')
         # Implementation returns [] on error
         assert isinstance(results, list)

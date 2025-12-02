@@ -11,7 +11,6 @@ Responsibilities:
 """
 
 import asyncio
-import logging
 import threading
 from typing import Optional, Dict, Any
 
@@ -96,8 +95,7 @@ class HealthService:
         return max(0, min(100, score))
 
     async def get_performance_metrics(
-        self,
-        include_history_days: int = 7
+        self, include_history_days: int = 7
     ) -> Dict[str, Any]:
         """
         Get current and historical performance metrics.
@@ -115,7 +113,7 @@ class HealthService:
             if not self.metrics_collector:
                 return {
                     "status": "disabled",
-                    "message": "Metrics collector not configured"
+                    "message": "Metrics collector not configured",
                 }
 
             current_metrics = self.metrics_collector.get_current_metrics()
@@ -174,7 +172,11 @@ class HealthService:
                 "health_score": score,
                 "store_available": store_healthy,
                 "components": components,
-                "health_status": "healthy" if score >= 80 else "degraded" if score >= 50 else "unhealthy",
+                "health_status": "healthy"
+                if score >= 80
+                else "degraded"
+                if score >= 50
+                else "unhealthy",
             }
 
         except Exception as e:
@@ -182,8 +184,7 @@ class HealthService:
             raise StorageError(f"Failed to get health score: {e}") from e
 
     async def get_active_alerts(
-        self,
-        severity_filter: Optional[str] = None
+        self, severity_filter: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Get active system alerts.
@@ -199,7 +200,7 @@ class HealthService:
                 return {
                     "status": "disabled",
                     "message": "Alert engine not configured",
-                    "alerts": []
+                    "alerts": [],
                 }
 
             alerts = self.alert_engine.get_active_alerts(
@@ -229,10 +230,7 @@ class HealthService:
         """
         try:
             if not self.alert_engine:
-                return {
-                    "status": "disabled",
-                    "message": "Alert engine not configured"
-                }
+                return {"status": "disabled", "message": "Alert engine not configured"}
 
             success = self.alert_engine.resolve_alert(alert_id)
 
@@ -247,17 +245,14 @@ class HealthService:
                 return {
                     "status": "not_found",
                     "alert_id": alert_id,
-                    "message": f"Alert {alert_id} not found"
+                    "message": f"Alert {alert_id} not found",
                 }
 
         except Exception as e:
             logger.error(f"Failed to resolve alert: {e}", exc_info=True)
             raise StorageError(f"Failed to resolve alert: {e}") from e
 
-    async def get_capacity_forecast(
-        self,
-        days_ahead: int = 30
-    ) -> Dict[str, Any]:
+    async def get_capacity_forecast(self, days_ahead: int = 30) -> Dict[str, Any]:
         """
         Forecast capacity needs.
 
@@ -271,7 +266,7 @@ class HealthService:
             if not self.capacity_planner:
                 return {
                     "status": "disabled",
-                    "message": "Capacity planner not configured"
+                    "message": "Capacity planner not configured",
                 }
 
             forecast = self.capacity_planner.get_forecast(days_ahead=days_ahead)
@@ -297,7 +292,9 @@ class HealthService:
             if not self.health_reporter:
                 # Generate basic report
                 health_result = await self.get_health_score()
-                metrics_result = await self.get_performance_metrics(include_history_days=7)
+                metrics_result = await self.get_performance_metrics(
+                    include_history_days=7
+                )
 
                 return {
                     "status": "success",
@@ -320,9 +317,7 @@ class HealthService:
             raise StorageError(f"Failed to generate weekly report: {e}") from e
 
     async def start_dashboard(
-        self,
-        port: int = 8080,
-        host: str = "localhost"
+        self, port: int = 8080, host: str = "localhost"
     ) -> Dict[str, Any]:
         """
         Start web dashboard server.

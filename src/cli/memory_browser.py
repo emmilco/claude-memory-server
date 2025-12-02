@@ -12,15 +12,16 @@ This provides a terminal user interface for:
 
 import asyncio
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from datetime import datetime
 
 try:
     from textual.app import App, ComposeResult
-    from textual.containers import Container, Horizontal, Vertical
-    from textual.widgets import Header, Footer, DataTable, Static, Input, Button, Label
+    from textual.containers import Container, Horizontal
+    from textual.widgets import Header, Footer, DataTable, Static, Input, Button
     from textual.binding import Binding
     from textual.screen import ModalScreen
+
     TEXTUAL_AVAILABLE = True
 except ImportError:
     TEXTUAL_AVAILABLE = False
@@ -47,14 +48,28 @@ class MemoryDetailScreen(ModalScreen):
     def compose(self) -> ComposeResult:
         """Compose the detail view."""
         yield Container(
-            Static(f"[bold cyan]Memory Details[/bold cyan]", id="detail-title"),
-            Static(f"[yellow]ID:[/yellow] {self.memory.get('id', 'N/A')}", id="detail-id"),
-            Static(f"[yellow]Category:[/yellow] {self.memory.get('category', 'N/A')}", id="detail-category"),
-            Static(f"[yellow]Context Level:[/yellow] {self.memory.get('context_level', 'N/A')}", id="detail-context"),
-            Static(f"[yellow]Importance:[/yellow] {self.memory.get('importance', 0):.2f}", id="detail-importance"),
-            Static(f"[yellow]Created:[/yellow] {self.memory.get('created_at', 'N/A')}", id="detail-created"),
+            Static("[bold cyan]Memory Details[/bold cyan]", id="detail-title"),
+            Static(
+                f"[yellow]ID:[/yellow] {self.memory.get('id', 'N/A')}", id="detail-id"
+            ),
+            Static(
+                f"[yellow]Category:[/yellow] {self.memory.get('category', 'N/A')}",
+                id="detail-category",
+            ),
+            Static(
+                f"[yellow]Context Level:[/yellow] {self.memory.get('context_level', 'N/A')}",
+                id="detail-context",
+            ),
+            Static(
+                f"[yellow]Importance:[/yellow] {self.memory.get('importance', 0):.2f}",
+                id="detail-importance",
+            ),
+            Static(
+                f"[yellow]Created:[/yellow] {self.memory.get('created_at', 'N/A')}",
+                id="detail-created",
+            ),
             Static("[yellow]Content:[/yellow]", id="detail-content-label"),
-            Static(self.memory.get('content', 'N/A'), id="detail-content"),
+            Static(self.memory.get("content", "N/A"), id="detail-content"),
             Horizontal(
                 Button("Delete", variant="error", id="delete-btn"),
                 Button("Close", variant="primary", id="close-btn"),
@@ -183,7 +198,10 @@ class MemoryBrowserApp(App):
         """Compose the UI."""
         yield Header()
         yield Container(
-            Static("[bold]Memory Browser[/bold] - Browse and manage all memories", id="title"),
+            Static(
+                "[bold]Memory Browser[/bold] - Browse and manage all memories",
+                id="title",
+            ),
             id="title-container",
         )
         yield Container(
@@ -221,6 +239,7 @@ class MemoryBrowserApp(App):
 
             # Generate a dummy embedding for "all memories" query
             import numpy as np
+
             dummy_embedding = np.zeros(384).tolist()
 
             results = await self.store.retrieve(
@@ -236,7 +255,9 @@ class MemoryBrowserApp(App):
                     "context_level": memory.context_level.value,
                     "importance": memory.importance,
                     "content": memory.content,
-                    "created_at": memory.created_at.isoformat() if memory.created_at else "N/A",
+                    "created_at": memory.created_at.isoformat()
+                    if memory.created_at
+                    else "N/A",
                     "scope": memory.scope.value,
                     "project_name": memory.project_name or "N/A",
                     "tags": memory.tags or [],
@@ -250,7 +271,9 @@ class MemoryBrowserApp(App):
 
         except Exception as e:
             logger.error(f"Error loading memories: {e}")
-            self.query_one("#stats-label", Static).update(f"[red]Error loading memories: {e}[/red]")
+            self.query_one("#stats-label", Static).update(
+                f"[red]Error loading memories: {e}[/red]"
+            )
 
     def update_table(self) -> None:
         """Update the table with filtered memories."""
@@ -258,7 +281,11 @@ class MemoryBrowserApp(App):
         table.clear()
 
         for memory in self.filtered_memories:
-            preview = memory["content"][:50] + "..." if len(memory["content"]) > 50 else memory["content"]
+            preview = (
+                memory["content"][:50] + "..."
+                if len(memory["content"]) > 50
+                else memory["content"]
+            )
             table.add_row(
                 memory["id"][:8] + "...",
                 memory["category"],
@@ -276,7 +303,9 @@ class MemoryBrowserApp(App):
         if self.search_query:
             stats_text += f" | Search: '{self.search_query}'"
         if self.current_filter_value != "all":
-            stats_text += f" | Filter: {self.current_filter_type}={self.current_filter_value}"
+            stats_text += (
+                f" | Filter: {self.current_filter_type}={self.current_filter_value}"
+            )
 
         self.query_one("#stats-label", Static).update(stats_text)
 
@@ -293,7 +322,8 @@ class MemoryBrowserApp(App):
         # Apply search query
         if self.search_query:
             self.filtered_memories = [
-                m for m in self.filtered_memories
+                m
+                for m in self.filtered_memories
                 if self.search_query in m["content"].lower()
                 or self.search_query in m["category"].lower()
                 or self.search_query in m["context_level"].lower()
@@ -304,18 +334,22 @@ class MemoryBrowserApp(App):
         if self.current_filter_value != "all":
             if self.current_filter_type == "context":
                 self.filtered_memories = [
-                    m for m in self.filtered_memories
+                    m
+                    for m in self.filtered_memories
                     if m["context_level"].lower() == self.current_filter_value.lower()
                 ]
             elif self.current_filter_type == "category":
                 self.filtered_memories = [
-                    m for m in self.filtered_memories
+                    m
+                    for m in self.filtered_memories
                     if m["category"].lower() == self.current_filter_value.lower()
                 ]
             elif self.current_filter_type == "project":
                 self.filtered_memories = [
-                    m for m in self.filtered_memories
-                    if m.get("project_name", "N/A").lower() == self.current_filter_value.lower()
+                    m
+                    for m in self.filtered_memories
+                    if m.get("project_name", "N/A").lower()
+                    == self.current_filter_value.lower()
                 ]
 
         self.update_table()
@@ -351,7 +385,9 @@ class MemoryBrowserApp(App):
         if confirmed:
             try:
                 await self.store.delete(memory["id"])
-                self.notify(f"Deleted memory {memory['id'][:8]}...", severity="information")
+                self.notify(
+                    f"Deleted memory {memory['id'][:8]}...", severity="information"
+                )
                 await self.load_memories()
             except Exception as e:
                 self.notify(f"Error deleting memory: {e}", severity="error")
@@ -370,7 +406,9 @@ class MemoryBrowserApp(App):
             unique_values = sorted(set(m["category"] for m in self.memories))
             unique_values = ["all"] + [v.lower() for v in unique_values]
         elif self.current_filter_type == "project":
-            unique_values = sorted(set(m.get("project_name", "N/A") for m in self.memories))
+            unique_values = sorted(
+                set(m.get("project_name", "N/A") for m in self.memories)
+            )
             unique_values = ["all"] + [v for v in unique_values]
 
         # Cycle through values
@@ -385,7 +423,9 @@ class MemoryBrowserApp(App):
         if self.current_filter_value == "all" and len(unique_values) > 1:
             filter_types = ["context", "category", "project"]
             type_index = filter_types.index(self.current_filter_type)
-            self.current_filter_type = filter_types[(type_index + 1) % len(filter_types)]
+            self.current_filter_type = filter_types[
+                (type_index + 1) % len(filter_types)
+            ]
 
         # Update filter label
         self.query_one("#filter-label", Static).update(
@@ -401,7 +441,11 @@ class MemoryBrowserApp(App):
             return
 
         count = len(self.filtered_memories)
-        filter_desc = f"{self.current_filter_type}={self.current_filter_value}" if self.current_filter_value != "all" else "all"
+        filter_desc = (
+            f"{self.current_filter_type}={self.current_filter_value}"
+            if self.current_filter_value != "all"
+            else "all"
+        )
 
         confirmed = await self.push_screen_wait(
             ConfirmDialog(
@@ -434,7 +478,6 @@ class MemoryBrowserApp(App):
             return
 
         # Generate filename with timestamp
-        from datetime import datetime
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"memories_export_{timestamp}.json"
         filepath = Path.home() / ".claude-rag" / filename
@@ -457,7 +500,10 @@ class MemoryBrowserApp(App):
             with open(filepath, "w") as f:
                 json.dump(export_data, f, indent=2, default=str)
 
-            self.notify(f"Exported {len(self.filtered_memories)} memories to {filepath}", severity="information")
+            self.notify(
+                f"Exported {len(self.filtered_memories)} memories to {filepath}",
+                severity="information",
+            )
 
         except Exception as e:
             self.notify(f"Error exporting memories: {e}", severity="error")
@@ -475,7 +521,9 @@ class MemoryBrowserApp(App):
 
         try:
             # Find most recent export file
-            export_files = sorted(export_dir.glob("memories_export_*.json"), reverse=True)
+            export_files = sorted(
+                export_dir.glob("memories_export_*.json"), reverse=True
+            )
             if not export_files:
                 self.notify("No export files found", severity="warning")
                 return
@@ -483,7 +531,9 @@ class MemoryBrowserApp(App):
             filepath = export_files[0]
 
             confirmed = await self.push_screen_wait(
-                ConfirmDialog(f"Import memories from:\n{filepath.name}?\n\nThis will add memories to the database.")
+                ConfirmDialog(
+                    f"Import memories from:\n{filepath.name}?\n\nThis will add memories to the database."
+                )
             )
 
             if not confirmed:
@@ -494,13 +544,12 @@ class MemoryBrowserApp(App):
                 export_data = json.load(f)
 
             memories_to_import = export_data.get("memories", [])
-            imported_count = 0
 
             # Import each memory
             # Note: This would need proper store.create() method implementation
             self.notify(
                 f"Import functionality requires store.create() method. Found {len(memories_to_import)} memories to import.",
-                severity="information"
+                severity="information",
             )
 
         except Exception as e:

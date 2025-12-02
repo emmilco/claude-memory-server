@@ -25,8 +25,9 @@ DEFAULT_EMBEDDING_DIM = 768
 
 class FeatureLevel(str, Enum):
     """Feature maturity levels for easy configuration presets."""
-    BASIC = "basic"           # Stable, production-ready features only
-    ADVANCED = "advanced"     # All stable features including power-user features
+
+    BASIC = "basic"  # Stable, production-ready features only
+    ADVANCED = "advanced"  # All stable features including power-user features
     EXPERIMENTAL = "experimental"  # All features including unstable/experimental
 
 
@@ -34,8 +35,12 @@ class PerformanceFeatures(BaseModel):
     """Performance optimization features."""
 
     # Embedding generation
-    parallel_embeddings: bool = True  # Use multiprocessing for faster embedding generation
-    parallel_workers: int = 3  # Number of worker processes for parallel embedding generation
+    parallel_embeddings: bool = (
+        True  # Use multiprocessing for faster embedding generation
+    )
+    parallel_workers: int = (
+        3  # Number of worker processes for parallel embedding generation
+    )
 
     # Search optimizations
     hybrid_search: bool = True  # BM25 + Vector hybrid search
@@ -46,7 +51,7 @@ class PerformanceFeatures(BaseModel):
     gpu_memory_fraction: float = 0.8  # Max GPU memory to use (0.0-1.0)
     force_cpu: bool = False  # Override GPU detection, use CPU only
 
-    @field_validator('parallel_workers')
+    @field_validator("parallel_workers")
     @classmethod
     def validate_parallel_workers(cls, v: int) -> int:
         """Ensure parallel_workers is >= 1."""
@@ -54,7 +59,7 @@ class PerformanceFeatures(BaseModel):
             raise ValueError("parallel_workers must be >= 1")
         return v
 
-    @field_validator('gpu_memory_fraction')
+    @field_validator("gpu_memory_fraction")
     @classmethod
     def validate_gpu_memory_fraction(cls, v: float) -> float:
         """Ensure gpu_memory_fraction is between 0.0 and 1.0."""
@@ -65,11 +70,11 @@ class PerformanceFeatures(BaseModel):
             )
         return v
 
-    @field_validator('force_cpu')
+    @field_validator("force_cpu")
     @classmethod
     def validate_gpu_cpu_exclusive(cls, v: bool, info) -> bool:
         """Ensure gpu_enabled and force_cpu are mutually exclusive."""
-        if v and info.data.get('gpu_enabled', False):
+        if v and info.data.get("gpu_enabled", False):
             raise ValueError("Cannot enable both gpu_enabled and force_cpu")
         return v
 
@@ -93,7 +98,7 @@ class SearchFeatures(BaseModel):
     query_expansion_max_synonyms: int = 2
     query_expansion_max_context_terms: int = 3
 
-    @field_validator('retrieval_gate_threshold')
+    @field_validator("retrieval_gate_threshold")
     @classmethod
     def validate_retrieval_gate_threshold(cls, v: float) -> float:
         """Ensure retrieval_gate_threshold is between 0.0 and 1.0."""
@@ -112,17 +117,17 @@ class AnalyticsFeatures(BaseModel):
     usage_pattern_analytics: bool = True  # Analyze usage patterns for insights
     usage_analytics_retention_days: int = 90
 
-    @field_validator('usage_pattern_analytics')
+    @field_validator("usage_pattern_analytics")
     @classmethod
     def validate_analytics_requires_tracking(cls, v: bool, info) -> bool:
         """Pattern analytics requires usage tracking."""
-        if v and not info.data.get('usage_tracking', False):
+        if v and not info.data.get("usage_tracking", False):
             raise ValueError(
                 "usage_pattern_analytics requires usage_tracking to be enabled"
             )
         return v
 
-    @field_validator('usage_analytics_retention_days')
+    @field_validator("usage_analytics_retention_days")
     @classmethod
     def validate_usage_analytics_retention_days(cls, v: int) -> int:
         """Ensure usage_analytics_retention_days is > 0 and <= 730 days."""
@@ -155,7 +160,7 @@ class MemoryFeatures(BaseModel):
     # Archival (REF-011)
     archival_threshold_days: int = 45  # Archive projects inactive for N days
 
-    @field_validator('proactive_suggestions_threshold')
+    @field_validator("proactive_suggestions_threshold")
     @classmethod
     def validate_proactive_suggestions_threshold(cls, v: float) -> float:
         """Ensure proactive_suggestions_threshold is between 0.0 and 1.0."""
@@ -181,8 +186,17 @@ class IndexingFeatures(BaseModel):
     auto_index_recursive: bool = True  # Recursive directory indexing
     auto_index_show_progress: bool = True  # Show progress indicators
     auto_index_exclude_patterns: list[str] = [
-        "node_modules/**", ".git/**", "venv/**", "__pycache__/**", "*.pyc",
-        "dist/**", "build/**", ".next/**", "target/**", "*.min.js", "*.map"
+        "node_modules/**",
+        ".git/**",
+        "venv/**",
+        "__pycache__/**",
+        "*.pyc",
+        "dist/**",
+        "build/**",
+        ".next/**",
+        "target/**",
+        "*.min.js",
+        "*.map",
     ]
 
     # Git indexing
@@ -192,14 +206,12 @@ class IndexingFeatures(BaseModel):
     git_index_tags: bool = True
     git_index_diffs: bool = True
 
-    @field_validator('auto_index_on_startup')
+    @field_validator("auto_index_on_startup")
     @classmethod
     def validate_auto_index_children(cls, v: bool, info) -> bool:
         """Auto-index children require parent enabled."""
-        if v and not info.data.get('auto_index_enabled', False):
-            raise ValueError(
-                "auto_index_on_startup requires auto_index_enabled=True"
-            )
+        if v and not info.data.get("auto_index_enabled", False):
+            raise ValueError("auto_index_on_startup requires auto_index_enabled=True")
         return v
 
 
@@ -208,7 +220,9 @@ class QualityThresholds(BaseModel):
 
     # Duplicate detection similarity thresholds
     duplicate_high_threshold: float = 0.95  # High-confidence duplicates (auto-merge)
-    duplicate_medium_threshold: float = 0.85  # Medium-confidence duplicates (prompt user)
+    duplicate_medium_threshold: float = (
+        0.85  # Medium-confidence duplicates (prompt user)
+    )
     duplicate_low_threshold: float = 0.75  # Low-confidence duplicates (flag as related)
 
     # Indexing limits
@@ -234,7 +248,11 @@ class QualityThresholds(BaseModel):
     maintainability_good: int = 65  # Good code quality
     maintainability_poor: int = 50  # Poor code quality
 
-    @field_validator('duplicate_high_threshold', 'duplicate_medium_threshold', 'duplicate_low_threshold')
+    @field_validator(
+        "duplicate_high_threshold",
+        "duplicate_medium_threshold",
+        "duplicate_low_threshold",
+    )
     @classmethod
     def validate_duplicate_thresholds(cls, v: float) -> float:
         """Ensure duplicate thresholds are between 0.0 and 1.0."""
@@ -245,7 +263,11 @@ class QualityThresholds(BaseModel):
             )
         return v
 
-    @field_validator('reranker_min_content_length', 'reranker_max_content_length', 'reranker_length_penalty_max')
+    @field_validator(
+        "reranker_min_content_length",
+        "reranker_max_content_length",
+        "reranker_length_penalty_max",
+    )
     @classmethod
     def validate_content_lengths(cls, v: int) -> int:
         """Ensure content length thresholds are positive."""
@@ -296,7 +318,7 @@ class ServerConfig(BaseSettings):
     qdrant_prefer_grpc: bool = False  # Use gRPC for better performance
     qdrant_health_check_interval: int = 60  # Health check every N seconds
 
-    @field_validator('qdrant_pool_size')
+    @field_validator("qdrant_pool_size")
     @classmethod
     def validate_qdrant_pool_size(cls, v: int) -> int:
         """Ensure qdrant_pool_size is >= 1."""
@@ -304,20 +326,20 @@ class ServerConfig(BaseSettings):
             raise ValueError("qdrant_pool_size must be >= 1")
         return v
 
-    @field_validator('qdrant_pool_min_size')
+    @field_validator("qdrant_pool_min_size")
     @classmethod
     def validate_qdrant_pool_min_size(cls, v: int, info) -> int:
         """Ensure qdrant_pool_min_size is >= 0 and <= pool_size."""
         if v < 0:
             raise ValueError("qdrant_pool_min_size must be >= 0")
-        pool_size = info.data.get('qdrant_pool_size', 5)
+        pool_size = info.data.get("qdrant_pool_size", 5)
         if v > pool_size:
             raise ValueError(
                 f"qdrant_pool_min_size ({v}) must be <= qdrant_pool_size ({pool_size})"
             )
         return v
 
-    @field_validator('qdrant_pool_timeout')
+    @field_validator("qdrant_pool_timeout")
     @classmethod
     def validate_qdrant_pool_timeout(cls, v: float) -> float:
         """Ensure qdrant_pool_timeout is > 0 and <= 300 seconds."""
@@ -330,7 +352,7 @@ class ServerConfig(BaseSettings):
             )
         return v
 
-    @field_validator('qdrant_pool_recycle')
+    @field_validator("qdrant_pool_recycle")
     @classmethod
     def validate_qdrant_pool_recycle(cls, v: int) -> int:
         """Ensure qdrant_pool_recycle is > 0 and <= 86400 seconds."""
@@ -343,7 +365,7 @@ class ServerConfig(BaseSettings):
             )
         return v
 
-    @field_validator('qdrant_health_check_interval')
+    @field_validator("qdrant_health_check_interval")
     @classmethod
     def validate_qdrant_health_check_interval(cls, v: int) -> int:
         """Ensure qdrant_health_check_interval is > 0 and <= 3600 seconds."""
@@ -362,7 +384,9 @@ class ServerConfig(BaseSettings):
     retrieval_timeout_ms: int = 500
 
     # Embedding settings
-    embedding_model: str = "all-mpnet-base-v2"  # 768 dims, better quality, MPS-optimized
+    embedding_model: str = (
+        "all-mpnet-base-v2"  # 768 dims, better quality, MPS-optimized
+    )
     embedding_cache_enabled: bool = True
     embedding_cache_path: str = "~/.claude-rag/embedding_cache.db"
     embedding_cache_ttl_days: int = 30
@@ -371,7 +395,9 @@ class ServerConfig(BaseSettings):
     @property
     def embedding_dimensions(self) -> int:
         """Get the embedding dimension for the configured model."""
-        return EMBEDDING_MODEL_DIMENSIONS.get(self.embedding_model, DEFAULT_EMBEDDING_DIM)
+        return EMBEDDING_MODEL_DIMENSIONS.get(
+            self.embedding_model, DEFAULT_EMBEDDING_DIM
+        )
 
     # SQLite for metadata tracking (not for vector storage - Qdrant only)
     sqlite_path: str = "~/.claude-rag/metadata.db"  # For ProjectIndexTracker metadata
@@ -382,7 +408,9 @@ class ServerConfig(BaseSettings):
     analytics: AnalyticsFeatures = AnalyticsFeatures()
     memory: MemoryFeatures = MemoryFeatures()
     indexing: IndexingFeatures = IndexingFeatures()
-    quality: QualityThresholds = QualityThresholds()  # REF-021: Quality and duplicate detection thresholds
+    quality: QualityThresholds = (
+        QualityThresholds()
+    )  # REF-021: Quality and duplicate detection thresholds
     advanced: AdvancedFeatures = AdvancedFeatures()
 
     # Feature level presets (NEW!)
@@ -401,7 +429,9 @@ class ServerConfig(BaseSettings):
     ranking_weight_usage: float = 0.2
     recency_decay_halflife_days: float = 7.0
 
-    @field_validator('ranking_weight_similarity', 'ranking_weight_recency', 'ranking_weight_usage')
+    @field_validator(
+        "ranking_weight_similarity", "ranking_weight_recency", "ranking_weight_usage"
+    )
     @classmethod
     def validate_ranking_weights(cls, v: float) -> float:
         """Ensure ranking weights are between 0.0 and 1.0."""
@@ -420,7 +450,7 @@ class ServerConfig(BaseSettings):
     hybrid_search_alpha: float = 0.5
     hybrid_fusion_method: Literal["weighted", "rrf", "cascade"] = "weighted"
 
-    @field_validator('hybrid_search_alpha')
+    @field_validator("hybrid_search_alpha")
     @classmethod
     def validate_hybrid_search_alpha(cls, v: float) -> float:
         """Ensure hybrid_search_alpha is between 0.0 and 1.0."""
@@ -434,7 +464,7 @@ class ServerConfig(BaseSettings):
     bm25_k1: float = 1.5
     bm25_b: float = 0.75
 
-    @field_validator('bm25_k1')
+    @field_validator("bm25_k1")
     @classmethod
     def validate_bm25_k1(cls, v: float) -> float:
         """Ensure bm25_k1 is positive (typical range 1.2-2.0)."""
@@ -446,7 +476,7 @@ class ServerConfig(BaseSettings):
             )
         return v
 
-    @field_validator('bm25_b')
+    @field_validator("bm25_b")
     @classmethod
     def validate_bm25_b(cls, v: float) -> float:
         """Ensure bm25_b is between 0.0 and 1.0."""
@@ -465,11 +495,11 @@ class ServerConfig(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="CLAUDE_RAG_",
         case_sensitive=False,
-        extra="ignore"  # REF-010: Ignore deprecated config options for backward compatibility
+        extra="ignore",  # REF-010: Ignore deprecated config options for backward compatibility
     )
 
-    @model_validator(mode='after')
-    def apply_feature_level_preset(self) -> 'ServerConfig':
+    @model_validator(mode="after")
+    def apply_feature_level_preset(self) -> "ServerConfig":
         """
         Apply feature level presets (BASIC, ADVANCED, EXPERIMENTAL) (REF-017).
 
@@ -480,28 +510,34 @@ class ServerConfig(BaseSettings):
             self.memory.proactive_suggestions = False
             self.indexing.git_index_diffs = False
             self.advanced.multi_repository = False
-            logger.info("Applied BASIC feature level preset - production-ready features only")
+            logger.info(
+                "Applied BASIC feature level preset - production-ready features only"
+            )
 
         elif self.feature_level == FeatureLevel.ADVANCED:
             # Enable all stable features including power-user features
             self.memory.proactive_suggestions = True
             self.indexing.git_indexing = True
             self.analytics.usage_pattern_analytics = True
-            logger.info("Applied ADVANCED feature level preset - all stable features enabled")
+            logger.info(
+                "Applied ADVANCED feature level preset - all stable features enabled"
+            )
 
         elif self.feature_level == FeatureLevel.EXPERIMENTAL:
             # Enable everything (bleeding edge)
-            logger.warning("Applied EXPERIMENTAL feature level - all features enabled including unstable ones")
+            logger.warning(
+                "Applied EXPERIMENTAL feature level - all features enabled including unstable ones"
+            )
 
         return self
 
-    @model_validator(mode='after')
-    def validate_ranking_weights(self) -> 'ServerConfig':
+    @model_validator(mode="after")
+    def validate_ranking_weights_sum(self) -> "ServerConfig":
         """Validate ranking weights sum to 1.0 and are non-negative (UX-051)."""
         weights = {
-            'ranking_weight_similarity': self.ranking_weight_similarity,
-            'ranking_weight_recency': self.ranking_weight_recency,
-            'ranking_weight_usage': self.ranking_weight_usage,
+            "ranking_weight_similarity": self.ranking_weight_similarity,
+            "ranking_weight_recency": self.ranking_weight_recency,
+            "ranking_weight_usage": self.ranking_weight_usage,
         }
 
         # Check non-negative
@@ -526,8 +562,8 @@ class ServerConfig(BaseSettings):
 
         return self
 
-    @model_validator(mode='after')
-    def validate_feature_dependencies(self) -> 'ServerConfig':
+    @model_validator(mode="after")
+    def validate_feature_dependencies(self) -> "ServerConfig":
         """Validate that dependent configuration options are consistent (UX-051)."""
         issues = []
 
@@ -541,9 +577,11 @@ class ServerConfig(BaseSettings):
 
         # Importance scoring dependencies
         if not self.performance.importance_scoring:
-            if (self.importance_complexity_weight != 1.0 or
-                self.importance_usage_weight != 1.0 or
-                self.importance_criticality_weight != 1.0):
+            if (
+                self.importance_complexity_weight != 1.0
+                or self.importance_usage_weight != 1.0
+                or self.importance_criticality_weight != 1.0
+            ):
                 issues.append(
                     "Importance weights are customized "
                     f"(complexity={self.importance_complexity_weight}, "
@@ -555,8 +593,10 @@ class ServerConfig(BaseSettings):
 
         # Query expansion dependencies (only check numeric settings, not boolean flags)
         if not self.search.query_expansion_enabled:
-            if (self.search.query_expansion_max_synonyms != 2 or
-                self.search.query_expansion_max_context_terms != 3):
+            if (
+                self.search.query_expansion_max_synonyms != 2
+                or self.search.query_expansion_max_context_terms != 3
+            ):
                 issues.append(
                     "Query expansion options are customized but "
                     "search.query_expansion_enabled=False. "
@@ -564,7 +604,10 @@ class ServerConfig(BaseSettings):
                 )
 
         # Retrieval gate dependencies
-        if not self.search.retrieval_gate_enabled and self.search.retrieval_gate_threshold != 0.8:
+        if (
+            not self.search.retrieval_gate_enabled
+            and self.search.retrieval_gate_threshold != 0.8
+        ):
             issues.append(
                 f"retrieval_gate_threshold is set to {self.search.retrieval_gate_threshold} "
                 f"but search.retrieval_gate_enabled=False. "
@@ -573,21 +616,23 @@ class ServerConfig(BaseSettings):
 
         if issues:
             raise ValueError(
-                "Configuration has inconsistent feature dependencies:\n" +
-                "\n".join(f"  - {issue}" for issue in issues)
+                "Configuration has inconsistent feature dependencies:\n"
+                + "\n".join(f"  - {issue}" for issue in issues)
             )
 
         return self
 
-    @model_validator(mode='after')
-    def validate_config(self) -> 'ServerConfig':
+    @model_validator(mode="after")
+    def validate_config(self) -> "ServerConfig":
         """Validate configuration consistency and constraints."""
 
         # Validate embedding batch size
         if self.embedding_batch_size < 1:
             raise ValueError("embedding_batch_size must be >= 1")
         if self.embedding_batch_size > 256:
-            raise ValueError("embedding_batch_size must not exceed 256 (memory constraint)")
+            raise ValueError(
+                "embedding_batch_size must not exceed 256 (memory constraint)"
+            )
 
         # Validate Qdrant URL format
         if self.storage_backend == "qdrant":
@@ -598,7 +643,9 @@ class ServerConfig(BaseSettings):
         if self.embedding_cache_ttl_days < 1:
             raise ValueError("embedding_cache_ttl_days must be >= 1")
         if self.embedding_cache_ttl_days > 3650:
-            raise ValueError("embedding_cache_ttl_days should not exceed 10 years (3650 days)")
+            raise ValueError(
+                "embedding_cache_ttl_days should not exceed 10 years (3650 days)"
+            )
 
         # Validate memory size limit
         if self.max_memory_size_bytes < 1024:  # At least 1KB
@@ -660,7 +707,9 @@ class ServerConfig(BaseSettings):
         if self.memory.conversation_session_timeout_minutes < 1:
             raise ValueError("conversation_session_timeout_minutes must be at least 1")
         if self.memory.conversation_session_timeout_minutes > 1440:  # 24 hours
-            raise ValueError("conversation_session_timeout_minutes should not exceed 1440 (24 hours)")
+            raise ValueError(
+                "conversation_session_timeout_minutes should not exceed 1440 (24 hours)"
+            )
 
         if self.conversation_query_history_size < 1:
             raise ValueError("conversation_query_history_size must be at least 1")
@@ -690,7 +739,9 @@ class ServerConfig(BaseSettings):
         if not 0.0 <= self.importance_usage_weight <= 2.0:
             raise ValueError("importance_usage_weight must be between 0.0 and 2.0")
         if not 0.0 <= self.importance_criticality_weight <= 2.0:
-            raise ValueError("importance_criticality_weight must be between 0.0 and 2.0")
+            raise ValueError(
+                "importance_criticality_weight must be between 0.0 and 2.0"
+            )
 
         # Validate GPU settings (PERF-002) - use feature group values
         if not 0.0 <= self.performance.gpu_memory_fraction <= 1.0:
@@ -722,6 +773,7 @@ class ServerConfig(BaseSettings):
         path.parent.mkdir(parents=True, exist_ok=True)
         return path
 
+
 # Global config instance
 _config: Optional[ServerConfig] = None
 
@@ -743,10 +795,11 @@ def _load_user_config_overrides() -> dict:
         return {}
 
     try:
-        with open(_USER_CONFIG_PATH, 'r') as f:
+        with open(_USER_CONFIG_PATH, "r") as f:
             return json.load(f)
     except Exception as e:
         import logging
+
         logging.warning(f"Failed to load user config from {_USER_CONFIG_PATH}: {e}")
         return {}
 

@@ -5,17 +5,14 @@ remediation workflows function as expected.
 """
 
 import pytest
-import pytest_asyncio
-from pathlib import Path
-from typing import Dict, Any
 
 from src.cli.health_command import HealthCommand
-from src.config import get_config
 
 
 # ============================================================================
 # Health Check Component Tests (6 tests)
 # ============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -111,6 +108,7 @@ async def test_health_check_parser_availability():
 # Health Check Full Run Tests (3 tests)
 # ============================================================================
 
+
 @pytest.mark.e2e
 @pytest.mark.asyncio
 async def test_health_command_full_run():
@@ -165,6 +163,7 @@ async def test_health_check_generates_recommendations():
 # Performance Metrics Tests (3 tests)
 # ============================================================================
 
+
 @pytest.mark.e2e
 @pytest.mark.asyncio
 async def test_health_check_qdrant_latency():
@@ -206,7 +205,7 @@ async def test_health_check_token_savings():
     cmd = HealthCommand()
 
     # check_token_savings may not be implemented yet
-    if not hasattr(cmd, 'check_token_savings'):
+    if not hasattr(cmd, "check_token_savings"):
         pytest.skip("check_token_savings not implemented")
 
     success, message, savings_data = await cmd.check_token_savings()
@@ -222,6 +221,7 @@ async def test_health_check_token_savings():
 # ============================================================================
 # Project Health Tests (3 tests)
 # ============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -280,12 +280,14 @@ async def test_health_check_project_stats_summary():
 # Health Monitor Command Tests (4 tests)
 # ============================================================================
 
+
 @pytest.mark.e2e
 @pytest.mark.asyncio
 async def test_health_monitor_command_exists():
     """Test: Health monitor command can be imported."""
     try:
         from src.cli.health_monitor_command import HealthMonitorCommand
+
         # Command exists and can be imported
         assert HealthMonitorCommand is not None
     except ImportError as e:
@@ -347,6 +349,7 @@ async def test_health_monitor_fix_dry_run():
 # Remediation Workflow Tests (2 tests)
 # ============================================================================
 
+
 @pytest.mark.e2e
 @pytest.mark.asyncio
 async def test_health_identifies_fixable_issues(fresh_server):
@@ -374,16 +377,18 @@ async def test_health_recommendations_are_actionable():
     for rec in cmd.recommendations:
         # Most recommendations should include a command or specific action
         # Look for common patterns like commands, URLs, or step numbers
-        has_action = any([
-            "python" in rec.lower(),
-            "docker" in rec.lower(),
-            "pip" in rec.lower(),
-            "run" in rec.lower(),
-            "install" in rec.lower(),
-            "start" in rec.lower(),
-            "check" in rec.lower(),
-            "→" in rec,  # Arrow indicating step
-            ":" in rec,  # Often used before commands
-        ])
+        any(
+            [
+                "python" in rec.lower(),
+                "docker" in rec.lower(),
+                "pip" in rec.lower(),
+                "run" in rec.lower(),
+                "install" in rec.lower(),
+                "start" in rec.lower(),
+                "check" in rec.lower(),
+                "→" in rec,  # Arrow indicating step
+                ":" in rec,  # Often used before commands
+            ]
+        )
         # Not all recommendations need commands, but most should be actionable
         # This is a soft check

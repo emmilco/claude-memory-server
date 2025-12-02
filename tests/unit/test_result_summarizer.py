@@ -1,6 +1,5 @@
 """Tests for result summarizer."""
 
-import pytest
 from src.memory.result_summarizer import ResultSummarizer, SearchFacets
 
 
@@ -41,8 +40,16 @@ def test_build_facets_multi_language():
     results = [
         {"language": "python", "unit_type": "function", "file_path": "/app/auth.py"},
         {"language": "python", "unit_type": "class", "file_path": "/app/user.py"},
-        {"language": "typescript", "unit_type": "function", "file_path": "/client/api.ts"},
-        {"language": "typescript", "unit_type": "interface", "file_path": "/client/types.ts"},
+        {
+            "language": "typescript",
+            "unit_type": "function",
+            "file_path": "/client/api.ts",
+        },
+        {
+            "language": "typescript",
+            "unit_type": "interface",
+            "file_path": "/client/types.ts",
+        },
     ]
 
     facets = ResultSummarizer.build_facets(results)
@@ -55,9 +62,21 @@ def test_build_facets_multi_language():
 def test_build_facets_directories():
     """Test directory facet extraction."""
     results = [
-        {"language": "python", "unit_type": "function", "file_path": "/app/auth/jwt.py"},
-        {"language": "python", "unit_type": "function", "file_path": "/app/auth/session.py"},
-        {"language": "python", "unit_type": "function", "file_path": "/app/user/profile.py"},
+        {
+            "language": "python",
+            "unit_type": "function",
+            "file_path": "/app/auth/jwt.py",
+        },
+        {
+            "language": "python",
+            "unit_type": "function",
+            "file_path": "/app/auth/session.py",
+        },
+        {
+            "language": "python",
+            "unit_type": "function",
+            "file_path": "/app/user/profile.py",
+        },
     ]
 
     facets = ResultSummarizer.build_facets(results)
@@ -102,7 +121,11 @@ def test_summarize_multi_language():
     """Test summary with multiple languages."""
     results = [
         {"language": "python", "unit_type": "function", "file_path": "/app/auth.py"},
-        {"language": "typescript", "unit_type": "function", "file_path": "/client/auth.ts"},
+        {
+            "language": "typescript",
+            "unit_type": "function",
+            "file_path": "/client/auth.ts",
+        },
     ]
 
     facets = ResultSummarizer.build_facets(results)
@@ -132,7 +155,11 @@ def test_summarize_many_languages():
     """Test summary with >2 languages."""
     results = [
         {"language": "python", "unit_type": "function", "file_path": "/app/auth.py"},
-        {"language": "typescript", "unit_type": "function", "file_path": "/client/auth.ts"},
+        {
+            "language": "typescript",
+            "unit_type": "function",
+            "file_path": "/client/auth.ts",
+        },
         {"language": "java", "unit_type": "method", "file_path": "/service/Auth.java"},
         {"language": "go", "unit_type": "function", "file_path": "/api/auth.go"},
     ]
@@ -173,7 +200,11 @@ def test_format_unit_types_mixed():
 def test_build_facets_ignore_unknown():
     """Test that unknown values are ignored."""
     results = [
-        {"language": "(unknown language)", "unit_type": "(unknown type)", "file_path": "(no path)"},
+        {
+            "language": "(unknown language)",
+            "unit_type": "(unknown type)",
+            "file_path": "(no path)",
+        },
         {"language": "python", "unit_type": "function", "file_path": "/app/test.py"},
     ]
 

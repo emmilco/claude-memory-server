@@ -58,11 +58,13 @@ class TestDashboardServerStart:
         """Test that start() initializes all necessary components."""
         server = DashboardServer(config=ServerConfig())
 
-        with patch('src.dashboard.web_server.MemoryRAGServer') as MockRAGServer:
-            with patch('src.dashboard.web_server.HTTPServer') as MockHTTPServer:
-                with patch('src.dashboard.web_server.threading.Thread') as MockThread:
-                    with patch('asyncio.run_coroutine_threadsafe') as mock_run_coroutine:
-                        with patch('asyncio.new_event_loop') as mock_new_loop:
+        with patch("src.dashboard.web_server.MemoryRAGServer") as MockRAGServer:
+            with patch("src.dashboard.web_server.HTTPServer") as MockHTTPServer:
+                with patch("src.dashboard.web_server.threading.Thread"):
+                    with patch(
+                        "asyncio.run_coroutine_threadsafe"
+                    ) as mock_run_coroutine:
+                        with patch("asyncio.new_event_loop") as mock_new_loop:
                             # Setup mocks
                             mock_rag = AsyncMock()
                             mock_rag.initialize = AsyncMock()
@@ -93,11 +95,13 @@ class TestDashboardServerStart:
         """Test starting server with custom host and port."""
         server = DashboardServer(config=ServerConfig())
 
-        with patch('src.dashboard.web_server.MemoryRAGServer') as MockRAGServer:
-            with patch('src.dashboard.web_server.HTTPServer') as MockHTTPServer:
-                with patch('src.dashboard.web_server.threading.Thread'):
-                    with patch('asyncio.run_coroutine_threadsafe') as mock_run_coroutine:
-                        with patch('asyncio.new_event_loop') as mock_new_loop:
+        with patch("src.dashboard.web_server.MemoryRAGServer") as MockRAGServer:
+            with patch("src.dashboard.web_server.HTTPServer") as MockHTTPServer:
+                with patch("src.dashboard.web_server.threading.Thread"):
+                    with patch(
+                        "asyncio.run_coroutine_threadsafe"
+                    ) as mock_run_coroutine:
+                        with patch("asyncio.new_event_loop") as mock_new_loop:
                             mock_rag = AsyncMock()
                             mock_rag.initialize = AsyncMock()
                             MockRAGServer.return_value = mock_rag
@@ -166,7 +170,7 @@ class TestDashboardServerStop:
         mock_thread.join = MagicMock()
         server.loop_thread = mock_thread
 
-        with patch('asyncio.run_coroutine_threadsafe') as mock_run:
+        with patch("asyncio.run_coroutine_threadsafe") as mock_run:
             mock_future = MagicMock()
             mock_future.result = MagicMock(return_value=None)
             mock_run.return_value = mock_future

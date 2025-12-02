@@ -12,6 +12,7 @@ sys.path.insert(0, str(project_root))
 from src.core.server import MemoryRAGServer
 from src.config import get_config
 
+
 async def main():
     config = get_config()
     server = MemoryRAGServer(config=config)
@@ -22,23 +23,23 @@ async def main():
     result = await server.search_code(
         query="duplicate detector find duplicates",
         project_name="claude-memory-server",
-        limit=5
+        limit=5,
     )
 
     print(f"\nStatus: {result['status']}")
     print(f"Total found: {result['total_found']}")
     print(f"Results count: {len(result['results'])}")
 
-    if result['results']:
+    if result["results"]:
         print("\nFirst result:")
-        print(result['results'][0])
+        print(result["results"][0])
     else:
         print("\nNo results returned")
         print(f"Quality: {result.get('quality')}")
         print(f"Suggestions: {result.get('suggestions')}")
 
     # Also try direct retrieve to compare
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("Testing direct store.retrieve...")
 
     from src.core.models import SearchFilters, MemoryScope, MemoryCategory, ContextLevel
@@ -65,6 +66,7 @@ async def main():
         print(f"   Metadata: {memory.metadata}")
 
     await server.close()
+
 
 if __name__ == "__main__":
     asyncio.run(main())

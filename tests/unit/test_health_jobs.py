@@ -2,12 +2,12 @@
 
 import pytest
 from datetime import datetime, UTC, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 from src.memory.health_jobs import HealthMaintenanceJobs, JobResult
 from src.memory.lifecycle_manager import LifecycleManager
 from src.memory.health_scorer import HealthScorer
-from src.core.models import LifecycleState, ContextLevel, MemoryUnit
+from src.core.models import LifecycleState, ContextLevel
 
 
 class TestJobResult:
@@ -111,26 +111,26 @@ class TestHealthMaintenanceJobs:
         # 5 old ACTIVE memories (should be archived)
         for i in range(5):
             mem = {
-                'id': f"old-active-{i}",
-                'lifecycle_state': LifecycleState.ACTIVE,
-                'content': f"Old content {i}",
-                'created_at': datetime.now(UTC) - timedelta(days=200),
-                'last_accessed': datetime.now(UTC) - timedelta(days=190),
-                'use_count': 0,
-                'context_level': ContextLevel.SESSION_STATE,
+                "id": f"old-active-{i}",
+                "lifecycle_state": LifecycleState.ACTIVE,
+                "content": f"Old content {i}",
+                "created_at": datetime.now(UTC) - timedelta(days=200),
+                "last_accessed": datetime.now(UTC) - timedelta(days=190),
+                "use_count": 0,
+                "context_level": ContextLevel.SESSION_STATE,
             }
             memories.append(mem)
 
         # 3 recent ACTIVE memories (should NOT be archived)
         for i in range(3):
             mem = {
-                'id': f"recent-active-{i}",
-                'lifecycle_state': LifecycleState.ACTIVE,
-                'content': f"Recent content {i}",
-                'created_at': datetime.now(UTC) - timedelta(days=3),
-                'last_accessed': datetime.now(UTC) - timedelta(days=1),
-                'use_count': 5,
-                'context_level': ContextLevel.SESSION_STATE,
+                "id": f"recent-active-{i}",
+                "lifecycle_state": LifecycleState.ACTIVE,
+                "content": f"Recent content {i}",
+                "created_at": datetime.now(UTC) - timedelta(days=3),
+                "last_accessed": datetime.now(UTC) - timedelta(days=1),
+                "use_count": 5,
+                "context_level": ContextLevel.SESSION_STATE,
             }
             memories.append(mem)
 
@@ -150,13 +150,13 @@ class TestHealthMaintenanceJobs:
         memories = []
         for i in range(3):
             mem = {
-                'id': f"old-{i}",
-                'lifecycle_state': LifecycleState.ACTIVE,
-                'content': f"Old content {i}",
-                'created_at': datetime.now(UTC) - timedelta(days=200),
-                'last_accessed': datetime.now(UTC) - timedelta(days=190),
-                'use_count': 0,
-                'context_level': ContextLevel.SESSION_STATE,
+                "id": f"old-{i}",
+                "lifecycle_state": LifecycleState.ACTIVE,
+                "content": f"Old content {i}",
+                "created_at": datetime.now(UTC) - timedelta(days=200),
+                "last_accessed": datetime.now(UTC) - timedelta(days=190),
+                "use_count": 0,
+                "context_level": ContextLevel.SESSION_STATE,
             }
             memories.append(mem)
 
@@ -180,19 +180,19 @@ class TestHealthMaintenanceJobs:
 
         # Already ARCHIVED
         mem = {
-            'id': "already-archived",
-            'lifecycle_state': LifecycleState.ARCHIVED,
-            'content': "Archived content",
-            'created_at': datetime.now(UTC) - timedelta(days=200),
+            "id": "already-archived",
+            "lifecycle_state": LifecycleState.ARCHIVED,
+            "content": "Archived content",
+            "created_at": datetime.now(UTC) - timedelta(days=200),
         }
         memories.append(mem)
 
         # Already STALE
         mem = {
-            'id': "already-stale",
-            'lifecycle_state': LifecycleState.STALE,
-            'content': "Stale content",
-            'created_at': datetime.now(UTC) - timedelta(days=300),
+            "id": "already-stale",
+            "lifecycle_state": LifecycleState.STALE,
+            "content": "Stale content",
+            "created_at": datetime.now(UTC) - timedelta(days=300),
         }
         memories.append(mem)
 
@@ -209,13 +209,13 @@ class TestHealthMaintenanceJobs:
         """Test weekly archival job error handling."""
         # Create one old memory
         mem = {
-            'id': "old-mem",
-            'lifecycle_state': LifecycleState.ACTIVE,
-            'content': "Old content",
-            'created_at': datetime.now(UTC) - timedelta(days=200),
-            'last_accessed': datetime.now(UTC) - timedelta(days=190),
-            'use_count': 0,
-            'context_level': ContextLevel.SESSION_STATE,
+            "id": "old-mem",
+            "lifecycle_state": LifecycleState.ACTIVE,
+            "content": "Old content",
+            "created_at": datetime.now(UTC) - timedelta(days=200),
+            "last_accessed": datetime.now(UTC) - timedelta(days=190),
+            "use_count": 0,
+            "context_level": ContextLevel.SESSION_STATE,
         }
 
         mock_store.get_all_memories = AsyncMock(return_value=[mem])
@@ -252,35 +252,35 @@ class TestHealthMaintenanceJobs:
         # 5 old STALE memories with low usage (should be deleted)
         for i in range(5):
             mem = {
-                'id': f"stale-{i}",
-                'lifecycle_state': LifecycleState.STALE,
-                'content': f"Stale content {i}",
-                'created_at': datetime.now(UTC) - timedelta(days=200),
-                'use_count': 1,
-                'context_level': ContextLevel.SESSION_STATE,
+                "id": f"stale-{i}",
+                "lifecycle_state": LifecycleState.STALE,
+                "content": f"Stale content {i}",
+                "created_at": datetime.now(UTC) - timedelta(days=200),
+                "use_count": 1,
+                "context_level": ContextLevel.SESSION_STATE,
             }
             memories.append(mem)
 
         # 2 old STALE memories with high usage (should NOT be deleted)
         for i in range(2):
             mem = {
-                'id': f"stale-used-{i}",
-                'lifecycle_state': LifecycleState.STALE,
-                'content': f"Used content {i}",
-                'created_at': datetime.now(UTC) - timedelta(days=200),
-                'use_count': 10,
-                'context_level': ContextLevel.SESSION_STATE,
+                "id": f"stale-used-{i}",
+                "lifecycle_state": LifecycleState.STALE,
+                "content": f"Used content {i}",
+                "created_at": datetime.now(UTC) - timedelta(days=200),
+                "use_count": 10,
+                "context_level": ContextLevel.SESSION_STATE,
             }
             memories.append(mem)
 
         # 1 old STALE USER_PREFERENCE (should NOT be deleted)
         mem = {
-            'id': "stale-pref",
-            'lifecycle_state': LifecycleState.STALE,
-            'content': "Preference",
-            'created_at': datetime.now(UTC) - timedelta(days=200),
-            'use_count': 0,
-            'context_level': ContextLevel.USER_PREFERENCE,
+            "id": "stale-pref",
+            "lifecycle_state": LifecycleState.STALE,
+            "content": "Preference",
+            "created_at": datetime.now(UTC) - timedelta(days=200),
+            "use_count": 0,
+            "context_level": ContextLevel.USER_PREFERENCE,
         }
         memories.append(mem)
 
@@ -300,12 +300,12 @@ class TestHealthMaintenanceJobs:
         memories = []
         for i in range(3):
             mem = {
-                'id': f"stale-{i}",
-                'lifecycle_state': LifecycleState.STALE,
-                'content': f"Stale content {i}",
-                'created_at': datetime.now(UTC) - timedelta(days=200),
-                'use_count': 1,
-                'context_level': ContextLevel.SESSION_STATE,
+                "id": f"stale-{i}",
+                "lifecycle_state": LifecycleState.STALE,
+                "content": f"Stale content {i}",
+                "created_at": datetime.now(UTC) - timedelta(days=200),
+                "use_count": 1,
+                "context_level": ContextLevel.SESSION_STATE,
             }
             memories.append(mem)
 
@@ -329,23 +329,23 @@ class TestHealthMaintenanceJobs:
 
         # STALE memory older than min_age (should be deleted)
         mem = {
-            'id': "old-stale",
-            'lifecycle_state': LifecycleState.STALE,
-            'content': "Old stale",
-            'created_at': datetime.now(UTC) - timedelta(days=200),
-            'use_count': 1,
-            'context_level': ContextLevel.SESSION_STATE,
+            "id": "old-stale",
+            "lifecycle_state": LifecycleState.STALE,
+            "content": "Old stale",
+            "created_at": datetime.now(UTC) - timedelta(days=200),
+            "use_count": 1,
+            "context_level": ContextLevel.SESSION_STATE,
         }
         memories.append(mem)
 
         # STALE memory younger than min_age (should NOT be deleted)
         mem = {
-            'id': "young-stale",
-            'lifecycle_state': LifecycleState.STALE,
-            'content': "Young stale",
-            'created_at': datetime.now(UTC) - timedelta(days=100),
-            'use_count': 1,
-            'context_level': ContextLevel.SESSION_STATE,
+            "id": "young-stale",
+            "lifecycle_state": LifecycleState.STALE,
+            "content": "Young stale",
+            "created_at": datetime.now(UTC) - timedelta(days=100),
+            "use_count": 1,
+            "context_level": ContextLevel.SESSION_STATE,
         }
         memories.append(mem)
 
@@ -362,12 +362,12 @@ class TestHealthMaintenanceJobs:
         """Test monthly cleanup job error handling."""
         # Create one STALE memory
         mem = {
-            'id': "stale-mem",
-            'lifecycle_state': LifecycleState.STALE,
-            'content': "Stale content",
-            'created_at': datetime.now(UTC) - timedelta(days=200),
-            'use_count': 1,
-            'context_level': ContextLevel.SESSION_STATE,
+            "id": "stale-mem",
+            "lifecycle_state": LifecycleState.STALE,
+            "content": "Stale content",
+            "created_at": datetime.now(UTC) - timedelta(days=200),
+            "use_count": 1,
+            "context_level": ContextLevel.SESSION_STATE,
         }
 
         mock_store.get_all_memories = AsyncMock(return_value=[mem])
@@ -388,10 +388,10 @@ class TestHealthMaintenanceJobs:
         memories = []
         for i in range(10):
             mem = {
-                'id': f"mem-{i}",
-                'lifecycle_state': LifecycleState.ACTIVE,
-                'content': f"Content {i}",
-                'created_at': datetime.now(UTC),
+                "id": f"mem-{i}",
+                "lifecycle_state": LifecycleState.ACTIVE,
+                "content": f"Content {i}",
+                "created_at": datetime.now(UTC),
             }
             memories.append(mem)
 

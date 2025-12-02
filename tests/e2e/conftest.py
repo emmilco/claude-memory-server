@@ -2,11 +2,7 @@
 
 import pytest
 import pytest_asyncio
-import tempfile
-import shutil
-import asyncio
-from pathlib import Path
-from typing import AsyncGenerator, Dict, Any
+from typing import AsyncGenerator
 
 from src.core.server import MemoryRAGServer
 from src.config import get_config
@@ -29,6 +25,7 @@ def clean_environment(tmp_path):
 # Session-Scoped Fixtures for Read-Only Tests (TEST-029 Optimization)
 # ============================================================================
 
+
 @pytest.fixture(scope="session")
 def session_sample_code_project(tmp_path_factory):
     """Session-scoped sample code project for reuse across read-only tests.
@@ -46,7 +43,9 @@ def session_sample_code_project(tmp_path_factory):
     project_dir.mkdir()
 
     # auth.py - Authentication module
-    (project_dir / "auth.py").write_text('''"""Authentication and authorization module."""
+    (
+        project_dir / "auth.py"
+    ).write_text('''"""Authentication and authorization module."""
 
 import hashlib
 from typing import Optional
@@ -84,7 +83,9 @@ def authenticate(username: str, password: str) -> Optional[User]:
 ''')
 
     # database.py - Database module
-    (project_dir / "database.py").write_text('''"""Database connection and operations."""
+    (
+        project_dir / "database.py"
+    ).write_text('''"""Database connection and operations."""
 
 import sqlite3
 from pathlib import Path
@@ -289,7 +290,6 @@ async def pre_indexed_server(session_sample_code_project, worker_id):
     """
     import os
     import hashlib
-    from unittest.mock import patch, AsyncMock
     from qdrant_client import QdrantClient
     from qdrant_client.models import Distance, VectorParams
     from src.embeddings.generator import EmbeddingGenerator
@@ -320,7 +320,7 @@ async def pre_indexed_server(session_sample_code_project, worker_id):
 
     # Apply mocks to EmbeddingGenerator
     original_generate = EmbeddingGenerator.generate
-    original_generate_batch = getattr(EmbeddingGenerator, 'generate_batch', None)
+    original_generate_batch = getattr(EmbeddingGenerator, "generate_batch", None)
     original_initialize = EmbeddingGenerator.initialize
     EmbeddingGenerator.generate = mock_generate
     EmbeddingGenerator.initialize = mock_initialize
@@ -336,7 +336,11 @@ async def pre_indexed_server(session_sample_code_project, worker_id):
 
     # Get vector size from config
     config = get_config()
-    model_dims = {"all-MiniLM-L6-v2": 384, "all-MiniLM-L12-v2": 384, "all-mpnet-base-v2": 768}
+    model_dims = {
+        "all-MiniLM-L6-v2": 384,
+        "all-MiniLM-L12-v2": 384,
+        "all-mpnet-base-v2": 768,
+    }
     vector_size = model_dims.get(config.embedding_model, 768)
 
     # Create collection if it doesn't exist
@@ -345,7 +349,7 @@ async def pre_indexed_server(session_sample_code_project, worker_id):
         if collection_name not in [c.name for c in collections]:
             qdrant_client.create_collection(
                 collection_name=collection_name,
-                vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE)
+                vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE),
             )
     except Exception:
         pass  # Collection might already exist
@@ -361,7 +365,7 @@ async def pre_indexed_server(session_sample_code_project, worker_id):
     await server.index_codebase(
         directory_path=str(session_sample_code_project),
         project_name="shared-test-project",
-        recursive=True
+        recursive=True,
     )
 
     yield server
@@ -390,7 +394,9 @@ async def pre_indexed_server(session_sample_code_project, worker_id):
 
 
 @pytest_asyncio.fixture
-async def fresh_server(clean_environment, unique_qdrant_collection, monkeypatch) -> AsyncGenerator[MemoryRAGServer, None]:
+async def fresh_server(
+    clean_environment, unique_qdrant_collection, monkeypatch
+) -> AsyncGenerator[MemoryRAGServer, None]:
     """Create a fresh server instance for E2E testing.
 
     This fixture provides a fully initialized server with:
@@ -434,7 +440,9 @@ def sample_code_project(clean_environment):
     project_dir.mkdir()
 
     # auth.py - Authentication module
-    (project_dir / "auth.py").write_text('''"""Authentication and authorization module."""
+    (
+        project_dir / "auth.py"
+    ).write_text('''"""Authentication and authorization module."""
 
 import hashlib
 from typing import Optional
@@ -472,7 +480,9 @@ def authenticate(username: str, password: str) -> Optional[User]:
 ''')
 
     # database.py - Database module
-    (project_dir / "database.py").write_text('''"""Database connection and operations."""
+    (
+        project_dir / "database.py"
+    ).write_text('''"""Database connection and operations."""
 
 import sqlite3
 from pathlib import Path

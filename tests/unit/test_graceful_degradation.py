@@ -1,7 +1,7 @@
 """Tests for graceful degradation functionality."""
 
 import pytest
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import Mock, patch
 from src.core.degradation_warnings import (
     DegradationTracker,
     DegradationWarning,
@@ -97,12 +97,8 @@ class TestDegradationTracker:
         """Test summary with warnings."""
         tracker = DegradationTracker()
 
-        tracker.add_warning(
-            "Qdrant", "Unavailable", "docker-compose up", "3x slower"
-        )
-        tracker.add_warning(
-            "Rust Parser", "Not built", "maturin develop", "10x slower"
-        )
+        tracker.add_warning("Qdrant", "Unavailable", "docker-compose up", "3x slower")
+        tracker.add_warning("Rust Parser", "Not built", "maturin develop", "10x slower")
 
         summary = tracker.get_summary()
 

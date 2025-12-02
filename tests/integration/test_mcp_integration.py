@@ -7,11 +7,10 @@ Covers SPEC requirements F010-R001 and F010-R002.
 
 import pytest
 import pytest_asyncio
-from typing import Dict, Any, List
 
 from src.config import ServerConfig
 from src.core.server import MemoryRAGServer
-from src.core.models import MemoryCategory, MemoryScope
+from src.core.models import MemoryCategory
 from src.core.exceptions import ValidationError
 from pydantic import ValidationError as PydanticValidationError
 
@@ -128,8 +127,9 @@ class TestToolRegistration:
         """
         # Get all public async methods that represent MCP tools
         tool_methods = {
-            name for name in dir(server)
-            if not name.startswith('_')
+            name
+            for name in dir(server)
+            if not name.startswith("_")
             and callable(getattr(server, name))
             and name in EXPECTED_CORE_TOOLS
         }
@@ -158,6 +158,7 @@ class TestToolRegistration:
         """
         # Test store_memory schema
         from src.core.models import StoreMemoryRequest
+
         schema = StoreMemoryRequest.model_json_schema()
         assert "content" in schema["properties"]
         assert "category" in schema["properties"]
@@ -165,6 +166,7 @@ class TestToolRegistration:
 
         # Test retrieve_memories schema
         from src.core.models import QueryRequest
+
         schema = QueryRequest.model_json_schema()
         assert "query" in schema["properties"]
         assert "limit" in schema["properties"]
@@ -172,6 +174,7 @@ class TestToolRegistration:
 
         # Test search_code has advanced filtering
         from src.core.models import CodeSearchFilters
+
         schema = CodeSearchFilters.model_json_schema()
         assert "file_pattern" in schema["properties"]
         assert "complexity_min" in schema["properties"]
@@ -189,7 +192,9 @@ class TestToolRegistration:
             method = getattr(server, tool_name)
             docstring = method.__doc__
             assert docstring is not None, f"Tool {tool_name} missing docstring"
-            assert len(docstring.strip()) > 10, f"Tool {tool_name} has inadequate docstring"
+            assert (
+                len(docstring.strip()) > 10
+            ), f"Tool {tool_name} has inadequate docstring"
 
     @pytest.mark.asyncio
     async def test_tool_categories_correct(self, server):
@@ -200,13 +205,13 @@ class TestToolRegistration:
         """
         for category, tools in TOOL_CATEGORIES.items():
             for tool_name in tools:
-                assert tool_name in EXPECTED_CORE_TOOLS, (
-                    f"Tool {tool_name} in category {category} not in core tools"
-                )
+                assert (
+                    tool_name in EXPECTED_CORE_TOOLS
+                ), f"Tool {tool_name} in category {category} not in core tools"
                 method = getattr(server, tool_name, None)
-                assert method is not None, (
-                    f"Category {category}: tool {tool_name} not found"
-                )
+                assert (
+                    method is not None
+                ), f"Category {category}: tool {tool_name} not found"
 
     @pytest.mark.asyncio
     async def test_no_duplicate_tool_names(self, server):
@@ -221,9 +226,9 @@ class TestToolRegistration:
 
         # Check for duplicates within all tools
         unique_names = set(all_names)
-        assert len(all_names) == len(unique_names), (
-            f"Duplicate tool names detected: {len(all_names)} vs {len(unique_names)}"
-        )
+        assert len(all_names) == len(
+            unique_names
+        ), f"Duplicate tool names detected: {len(all_names)} vs {len(unique_names)}"
 
         # Verify core and delegated don't overlap
         overlap = EXPECTED_CORE_TOOLS & DELEGATED_MCP_TOOLS
@@ -241,6 +246,7 @@ class TestSchemaValidation:
         # Missing content
         with pytest.raises((ValidationError, PydanticValidationError)) as exc:
             from src.core.models import StoreMemoryRequest
+
             StoreMemoryRequest(category=MemoryCategory.FACT)
 
         error_msg = str(exc.value)
@@ -249,6 +255,7 @@ class TestSchemaValidation:
         # Missing category
         with pytest.raises((ValidationError, PydanticValidationError)) as exc:
             from src.core.models import StoreMemoryRequest
+
             StoreMemoryRequest(content="test content")
 
         error_msg = str(exc.value)
@@ -262,6 +269,7 @@ class TestSchemaValidation:
         # Empty string query
         with pytest.raises((ValidationError, PydanticValidationError)) as exc:
             from src.core.models import QueryRequest
+
             QueryRequest(query="")
 
         error_msg = str(exc.value)
@@ -270,6 +278,7 @@ class TestSchemaValidation:
         # Whitespace-only query
         with pytest.raises((ValidationError, PydanticValidationError)) as exc:
             from src.core.models import QueryRequest
+
             QueryRequest(query="   ")
 
         error_msg = str(exc.value)
@@ -285,9 +294,7 @@ class TestSchemaValidation:
         # Importance > 1.0
         with pytest.raises((ValidationError, PydanticValidationError)) as exc:
             StoreMemoryRequest(
-                content="test",
-                category=MemoryCategory.FACT,
-                importance=1.5
+                content="test", category=MemoryCategory.FACT, importance=1.5
             )
 
         error_msg = str(exc.value)
@@ -296,9 +303,7 @@ class TestSchemaValidation:
         # Importance < 0.0
         with pytest.raises((ValidationError, PydanticValidationError)) as exc:
             StoreMemoryRequest(
-                content="test",
-                category=MemoryCategory.FACT,
-                importance=-0.5
+                content="test", category=MemoryCategory.FACT, importance=-0.5
             )
 
         error_msg = str(exc.value)
@@ -314,16 +319,15 @@ class TestSchemaValidation:
         # Valid categories should work
         valid_request = StoreMemoryRequest(
             content="test",
-            category="fact"  # String version of enum
+            category="fact",  # String version of enum
         )
         assert valid_request.category == MemoryCategory.FACT
 
         # Invalid category should fail
-        with pytest.raises((ValidationError, PydanticValidationError, ValueError)) as exc:
-            StoreMemoryRequest(
-                content="test",
-                category="invalid_category"
-            )
+        with pytest.raises(
+            (ValidationError, PydanticValidationError, ValueError)
+        ) as exc:
+            StoreMemoryRequest(content="test", category="invalid_category")
 
         error_msg = str(exc.value)
         assert "category" in error_msg.lower() or "enum" in error_msg.lower()
@@ -339,7 +343,7 @@ class TestSchemaValidation:
         request = StoreMemoryRequest(
             content="test",
             category=MemoryCategory.FACT,
-            metadata={"key": "value", "count": 42}
+            metadata={"key": "value", "count": 42},
         )
         assert request.metadata == {"key": "value", "count": 42}
 
@@ -348,14 +352,16 @@ class TestSchemaValidation:
             file_pattern="**/*.py",
             complexity_min=1,
             complexity_max=10,
-            sort_by="complexity"
+            sort_by="complexity",
         )
         assert filters.file_pattern == "**/*.py"
         assert filters.complexity_min == 1
         assert filters.sort_by == "complexity"
 
         # Invalid sort_by should fail
-        with pytest.raises((ValidationError, PydanticValidationError, ValueError)) as exc:
+        with pytest.raises(
+            (ValidationError, PydanticValidationError, ValueError)
+        ) as exc:
             CodeSearchFilters(sort_by="invalid_sort")
 
         error_msg = str(exc.value)
@@ -372,9 +378,7 @@ class TestMCPProtocolCompliance:
         """
         # Store memory should return dict with status
         result = await server.store_memory(
-            content="test memory",
-            category="fact",
-            importance=0.5
+            content="test memory", category="fact", importance=0.5
         )
         assert isinstance(result, dict)
         assert "status" in result
@@ -398,12 +402,12 @@ class TestMCPProtocolCompliance:
         error = CustomValidationError(
             "Test validation error",
             solution="Fix the input",
-            docs_url="https://docs.example.com"
+            docs_url="https://docs.example.com",
         )
 
         # Error should have required attributes
-        assert hasattr(error, 'solution')
-        assert hasattr(error, 'docs_url')
+        assert hasattr(error, "solution")
+        assert hasattr(error, "docs_url")
         assert error.error_code == "E002"
 
         # Error message should be JSON-serializable
@@ -411,7 +415,7 @@ class TestMCPProtocolCompliance:
             "error_code": error.error_code,
             "message": str(error),
             "solution": error.solution,
-            "docs_url": error.docs_url
+            "docs_url": error.docs_url,
         }
 
         # Should serialize without errors
@@ -430,9 +434,7 @@ class TestMCPProtocolCompliance:
 
         # retrieve_memories with optional params
         result = await server.retrieve_memories(
-            query="test",
-            limit=5,
-            min_importance=0.3
+            query="test", limit=5, min_importance=0.3
         )
         assert isinstance(result, dict)
         assert result.get("results") is not None
@@ -447,14 +449,13 @@ class TestMCPProtocolCompliance:
             content="project test",
             category="fact",
             scope="project",
-            project_name="test-project"
+            project_name="test-project",
         )
         assert result["status"] == "success"
 
         # List memories should filter by project
         result = await server.list_memories(
-            project_name="test-project",
-            scope="project"
+            project_name="test-project", scope="project"
         )
         assert isinstance(result, dict)
         assert "memories" in result

@@ -6,8 +6,6 @@ from pathlib import Path
 
 from src.memory.optimization_analyzer import (
     OptimizationAnalyzer,
-    AnalysisResult,
-    OptimizationSuggestion,
 )
 
 
@@ -27,7 +25,9 @@ def temp_project():
         (project / "node_modules").mkdir()
         (project / "node_modules" / "package").mkdir()
         for i in range(50):
-            (project / "node_modules" / "package" / f"file{i}.js").write_text("module.exports = {}")
+            (project / "node_modules" / "package" / f"file{i}.js").write_text(
+                "module.exports = {}"
+            )
 
         # Create build output
         (project / "dist").mkdir()
@@ -53,8 +53,12 @@ def temp_project():
 
         # Create large binary files
         (project / "assets").mkdir()
-        (project / "assets" / "large.png").write_bytes(b"\x00" * (2 * 1024 * 1024))  # 2MB
-        (project / "assets" / "huge.jpg").write_bytes(b"\x00" * (3 * 1024 * 1024))  # 3MB
+        (project / "assets" / "large.png").write_bytes(
+            b"\x00" * (2 * 1024 * 1024)
+        )  # 2MB
+        (project / "assets" / "huge.jpg").write_bytes(
+            b"\x00" * (3 * 1024 * 1024)
+        )  # 3MB
 
         # Create log files
         for i in range(12):
@@ -63,23 +67,30 @@ def temp_project():
         yield project
 
 
-@pytest.mark.parametrize("pattern_match,description_match,min_files,expected_priority", [
-    ("node_modules", "Node.js", 50, 5),
-    ("dist/", "build", 20, None),
-    ("venv", "virtual", 30, None),
-    ("__pycache__", "cache", 10, None),
-    (".git/", None, 15, None),
-], ids=["node_modules", "build_dist", "venv", "pycache", "git"])
-def test_analyze_finds_common_directories(temp_project, pattern_match, description_match, min_files, expected_priority):
+@pytest.mark.parametrize(
+    "pattern_match,description_match,min_files,expected_priority",
+    [
+        ("node_modules", "Node.js", 50, 5),
+        ("dist/", "build", 20, None),
+        ("venv", "virtual", 30, None),
+        ("__pycache__", "cache", 10, None),
+        (".git/", None, 15, None),
+    ],
+    ids=["node_modules", "build_dist", "venv", "pycache", "git"],
+)
+def test_analyze_finds_common_directories(
+    temp_project, pattern_match, description_match, min_files, expected_priority
+):
     """Test detection of common excludable directories."""
     analyzer = OptimizationAnalyzer(temp_project)
     result = analyzer.analyze()
 
     # Find matching suggestions
     suggestions = [
-        s for s in result.suggestions
-        if pattern_match in s.pattern.lower() or
-           (description_match and description_match.lower() in s.description.lower())
+        s
+        for s in result.suggestions
+        if pattern_match in s.pattern.lower()
+        or (description_match and description_match.lower() in s.description.lower())
     ]
 
     assert len(suggestions) > 0, f"No suggestions found for {pattern_match}"
@@ -96,8 +107,9 @@ def test_analyze_finds_large_binaries(temp_project):
     result = analyzer.analyze()
 
     # Should suggest excluding large images (2MB, 3MB)
-    binary_suggestions = [
-        s for s in result.suggestions
+    [
+        s
+        for s in result.suggestions
         if s.type == "exclude_pattern" and (".png" in s.pattern or ".jpg" in s.pattern)
     ]
 
@@ -113,7 +125,8 @@ def test_analyze_finds_log_files(temp_project):
 
     # Should suggest excluding *.log (12 log files)
     log_suggestions = [
-        s for s in result.suggestions
+        s
+        for s in result.suggestions
         if "*.log" in s.pattern or "log" in s.description.lower()
     ]
 
@@ -133,9 +146,9 @@ def test_suggestions_sorted_by_priority(temp_project):
         next_sug = result.suggestions[i + 1]
 
         # Either higher priority, or same priority with more time savings
-        assert (
-            current.priority > next_sug.priority or
-            (current.priority == next_sug.priority and current.time_savings_seconds >= next_sug.time_savings_seconds)
+        assert current.priority > next_sug.priority or (
+            current.priority == next_sug.priority
+            and current.time_savings_seconds >= next_sug.time_savings_seconds
         )
 
 
@@ -191,11 +204,15 @@ def test_clean_project():
         assert len(result.suggestions) <= 1  # Maybe test directory if > 100 files
 
 
-@pytest.mark.parametrize("filename,magic_bytes,description", [
-    ("image.jpg", b"\xFF\xD8\xFF", "JPEG image"),
-    ("photo.png", b"\x89PNG", "PNG image"),
-    ("app.exe", b"MZ", "Windows executable"),
-], ids=["jpeg", "png", "exe"])
+@pytest.mark.parametrize(
+    "filename,magic_bytes,description",
+    [
+        ("image.jpg", b"\xff\xd8\xff", "JPEG image"),
+        ("photo.png", b"\x89PNG", "PNG image"),
+        ("app.exe", b"MZ", "Windows executable"),
+    ],
+    ids=["jpeg", "png", "exe"],
+)
 def test_binary_detection(filename, magic_bytes, description):
     """Test binary file detection for various file types."""
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -209,14 +226,20 @@ def test_binary_detection(filename, magic_bytes, description):
 
         file_path = (project / filename).resolve()
         assert file_path in analyzer.file_stats, f"File not found in stats: {filename}"
-        assert analyzer.file_stats[file_path].is_binary, f"{description} should be detected as binary"
+        assert analyzer.file_stats[
+            file_path
+        ].is_binary, f"{description} should be detected as binary"
 
 
-@pytest.mark.parametrize("filename,content,description", [
-    ("code.py", "def hello(): print('world')", "Python file"),
-    ("script.js", "console.log('hello')", "JavaScript file"),
-    ("README.md", "# Project", "Markdown file"),
-], ids=["python", "javascript", "markdown"])
+@pytest.mark.parametrize(
+    "filename,content,description",
+    [
+        ("code.py", "def hello(): print('world')", "Python file"),
+        ("script.js", "console.log('hello')", "JavaScript file"),
+        ("README.md", "# Project", "Markdown file"),
+    ],
+    ids=["python", "javascript", "markdown"],
+)
 def test_text_files_not_binary(filename, content, description):
     """Test that text files are not marked as binary."""
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -230,7 +253,9 @@ def test_text_files_not_binary(filename, content, description):
 
         file_path = (project / filename).resolve()
         assert file_path in analyzer.file_stats, f"File not found: {filename}"
-        assert not analyzer.file_stats[file_path].is_binary, f"{description} should not be binary"
+        assert not analyzer.file_stats[
+            file_path
+        ].is_binary, f"{description} should not be binary"
 
 
 def test_large_file_threshold():
@@ -245,7 +270,7 @@ def test_large_file_threshold():
 
         # Use 1MB threshold
         analyzer = OptimizationAnalyzer(project, large_file_threshold_mb=1.0)
-        result = analyzer.analyze()
+        analyzer.analyze()
 
         # Medium and large files should trigger suggestions if enough of them
         # (need 3+ files with same extension)
@@ -295,7 +320,9 @@ def test_time_savings_calculation():
         result = analyzer.analyze()
 
         # Should suggest excluding node_modules
-        node_modules_sugg = [s for s in result.suggestions if "node_modules" in s.pattern]
+        node_modules_sugg = [
+            s for s in result.suggestions if "node_modules" in s.pattern
+        ]
         assert len(node_modules_sugg) > 0
 
         suggestion = node_modules_sugg[0]

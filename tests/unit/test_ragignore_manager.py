@@ -152,7 +152,9 @@ def test_validate_pattern_invalid(manager):
     ]
 
     for pattern in invalid_patterns:
-        assert not manager.validate_pattern(pattern), f"Pattern should be invalid: {pattern}"
+        assert not manager.validate_pattern(
+            pattern
+        ), f"Pattern should be invalid: {pattern}"
 
 
 def test_generate_default_ragignore(manager):

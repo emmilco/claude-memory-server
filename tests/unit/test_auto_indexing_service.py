@@ -2,10 +2,9 @@
 
 import pytest
 import pytest_asyncio
-import asyncio
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
+from unittest.mock import Mock, AsyncMock, patch
 
 from src.memory.auto_indexing_service import AutoIndexingService, IndexingProgress
 from src.config import ServerConfig
@@ -81,13 +80,15 @@ async def service(temp_project_dir, config):
     # Create mock indexer
     mock_indexer = AsyncMock()
     mock_indexer.initialize = AsyncMock()
-    mock_indexer.index_directory = AsyncMock(return_value={
-        'total_files': 4,
-        'indexed_files': 4,
-        'skipped_files': 0,
-        'total_units': 20,
-        'failed_files': []
-    })
+    mock_indexer.index_directory = AsyncMock(
+        return_value={
+            "total_files": 4,
+            "indexed_files": 4,
+            "skipped_files": 0,
+            "total_units": 20,
+            "failed_files": [],
+        }
+    )
     mock_indexer.close = AsyncMock()
     service.indexer = mock_indexer
 
@@ -174,7 +175,7 @@ class TestIndexingProgress:
         progress.files_completed = 50
         progress.start_time = datetime.now(UTC)  # Just started
 
-        data = progress.to_dict()
+        progress.to_dict()
         # With zero elapsed time, rate calculation could be problematic
         # Should either have no ETA or a very large one
         # The code handles this with "if elapsed > 0" check
@@ -205,7 +206,9 @@ class TestAutoIndexingServiceInitialization:
         assert service.indexer is not None
 
     @pytest.mark.asyncio
-    async def test_operations_fail_without_initialization(self, temp_project_dir, config):
+    async def test_operations_fail_without_initialization(
+        self, temp_project_dir, config
+    ):
         """Test operations fail if not initialized."""
         service = AutoIndexingService(
             project_path=temp_project_dir,
@@ -247,7 +250,9 @@ class TestShouldAutoIndex:
         should_index = await service.should_auto_index()
         assert should_index is False
 
-    @pytest.mark.skip(reason="auto_index_enabled config not yet implemented - see FEAT-033")
+    @pytest.mark.skip(
+        reason="auto_index_enabled config not yet implemented - see FEAT-033"
+    )
     @pytest.mark.asyncio
     async def test_respects_disabled_config(self, service):
         """Test respects disabled configuration."""
@@ -267,7 +272,9 @@ class TestExcludePatterns:
         should_index = service.should_index_file(file_path)
         assert should_index is True
 
-    @pytest.mark.skip(reason="auto_index_exclude_patterns config not yet implemented - see FEAT-033")
+    @pytest.mark.skip(
+        reason="auto_index_exclude_patterns config not yet implemented - see FEAT-033"
+    )
     @pytest.mark.asyncio
     async def test_should_exclude_node_modules(self, service, temp_project_dir):
         """Test node_modules files are excluded."""
@@ -319,8 +326,8 @@ class TestForegroundIndexing:
         """Test foreground indexing runs successfully."""
         result = await service._index_in_foreground()
 
-        assert result['indexed_files'] == 4
-        assert result['total_units'] == 20
+        assert result["indexed_files"] == 4
+        assert result["total_units"] == 20
         assert service.progress.status == "complete"
         assert service.progress.is_background is False
 
@@ -347,8 +354,8 @@ class TestBackgroundIndexing:
         """Test background indexing runs successfully."""
         result = await service._index_in_background()
 
-        assert result['indexed_files'] == 4
-        assert result['total_units'] == 20
+        assert result["indexed_files"] == 4
+        assert result["total_units"] == 20
         assert service.progress.status == "complete"
         assert service.progress.is_background is True
 
@@ -370,7 +377,9 @@ class TestBackgroundIndexing:
 class TestStartAutoIndexing:
     """Test starting auto-indexing."""
 
-    @pytest.mark.skip(reason="auto_index_size_threshold config not yet implemented - see FEAT-033")
+    @pytest.mark.skip(
+        reason="auto_index_size_threshold config not yet implemented - see FEAT-033"
+    )
     @pytest.mark.asyncio
     async def test_starts_foreground_for_small_project(self, service):
         """Test uses foreground mode for small projects."""
@@ -381,9 +390,11 @@ class TestStartAutoIndexing:
 
         assert result is not None
         assert result["mode"] == "foreground"
-        assert result['indexed_files'] == 4
+        assert result["indexed_files"] == 4
 
-    @pytest.mark.skip(reason="auto_index_size_threshold config not yet implemented - see FEAT-033")
+    @pytest.mark.skip(
+        reason="auto_index_size_threshold config not yet implemented - see FEAT-033"
+    )
     @pytest.mark.asyncio
     async def test_starts_background_for_large_project(self, service):
         """Test uses background mode for large projects."""
@@ -409,7 +420,9 @@ class TestStartAutoIndexing:
         result = await service.start_auto_indexing(force=False)
         assert result is None
 
-    @pytest.mark.skip(reason="auto_index_size_threshold config not yet implemented - see FEAT-033")
+    @pytest.mark.skip(
+        reason="auto_index_size_threshold config not yet implemented - see FEAT-033"
+    )
     @pytest.mark.asyncio
     async def test_forces_indexing_when_requested(self, service):
         """Test forces indexing when force=True."""
@@ -420,7 +433,9 @@ class TestStartAutoIndexing:
         result = await service.start_auto_indexing(force=True)
         assert result is not None
 
-    @pytest.mark.skip(reason="auto_index_size_threshold config not yet implemented - see FEAT-033")
+    @pytest.mark.skip(
+        reason="auto_index_size_threshold config not yet implemented - see FEAT-033"
+    )
     @pytest.mark.asyncio
     async def test_progress_callback(self, service):
         """Test progress callback is called."""
@@ -433,7 +448,7 @@ class TestStartAutoIndexing:
         # Callback should be passed to indexer
         service.indexer.index_directory.assert_called_once()
         call_kwargs = service.indexer.index_directory.call_args[1]
-        assert call_kwargs['progress_callback'] == callback
+        assert call_kwargs["progress_callback"] == callback
 
 
 class TestFileWatcher:
@@ -491,7 +506,9 @@ class TestProgressQueries:
         assert progress["total_files"] == 10
         assert progress["files_completed"] == 5
 
-    @pytest.mark.skip(reason="auto_index_size_threshold config not yet implemented - see FEAT-033")
+    @pytest.mark.skip(
+        reason="auto_index_size_threshold config not yet implemented - see FEAT-033"
+    )
     @pytest.mark.asyncio
     async def test_wait_for_completion(self, service):
         """Test waiting for background task completion."""
@@ -532,7 +549,9 @@ class TestManualReindex:
         assert result["mode"] == "foreground"
 
 
-@pytest.mark.skip(reason="Auto-indexing config parameters not yet implemented in ServerConfig - see FEAT-033")
+@pytest.mark.skip(
+    reason="Auto-indexing config parameters not yet implemented in ServerConfig - see FEAT-033"
+)
 class TestCleanup:
     """Test resource cleanup."""
 
@@ -550,7 +569,9 @@ class TestCleanup:
         service.tracker.close = AsyncMock()
 
         # Mock the indexer class to prevent real initialization
-        with patch('src.memory.auto_indexing_service.IncrementalIndexer') as mock_indexer_class:
+        with patch(
+            "src.memory.auto_indexing_service.IncrementalIndexer"
+        ) as mock_indexer_class:
             mock_indexer = AsyncMock()
             mock_indexer.initialize = AsyncMock()
             mock_indexer.close = AsyncMock()
@@ -582,13 +603,15 @@ class TestCleanup:
 
         service.indexer = AsyncMock()
         service.indexer.initialize = AsyncMock()
-        service.indexer.index_directory = AsyncMock(return_value={
-            'total_files': 4,
-            'indexed_files': 4,
-            'total_units': 20,
-            'skipped_files': 0,
-            'failed_files': []
-        })
+        service.indexer.index_directory = AsyncMock(
+            return_value={
+                "total_files": 4,
+                "indexed_files": 4,
+                "total_units": 20,
+                "skipped_files": 0,
+                "failed_files": [],
+            }
+        )
         service.indexer.close = AsyncMock()
 
         await service.initialize()

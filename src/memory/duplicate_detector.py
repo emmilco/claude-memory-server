@@ -2,8 +2,7 @@
 
 import logging
 import numpy as np
-from typing import List, Tuple, Optional, Dict, Any, Set
-from datetime import datetime, UTC
+from typing import List, Tuple, Optional, Dict, Any
 from dataclasses import dataclass
 
 from src.core.models import MemoryUnit, MemoryCategory
@@ -18,6 +17,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class DuplicateMember:
     """Member of a duplicate cluster."""
+
     id: str
     file_path: str
     unit_name: str
@@ -28,6 +28,7 @@ class DuplicateMember:
 @dataclass
 class DuplicateCluster:
     """Group of similar code units."""
+
     canonical_id: str  # ID of the "best" version
     canonical_name: str
     canonical_file: str
@@ -73,7 +74,7 @@ class DuplicateDetector:
         embedding_generator: EmbeddingGenerator,
         high_threshold: Optional[float] = None,
         medium_threshold: Optional[float] = None,
-        low_threshold: Optional[float] = None
+        low_threshold: Optional[float] = None,
     ):
         """
         Initialize duplicate detector.
@@ -87,12 +88,32 @@ class DuplicateDetector:
         """
         # Load defaults from config if not provided
         config = get_config()
-        self.high_threshold = high_threshold if high_threshold is not None else config.quality.duplicate_high_threshold
-        self.medium_threshold = medium_threshold if medium_threshold is not None else config.quality.duplicate_medium_threshold
-        self.low_threshold = low_threshold if low_threshold is not None else config.quality.duplicate_low_threshold
+        self.high_threshold = (
+            high_threshold
+            if high_threshold is not None
+            else config.quality.duplicate_high_threshold
+        )
+        self.medium_threshold = (
+            medium_threshold
+            if medium_threshold is not None
+            else config.quality.duplicate_medium_threshold
+        )
+        self.low_threshold = (
+            low_threshold
+            if low_threshold is not None
+            else config.quality.duplicate_low_threshold
+        )
 
-        if not (0.0 <= self.low_threshold <= self.medium_threshold <= self.high_threshold <= 1.0):
-            raise ValidationError("Thresholds must satisfy: 0 <= low <= medium <= high <= 1")
+        if not (
+            0.0
+            <= self.low_threshold
+            <= self.medium_threshold
+            <= self.high_threshold
+            <= 1.0
+        ):
+            raise ValidationError(
+                "Thresholds must satisfy: 0 <= low <= medium <= high <= 1"
+            )
 
         self.store = store
         self.embedding_generator = embedding_generator
@@ -103,9 +124,7 @@ class DuplicateDetector:
         )
 
     async def find_duplicates(
-        self,
-        memory: MemoryUnit,
-        min_threshold: Optional[float] = None
+        self, memory: MemoryUnit, min_threshold: Optional[float] = None
     ) -> List[Tuple[MemoryUnit, float]]:
         """
         Find memories similar to the given memory.
@@ -126,16 +145,17 @@ class DuplicateDetector:
             # Retrieve similar memories from store
             # Use same category and scope filters to narrow search
             from src.core.models import SearchFilters
+
             filters = SearchFilters(
                 category=memory.category,
                 scope=memory.scope,
-                project_name=memory.project_name
+                project_name=memory.project_name,
             )
 
             similar_memories = await self.store.retrieve(
                 query_embedding=query_embedding,
                 filters=filters,
-                limit=100  # Cast wide net for duplicate detection
+                limit=100,  # Cast wide net for duplicate detection
             )
 
             # Filter out the memory itself and apply threshold
@@ -160,7 +180,7 @@ class DuplicateDetector:
     async def find_all_duplicates(
         self,
         category: Optional[MemoryCategory] = None,
-        min_threshold: Optional[float] = None
+        min_threshold: Optional[float] = None,
     ) -> Dict[str, List[Tuple[str, float]]]:
         """
         Scan entire database for duplicate clusters.
@@ -172,16 +192,19 @@ class DuplicateDetector:
         Returns:
             Dict mapping canonical memory ID to list of (duplicate_id, score) tuples
         """
-        threshold = min_threshold if min_threshold is not None else self.medium_threshold
+        threshold = (
+            min_threshold if min_threshold is not None else self.medium_threshold
+        )
 
         try:
             # Get all memories
             from src.core.models import SearchFilters
+
             filters = SearchFilters(category=category) if category else None
             all_memories_results = await self.store.retrieve(
                 query_embedding=[0.0] * DEFAULT_EMBEDDING_DIM,
                 filters=filters,
-                limit=10000
+                limit=10000,
             )
 
             all_memories = [mem for mem, _ in all_memories_results]
@@ -236,8 +259,7 @@ class DuplicateDetector:
             return "none"
 
     async def get_auto_merge_candidates(
-        self,
-        category: Optional[MemoryCategory] = None
+        self, category: Optional[MemoryCategory] = None
     ) -> Dict[str, List[Tuple[str, float]]]:
         """
         Get high-confidence duplicate clusters safe for automatic merging.
@@ -249,8 +271,7 @@ class DuplicateDetector:
             Dict mapping canonical memory ID to list of (duplicate_id, score) tuples
         """
         all_duplicates = await self.find_all_duplicates(
-            category=category,
-            min_threshold=self.high_threshold
+            category=category, min_threshold=self.high_threshold
         )
 
         # Filter to only include clusters with high-confidence duplicates
@@ -267,8 +288,7 @@ class DuplicateDetector:
         return auto_merge_candidates
 
     async def get_user_review_candidates(
-        self,
-        category: Optional[MemoryCategory] = None
+        self, category: Optional[MemoryCategory] = None
     ) -> Dict[str, List[Tuple[str, float]]]:
         """
         Get medium-confidence duplicates that need user review.
@@ -280,8 +300,7 @@ class DuplicateDetector:
             Dict mapping canonical memory ID to list of (duplicate_id, score) tuples
         """
         all_duplicates = await self.find_all_duplicates(
-            category=category,
-            min_threshold=self.medium_threshold
+            category=category, min_threshold=self.medium_threshold
         )
 
         # Filter to clusters that have at least one medium-confidence duplicate
@@ -353,6 +372,7 @@ class DuplicateDetector:
         try:
             # Get all code units
             from src.core.models import SearchFilters, MemoryCategory
+
             filters = SearchFilters(
                 project_name=project_name,
                 category=category or MemoryCategory.CODE,
@@ -369,12 +389,16 @@ class DuplicateDetector:
                 logger.info("No code units found for clustering")
                 return []
 
-            logger.info(f"Clustering {len(all_code)} code units (threshold={min_threshold})")
+            logger.info(
+                f"Clustering {len(all_code)} code units (threshold={min_threshold})"
+            )
 
             # Build similarity graph (edges)
             edges: List[Tuple[str, str, float]] = []
             for unit in all_code:
-                duplicates = await self.find_duplicates(unit, min_threshold=min_threshold)
+                duplicates = await self.find_duplicates(
+                    unit, min_threshold=min_threshold
+                )
                 for dup, score in duplicates:
                     # Add edge (avoid duplicates by sorting IDs)
                     id1, id2 = sorted([unit.id, dup.id])
@@ -408,25 +432,33 @@ class DuplicateDetector:
                 for member_id, similarity in members_data:
                     member = next((m for m in all_code if m.id == member_id), None)
                     if member:
-                        members.append(DuplicateMember(
-                            id=member.id,
-                            file_path=member.metadata.get("file_path", "unknown"),
-                            unit_name=member.metadata.get("unit_name", "unknown"),
-                            similarity_to_canonical=similarity,
-                            line_count=member.metadata.get("line_count", 0),
-                        ))
+                        members.append(
+                            DuplicateMember(
+                                id=member.id,
+                                file_path=member.metadata.get("file_path", "unknown"),
+                                unit_name=member.metadata.get("unit_name", "unknown"),
+                                similarity_to_canonical=similarity,
+                                line_count=member.metadata.get("line_count", 0),
+                            )
+                        )
                         total_similarity += similarity
 
                 if members:
                     avg_similarity = total_similarity / len(members)
-                    clusters.append(DuplicateCluster(
-                        canonical_id=canonical_id,
-                        canonical_name=canonical.metadata.get("unit_name", "unknown"),
-                        canonical_file=canonical.metadata.get("file_path", "unknown"),
-                        members=members,
-                        average_similarity=avg_similarity,
-                        cluster_size=len(members) + 1,  # +1 for canonical
-                    ))
+                    clusters.append(
+                        DuplicateCluster(
+                            canonical_id=canonical_id,
+                            canonical_name=canonical.metadata.get(
+                                "unit_name", "unknown"
+                            ),
+                            canonical_file=canonical.metadata.get(
+                                "file_path", "unknown"
+                            ),
+                            members=members,
+                            average_similarity=avg_similarity,
+                            cluster_size=len(members) + 1,  # +1 for canonical
+                        )
+                    )
 
             # Sort by cluster size (largest first)
             clusters.sort(key=lambda c: c.cluster_size, reverse=True)

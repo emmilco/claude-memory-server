@@ -4,10 +4,6 @@ import pytest
 from datetime import datetime, timedelta, UTC
 from src.monitoring.capacity_planner import (
     CapacityPlanner,
-    DatabaseGrowthForecast,
-    MemoryCapacityAnalysis,
-    ProjectCapacityReport,
-    CapacityForecast,
 )
 from src.monitoring.metrics_collector import MetricsCollector, HealthMetrics
 
@@ -69,7 +65,10 @@ class TestCapacityPlanner:
         # Database should be growing
         assert forecast.database_growth.trend == "GROWING"
         assert forecast.database_growth.growth_rate_mb_per_day > 0
-        assert forecast.database_growth.projected_size_mb > forecast.database_growth.current_size_mb
+        assert (
+            forecast.database_growth.projected_size_mb
+            > forecast.database_growth.current_size_mb
+        )
 
     @pytest.mark.asyncio
     async def test_memory_capacity_forecast(self, capacity_planner, metrics_collector):
@@ -104,7 +103,8 @@ class TestCapacityPlanner:
         for i in range(10):
             metrics = HealthMetrics(
                 timestamp=base_time + timedelta(days=i),
-                database_size_mb=1400.0 + (i * 10.0),  # Growing rapidly toward 1500MB warning
+                database_size_mb=1400.0
+                + (i * 10.0),  # Growing rapidly toward 1500MB warning
                 total_memories=1000 + (i * 100),
                 active_memories=500,
                 recent_memories=300,
@@ -145,10 +145,15 @@ class TestCapacityPlanner:
 
         # Projects should be growing
         assert forecast.project_capacity.project_addition_rate_per_week > 0
-        assert forecast.project_capacity.projected_active_projects > forecast.project_capacity.current_active_projects
+        assert (
+            forecast.project_capacity.projected_active_projects
+            > forecast.project_capacity.current_active_projects
+        )
 
     @pytest.mark.asyncio
-    async def test_forecast_different_periods(self, capacity_planner, metrics_collector):
+    async def test_forecast_different_periods(
+        self, capacity_planner, metrics_collector
+    ):
         """Test forecasting for different time periods."""
         # Add some baseline metrics
         base_time = datetime.now(UTC) - timedelta(days=10)
@@ -175,13 +180,18 @@ class TestCapacityPlanner:
         assert forecast_90.forecast_days == 90
 
         # 90-day projection should be larger than 7-day
-        assert forecast_90.database_growth.projected_size_mb >= forecast_7.database_growth.projected_size_mb
+        assert (
+            forecast_90.database_growth.projected_size_mb
+            >= forecast_7.database_growth.projected_size_mb
+        )
 
 
 class TestLinearRegressionCalculation:
     """Test linear regression calculations."""
 
-    def test_calculate_growth_rate_single_point(self, capacity_planner, metrics_collector):
+    def test_calculate_growth_rate_single_point(
+        self, capacity_planner, metrics_collector
+    ):
         """Test growth rate with single data point."""
         metrics = HealthMetrics(
             timestamp=datetime.now(UTC),
@@ -197,12 +207,16 @@ class TestLinearRegressionCalculation:
         metrics_collector.store_metrics(metrics)
 
         history = metrics_collector.get_metrics_history(days=7)
-        growth_rate = capacity_planner._calculate_linear_growth_rate(history, "database_size_mb")
+        growth_rate = capacity_planner._calculate_linear_growth_rate(
+            history, "database_size_mb"
+        )
 
         # Single point should yield zero growth rate
         assert growth_rate == 0.0
 
-    def test_calculate_growth_rate_upward_trend(self, capacity_planner, metrics_collector):
+    def test_calculate_growth_rate_upward_trend(
+        self, capacity_planner, metrics_collector
+    ):
         """Test growth rate with upward trend."""
         base_time = datetime.now(UTC) - timedelta(days=10)
         for i in range(10):
@@ -220,12 +234,16 @@ class TestLinearRegressionCalculation:
             metrics_collector.store_metrics(metrics)
 
         history = metrics_collector.get_metrics_history(days=10)
-        growth_rate = capacity_planner._calculate_linear_growth_rate(history, "database_size_mb")
+        growth_rate = capacity_planner._calculate_linear_growth_rate(
+            history, "database_size_mb"
+        )
 
         # Should detect ~5MB/day growth
         assert 4.5 <= growth_rate <= 5.5
 
-    def test_calculate_growth_rate_downward_trend(self, capacity_planner, metrics_collector):
+    def test_calculate_growth_rate_downward_trend(
+        self, capacity_planner, metrics_collector
+    ):
         """Test growth rate with downward trend."""
         base_time = datetime.now(UTC) - timedelta(days=10)
         for i in range(10):
@@ -243,7 +261,9 @@ class TestLinearRegressionCalculation:
             metrics_collector.store_metrics(metrics)
 
         history = metrics_collector.get_metrics_history(days=10)
-        growth_rate = capacity_planner._calculate_linear_growth_rate(history, "total_memories")
+        growth_rate = capacity_planner._calculate_linear_growth_rate(
+            history, "total_memories"
+        )
 
         # Should detect negative growth
         assert growth_rate < 0
@@ -286,7 +306,8 @@ class TestCapacityRecommendations:
         for i in range(10):
             metrics = HealthMetrics(
                 timestamp=base_time + timedelta(days=i),
-                database_size_mb=1900.0 + (i * 20.0),  # Approaching 2000MB limit rapidly
+                database_size_mb=1900.0
+                + (i * 20.0),  # Approaching 2000MB limit rapidly
                 total_memories=48000 + (i * 500),  # Approaching 50000 limit
                 active_memories=500,
                 recent_memories=300,
@@ -303,4 +324,7 @@ class TestCapacityRecommendations:
         assert forecast.overall_status == "CRITICAL"
         # Should have actionable recommendations
         assert len(forecast.recommendations) > 1
-        assert any("🔴" in rec or "immediate" in rec.lower() for rec in forecast.recommendations)
+        assert any(
+            "🔴" in rec or "immediate" in rec.lower()
+            for rec in forecast.recommendations
+        )

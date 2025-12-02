@@ -1,13 +1,15 @@
 """Tests for refinement advisor."""
 
-import pytest
 from src.memory.refinement_advisor import RefinementAdvisor
 from src.memory.result_summarizer import SearchFacets
 
 
 def test_too_many_results_hint():
     """Test hint for too many results."""
-    results = [{"file_path": f"/app/file{i}.py", "language": "python", "unit_type": "function"} for i in range(60)]
+    results = [
+        {"file_path": f"/app/file{i}.py", "language": "python", "unit_type": "function"}
+        for i in range(60)
+    ]
     facets = SearchFacets(
         languages={"python": 60},
         unit_types={"function": 60},
@@ -26,7 +28,9 @@ def test_too_many_results_hint():
 
 def test_too_few_results_hint():
     """Test hint for too few results."""
-    results = [{"file_path": "/app/auth.py", "language": "python", "unit_type": "function"}]
+    results = [
+        {"file_path": "/app/auth.py", "language": "python", "unit_type": "function"}
+    ]
     facets = SearchFacets(
         languages={"python": 1},
         unit_types={"function": 1},
@@ -45,7 +49,9 @@ def test_too_few_results_hint():
 
 def test_hybrid_search_suggestion():
     """Test suggestion to try hybrid search."""
-    results = [{"file_path": "/app/auth.py", "language": "python", "unit_type": "function"}]
+    results = [
+        {"file_path": "/app/auth.py", "language": "python", "unit_type": "function"}
+    ]
     facets = SearchFacets(
         languages={"python": 1},
         unit_types={"function": 1},
@@ -65,7 +71,11 @@ def test_hybrid_search_suggestion():
 def test_scattered_results_hint():
     """Test hint for scattered results across many files."""
     results = [
-        {"file_path": f"/app/dir{i}/file.py", "language": "python", "unit_type": "function"}
+        {
+            "file_path": f"/app/dir{i}/file.py",
+            "language": "python",
+            "unit_type": "function",
+        }
         for i in range(15)
     ]
     facets = SearchFacets(
@@ -87,12 +97,36 @@ def test_scattered_results_hint():
 def test_concentrated_directory_hint():
     """Test hint when most results are in one directory."""
     results = [
-        {"file_path": "/app/auth/file1.py", "language": "python", "unit_type": "function"},
-        {"file_path": "/app/auth/file2.py", "language": "python", "unit_type": "function"},
-        {"file_path": "/app/auth/file3.py", "language": "python", "unit_type": "function"},
-        {"file_path": "/app/auth/file4.py", "language": "python", "unit_type": "function"},
-        {"file_path": "/app/user/file1.py", "language": "python", "unit_type": "function"},
-        {"file_path": "/app/api/handler.py", "language": "python", "unit_type": "function"},
+        {
+            "file_path": "/app/auth/file1.py",
+            "language": "python",
+            "unit_type": "function",
+        },
+        {
+            "file_path": "/app/auth/file2.py",
+            "language": "python",
+            "unit_type": "function",
+        },
+        {
+            "file_path": "/app/auth/file3.py",
+            "language": "python",
+            "unit_type": "function",
+        },
+        {
+            "file_path": "/app/auth/file4.py",
+            "language": "python",
+            "unit_type": "function",
+        },
+        {
+            "file_path": "/app/user/file1.py",
+            "language": "python",
+            "unit_type": "function",
+        },
+        {
+            "file_path": "/app/api/handler.py",
+            "language": "python",
+            "unit_type": "function",
+        },
     ]
     facets = SearchFacets(
         languages={"python": 6},
@@ -142,7 +176,9 @@ def test_mixed_unit_types_hint():
 
 def test_short_query_hint():
     """Test hint for short query."""
-    results = [{"file_path": "/app/auth.py", "language": "python", "unit_type": "function"}] * 10
+    results = [
+        {"file_path": "/app/auth.py", "language": "python", "unit_type": "function"}
+    ] * 10
     facets = SearchFacets(
         languages={"python": 10},
         unit_types={"function": 10},
@@ -161,7 +197,9 @@ def test_short_query_hint():
 
 def test_identifier_search_hint():
     """Test hint for searching specific identifiers."""
-    results = [{"file_path": "/app/auth.py", "language": "python", "unit_type": "function"}] * 5
+    results = [
+        {"file_path": "/app/auth.py", "language": "python", "unit_type": "function"}
+    ] * 5
     facets = SearchFacets(
         languages={"python": 5},
         unit_types={"function": 5},
@@ -191,7 +229,11 @@ def test_multi_language_hint():
     results = [
         {"file_path": "/app/auth.py", "language": "python", "unit_type": "function"},
     ] * 30 + [
-        {"file_path": "/client/auth.ts", "language": "typescript", "unit_type": "function"},
+        {
+            "file_path": "/client/auth.ts",
+            "language": "typescript",
+            "unit_type": "function",
+        },
     ] * 25
 
     facets = SearchFacets(
@@ -213,7 +255,14 @@ def test_multi_language_hint():
 def test_max_three_hints():
     """Test that maximum 3 hints are returned."""
     # Create scenario that could generate many hints
-    results = [{"file_path": f"/app/dir{i}/file.py", "language": "python", "unit_type": "function"} for i in range(60)]
+    results = [
+        {
+            "file_path": f"/app/dir{i}/file.py",
+            "language": "python",
+            "unit_type": "function",
+        }
+        for i in range(60)
+    ]
     facets = SearchFacets(
         languages={"python": 40, "typescript": 20},
         unit_types={"function": 50, "class": 10},
@@ -232,7 +281,9 @@ def test_max_three_hints():
 
 def test_remove_file_pattern_hint():
     """Test hint to remove file_pattern filter."""
-    results = [{"file_path": "/app/auth.py", "language": "python", "unit_type": "function"}]
+    results = [
+        {"file_path": "/app/auth.py", "language": "python", "unit_type": "function"}
+    ]
     facets = SearchFacets(
         languages={"python": 1},
         unit_types={"function": 1},

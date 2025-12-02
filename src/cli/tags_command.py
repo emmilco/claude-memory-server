@@ -1,6 +1,5 @@
 """CLI command for tag management."""
 
-import asyncio
 import click
 from rich.console import Console
 from rich.table import Table
@@ -98,12 +97,14 @@ def merge_tags(source: str, target: str):
         console.print(f"[red]Target tag not found: {target}[/red]")
         return
 
-    console.print(f"Merging [yellow]{source_tag.full_path}[/yellow] into [green]{target_tag.full_path}[/green]")
+    console.print(
+        f"Merging [yellow]{source_tag.full_path}[/yellow] into [green]{target_tag.full_path}[/green]"
+    )
 
     if click.confirm("Are you sure?"):
         try:
             manager.merge_tags(source_tag.id, target_tag.id)
-            console.print(f"[green]✓ Tags merged successfully[/green]")
+            console.print("[green]✓ Tags merged successfully[/green]")
         except Exception as e:
             console.print(f"[red]Failed to merge tags: {e}[/red]")
 
@@ -131,12 +132,14 @@ def delete_tag(tag: str, cascade: bool):
 
     console.print(f"Deleting [yellow]{tag_obj.full_path}[/yellow]")
     if descendants:
-        console.print(f"  [red]This will also delete {len(descendants)} descendants[/red]")
+        console.print(
+            f"  [red]This will also delete {len(descendants)} descendants[/red]"
+        )
 
     if click.confirm("Are you sure?"):
         try:
             manager.delete_tag(tag_obj.id, cascade=cascade)
-            console.print(f"[green]✓ Tag deleted[/green]")
+            console.print("[green]✓ Tag deleted[/green]")
         except Exception as e:
             console.print(f"[red]Failed to delete tag: {e}[/red]")
 

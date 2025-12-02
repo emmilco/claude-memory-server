@@ -5,8 +5,6 @@ import logging
 from typing import Dict, Any, Optional, List
 from src.core.models import (
     MemoryUnit,
-    MemoryCategory,
-    MemoryScope,
     ContextLevel,
     StoreMemoryRequest,
     QueryRequest,
@@ -493,9 +491,7 @@ def validate_project_name(project_name: Optional[str]) -> Optional[str]:
 # ============================================================================
 
 
-def validate_batch_store_requests(
-    payloads: List[Dict[str, Any]]
-) -> List[MemoryUnit]:
+def validate_batch_store_requests(payloads: List[Dict[str, Any]]) -> List[MemoryUnit]:
     """
     Validate a batch of store requests.
 
@@ -525,7 +521,7 @@ def validate_batch_store_requests(
             errors.append(f"Item {i}: {str(e)}")
 
     if errors:
-        raise ValidationError(f"Batch validation failed:\n" + "\n".join(errors[:10]))
+        raise ValidationError("Batch validation failed:\n" + "\n".join(errors[:10]))
 
     logger.info(f"Validated batch of {len(validated)} memory units")
     return validated

@@ -1,12 +1,9 @@
 """Tests for allowed_fields configuration module."""
 
-import pytest
 from src.core.allowed_fields import (
     ALLOWED_MEMORY_FIELDS,
     ALLOWED_FILTER_FIELDS,
-    ALLOWED_SORT_FIELDS,
     ALLOWED_SORTABLE_FIELDS,
-    ALLOWED_CODE_METADATA_FIELDS,
     INJECTION_PATTERNS,
     is_allowed_field,
     is_filterable_field,
@@ -126,7 +123,9 @@ class TestValueValidation:
 
         assert valid is True
         # Message should be empty string for valid content
-        assert message == "", f"Expected empty message for valid content, got: {message}"
+        assert (
+            message == ""
+        ), f"Expected empty message for valid content, got: {message}"
 
     def test_validate_field_value_content_empty(self):
         """Test validating empty content."""
@@ -267,7 +266,11 @@ class TestInjectionPatterns:
         patterns_str = str(INJECTION_PATTERNS).lower()
 
         # At least some common SQL terms should be covered
-        assert "select" in patterns_str or "union" in patterns_str or "drop" in patterns_str
+        assert (
+            "select" in patterns_str
+            or "union" in patterns_str
+            or "drop" in patterns_str
+        )
 
     def test_injection_patterns_count(self):
         """Test that we have a reasonable number of patterns."""
@@ -300,14 +303,14 @@ class TestMemoryFieldStructure:
         importance = ALLOWED_MEMORY_FIELDS["importance"]
 
         assert "type" in importance
-        assert importance["type"] == float
+        assert importance["type"] is float
 
     def test_tags_field_structure(self):
         """Test tags field has required structure."""
         tags = ALLOWED_MEMORY_FIELDS["tags"]
 
         assert "type" in tags
-        assert tags["type"] == list
+        assert tags["type"] is list
 
 
 class TestValidateFieldValueCoverage:

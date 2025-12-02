@@ -45,7 +45,7 @@ class DependencyGraphGenerator:
         language: Optional[str] = None,
         include_metadata: bool = True,
         highlight_circular: bool = True,
-        project_root: Optional[Path] = None
+        project_root: Optional[Path] = None,
     ) -> tuple[str, Dict[str, Any]]:
         """
         Generate dependency graph in specified format.
@@ -67,15 +67,14 @@ class DependencyGraphGenerator:
             max_depth=max_depth,
             file_pattern=file_pattern,
             language=language,
-            project_root=project_root
+            project_root=project_root,
         )
 
         # Detect circular dependencies if needed
         circular_groups = []
         if highlight_circular:
             circular_groups = self._detect_circular_in_subgraph(
-                filtered_nodes,
-                filtered_edges
+                filtered_nodes, filtered_edges
             )
 
         # Enrich with metadata if requested
@@ -86,24 +85,15 @@ class DependencyGraphGenerator:
         # Generate in requested format
         if format == "dot":
             graph_data = self._to_dot(
-                filtered_nodes,
-                filtered_edges,
-                node_metadata,
-                circular_groups
+                filtered_nodes, filtered_edges, node_metadata, circular_groups
             )
         elif format == "json":
             graph_data = self._to_json(
-                filtered_nodes,
-                filtered_edges,
-                node_metadata,
-                circular_groups
+                filtered_nodes, filtered_edges, node_metadata, circular_groups
             )
         elif format == "mermaid":
             graph_data = self._to_mermaid(
-                filtered_nodes,
-                filtered_edges,
-                node_metadata,
-                circular_groups
+                filtered_nodes, filtered_edges, node_metadata, circular_groups
             )
         else:
             raise ValueError(f"Unsupported format: {format}")
@@ -112,7 +102,7 @@ class DependencyGraphGenerator:
         stats = {
             "node_count": len(filtered_nodes),
             "edge_count": len(filtered_edges),
-            "circular_dependency_count": len(circular_groups)
+            "circular_dependency_count": len(circular_groups),
         }
 
         return graph_data, stats, circular_groups
@@ -122,25 +112,29 @@ class DependencyGraphGenerator:
         max_depth: Optional[int],
         file_pattern: Optional[str],
         language: Optional[str],
-        project_root: Optional[Path]
+        project_root: Optional[Path],
     ) -> tuple[Set[str], Set[tuple[str, str]]]:
         """Apply filters to get a subgraph."""
         # Start with all nodes
-        all_nodes = set(self.graph.dependencies.keys()) | set(self.graph.dependents.keys())
+        all_nodes = set(self.graph.dependencies.keys()) | set(
+            self.graph.dependents.keys()
+        )
         filtered_nodes = all_nodes.copy()
 
         # Apply file pattern filter
         if file_pattern:
             filtered_nodes = {
-                node for node in filtered_nodes
-                if fnmatch.fnmatch(Path(node).name, file_pattern) or
-                   fnmatch.fnmatch(node, file_pattern)
+                node
+                for node in filtered_nodes
+                if fnmatch.fnmatch(Path(node).name, file_pattern)
+                or fnmatch.fnmatch(node, file_pattern)
             }
 
         # Apply language filter
         if language:
             filtered_nodes = {
-                node for node in filtered_nodes
+                node
+                for node in filtered_nodes
                 if self._get_language(node) == language.lower()
             }
 
@@ -167,8 +161,7 @@ class DependencyGraphGenerator:
 
         # Find entry points (files with no dependencies)
         entry_points = {
-            node for node in nodes
-            if not self.graph.dependencies.get(node, set())
+            node for node in nodes if not self.graph.dependencies.get(node, set())
         }
 
         # If no entry points, use all nodes as entry points
@@ -195,9 +188,7 @@ class DependencyGraphGenerator:
         return visited
 
     def _detect_circular_in_subgraph(
-        self,
-        nodes: Set[str],
-        edges: Set[tuple[str, str]]
+        self, nodes: Set[str], edges: Set[tuple[str, str]]
     ) -> List[List[str]]:
         """Detect circular dependencies in filtered subgraph."""
         # Build adjacency list for subgraph
@@ -260,7 +251,9 @@ class DependencyGraphGenerator:
             try:
                 if os.path.exists(node):
                     mtime = os.path.getmtime(node)
-                    node_meta["last_modified"] = datetime.fromtimestamp(mtime).isoformat()
+                    node_meta["last_modified"] = datetime.fromtimestamp(
+                        mtime
+                    ).isoformat()
                 else:
                     node_meta["last_modified"] = None
             except Exception:
@@ -304,7 +297,7 @@ class DependencyGraphGenerator:
         nodes: Set[str],
         edges: Set[tuple[str, str]],
         metadata: Dict[str, Dict[str, Any]],
-        circular_groups: List[List[str]]
+        circular_groups: List[List[str]],
     ) -> str:
         """Export to DOT format (Graphviz)."""
         lines = ["digraph dependencies {"]
@@ -333,11 +326,11 @@ class DependencyGraphGenerator:
             # Styling
             attrs = [f'label="{label}"']
             if node in circular_nodes:
-                attrs.append('style=filled')
+                attrs.append("style=filled")
                 attrs.append('fillcolor="#ff9999"')
             else:
-                attrs.append('style=filled')
-                attrs.append('fillcolor=lightblue')
+                attrs.append("style=filled")
+                attrs.append("fillcolor=lightblue")
 
             node_id = self._sanitize_dot_id(node)
             lines.append(f'    "{node_id}" [{", ".join(attrs)}];')
@@ -356,7 +349,9 @@ class DependencyGraphGenerator:
             target_id = self._sanitize_dot_id(target)
 
             if (source, target) in circular_edges:
-                lines.append(f'    "{source_id}" -> "{target_id}" [color=red, penwidth=2];')
+                lines.append(
+                    f'    "{source_id}" -> "{target_id}" [color=red, penwidth=2];'
+                )
             else:
                 lines.append(f'    "{source_id}" -> "{target_id}";')
 
@@ -374,41 +369,36 @@ class DependencyGraphGenerator:
         nodes: Set[str],
         edges: Set[tuple[str, str]],
         metadata: Dict[str, Dict[str, Any]],
-        circular_groups: List[List[str]]
+        circular_groups: List[List[str]],
     ) -> str:
         """Export to JSON format (D3.js compatible)."""
         # Build nodes array
         nodes_array = []
         for node in sorted(nodes):
             meta = metadata.get(node, {})
-            nodes_array.append({
-                "id": node,
-                "label": Path(node).name,
-                "size": meta.get("size", 0),
-                "language": meta.get("language", "unknown"),
-                "last_modified": meta.get("last_modified"),
-            })
+            nodes_array.append(
+                {
+                    "id": node,
+                    "label": Path(node).name,
+                    "size": meta.get("size", 0),
+                    "language": meta.get("language", "unknown"),
+                    "last_modified": meta.get("last_modified"),
+                }
+            )
 
         # Build links array
         links_array = []
         for source, target in sorted(edges):
-            links_array.append({
-                "source": source,
-                "target": target,
-                "type": "import"
-            })
+            links_array.append({"source": source, "target": target, "type": "import"})
 
         # Build circular groups
-        circular_array = [
-            [node for node in group]
-            for group in circular_groups
-        ]
+        circular_array = [[node for node in group] for group in circular_groups]
 
         # Combine into graph
         graph = {
             "nodes": nodes_array,
             "links": links_array,
-            "circular_groups": circular_array
+            "circular_groups": circular_array,
         }
 
         return json.dumps(graph, indent=2)
@@ -418,7 +408,7 @@ class DependencyGraphGenerator:
         nodes: Set[str],
         edges: Set[tuple[str, str]],
         metadata: Dict[str, Dict[str, Any]],
-        circular_groups: List[List[str]]
+        circular_groups: List[List[str]],
     ) -> str:
         """Export to Mermaid diagram format."""
         lines = ["graph LR"]
@@ -463,9 +453,13 @@ class DependencyGraphGenerator:
 
             # Use dashed line for circular dependencies
             if (source, target) in circular_edges:
-                lines.append(f"    {source_id}[{source_label}] -.-> {target_id}[{target_label}]")
+                lines.append(
+                    f"    {source_id}[{source_label}] -.-> {target_id}[{target_label}]"
+                )
             else:
-                lines.append(f"    {source_id}[{source_label}] --> {target_id}[{target_label}]")
+                lines.append(
+                    f"    {source_id}[{source_label}] --> {target_id}[{target_label}]"
+                )
 
         # Add styling for circular nodes
         lines.append("")

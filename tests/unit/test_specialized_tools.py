@@ -1,15 +1,13 @@
 """Comprehensive unit tests for SpecializedRetrievalTools."""
 
 import pytest
-import pytest_asyncio
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 from src.core.tools import SpecializedRetrievalTools
 from src.core.models import (
     ContextLevel,
     MemoryScope,
     MemoryCategory,
     MemoryUnit,
-    SearchFilters,
 )
 from tests.conftest import mock_embedding
 
@@ -25,7 +23,9 @@ def mock_store():
 def mock_embedding_generator():
     """Create a mock embedding generator."""
     generator = AsyncMock()
-    generator.generate.return_value = mock_embedding(value=0.1)  # Mock embedding (768-dim)
+    generator.generate.return_value = mock_embedding(
+        value=0.1
+    )  # Mock embedding (768-dim)
     return generator
 
 
@@ -33,8 +33,7 @@ def mock_embedding_generator():
 def tools(mock_store, mock_embedding_generator):
     """Create SpecializedRetrievalTools instance."""
     return SpecializedRetrievalTools(
-        store=mock_store,
-        embedding_generator=mock_embedding_generator
+        store=mock_store, embedding_generator=mock_embedding_generator
     )
 
 
@@ -55,7 +54,9 @@ class TestRetrievePreferences:
     """Test retrieve_preferences method."""
 
     @pytest.mark.asyncio
-    async def test_retrieve_preferences_basic(self, tools, mock_store, mock_embedding_generator, sample_memory):
+    async def test_retrieve_preferences_basic(
+        self, tools, mock_store, mock_embedding_generator, sample_memory
+    ):
         """Test basic preference retrieval."""
         # Setup mock response
         mock_store.search_with_filters.return_value = [
@@ -63,10 +64,7 @@ class TestRetrievePreferences:
         ]
 
         # Call method
-        results = await tools.retrieve_preferences(
-            query="coding style",
-            limit=5
-        )
+        results = await tools.retrieve_preferences(query="coding style", limit=5)
 
         # Verify embedding was generated
         mock_embedding_generator.generate.assert_called_once_with("coding style")
@@ -88,9 +86,7 @@ class TestRetrievePreferences:
         mock_store.search_with_filters.return_value = []
 
         await tools.retrieve_preferences(
-            query="test",
-            scope=MemoryScope.GLOBAL,
-            limit=10
+            query="test", scope=MemoryScope.GLOBAL, limit=10
         )
 
         # Verify scope was passed in filters
@@ -104,9 +100,7 @@ class TestRetrievePreferences:
         mock_store.search_with_filters.return_value = []
 
         await tools.retrieve_preferences(
-            query="test",
-            project_name="my-project",
-            limit=5
+            query="test", project_name="my-project", limit=5
         )
 
         # Verify project_name was passed in filters
@@ -119,11 +113,7 @@ class TestRetrievePreferences:
         """Test preference retrieval with minimum importance filter."""
         mock_store.search_with_filters.return_value = []
 
-        await tools.retrieve_preferences(
-            query="test",
-            min_importance=0.7,
-            limit=5
-        )
+        await tools.retrieve_preferences(query="test", min_importance=0.7, limit=5)
 
         # Verify min_importance was passed in filters
         call_args = mock_store.search_with_filters.call_args
@@ -136,8 +126,7 @@ class TestRetrievePreferences:
         mock_store.search_with_filters.return_value = []
 
         results = await tools.retrieve_preferences(
-            query="nonexistent preference",
-            limit=5
+            query="nonexistent preference", limit=5
         )
 
         assert len(results) == 0
@@ -147,7 +136,9 @@ class TestRetrieveProjectContext:
     """Test retrieve_project_context method."""
 
     @pytest.mark.asyncio
-    async def test_retrieve_project_context_basic(self, tools, mock_store, mock_embedding_generator, sample_memory):
+    async def test_retrieve_project_context_basic(
+        self, tools, mock_store, mock_embedding_generator, sample_memory
+    ):
         """Test basic project context retrieval."""
         # Update sample memory to project context
         sample_memory.context_level = ContextLevel.PROJECT_CONTEXT
@@ -157,10 +148,7 @@ class TestRetrieveProjectContext:
             (sample_memory, 0.88),
         ]
 
-        results = await tools.retrieve_project_context(
-            query="database setup",
-            limit=3
-        )
+        results = await tools.retrieve_project_context(query="database setup", limit=3)
 
         # Verify embedding was generated
         mock_embedding_generator.generate.assert_called_once_with("database setup")
@@ -180,9 +168,7 @@ class TestRetrieveProjectContext:
         mock_store.search_with_filters.return_value = []
 
         await tools.retrieve_project_context(
-            query="test",
-            category=MemoryCategory.CONTEXT,
-            limit=5
+            query="test", category=MemoryCategory.CONTEXT, limit=5
         )
 
         # Verify category was passed in filters
@@ -196,9 +182,7 @@ class TestRetrieveProjectContext:
         mock_store.search_with_filters.return_value = []
 
         await tools.retrieve_project_context(
-            query="test",
-            project_name="specific-project",
-            limit=5
+            query="test", project_name="specific-project", limit=5
         )
 
         call_args = mock_store.search_with_filters.call_args
@@ -210,7 +194,9 @@ class TestRetrieveSessionState:
     """Test retrieve_session_state method."""
 
     @pytest.mark.asyncio
-    async def test_retrieve_session_state_basic(self, tools, mock_store, mock_embedding_generator, sample_memory):
+    async def test_retrieve_session_state_basic(
+        self, tools, mock_store, mock_embedding_generator, sample_memory
+    ):
         """Test basic session state retrieval."""
         # Update sample memory to session state
         sample_memory.context_level = ContextLevel.SESSION_STATE
@@ -219,10 +205,7 @@ class TestRetrieveSessionState:
             (sample_memory, 0.92),
         ]
 
-        results = await tools.retrieve_session_state(
-            query="current work",
-            limit=5
-        )
+        results = await tools.retrieve_session_state(query="current work", limit=5)
 
         # Verify embedding was generated
         mock_embedding_generator.generate.assert_called_once_with("current work")
@@ -242,9 +225,7 @@ class TestRetrieveSessionState:
         mock_store.search_with_filters.return_value = []
 
         await tools.retrieve_session_state(
-            query="test",
-            project_name="my-project",
-            limit=5
+            query="test", project_name="my-project", limit=5
         )
 
         call_args = mock_store.search_with_filters.call_args
@@ -256,11 +237,7 @@ class TestRetrieveSessionState:
         """Test session state retrieval with importance filter."""
         mock_store.search_with_filters.return_value = []
 
-        await tools.retrieve_session_state(
-            query="test",
-            min_importance=0.5,
-            limit=5
-        )
+        await tools.retrieve_session_state(query="test", min_importance=0.5, limit=5)
 
         call_args = mock_store.search_with_filters.call_args
         filters = call_args[1]["filters"]
@@ -271,7 +248,9 @@ class TestRetrieveByCategory:
     """Test retrieve_by_category method."""
 
     @pytest.mark.asyncio
-    async def test_retrieve_by_category_workflow(self, tools, mock_store, mock_embedding_generator, sample_memory):
+    async def test_retrieve_by_category_workflow(
+        self, tools, mock_store, mock_embedding_generator, sample_memory
+    ):
         """Test category-based retrieval for workflows."""
         sample_memory.category = MemoryCategory.WORKFLOW
 
@@ -280,9 +259,7 @@ class TestRetrieveByCategory:
         ]
 
         results = await tools.retrieve_by_category(
-            query="deployment process",
-            category=MemoryCategory.WORKFLOW,
-            limit=5
+            query="deployment process", category=MemoryCategory.WORKFLOW, limit=5
         )
 
         # Verify search was called with category filter
@@ -302,7 +279,7 @@ class TestRetrieveByCategory:
             query="test",
             category=MemoryCategory.FACT,
             context_level=ContextLevel.PROJECT_CONTEXT,
-            limit=5
+            limit=5,
         )
 
         call_args = mock_store.search_with_filters.call_args
@@ -319,7 +296,7 @@ class TestRetrieveByCategory:
             query="test",
             category=MemoryCategory.EVENT,
             project_name="test-project",
-            limit=5
+            limit=5,
         )
 
         call_args = mock_store.search_with_filters.call_args
@@ -332,7 +309,9 @@ class TestRetrieveMultiLevel:
     """Test retrieve_multi_level method."""
 
     @pytest.mark.asyncio
-    async def test_retrieve_multi_level_two_levels(self, tools, mock_store, mock_embedding_generator, sample_memory):
+    async def test_retrieve_multi_level_two_levels(
+        self, tools, mock_store, mock_embedding_generator, sample_memory
+    ):
         """Test retrieval from multiple context levels."""
         # Setup different memories for different levels
         pref_memory = MemoryUnit(
@@ -363,11 +342,8 @@ class TestRetrieveMultiLevel:
         # Call method
         results = await tools.retrieve_multi_level(
             query="python coding",
-            context_levels=[
-                ContextLevel.USER_PREFERENCE,
-                ContextLevel.PROJECT_CONTEXT
-            ],
-            limit=5
+            context_levels=[ContextLevel.USER_PREFERENCE, ContextLevel.PROJECT_CONTEXT],
+            limit=5,
         )
 
         # Verify embedding generated once
@@ -393,7 +369,7 @@ class TestRetrieveMultiLevel:
             query="test",
             context_levels=[ContextLevel.USER_PREFERENCE],
             project_name="my-project",
-            limit=10
+            limit=10,
         )
 
         # Verify project_name was passed in filters
@@ -402,7 +378,9 @@ class TestRetrieveMultiLevel:
         assert filters.project_name == "my-project"
 
     @pytest.mark.asyncio
-    async def test_retrieve_multi_level_all_three_levels(self, tools, mock_store, mock_embedding_generator):
+    async def test_retrieve_multi_level_all_three_levels(
+        self, tools, mock_store, mock_embedding_generator
+    ):
         """Test retrieval from all three context levels."""
         mock_store.search_with_filters.return_value = []
 
@@ -411,9 +389,9 @@ class TestRetrieveMultiLevel:
             context_levels=[
                 ContextLevel.USER_PREFERENCE,
                 ContextLevel.PROJECT_CONTEXT,
-                ContextLevel.SESSION_STATE
+                ContextLevel.SESSION_STATE,
             ],
-            limit=10
+            limit=10,
         )
 
         # Verify search called three times
@@ -431,16 +409,16 @@ class TestRetrieveMultiLevel:
         mock_store.search_with_filters.return_value = []
 
         results = await tools.retrieve_multi_level(
-            query="nonexistent",
-            context_levels=[ContextLevel.USER_PREFERENCE],
-            limit=5
+            query="nonexistent", context_levels=[ContextLevel.USER_PREFERENCE], limit=5
         )
 
         assert ContextLevel.USER_PREFERENCE in results
         assert len(results[ContextLevel.USER_PREFERENCE]) == 0
 
     @pytest.mark.asyncio
-    async def test_retrieve_multi_level_respects_limit(self, tools, mock_store, sample_memory):
+    async def test_retrieve_multi_level_respects_limit(
+        self, tools, mock_store, sample_memory
+    ):
         """Test that multi-level retrieval respects the limit parameter."""
         # Create multiple mock results
         mock_results = [(sample_memory, 0.9) for _ in range(10)]
@@ -449,7 +427,7 @@ class TestRetrieveMultiLevel:
         await tools.retrieve_multi_level(
             query="test",
             context_levels=[ContextLevel.USER_PREFERENCE],
-            limit=3  # Should only request 3 per level
+            limit=3,  # Should only request 3 per level
         )
 
         # Verify limit was passed correctly

@@ -1,15 +1,12 @@
 """Targeted tests for file_watcher.py uncovered lines."""
 
 import pytest
-import pytest_asyncio
 import asyncio
-import tempfile
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 from watchdog.events import FileSystemEvent
 
 from src.memory.file_watcher import DebouncedFileWatcher, FileWatcherService
-from src.config import ServerConfig
 
 
 class TestDebouncedFileWatcherCoverage:
@@ -20,10 +17,7 @@ class TestDebouncedFileWatcherCoverage:
         """Test _should_process returns False for non-files (line 75)."""
         callback = AsyncMock()
         watcher = DebouncedFileWatcher(
-            watch_path=tmp_path,
-            callback=callback,
-            debounce_ms=100,
-            patterns={".py"}
+            watch_path=tmp_path, callback=callback, debounce_ms=100, patterns={".py"}
         )
 
         # Test with directory
@@ -41,10 +35,7 @@ class TestDebouncedFileWatcherCoverage:
         """Test _compute_file_hash error handling (lines 85-87)."""
         callback = AsyncMock()
         watcher = DebouncedFileWatcher(
-            watch_path=tmp_path,
-            callback=callback,
-            debounce_ms=100,
-            patterns={".py"}
+            watch_path=tmp_path, callback=callback, debounce_ms=100, patterns={".py"}
         )
 
         # Create a file but mock open to raise error
@@ -61,17 +52,14 @@ class TestDebouncedFileWatcherCoverage:
         """Test _has_changed when hash computation fails (line 113)."""
         callback = AsyncMock()
         watcher = DebouncedFileWatcher(
-            watch_path=tmp_path,
-            callback=callback,
-            debounce_ms=100,
-            patterns={".py"}
+            watch_path=tmp_path, callback=callback, debounce_ms=100, patterns={".py"}
         )
 
         test_file = tmp_path / "test.py"
         test_file.write_text("content")
 
         # Mock _compute_file_hash to return None
-        with patch.object(watcher, '_compute_file_hash', return_value=None):
+        with patch.object(watcher, "_compute_file_hash", return_value=None):
             result = watcher._has_changed(test_file)
 
         assert result is False
@@ -81,17 +69,14 @@ class TestDebouncedFileWatcherCoverage:
         """Test _has_changed exception handling (lines 123-125)."""
         callback = AsyncMock()
         watcher = DebouncedFileWatcher(
-            watch_path=tmp_path,
-            callback=callback,
-            debounce_ms=100,
-            patterns={".py"}
+            watch_path=tmp_path, callback=callback, debounce_ms=100, patterns={".py"}
         )
 
         test_file = tmp_path / "test.py"
         test_file.write_text("content")
 
         # Mock stat to raise exception
-        with patch.object(Path, 'stat', side_effect=OSError("Stat failed")):
+        with patch.object(Path, "stat", side_effect=OSError("Stat failed")):
             result = watcher._has_changed(test_file)
 
         assert result is False
@@ -101,10 +86,7 @@ class TestDebouncedFileWatcherCoverage:
         """Test on_modified skips directories (line 129-130)."""
         callback = AsyncMock()
         watcher = DebouncedFileWatcher(
-            watch_path=tmp_path,
-            callback=callback,
-            debounce_ms=100,
-            patterns={".py"}
+            watch_path=tmp_path, callback=callback, debounce_ms=100, patterns={".py"}
         )
 
         # Create directory event
@@ -125,10 +107,7 @@ class TestDebouncedFileWatcherCoverage:
         callback_event = asyncio.Event()
         callback = AsyncMock(side_effect=lambda path: callback_event.set())
         watcher = DebouncedFileWatcher(
-            watch_path=tmp_path,
-            callback=callback,
-            debounce_ms=50,
-            patterns={".py"}
+            watch_path=tmp_path, callback=callback, debounce_ms=50, patterns={".py"}
         )
 
         # Create test file
@@ -151,10 +130,7 @@ class TestDebouncedFileWatcherCoverage:
         """Test on_created skips directories (line 139-140)."""
         callback = AsyncMock()
         watcher = DebouncedFileWatcher(
-            watch_path=tmp_path,
-            callback=callback,
-            debounce_ms=100,
-            patterns={".py"}
+            watch_path=tmp_path, callback=callback, debounce_ms=100, patterns={".py"}
         )
 
         # Create directory event
@@ -175,10 +151,7 @@ class TestDebouncedFileWatcherCoverage:
         callback_event = asyncio.Event()
         callback = AsyncMock(side_effect=lambda path: callback_event.set())
         watcher = DebouncedFileWatcher(
-            watch_path=tmp_path,
-            callback=callback,
-            debounce_ms=50,
-            patterns={".py"}
+            watch_path=tmp_path, callback=callback, debounce_ms=50, patterns={".py"}
         )
 
         # Create test file
@@ -201,10 +174,7 @@ class TestDebouncedFileWatcherCoverage:
         """Test on_deleted skips directories (line 151-152)."""
         callback = AsyncMock()
         watcher = DebouncedFileWatcher(
-            watch_path=tmp_path,
-            callback=callback,
-            debounce_ms=100,
-            patterns={".py"}
+            watch_path=tmp_path, callback=callback, debounce_ms=100, patterns={".py"}
         )
 
         # Create directory event
@@ -222,10 +192,7 @@ class TestDebouncedFileWatcherCoverage:
         """Test on_deleted removes file from tracking (lines 154-158)."""
         callback = AsyncMock()
         watcher = DebouncedFileWatcher(
-            watch_path=tmp_path,
-            callback=callback,
-            debounce_ms=100,
-            patterns={".py"}
+            watch_path=tmp_path, callback=callback, debounce_ms=100, patterns={".py"}
         )
 
         test_file = tmp_path / "to_delete.py"
@@ -248,10 +215,7 @@ class TestDebouncedFileWatcherCoverage:
         """Test _execute_debounced_callback with empty pending files (line 189)."""
         callback = AsyncMock()
         watcher = DebouncedFileWatcher(
-            watch_path=tmp_path,
-            callback=callback,
-            debounce_ms=10,
-            patterns={".py"}
+            watch_path=tmp_path, callback=callback, debounce_ms=10, patterns={".py"}
         )
 
         # Call with no pending files
@@ -273,10 +237,7 @@ class TestDebouncedFileWatcherCoverage:
         callback = AsyncMock(side_effect=error_callback)
 
         watcher = DebouncedFileWatcher(
-            watch_path=tmp_path,
-            callback=callback,
-            debounce_ms=50,
-            patterns={".py"}
+            watch_path=tmp_path, callback=callback, debounce_ms=50, patterns={".py"}
         )
 
         test_file = tmp_path / "test.py"
@@ -305,7 +266,7 @@ class TestDebouncedFileWatcherCoverage:
             watch_path=tmp_path,
             callback=sync_callback,
             debounce_ms=50,
-            patterns={".py"}
+            patterns={".py"},
         )
 
         test_file = tmp_path / "test.py"
@@ -328,10 +289,7 @@ class TestFileWatcherServiceCoverage:
     def test_start_already_running(self, tmp_path):
         """Test start when already running (lines 258-259)."""
         callback = MagicMock()
-        service = FileWatcherService(
-            watch_path=tmp_path,
-            callback=callback
-        )
+        service = FileWatcherService(watch_path=tmp_path, callback=callback)
 
         # Start once
         service.start()
@@ -349,10 +307,7 @@ class TestFileWatcherServiceCoverage:
     def test_stop_not_running(self, tmp_path):
         """Test stop when not running (line 268)."""
         callback = MagicMock()
-        service = FileWatcherService(
-            watch_path=tmp_path,
-            callback=callback
-        )
+        service = FileWatcherService(watch_path=tmp_path, callback=callback)
 
         # Service should not be running initially
         assert service.is_running is False
@@ -367,10 +322,7 @@ class TestFileWatcherServiceCoverage:
     async def test_start_async(self, tmp_path):
         """Test start_async method (lines 277-278, 280-282)."""
         callback = AsyncMock()
-        service = FileWatcherService(
-            watch_path=tmp_path,
-            callback=callback
-        )
+        service = FileWatcherService(watch_path=tmp_path, callback=callback)
 
         # Start async and cancel after short time
         task = asyncio.create_task(service.start_async())
@@ -398,10 +350,7 @@ class TestFileWatcherServiceCoverage:
     async def test_start_async_cancellation(self, tmp_path):
         """Test start_async cancellation handling (lines 283-285)."""
         callback = AsyncMock()
-        service = FileWatcherService(
-            watch_path=tmp_path,
-            callback=callback
-        )
+        service = FileWatcherService(watch_path=tmp_path, callback=callback)
 
         # Start async
         task = asyncio.create_task(service.start_async())

@@ -15,9 +15,8 @@ import asyncio
 import time
 import json
 import logging
-import statistics
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Optional
 from dataclasses import dataclass, asdict
 import sys
 
@@ -77,7 +76,9 @@ class PoolBenchmark:
             await self.server.close()
             print("✅ Server closed")
 
-    async def benchmark_retrieve_operations(self, scenario_name: str) -> BenchmarkResult:
+    async def benchmark_retrieve_operations(
+        self, scenario_name: str
+    ) -> BenchmarkResult:
         """Benchmark retrieve operations (most common read operation).
 
         Args:
@@ -143,7 +144,7 @@ class PoolBenchmark:
 
         # Calculate metrics
         if not self.latencies:
-            print(f"⚠️  No successful operations")
+            print("⚠️  No successful operations")
             return None
 
         sorted_latencies = sorted(self.latencies)
@@ -159,22 +160,30 @@ class PoolBenchmark:
             total_duration_sec=total_duration,
             throughput_ops_sec=throughput,
             latencies_ms=sorted_latencies,
-            p50_latency_ms=sorted_latencies[p50_idx] if p50_idx < len(sorted_latencies) else 0,
-            p95_latency_ms=sorted_latencies[p95_idx] if p95_idx < len(sorted_latencies) else 0,
-            p99_latency_ms=sorted_latencies[p99_idx] if p99_idx < len(sorted_latencies) else 0,
+            p50_latency_ms=sorted_latencies[p50_idx]
+            if p50_idx < len(sorted_latencies)
+            else 0,
+            p95_latency_ms=sorted_latencies[p95_idx]
+            if p95_idx < len(sorted_latencies)
+            else 0,
+            p99_latency_ms=sorted_latencies[p99_idx]
+            if p99_idx < len(sorted_latencies)
+            else 0,
             min_latency_ms=min(sorted_latencies),
             max_latency_ms=max(sorted_latencies),
             pool_active_connections=0,  # Would be populated if pool exposes this
-            pool_idle_connections=0,    # Would be populated if pool exposes this
-            pool_total_acquires=0,      # Would be populated if pool exposes this
-            pool_health_failures=0,     # Would be populated if pool exposes this
+            pool_idle_connections=0,  # Would be populated if pool exposes this
+            pool_total_acquires=0,  # Would be populated if pool exposes this
+            pool_health_failures=0,  # Would be populated if pool exposes this
             successful_operations=successful,
             failed_operations=failed,
         )
 
         return result
 
-    async def benchmark_concurrent_operations(self, num_concurrent: int) -> BenchmarkResult:
+    async def benchmark_concurrent_operations(
+        self, num_concurrent: int
+    ) -> BenchmarkResult:
         """Benchmark concurrent operations.
 
         Args:
@@ -202,7 +211,7 @@ class PoolBenchmark:
                 op_start = time.time()
 
                 try:
-                    result = await self.server.retrieve_memories(
+                    await self.server.retrieve_memories(
                         query="test concurrent load",
                         limit=5,
                         min_importance=0.0,
@@ -217,9 +226,7 @@ class PoolBenchmark:
 
         # Run concurrent clients
         try:
-            await asyncio.gather(*[
-                client_workload(i) for i in range(num_concurrent)
-            ])
+            await asyncio.gather(*[client_workload(i) for i in range(num_concurrent)])
         except Exception as e:
             print(f"❌ Error during concurrent benchmark: {e}")
             raise
@@ -228,7 +235,7 @@ class PoolBenchmark:
 
         # Calculate metrics
         if not self.latencies:
-            print(f"⚠️  No successful operations")
+            print("⚠️  No successful operations")
             return None
 
         sorted_latencies = sorted(self.latencies)
@@ -244,9 +251,15 @@ class PoolBenchmark:
             total_duration_sec=total_duration,
             throughput_ops_sec=throughput,
             latencies_ms=sorted_latencies,
-            p50_latency_ms=sorted_latencies[p50_idx] if p50_idx < len(sorted_latencies) else 0,
-            p95_latency_ms=sorted_latencies[p95_idx] if p95_idx < len(sorted_latencies) else 0,
-            p99_latency_ms=sorted_latencies[p99_idx] if p99_idx < len(sorted_latencies) else 0,
+            p50_latency_ms=sorted_latencies[p50_idx]
+            if p50_idx < len(sorted_latencies)
+            else 0,
+            p95_latency_ms=sorted_latencies[p95_idx]
+            if p95_idx < len(sorted_latencies)
+            else 0,
+            p99_latency_ms=sorted_latencies[p99_idx]
+            if p99_idx < len(sorted_latencies)
+            else 0,
             min_latency_ms=min(sorted_latencies),
             max_latency_ms=max(sorted_latencies),
             pool_active_connections=0,
@@ -269,12 +282,14 @@ class PoolBenchmark:
         print(f"Scenario: {result.scenario}")
         print(f"{'=' * 70}")
         print(f"Total Duration:      {result.total_duration_sec:.2f} seconds")
-        print(f"Successful Ops:      {result.successful_operations}/{result.iterations}")
+        print(
+            f"Successful Ops:      {result.successful_operations}/{result.iterations}"
+        )
         print(f"Failed Ops:          {result.failed_operations}")
         print()
         print(f"Throughput:          {result.throughput_ops_sec:,.0f} ops/sec")
         print()
-        print(f"Latency (milliseconds):")
+        print("Latency (milliseconds):")
         print(f"  Min:               {result.min_latency_ms:.2f} ms")
         print(f"  P50 (median):      {result.p50_latency_ms:.2f} ms")
         print(f"  P95:               {result.p95_latency_ms:.2f} ms")
@@ -282,7 +297,9 @@ class PoolBenchmark:
         print(f"  Max:               {result.max_latency_ms:.2f} ms")
         print()
 
-    def save_results(self, results: List[BenchmarkResult], filename: str = "benchmark_results.json"):
+    def save_results(
+        self, results: List[BenchmarkResult], filename: str = "benchmark_results.json"
+    ):
         """Save benchmark results to JSON file."""
         output_path = Path(__file__).parent.parent / "benchmark_results.json"
 
@@ -345,7 +362,9 @@ async def main():
         print("=" * 70)
 
         for result in results:
-            print(f"{result.scenario:40s} {result.throughput_ops_sec:10,.0f} ops/sec | P95: {result.p95_latency_ms:6.2f}ms")
+            print(
+                f"{result.scenario:40s} {result.throughput_ops_sec:10,.0f} ops/sec | P95: {result.p95_latency_ms:6.2f}ms"
+            )
 
         # Save results
         benchmark.save_results(results)

@@ -14,7 +14,7 @@ from src.core.validation import (
     validate_batch_store_requests,
 )
 from src.core.exceptions import ValidationError
-from src.core.models import MemoryCategory, MemoryScope, ContextLevel
+from src.core.models import MemoryCategory, ContextLevel
 
 
 class TestInjectionDetection:
@@ -181,7 +181,10 @@ class TestStoreRequestValidation:
             validate_store_request(payload)
         # Should detect suspicious pattern (either from Pydantic or our validation)
         error_msg = str(exc.value).lower()
-        assert any(keyword in error_msg for keyword in ["security threat", "suspicious pattern", "drop table"])
+        assert any(
+            keyword in error_msg
+            for keyword in ["security threat", "suspicious pattern", "drop table"]
+        )
 
     def test_validate_store_request_sanitizes_content(self):
         """Test content sanitization."""
@@ -215,7 +218,10 @@ class TestStoreRequestValidation:
         with pytest.raises(ValidationError) as exc:
             validate_store_request(payload)
         # Pydantic will reject this before our validation
-        assert ("validation" in str(exc.value).lower() or "maximum" in str(exc.value).lower())
+        assert (
+            "validation" in str(exc.value).lower()
+            or "maximum" in str(exc.value).lower()
+        )
 
     def test_validate_store_request_sets_default_context_level(self):
         """Test default context level."""

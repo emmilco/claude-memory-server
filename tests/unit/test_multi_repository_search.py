@@ -2,7 +2,7 @@
 
 import pytest
 import pytest_asyncio
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 from datetime import datetime, UTC
 
 from src.memory.multi_repository_search import (
@@ -12,7 +12,6 @@ from src.memory.multi_repository_search import (
 )
 from src.memory.repository_registry import (
     RepositoryRegistry,
-    Repository,
     RepositoryType,
     RepositoryStatus,
 )
@@ -24,6 +23,7 @@ from tests.conftest import mock_embedding
 # ============================================================================
 # Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def temp_registry_file(tmp_path):
@@ -165,6 +165,7 @@ async def multi_repo_search(
 # Result Model Tests
 # ============================================================================
 
+
 class TestRepositorySearchResult:
     """Test RepositorySearchResult dataclass."""
 
@@ -257,12 +258,17 @@ class TestMultiRepositorySearchResult:
 # Initialization Tests
 # ============================================================================
 
+
 class TestMultiRepositorySearchInit:
     """Test multi-repository search initialization."""
 
     @pytest.mark.asyncio
     async def test_initialization(
-        self, repository_registry, workspace_manager, mock_store, mock_embedding_generator
+        self,
+        repository_registry,
+        workspace_manager,
+        mock_store,
+        mock_embedding_generator,
     ):
         """Test initializing multi-repository search."""
         searcher = MultiRepositorySearch(
@@ -293,6 +299,7 @@ class TestMultiRepositorySearchInit:
 # ============================================================================
 # Single Repository Search Tests
 # ============================================================================
+
 
 class TestSingleRepositorySearch:
     """Test searching single repositories."""
@@ -347,6 +354,7 @@ class TestSingleRepositorySearch:
 # ============================================================================
 # Multi-Repository Search Tests
 # ============================================================================
+
 
 class TestMultiRepositorySearch:
     """Test searching multiple repositories."""
@@ -462,6 +470,7 @@ class TestMultiRepositorySearch:
 # Workspace Search Tests
 # ============================================================================
 
+
 class TestWorkspaceSearch:
     """Test workspace-scoped search."""
 
@@ -534,6 +543,7 @@ class TestWorkspaceSearch:
 # ============================================================================
 # Dependency-Aware Search Tests
 # ============================================================================
+
 
 class TestDependencyAwareSearch:
     """Test searching with repository dependencies."""
@@ -614,6 +624,7 @@ class TestDependencyAwareSearch:
 # Search Scope Utilities Tests
 # ============================================================================
 
+
 class TestSearchScopeUtilities:
     """Test search scope utility methods."""
 
@@ -628,9 +639,7 @@ class TestSearchScopeUtilities:
         assert len(repo_ids) == 3
 
     @pytest.mark.asyncio
-    async def test_get_search_scope_repositories_by_workspace(
-        self, multi_repo_search
-    ):
+    async def test_get_search_scope_repositories_by_workspace(self, multi_repo_search):
         """Test getting repositories by workspace."""
         repo_ids = await multi_repo_search.get_search_scope_repositories(
             workspace_id="ws-1"

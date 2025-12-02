@@ -29,13 +29,15 @@ class DependencyGraph:
         self.dependents: Dict[str, Set[str]] = defaultdict(set)
 
         # Import details: (source, target) -> list of import info
-        self.import_details: Dict[Tuple[str, str], List[Dict[str, Any]]] = defaultdict(list)
+        self.import_details: Dict[Tuple[str, str], List[Dict[str, Any]]] = defaultdict(
+            list
+        )
 
     def add_file_dependencies(
         self,
         source_file: str,
         imports: List[Dict[str, Any]],
-        project_root: Optional[Path] = None
+        project_root: Optional[Path] = None,
     ) -> None:
         """
         Add dependencies for a file based on its imports.
@@ -54,10 +56,7 @@ class DependencyGraph:
             # Try to resolve module to a file path
             # This is a simplified resolver - could be enhanced
             target_file = self._resolve_module_to_file(
-                module,
-                source_file,
-                is_relative,
-                project_root
+                module, source_file, is_relative, project_root
             )
 
             if target_file:
@@ -68,19 +67,21 @@ class DependencyGraph:
                 self.dependents[target_file].add(source_file)
 
                 # Store import details
-                self.import_details[(source_file, target_file)].append({
-                    "module": module,
-                    "items": imp.get("items", []),
-                    "type": imp.get("type", "import"),
-                    "line": imp.get("line", 0),
-                })
+                self.import_details[(source_file, target_file)].append(
+                    {
+                        "module": module,
+                        "items": imp.get("items", []),
+                        "type": imp.get("type", "import"),
+                        "line": imp.get("line", 0),
+                    }
+                )
 
     def _resolve_module_to_file(
         self,
         module: str,
         source_file: str,
         is_relative: bool,
-        project_root: Optional[Path]
+        project_root: Optional[Path],
     ) -> Optional[str]:
         """
         Resolve a module import to a file path.
@@ -107,10 +108,10 @@ class DependencyGraph:
 
         # Handle relative imports (Python, JS, TS)
         if is_relative:
-            if module.startswith('.'):
+            if module.startswith("."):
                 # Relative import: ./module or ../module
                 # Remove leading dots and convert to path
-                rel_path = module.lstrip('.')
+                rel_path = module.lstrip(".")
                 levels_up = len(module) - len(rel_path) - 1
 
                 # Navigate up the directory tree
@@ -120,18 +121,18 @@ class DependencyGraph:
 
                 # Build target path
                 if rel_path:
-                    target_path = target_dir / rel_path.replace('.', '/')
+                    target_path = target_dir / rel_path.replace(".", "/")
                 else:
                     target_path = target_dir
 
                 # Try common extensions
-                for ext in ['.py', '.js', '.ts', '.tsx', '.jsx']:
+                for ext in [".py", ".js", ".ts", ".tsx", ".jsx"]:
                     file_path = target_path.with_suffix(ext)
                     if file_path.exists() and file_path.is_relative_to(project_root):
                         return str(file_path.resolve())
 
                 # Try as directory with __init__.py or index.js
-                for init_file in ['__init__.py', 'index.js', 'index.ts']:
+                for init_file in ["__init__.py", "index.js", "index.ts"]:
                     file_path = target_path / init_file
                     if file_path.exists() and file_path.is_relative_to(project_root):
                         return str(file_path.resolve())
@@ -233,10 +234,7 @@ class DependencyGraph:
         return visited
 
     def find_path(
-        self,
-        source: str,
-        target: str,
-        max_depth: int = 10
+        self, source: str, target: str, max_depth: int = 10
     ) -> Optional[List[str]]:
         """
         Find import path from source file to target file.
@@ -311,11 +309,7 @@ class DependencyGraph:
 
         return cycles
 
-    def get_import_details(
-        self,
-        source: str,
-        target: str
-    ) -> List[Dict[str, Any]]:
+    def get_import_details(self, source: str, target: str) -> List[Dict[str, Any]]:
         """
         Get detailed import information between two files.
 
@@ -344,14 +338,14 @@ class DependencyGraph:
         most_dependents = sorted(
             [(file, len(deps)) for file, deps in self.dependents.items()],
             key=lambda x: x[1],
-            reverse=True
+            reverse=True,
         )[:10]
 
         # Find files with most dependencies
         most_dependencies = sorted(
             [(file, len(deps)) for file, deps in self.dependencies.items()],
             key=lambda x: x[1],
-            reverse=True
+            reverse=True,
         )[:10]
 
         return {

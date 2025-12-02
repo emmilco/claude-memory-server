@@ -5,11 +5,11 @@ for the memory system, helping identify quality issues and maintenance needs.
 """
 
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List
 from datetime import datetime, UTC
 from dataclasses import dataclass, field
 
-from src.core.models import LifecycleState, MemoryUnit
+from src.core.models import LifecycleState
 from src.store import MemoryStore
 
 logger = logging.getLogger(__name__)
@@ -77,10 +77,10 @@ class HealthScorer:
 
     # Ideal distribution percentages
     IDEAL_DISTRIBUTION = {
-        LifecycleState.ACTIVE: 0.60,    # 60%
-        LifecycleState.RECENT: 0.25,    # 25%
+        LifecycleState.ACTIVE: 0.60,  # 60%
+        LifecycleState.RECENT: 0.25,  # 25%
         LifecycleState.ARCHIVED: 0.10,  # 10%
-        LifecycleState.STALE: 0.05,     # 5%
+        LifecycleState.STALE: 0.05,  # 5%
     }
 
     # Thresholds for recommendations
@@ -116,10 +116,10 @@ class HealthScorer:
 
         # Calculate weighted overall score
         overall = (
-            (100 - noise_ratio * 100) * 0.4 +        # 40% weight
-            (100 - duplicate_rate * 100) * 0.2 +     # 20% weight
-            (100 - contradiction_rate * 100) * 0.2 + # 20% weight
-            distribution_score * 0.2                 # 20% weight
+            (100 - noise_ratio * 100) * 0.4  # 40% weight
+            + (100 - duplicate_rate * 100) * 0.2  # 20% weight
+            + (100 - contradiction_rate * 100) * 0.2  # 20% weight
+            + distribution_score * 0.2  # 20% weight
         )
 
         # Determine grade
@@ -205,16 +205,20 @@ class HealthScorer:
                 batch_end = min(batch_start + PAGINATION_PAGE_SIZE, total_memories)
                 batch = all_memories[batch_start:batch_end]
 
-                logger.debug(f"Processing lifecycle distribution batch {batch_start}-{batch_end}/{total_memories}")
+                logger.debug(
+                    f"Processing lifecycle distribution batch {batch_start}-{batch_end}/{total_memories}"
+                )
 
                 for memory in batch:
                     # Support both dict and object (MemoryUnit) access patterns
-                    if hasattr(memory, 'lifecycle_state'):
+                    if hasattr(memory, "lifecycle_state"):
                         state = memory.lifecycle_state
                     elif isinstance(memory, dict):
-                        state = memory.get('lifecycle_state', LifecycleState.ACTIVE)
+                        state = memory.get("lifecycle_state", LifecycleState.ACTIVE)
                     else:
-                        state = getattr(memory, 'lifecycle_state', LifecycleState.ACTIVE)
+                        state = getattr(
+                            memory, "lifecycle_state", LifecycleState.ACTIVE
+                        )
 
                     if isinstance(state, str):
                         # Convert string to LifecycleState enum
@@ -302,12 +306,12 @@ class HealthScorer:
 
             for memory in all_memories:
                 # Support both dict and object (MemoryUnit) access patterns
-                if hasattr(memory, 'content'):
+                if hasattr(memory, "content"):
                     content = memory.content.strip().lower()
                 elif isinstance(memory, dict):
-                    content = memory.get('content', '').strip().lower()
+                    content = memory.get("content", "").strip().lower()
                 else:
-                    content = getattr(memory, 'content', '').strip().lower()
+                    content = getattr(memory, "content", "").strip().lower()
 
                 if content in content_map:
                     duplicate_count += 1
@@ -482,6 +486,7 @@ class HealthScorer:
             },
             "stale_percentage": (
                 (distribution.get(LifecycleState.STALE, 0) / total * 100)
-                if total > 0 else 0.0
+                if total > 0
+                else 0.0
             ),
         }

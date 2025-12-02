@@ -112,7 +112,7 @@ class TestFileWatcherIndexerIntegration:
             await indexer.index_file(file_path)
 
         # Create file watcher
-        watcher = DebouncedFileWatcher(
+        DebouncedFileWatcher(
             watch_path=temp_dir,
             callback=on_file_change,
             patterns={".py"},
@@ -162,7 +162,7 @@ class TestFileWatcherIndexerIntegration:
         await indexer.index_file(test_file)
 
         initial_store_count = mock_store.batch_store.call_count
-        initial_stored_count = len(mock_store.stored_items)
+        len(mock_store.stored_items)
 
         # Modify file
         test_file.write_text(SAMPLE_PYTHON_V2)
@@ -270,7 +270,9 @@ class TestFileWatcherIndexerIntegration:
         (temp_dir / "file3.py").write_text("def func3():\n    pass")
 
         # Index directory
-        result = await indexer.index_directory(temp_dir, recursive=False, show_progress=False)
+        result = await indexer.index_directory(
+            temp_dir, recursive=False, show_progress=False
+        )
 
         # Verify all files were indexed
         assert result["total_files"] == 3
@@ -310,7 +312,9 @@ class TestFileWatcherIndexerIntegration:
         (subsubdir / "nested.py").write_text("def nested_func():\n    pass")
 
         # Index recursively
-        result = await indexer.index_directory(temp_dir, recursive=True, show_progress=False)
+        result = await indexer.index_directory(
+            temp_dir, recursive=True, show_progress=False
+        )
 
         # Verify all files were found and indexed
         assert result["total_files"] == 3
@@ -408,5 +412,3 @@ class TestFileWatcherIndexerIntegration:
         assert any("valid_func" in item[0] for item in stored)
 
         await indexer.close()
-
-

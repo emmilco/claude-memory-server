@@ -122,14 +122,18 @@ class TestSearchAllProjectsWithConsent:
         assert "No projects have opted in" in result["message"]
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="MultiRepositorySearcher class not available - needs implementation")
+    @pytest.mark.skip(
+        reason="MultiRepositorySearcher class not available - needs implementation"
+    )
     async def test_search_with_opted_in_projects(self, service):
         """Test search across opted-in projects."""
-        with patch("src.memory.multi_repository_search.MultiRepositorySearcher") as MockSearcher:
+        with patch(
+            "src.memory.multi_repository_search.MultiRepositorySearcher"
+        ) as MockSearcher:
             mock_searcher = MagicMock()
-            mock_searcher.search_project = AsyncMock(return_value=[
-                {"file_path": "/test.py", "relevance_score": 0.85}
-            ])
+            mock_searcher.search_project = AsyncMock(
+                return_value=[{"file_path": "/test.py", "relevance_score": 0.85}]
+            )
             MockSearcher.return_value = mock_searcher
 
             result = await service.search_all_projects(
@@ -142,10 +146,14 @@ class TestSearchAllProjectsWithConsent:
             assert "query_time_ms" in result
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="MultiRepositorySearcher class not available - needs implementation")
+    @pytest.mark.skip(
+        reason="MultiRepositorySearcher class not available - needs implementation"
+    )
     async def test_search_increments_stats(self, service):
         """Test search increments statistics."""
-        with patch("src.memory.multi_repository_search.MultiRepositorySearcher") as MockSearcher:
+        with patch(
+            "src.memory.multi_repository_search.MultiRepositorySearcher"
+        ) as MockSearcher:
             mock_searcher = MagicMock()
             mock_searcher.search_project = AsyncMock(return_value=[])
             MockSearcher.return_value = mock_searcher
@@ -154,18 +162,35 @@ class TestSearchAllProjectsWithConsent:
             await service.search_all_projects(query="test")
 
             stats = service.get_stats()
-            assert stats["cross_project_searches"] == initial_stats["cross_project_searches"] + 1
+            assert (
+                stats["cross_project_searches"]
+                == initial_stats["cross_project_searches"] + 1
+            )
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="MultiRepositorySearcher class not available - needs implementation")
+    @pytest.mark.skip(
+        reason="MultiRepositorySearcher class not available - needs implementation"
+    )
     async def test_search_with_file_filter(self, service):
         """Test search with file pattern filter."""
-        with patch("src.memory.multi_repository_search.MultiRepositorySearcher") as MockSearcher:
+        with patch(
+            "src.memory.multi_repository_search.MultiRepositorySearcher"
+        ) as MockSearcher:
             mock_searcher = MagicMock()
-            mock_searcher.search_project = AsyncMock(return_value=[
-                {"file_path": "/auth.py", "relevance_score": 0.9, "language": "python"},
-                {"file_path": "/utils.py", "relevance_score": 0.7, "language": "python"},
-            ])
+            mock_searcher.search_project = AsyncMock(
+                return_value=[
+                    {
+                        "file_path": "/auth.py",
+                        "relevance_score": 0.9,
+                        "language": "python",
+                    },
+                    {
+                        "file_path": "/utils.py",
+                        "relevance_score": 0.7,
+                        "language": "python",
+                    },
+                ]
+            )
             MockSearcher.return_value = mock_searcher
 
             result = await service.search_all_projects(
@@ -177,15 +202,29 @@ class TestSearchAllProjectsWithConsent:
             assert all("auth" in r.get("file_path", "") for r in result["results"])
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="MultiRepositorySearcher class not available - needs implementation")
+    @pytest.mark.skip(
+        reason="MultiRepositorySearcher class not available - needs implementation"
+    )
     async def test_search_with_language_filter(self, service):
         """Test search with language filter."""
-        with patch("src.memory.multi_repository_search.MultiRepositorySearcher") as MockSearcher:
+        with patch(
+            "src.memory.multi_repository_search.MultiRepositorySearcher"
+        ) as MockSearcher:
             mock_searcher = MagicMock()
-            mock_searcher.search_project = AsyncMock(return_value=[
-                {"file_path": "/test.py", "relevance_score": 0.9, "language": "python"},
-                {"file_path": "/test.js", "relevance_score": 0.8, "language": "javascript"},
-            ])
+            mock_searcher.search_project = AsyncMock(
+                return_value=[
+                    {
+                        "file_path": "/test.py",
+                        "relevance_score": 0.9,
+                        "language": "python",
+                    },
+                    {
+                        "file_path": "/test.js",
+                        "relevance_score": 0.8,
+                        "language": "javascript",
+                    },
+                ]
+            )
             MockSearcher.return_value = mock_searcher
 
             result = await service.search_all_projects(
@@ -194,16 +233,24 @@ class TestSearchAllProjectsWithConsent:
             )
 
             # Only Python files should be included
-            assert all(r.get("language", "").lower() == "python" for r in result["results"])
+            assert all(
+                r.get("language", "").lower() == "python" for r in result["results"]
+            )
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="MultiRepositorySearcher class not available - needs implementation")
+    @pytest.mark.skip(
+        reason="MultiRepositorySearcher class not available - needs implementation"
+    )
     async def test_search_handles_project_errors(self, service):
         """Test search continues when individual project fails."""
-        with patch("src.memory.multi_repository_search.MultiRepositorySearcher") as MockSearcher:
+        with patch(
+            "src.memory.multi_repository_search.MultiRepositorySearcher"
+        ) as MockSearcher:
             mock_searcher = MagicMock()
 
-            async def search_side_effect(query, query_embedding, project_name, **kwargs):
+            async def search_side_effect(
+                query, query_embedding, project_name, **kwargs
+            ):
                 if project_name == "project1":
                     raise Exception("Project search failed")
                 return [{"file_path": "/test.py", "relevance_score": 0.8}]
@@ -218,15 +265,21 @@ class TestSearchAllProjectsWithConsent:
             assert "project2" in result["projects_searched"]
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="MultiRepositorySearcher class not available - needs implementation")
+    @pytest.mark.skip(
+        reason="MultiRepositorySearcher class not available - needs implementation"
+    )
     async def test_search_results_sorted_by_relevance(self, service):
         """Test search results are sorted by relevance score."""
-        with patch("src.memory.multi_repository_search.MultiRepositorySearcher") as MockSearcher:
+        with patch(
+            "src.memory.multi_repository_search.MultiRepositorySearcher"
+        ) as MockSearcher:
             mock_searcher = MagicMock()
-            mock_searcher.search_project = AsyncMock(return_value=[
-                {"file_path": "/low.py", "relevance_score": 0.5},
-                {"file_path": "/high.py", "relevance_score": 0.9},
-            ])
+            mock_searcher.search_project = AsyncMock(
+                return_value=[
+                    {"file_path": "/low.py", "relevance_score": 0.5},
+                    {"file_path": "/high.py", "relevance_score": 0.9},
+                ]
+            )
             MockSearcher.return_value = mock_searcher
 
             result = await service.search_all_projects(query="test")
@@ -236,15 +289,21 @@ class TestSearchAllProjectsWithConsent:
                 assert scores == sorted(scores, reverse=True)
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="MultiRepositorySearcher class not available - needs implementation")
+    @pytest.mark.skip(
+        reason="MultiRepositorySearcher class not available - needs implementation"
+    )
     async def test_search_respects_limit(self, service):
         """Test search respects the limit parameter."""
-        with patch("src.memory.multi_repository_search.MultiRepositorySearcher") as MockSearcher:
+        with patch(
+            "src.memory.multi_repository_search.MultiRepositorySearcher"
+        ) as MockSearcher:
             mock_searcher = MagicMock()
-            mock_searcher.search_project = AsyncMock(return_value=[
-                {"file_path": f"/test{i}.py", "relevance_score": 0.9 - i * 0.1}
-                for i in range(10)
-            ])
+            mock_searcher.search_project = AsyncMock(
+                return_value=[
+                    {"file_path": f"/test{i}.py", "relevance_score": 0.9 - i * 0.1}
+                    for i in range(10)
+                ]
+            )
             MockSearcher.return_value = mock_searcher
 
             result = await service.search_all_projects(
@@ -255,14 +314,18 @@ class TestSearchAllProjectsWithConsent:
             assert len(result["results"]) <= 3
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="MultiRepositorySearcher class not available - needs implementation")
+    @pytest.mark.skip(
+        reason="MultiRepositorySearcher class not available - needs implementation"
+    )
     async def test_search_logs_metrics(self, service):
         """Test search logs metrics when collector is available."""
         metrics_collector = MagicMock()
         metrics_collector.log_query = MagicMock()
         service.metrics_collector = metrics_collector
 
-        with patch("src.memory.multi_repository_search.MultiRepositorySearcher") as MockSearcher:
+        with patch(
+            "src.memory.multi_repository_search.MultiRepositorySearcher"
+        ) as MockSearcher:
             mock_searcher = MagicMock()
             mock_searcher.search_project = AsyncMock(return_value=[])
             MockSearcher.return_value = mock_searcher
@@ -464,7 +527,9 @@ class TestConsentManagerIntegration:
         )
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="MultiRepositorySearcher class not available - needs implementation")
+    @pytest.mark.skip(
+        reason="MultiRepositorySearcher class not available - needs implementation"
+    )
     async def test_opt_in_then_search(self, service_with_consent):
         """Test opting in a project then searching."""
         # Opt in
@@ -472,11 +537,17 @@ class TestConsentManagerIntegration:
         service_with_consent.consent.opt_in.assert_called_with("new-project")
 
         # Now configure consent to return the opted-in project
-        service_with_consent.consent.get_opted_in_projects.return_value = ["new-project"]
-        service_with_consent.embedding_generator.generate = AsyncMock(return_value=mock_embedding(value=0.1))
+        service_with_consent.consent.get_opted_in_projects.return_value = [
+            "new-project"
+        ]
+        service_with_consent.embedding_generator.generate = AsyncMock(
+            return_value=mock_embedding(value=0.1)
+        )
 
         # Search should work
-        with patch("src.memory.multi_repository_search.MultiRepositorySearcher") as MockSearcher:
+        with patch(
+            "src.memory.multi_repository_search.MultiRepositorySearcher"
+        ) as MockSearcher:
             mock_searcher = MagicMock()
             mock_searcher.search_project = AsyncMock(return_value=[])
             MockSearcher.return_value = mock_searcher
@@ -489,7 +560,9 @@ class TestConsentManagerIntegration:
         """Test opting out removes project from search."""
         # Initial state: project is opted in
         service_with_consent.consent.get_opted_in_projects.return_value = ["project1"]
-        service_with_consent.embedding_generator.generate = AsyncMock(return_value=mock_embedding(value=0.1))
+        service_with_consent.embedding_generator.generate = AsyncMock(
+            return_value=mock_embedding(value=0.1)
+        )
 
         # Opt out
         await service_with_consent.opt_out_cross_project("project1")
@@ -524,10 +597,14 @@ class TestEdgeCases:
         )
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="MultiRepositorySearcher class not available - needs implementation")
+    @pytest.mark.skip(
+        reason="MultiRepositorySearcher class not available - needs implementation"
+    )
     async def test_empty_query_search(self, service):
         """Test search with empty query."""
-        with patch("src.memory.multi_repository_search.MultiRepositorySearcher") as MockSearcher:
+        with patch(
+            "src.memory.multi_repository_search.MultiRepositorySearcher"
+        ) as MockSearcher:
             mock_searcher = MagicMock()
             mock_searcher.search_project = AsyncMock(return_value=[])
             MockSearcher.return_value = mock_searcher
@@ -543,14 +620,18 @@ class TestEdgeCases:
         service.consent.opt_in.assert_called_with("project-with-dashes_and_underscores")
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="MultiRepositorySearcher class not available - needs implementation")
+    @pytest.mark.skip(
+        reason="MultiRepositorySearcher class not available - needs implementation"
+    )
     async def test_search_with_zero_limit(self, service):
         """Test search with zero limit returns empty."""
-        with patch("src.memory.multi_repository_search.MultiRepositorySearcher") as MockSearcher:
+        with patch(
+            "src.memory.multi_repository_search.MultiRepositorySearcher"
+        ) as MockSearcher:
             mock_searcher = MagicMock()
-            mock_searcher.search_project = AsyncMock(return_value=[
-                {"file_path": "/test.py", "relevance_score": 0.9}
-            ])
+            mock_searcher.search_project = AsyncMock(
+                return_value=[{"file_path": "/test.py", "relevance_score": 0.9}]
+            )
             MockSearcher.return_value = mock_searcher
 
             result = await service.search_all_projects(
@@ -561,10 +642,14 @@ class TestEdgeCases:
             assert len(result["results"]) == 0
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="MultiRepositorySearcher class not available - needs implementation")
+    @pytest.mark.skip(
+        reason="MultiRepositorySearcher class not available - needs implementation"
+    )
     async def test_search_mode_passed_to_searcher(self, service):
         """Test search mode is passed to underlying searcher."""
-        with patch("src.memory.multi_repository_search.MultiRepositorySearcher") as MockSearcher:
+        with patch(
+            "src.memory.multi_repository_search.MultiRepositorySearcher"
+        ) as MockSearcher:
             mock_searcher = MagicMock()
             mock_searcher.search_project = AsyncMock(return_value=[])
             MockSearcher.return_value = mock_searcher

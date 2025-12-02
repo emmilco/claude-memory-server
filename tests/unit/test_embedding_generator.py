@@ -10,7 +10,6 @@ import pytest
 pytestmark = pytest.mark.real_embeddings
 import pytest_asyncio
 import asyncio
-from unittest.mock import Mock, patch, AsyncMock
 import numpy as np
 
 from src.embeddings.generator import EmbeddingGenerator
@@ -71,7 +70,9 @@ class TestEmbeddingGeneratorInitialization:
         """Test that MODELS dict contains expected models."""
         assert "all-MiniLM-L6-v2" in EmbeddingGenerator.MODELS
         assert EmbeddingGenerator.MODELS["all-mpnet-base-v2"] == 768
-        assert EmbeddingGenerator.MODELS["all-MiniLM-L6-v2"] == 384  # Old model still supported
+        assert (
+            EmbeddingGenerator.MODELS["all-MiniLM-L6-v2"] == 384
+        )  # Old model still supported
         assert "all-mpnet-base-v2" in EmbeddingGenerator.MODELS
         assert EmbeddingGenerator.MODELS["all-mpnet-base-v2"] == 768
 
@@ -92,7 +93,9 @@ class TestEmbeddingGeneration:
 
         # Verify embedding is normalized (magnitude should be 1.0)
         magnitude = sum(x * x for x in embedding) ** 0.5
-        assert abs(magnitude - 1.0) < 1e-5, f"Embedding should be normalized, got magnitude {magnitude}"
+        assert (
+            abs(magnitude - 1.0) < 1e-5
+        ), f"Embedding should be normalized, got magnitude {magnitude}"
 
     @pytest.mark.asyncio
     async def test_generate_batch_embeddings(self, generator):
@@ -117,7 +120,9 @@ class TestEmbeddingGeneration:
     async def test_generate_empty_string(self, generator):
         """Test generating embedding for empty string."""
         # Empty string should raise EmbeddingError
-        with pytest.raises(EmbeddingError, match="Cannot generate embedding for empty text"):
+        with pytest.raises(
+            EmbeddingError, match="Cannot generate embedding for empty text"
+        ):
             await generator.generate("")
 
     @pytest.mark.asyncio
@@ -160,7 +165,9 @@ class TestBatchProcessing:
         assert len(embeddings) == 100
         # Verify all are different (at least some variation)
         unique_embeddings = {tuple(emb) for emb in embeddings}
-        assert len(unique_embeddings) > 90, "Embeddings should be unique for different texts"
+        assert (
+            len(unique_embeddings) > 90
+        ), "Embeddings should be unique for different texts"
 
     @pytest.mark.asyncio
     async def test_batch_processing_respects_batch_size(self, config):
@@ -243,7 +250,7 @@ class TestErrorHandling:
                 embedding_model="nonexistent-model-12345",
                 embedding_cache_enabled=False,
             )
-            gen = EmbeddingGenerator(config)
+            EmbeddingGenerator(config)
 
 
 class TestNormalization:
@@ -257,8 +264,9 @@ class TestNormalization:
 
         for i, embedding in enumerate(embeddings):
             magnitude = sum(x * x for x in embedding) ** 0.5
-            assert abs(magnitude - 1.0) < 1e-5, \
-                f"Embedding {i} should be normalized (magnitude 1.0), got {magnitude}"
+            assert (
+                abs(magnitude - 1.0) < 1e-5
+            ), f"Embedding {i} should be normalized (magnitude 1.0), got {magnitude}"
 
     @pytest.mark.asyncio
     async def test_zero_embedding_handling(self, generator):
@@ -319,7 +327,9 @@ class TestSemanticSimilarity:
     """Test that embeddings capture semantic similarity."""
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="Requires real embeddings - mock embeddings are hash-based, not semantic")
+    @pytest.mark.skip(
+        reason="Requires real embeddings - mock embeddings are hash-based, not semantic"
+    )
     async def test_similar_texts_have_similar_embeddings(self, generator):
         """Test that semantically similar texts have similar embeddings.
 
@@ -337,15 +347,20 @@ class TestSemanticSimilarity:
 
         # Calculate cosine similarity
         def cosine_sim(a, b):
-            return sum(x * y for x, y in zip(a, b))  # Already normalized, so no need to divide
+            return sum(
+                x * y for x, y in zip(a, b)
+            )  # Already normalized, so no need to divide
 
         sim_1_2 = cosine_sim(emb1, emb2)
         sim_1_3 = cosine_sim(emb1, emb3)
 
         # Similar sentences should have higher similarity than dissimilar ones
-        assert sim_1_2 > sim_1_3, \
-            f"Similar texts should have higher similarity. Got {sim_1_2} vs {sim_1_3}"
-        assert sim_1_2 > 0.7, f"Similar texts should have high similarity score, got {sim_1_2}"
+        assert (
+            sim_1_2 > sim_1_3
+        ), f"Similar texts should have higher similarity. Got {sim_1_2} vs {sim_1_3}"
+        assert (
+            sim_1_2 > 0.7
+        ), f"Similar texts should have high similarity score, got {sim_1_2}"
 
 
 class TestResourceManagement:
@@ -375,5 +390,3 @@ class TestResourceManagement:
         await gen.close()
         await gen.close()
         await gen.close()
-
-

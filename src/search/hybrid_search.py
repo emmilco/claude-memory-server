@@ -1,7 +1,7 @@
 """Hybrid search combining BM25 keyword and vector semantic search."""
 
 import logging
-from typing import List, Tuple, Dict, Any, Optional
+from typing import List, Tuple, Optional
 from dataclasses import dataclass
 from enum import Enum
 
@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 class FusionMethod(str, Enum):
     """Methods for combining keyword and semantic search results."""
+
     WEIGHTED = "weighted"  # Weighted score combination
     RRF = "rrf"  # Reciprocal Rank Fusion
     CASCADE = "cascade"  # Keyword first, then semantic if needed
@@ -21,6 +22,7 @@ class FusionMethod(str, Enum):
 @dataclass
 class HybridSearchResult:
     """Result from hybrid search with detailed scoring."""
+
     memory: MemoryUnit
     total_score: float
     vector_score: float
@@ -69,9 +71,7 @@ class HybridSearcher:
         self.memory_units: List[MemoryUnit] = []
 
     def index_documents(
-        self,
-        documents: List[str],
-        memory_units: List[MemoryUnit]
+        self, documents: List[str], memory_units: List[MemoryUnit]
     ) -> None:
         """
         Index documents for BM25 search.
@@ -127,7 +127,7 @@ class HybridSearcher:
                     total_score=score,
                     vector_score=score,
                     bm25_score=0.0,
-                    fusion_method=self.fusion_method.value
+                    fusion_method=self.fusion_method.value,
                 )
                 for memory, score in vector_results[:limit]
             ]
@@ -169,21 +169,21 @@ class HybridSearcher:
         vector_scores_norm = self._normalize_scores(
             [score for _, score in vector_results]
         )
-        bm25_scores_norm = self._normalize_scores(
-            [score for _, score in bm25_results]
-        )
+        bm25_scores_norm = self._normalize_scores([score for _, score in bm25_results])
 
         # Build score dictionaries
         vector_score_dict = {
             memory.id: (score_norm, score_raw, rank)
-            for rank, ((memory, score_raw), score_norm)
-            in enumerate(zip(vector_results, vector_scores_norm))
+            for rank, ((memory, score_raw), score_norm) in enumerate(
+                zip(vector_results, vector_scores_norm)
+            )
         }
 
         bm25_score_dict = {
             memory.id: (score_norm, score_raw, rank)
-            for rank, ((memory, score_raw), score_norm)
-            in enumerate(zip(bm25_results, bm25_scores_norm))
+            for rank, ((memory, score_raw), score_norm) in enumerate(
+                zip(bm25_results, bm25_scores_norm)
+            )
         }
 
         # Combine scores for all unique memories
@@ -192,8 +192,12 @@ class HybridSearcher:
 
         for memory_id in all_memory_ids:
             # Get scores (default to 0 if not present)
-            vec_norm, vec_raw, vec_rank = vector_score_dict.get(memory_id, (0.0, 0.0, None))
-            bm25_norm, bm25_raw, bm25_rank = bm25_score_dict.get(memory_id, (0.0, 0.0, None))
+            vec_norm, vec_raw, vec_rank = vector_score_dict.get(
+                memory_id, (0.0, 0.0, None)
+            )
+            bm25_norm, bm25_raw, bm25_rank = bm25_score_dict.get(
+                memory_id, (0.0, 0.0, None)
+            )
 
             # Combined score
             total_score = self.alpha * vec_norm + (1 - self.alpha) * bm25_norm
@@ -201,19 +205,21 @@ class HybridSearcher:
             # Find memory unit
             memory = next(
                 (m for m, _ in vector_results if m.id == memory_id),
-                next((m for m, _ in bm25_results if m.id == memory_id), None)
+                next((m for m, _ in bm25_results if m.id == memory_id), None),
             )
 
             if memory:
-                combined_results.append(HybridSearchResult(
-                    memory=memory,
-                    total_score=total_score,
-                    vector_score=vec_raw,
-                    bm25_score=bm25_raw,
-                    rank_vector=vec_rank,
-                    rank_bm25=bm25_rank,
-                    fusion_method="weighted"
-                ))
+                combined_results.append(
+                    HybridSearchResult(
+                        memory=memory,
+                        total_score=total_score,
+                        vector_score=vec_raw,
+                        bm25_score=bm25_raw,
+                        rank_vector=vec_rank,
+                        rank_bm25=bm25_rank,
+                        fusion_method="weighted",
+                    )
+                )
 
         # Sort by combined score
         combined_results.sort(key=lambda x: x.total_score, reverse=True)
@@ -253,7 +259,9 @@ class HybridSearcher:
         where k is typically 60
         """
         # Build rank dictionaries
-        vector_ranks = {memory.id: rank for rank, (memory, _) in enumerate(vector_results)}
+        vector_ranks = {
+            memory.id: rank for rank, (memory, _) in enumerate(vector_results)
+        }
         bm25_ranks = {memory.id: rank for rank, (memory, _) in enumerate(bm25_results)}
 
         # Get all unique memories
@@ -282,15 +290,17 @@ class HybridSearcher:
             memory = vector_memory or bm25_memory
 
             if memory:
-                combined_results.append(HybridSearchResult(
-                    memory=memory,
-                    total_score=rrf_score,
-                    vector_score=vec_score,
-                    bm25_score=bm25_score,
-                    rank_vector=vector_ranks.get(memory_id),
-                    rank_bm25=bm25_ranks.get(memory_id),
-                    fusion_method="rrf"
-                ))
+                combined_results.append(
+                    HybridSearchResult(
+                        memory=memory,
+                        total_score=rrf_score,
+                        vector_score=vec_score,
+                        bm25_score=bm25_score,
+                        rank_vector=vector_ranks.get(memory_id),
+                        rank_bm25=bm25_ranks.get(memory_id),
+                        fusion_method="rrf",
+                    )
+                )
 
         # Sort by RRF score
         combined_results.sort(key=lambda x: x.total_score, reverse=True)
@@ -315,26 +325,30 @@ class HybridSearcher:
 
         # Add BM25 results with non-zero scores first
         bm25_with_scores = [
-            (memory, score) for memory, score in bm25_results
-            if score > 0
+            (memory, score) for memory, score in bm25_results if score > 0
         ]
 
         for rank, (memory, score) in enumerate(bm25_with_scores[:limit]):
-            results.append(HybridSearchResult(
-                memory=memory,
-                total_score=score,
-                vector_score=0.0,  # Will update if also in vector results
-                bm25_score=score,
-                rank_bm25=rank,
-                fusion_method="cascade"
-            ))
+            results.append(
+                HybridSearchResult(
+                    memory=memory,
+                    total_score=score,
+                    vector_score=0.0,  # Will update if also in vector results
+                    bm25_score=score,
+                    rank_bm25=rank,
+                    fusion_method="cascade",
+                )
+            )
             seen_ids.add(memory.id)
 
         # Log results included and backfilled
         logger.debug(f"Cascade fusion: included {len(results)} BM25 results")
 
         # Update vector_score for BM25 results that also appear in vector results
-        vector_scores_by_id = {memory.id: (score, rank) for rank, (memory, score) in enumerate(vector_results)}
+        vector_scores_by_id = {
+            memory.id: (score, rank)
+            for rank, (memory, score) in enumerate(vector_results)
+        }
         for result in results:
             if result.memory.id in vector_scores_by_id:
                 vector_score, rank_vector = vector_scores_by_id[result.memory.id]
@@ -347,19 +361,23 @@ class HybridSearcher:
                 break
 
             if memory.id not in seen_ids:
-                results.append(HybridSearchResult(
-                    memory=memory,
-                    total_score=score,
-                    vector_score=score,
-                    bm25_score=0.0,
-                    rank_vector=rank,
-                    fusion_method="cascade"
-                ))
+                results.append(
+                    HybridSearchResult(
+                        memory=memory,
+                        total_score=score,
+                        vector_score=score,
+                        bm25_score=0.0,
+                        rank_vector=rank,
+                        fusion_method="cascade",
+                    )
+                )
                 seen_ids.add(memory.id)
 
         num_bm25_results = len([r for r in results if r.bm25_score > 0])
         num_backfilled = len(results) - num_bm25_results
-        logger.debug(f"Cascade fusion: included {num_bm25_results} BM25 results, backfilled with {num_backfilled} vector results")
+        logger.debug(
+            f"Cascade fusion: included {num_bm25_results} BM25 results, backfilled with {num_backfilled} vector results"
+        )
 
         return results[:limit]
 
@@ -389,7 +407,4 @@ class HybridSearcher:
             return [1.0] * len(scores)
 
         # Min-max normalization
-        return [
-            (score - min_score) / (max_score - min_score)
-            for score in scores
-        ]
+        return [(score - min_score) / (max_score - min_score) for score in scores]

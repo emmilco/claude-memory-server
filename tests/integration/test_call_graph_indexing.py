@@ -7,12 +7,8 @@ normal code indexing operations.
 
 import pytest
 import pytest_asyncio
-from pathlib import Path
-import tempfile
-import shutil
 
 from src.memory.incremental_indexer import IncrementalIndexer
-from src.store.call_graph_store import QdrantCallGraphStore
 from src.config import get_config
 
 
@@ -20,10 +16,7 @@ from src.config import get_config
 async def indexer():
     """Create incremental indexer for tests."""
     config = get_config()
-    indexer = IncrementalIndexer(
-        config=config,
-        project_name="test_call_graph_indexing"
-    )
+    indexer = IncrementalIndexer(config=config, project_name="test_call_graph_indexing")
     await indexer.initialize()
     yield indexer
     # Cleanup
@@ -160,7 +153,7 @@ async def test_reindexing_updates_call_graph(indexer, temp_project):
 
     # Index initially
     result1 = await indexer.index_file(calc_file)
-    calls_count_1 = result1.get("call_sites_extracted", 0)
+    result1.get("call_sites_extracted", 0)
 
     # Modify file to add more function calls
     calc_file.write_text("""

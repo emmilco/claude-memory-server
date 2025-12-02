@@ -1,7 +1,7 @@
 """Tests for dependency graph visualization module (src/graph/dependency_graph.py)."""
 
 import pytest
-from src.graph import DependencyGraph, GraphNode, GraphEdge, CircularDependency, NodeColor
+from src.graph import DependencyGraph, GraphNode, GraphEdge, CircularDependency
 
 
 class TestGraphNode:
@@ -350,7 +350,9 @@ class TestGraphFiltering:
         """Test filtering by wildcard pattern."""
         graph = DependencyGraph()
         graph.add_node(GraphNode(file_path="/project/src/main.py", language="python"))
-        graph.add_node(GraphNode(file_path="/project/tests/test_main.py", language="python"))
+        graph.add_node(
+            GraphNode(file_path="/project/tests/test_main.py", language="python")
+        )
         graph.add_node(GraphNode(file_path="/project/README.md", language="markdown"))
 
         filtered = graph.filter_by_pattern("/project/src/*")
@@ -390,7 +392,9 @@ class TestGraphFiltering:
         """Test filtering by Python language."""
         graph = DependencyGraph()
         graph.add_node(GraphNode(file_path="/a.py", language="python"))
-        graph.add_node(GraphNode(file_path="/b.py", language="Python"))  # Different case
+        graph.add_node(
+            GraphNode(file_path="/b.py", language="Python")
+        )  # Different case
         graph.add_node(GraphNode(file_path="/c.js", language="javascript"))
 
         filtered = graph.filter_by_language("python")

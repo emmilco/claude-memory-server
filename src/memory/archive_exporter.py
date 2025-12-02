@@ -1,6 +1,5 @@
 """Archive export functionality for portable project archives."""
 
-import json
 import logging
 import tarfile
 import tempfile
@@ -81,7 +80,9 @@ class ArchiveExporter:
                 }
 
             # Create portable export archive
-            with tarfile.open(output_path, "w:gz", compresslevel=self.compression_level) as tar:
+            with tarfile.open(
+                output_path, "w:gz", compresslevel=self.compression_level
+            ) as tar:
                 # Add the compressed index archive
                 tar.add(source_archive, arcname=f"{project_name}/archive.tar.gz")
 
@@ -92,7 +93,9 @@ class ArchiveExporter:
                 # Add README if requested
                 if include_readme:
                     readme_content = self._generate_readme(project_name, archive_info)
-                    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as tmp:
+                    with tempfile.NamedTemporaryFile(
+                        mode="w", delete=False, suffix=".txt"
+                    ) as tmp:
                         tmp.write(readme_content)
                         tmp_path = tmp.name
 
@@ -104,7 +107,9 @@ class ArchiveExporter:
             # Get export file size
             export_size_mb = output_path.stat().st_size / (1024 * 1024)
 
-            logger.info(f"Exported archive for {project_name} to {output_path} ({export_size_mb:.2f} MB)")
+            logger.info(
+                f"Exported archive for {project_name} to {output_path} ({export_size_mb:.2f} MB)"
+            )
 
             return {
                 "success": True,
@@ -147,49 +152,57 @@ class ArchiveExporter:
         # Statistics
         stats = archive_info.get("statistics", {})
         if stats:
-            lines.extend([
-                "## Statistics",
-                "",
-                f"- Total Files: {stats.get('total_files', 'N/A')}",
-                f"- Total Semantic Units: {stats.get('total_semantic_units', 'N/A')}",
-                f"- Total Memories: {stats.get('total_memories', 'N/A')}",
-                "",
-            ])
+            lines.extend(
+                [
+                    "## Statistics",
+                    "",
+                    f"- Total Files: {stats.get('total_files', 'N/A')}",
+                    f"- Total Semantic Units: {stats.get('total_semantic_units', 'N/A')}",
+                    f"- Total Memories: {stats.get('total_memories', 'N/A')}",
+                    "",
+                ]
+            )
 
         # Compression info
         comp_info = archive_info.get("compression_info", {})
         if comp_info:
-            lines.extend([
-                "## Compression",
-                "",
-                f"- Original Size: {comp_info.get('original_size_mb', 'N/A')} MB",
-                f"- Compressed Size: {comp_info.get('compressed_size_mb', 'N/A')} MB",
-                f"- Compression Ratio: {comp_info.get('compression_ratio', 'N/A')}",
-                f"- Savings: {comp_info.get('savings_percent', 'N/A')}%",
-                "",
-            ])
+            lines.extend(
+                [
+                    "## Compression",
+                    "",
+                    f"- Original Size: {comp_info.get('original_size_mb', 'N/A')} MB",
+                    f"- Compressed Size: {comp_info.get('compressed_size_mb', 'N/A')} MB",
+                    f"- Compression Ratio: {comp_info.get('compression_ratio', 'N/A')}",
+                    f"- Savings: {comp_info.get('savings_percent', 'N/A')}%",
+                    "",
+                ]
+            )
 
         # Last activity
         last_activity = archive_info.get("last_activity", {})
         if last_activity:
-            lines.extend([
-                "## Last Activity",
-                "",
-                f"- Date: {last_activity.get('date', 'N/A')}",
-                f"- Days Inactive: {last_activity.get('days_inactive', 'N/A')}",
-                f"- Searches: {last_activity.get('searches_count', 'N/A')}",
-                f"- Index Updates: {last_activity.get('index_updates_count', 'N/A')}",
-                "",
-            ])
+            lines.extend(
+                [
+                    "## Last Activity",
+                    "",
+                    f"- Date: {last_activity.get('date', 'N/A')}",
+                    f"- Days Inactive: {last_activity.get('days_inactive', 'N/A')}",
+                    f"- Searches: {last_activity.get('searches_count', 'N/A')}",
+                    f"- Index Updates: {last_activity.get('index_updates_count', 'N/A')}",
+                    "",
+                ]
+            )
 
         # Restore info
         restore_info = archive_info.get("restore_info", {})
         if restore_info:
-            lines.extend([
-                "## Restore Information",
-                "",
-                f"- Estimated Restore Time: {restore_info.get('estimated_restore_time_seconds', 'N/A')} seconds",
-            ])
+            lines.extend(
+                [
+                    "## Restore Information",
+                    "",
+                    f"- Estimated Restore Time: {restore_info.get('estimated_restore_time_seconds', 'N/A')} seconds",
+                ]
+            )
 
             warnings = restore_info.get("warnings", [])
             if warnings:
@@ -200,30 +213,32 @@ class ArchiveExporter:
             lines.append("")
 
         # Import instructions
-        lines.extend([
-            "## How to Import",
-            "",
-            "To import this archive into Claude Memory RAG:",
-            "",
-            "```bash",
-            "# Using CLI",
-            f"python -m src.cli archival import {project_name}_archive_*.tar.gz",
-            "",
-            "# Or specify custom project name",
-            f"python -m src.cli archival import {project_name}_archive_*.tar.gz --name my-project",
-            "```",
-            "",
-            "## Contents",
-            "",
-            "- `archive.tar.gz` - Compressed project index and embedding cache",
-            "- `manifest.json` - Archive metadata and statistics",
-            "- `README.txt` - This file",
-            "",
-            "---",
-            "",
-            "Generated by Claude Memory RAG Server",
-            f"Export Date: {datetime.now(UTC).isoformat()}",
-        ])
+        lines.extend(
+            [
+                "## How to Import",
+                "",
+                "To import this archive into Claude Memory RAG:",
+                "",
+                "```bash",
+                "# Using CLI",
+                f"python -m src.cli archival import {project_name}_archive_*.tar.gz",
+                "",
+                "# Or specify custom project name",
+                f"python -m src.cli archival import {project_name}_archive_*.tar.gz --name my-project",
+                "```",
+                "",
+                "## Contents",
+                "",
+                "- `archive.tar.gz` - Compressed project index and embedding cache",
+                "- `manifest.json` - Archive metadata and statistics",
+                "- `README.txt` - This file",
+                "",
+                "---",
+                "",
+                "Generated by Claude Memory RAG Server",
+                f"Export Date: {datetime.now(UTC).isoformat()}",
+            ]
+        )
 
         return "\n".join(lines)
 
@@ -244,12 +259,16 @@ class ArchiveExporter:
                 archive_info = self.compressor.get_archive_info(project_name)
                 if archive_info:
                     size_mb = archive_info.get("archive_file_size_mb", 0)
-                    exportable.append({
-                        "project_name": project_name,
-                        "archived_at": archive_info.get("archived_at"),
-                        "size_mb": size_mb,
-                        "compression_ratio": archive_info.get("compression_info", {}).get("compression_ratio", 0),
-                    })
+                    exportable.append(
+                        {
+                            "project_name": project_name,
+                            "archived_at": archive_info.get("archived_at"),
+                            "size_mb": size_mb,
+                            "compression_ratio": archive_info.get(
+                                "compression_info", {}
+                            ).get("compression_ratio", 0),
+                        }
+                    )
                     total_size_mb += size_mb
 
             return {

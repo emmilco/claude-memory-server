@@ -16,7 +16,6 @@ from src.analysis.quality_analyzer import (
     QualitySeverity,
     QualityCategory,
 )
-from src.analysis.complexity_analyzer import ComplexityAnalyzer, ComplexityMetrics
 
 
 class TestQualityAnalyzer:
@@ -195,7 +194,9 @@ def complex_func(a, b, c, d, e, f):
         assert metrics.line_count <= 10
         assert metrics.maintainability_index >= 80
         assert metrics.duplication_score == 0.0
-        assert len(metrics.quality_flags) == 0 or "missing_docs" in metrics.quality_flags
+        assert (
+            len(metrics.quality_flags) == 0 or "missing_docs" in metrics.quality_flags
+        )
 
     def test_calculate_quality_metrics_complex(self, analyzer, complex_code_unit):
         """Test quality metrics for complex code."""
@@ -204,7 +205,10 @@ def complex_func(a, b, c, d, e, f):
             duplication_score=0.0,
         )
         assert metrics.cyclomatic_complexity > 10
-        assert "high_complexity" in metrics.quality_flags or "critical_complexity" in metrics.quality_flags
+        assert (
+            "high_complexity" in metrics.quality_flags
+            or "critical_complexity" in metrics.quality_flags
+        )
         assert metrics.maintainability_index < 80
 
     def test_quality_flags_high_complexity(self, analyzer, complex_code_unit):
@@ -281,7 +285,8 @@ def complex_func(a, b, c, d, e, f):
         )
         hotspots = analyzer.analyze_for_hotspots(code_unit, quality_metrics)
         assert any(
-            h.category == QualityCategory.COMPLEXITY and h.severity == QualitySeverity.CRITICAL
+            h.category == QualityCategory.COMPLEXITY
+            and h.severity == QualitySeverity.CRITICAL
             for h in hotspots
         )
 

@@ -8,11 +8,11 @@ full implementation of the dependency graph visualization feature.
 import pytest
 
 # Skip all tests - FEAT-048 get_dependency_graph not implemented
-pytestmark = pytest.mark.skip(reason="FEAT-048 get_dependency_graph() method not implemented")
+pytestmark = pytest.mark.skip(
+    reason="FEAT-048 get_dependency_graph() method not implemented"
+)
 import pytest_asyncio
 import json
-from pathlib import Path
-import uuid
 
 from src.store.qdrant_store import QdrantMemoryStore
 from src.core.server import MemoryRAGServer
@@ -487,7 +487,9 @@ class TestMetadataInclusion:
                 metadata_found = True
                 break
         # At least some metadata should be present when include_metadata=True
-        assert metadata_found, "Expected at least some metadata in nodes when include_metadata=True"
+        assert (
+            metadata_found
+        ), "Expected at least some metadata in nodes when include_metadata=True"
 
     @pytest.mark.asyncio
     async def test_include_metadata_false(self, server_with_graph):

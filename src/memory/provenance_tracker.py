@@ -6,7 +6,6 @@ from typing import Dict, Any, Optional
 
 from src.core.models import MemoryProvenance, ProvenanceSource, MemoryUnit
 from src.store.base import MemoryStore
-from src.core.exceptions import ValidationError
 from src.config import DEFAULT_EMBEDDING_DIM
 
 logger = logging.getLogger(__name__)
@@ -34,10 +33,7 @@ class ProvenanceTracker:
         logger.info("ProvenanceTracker initialized")
 
     async def capture_provenance(
-        self,
-        content: str,
-        source: ProvenanceSource,
-        context: Dict[str, Any]
+        self, content: str, source: ProvenanceSource, context: Dict[str, Any]
     ) -> MemoryProvenance:
         """
         Capture provenance metadata for a new memory.
@@ -69,7 +65,7 @@ class ProvenanceTracker:
                 verified=False,
                 conversation_id=conversation_id,
                 file_context=file_context,
-                notes=notes
+                notes=notes,
             )
 
             logger.debug(
@@ -84,9 +80,7 @@ class ProvenanceTracker:
             return MemoryProvenance()
 
     def _determine_created_by(
-        self,
-        source: ProvenanceSource,
-        context: Dict[str, Any]
+        self, source: ProvenanceSource, context: Dict[str, Any]
     ) -> str:
         """
         Determine the created_by value based on source and context.
@@ -152,11 +146,14 @@ class ProvenanceTracker:
                 return
 
             # Update provenance
-            memory.provenance.last_confirmed = None  # Don't update confirmed, just accessed
+            memory.provenance.last_confirmed = (
+                None  # Don't update confirmed, just accessed
+            )
 
             # The store layer should update last_accessed automatically,
             # but we can also update it explicitly if needed
             from src.embeddings.generator import EmbeddingGenerator
+
             embedding_gen = EmbeddingGenerator()
             embedding = await embedding_gen.generate(memory.content)
 
@@ -176,7 +173,7 @@ class ProvenanceTracker:
                     "created_at": memory.created_at,
                     "last_accessed": datetime.now(UTC),
                     "provenance": memory.provenance.model_dump(),
-                }
+                },
             )
 
             logger.debug(f"Updated access time for memory: {memory_id}")
@@ -184,7 +181,9 @@ class ProvenanceTracker:
         except Exception as e:
             logger.error(f"Error updating access time: {e}")
 
-    async def verify_memory(self, memory_id: str, verified: bool, user_notes: Optional[str] = None) -> bool:
+    async def verify_memory(
+        self, memory_id: str, verified: bool, user_notes: Optional[str] = None
+    ) -> bool:
         """
         Mark memory as verified by user.
 
@@ -209,7 +208,9 @@ class ProvenanceTracker:
 
             # Boost confidence if verified
             if verified:
-                memory.provenance.confidence = min(1.0, memory.provenance.confidence + 0.15)
+                memory.provenance.confidence = min(
+                    1.0, memory.provenance.confidence + 0.15
+                )
 
             # Add notes if provided
             if user_notes:
@@ -218,6 +219,7 @@ class ProvenanceTracker:
 
             # Store updated memory
             from src.embeddings.generator import EmbeddingGenerator
+
             embedding_gen = EmbeddingGenerator()
             embedding = await embedding_gen.generate(memory.content)
 
@@ -235,7 +237,7 @@ class ProvenanceTracker:
                     "metadata": memory.metadata,
                     "created_at": memory.created_at,
                     "provenance": memory.provenance.model_dump(),
-                }
+                },
             )
 
             logger.info(
@@ -282,7 +284,9 @@ class ProvenanceTracker:
 
             # Last confirmation factor
             if memory.provenance.last_confirmed:
-                days_since_confirmed = (datetime.now(UTC) - memory.provenance.last_confirmed).days
+                days_since_confirmed = (
+                    datetime.now(UTC) - memory.provenance.last_confirmed
+                ).days
                 if days_since_confirmed < 30:
                     confidence = min(1.0, confidence + 0.1)  # Recent confirmation bonus
 
@@ -301,9 +305,7 @@ class ProvenanceTracker:
             return memory.provenance.confidence
 
     async def get_low_confidence_memories(
-        self,
-        threshold: float = 0.6,
-        limit: int = 50
+        self, threshold: float = 0.6, limit: int = 50
     ) -> list[MemoryUnit]:
         """
         Get memories with low confidence scores for review.
@@ -317,11 +319,8 @@ class ProvenanceTracker:
         """
         try:
             # Get all memories (this is simplified - in production, we'd want better filtering)
-            from src.core.models import SearchFilters
             all_memories = await self.store.retrieve(
-                query_embedding=[0.0] * DEFAULT_EMBEDDING_DIM,
-                filters=None,
-                limit=1000
+                query_embedding=[0.0] * DEFAULT_EMBEDDING_DIM, filters=None, limit=1000
             )
 
             # Filter for low confidence
@@ -341,9 +340,7 @@ class ProvenanceTracker:
             return []
 
     async def get_unverified_memories(
-        self,
-        days_old: int = 90,
-        limit: int = 50
+        self, days_old: int = 90, limit: int = 50
     ) -> list[MemoryUnit]:
         """
         Get old unverified memories that need review.
@@ -358,9 +355,7 @@ class ProvenanceTracker:
         try:
             # Get all memories
             all_memories = await self.store.retrieve(
-                query_embedding=[0.0] * DEFAULT_EMBEDDING_DIM,
-                filters=None,
-                limit=1000
+                query_embedding=[0.0] * DEFAULT_EMBEDDING_DIM, filters=None, limit=1000
             )
 
             # Filter for unverified and old

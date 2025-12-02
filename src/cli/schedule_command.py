@@ -2,8 +2,6 @@
 
 import asyncio
 import logging
-from pathlib import Path
-from typing import Optional
 import sys
 
 from rich.console import Console
@@ -154,7 +152,10 @@ async def schedule_status() -> int:
         table.add_column("Value", style="white")
 
         status_emoji = "✅" if schedule_config.enabled else "❌"
-        table.add_row("Status", f"{status_emoji} {'Enabled' if schedule_config.enabled else 'Disabled'}")
+        table.add_row(
+            "Status",
+            f"{status_emoji} {'Enabled' if schedule_config.enabled else 'Disabled'}",
+        )
         table.add_row("Frequency", schedule_config.frequency)
         table.add_row("Time", schedule_config.time)
         table.add_row("Retention", f"{schedule_config.retention_days} days")
@@ -200,7 +201,9 @@ async def schedule_test() -> int:
         schedule_config_path = config.data_dir / "backup_schedule.json"
 
         if not schedule_config_path.exists():
-            console.print("\n[bold red]Error:[/bold red] No backup schedule configured.\n")
+            console.print(
+                "\n[bold red]Error:[/bold red] No backup schedule configured.\n"
+            )
             console.print("Run [cyan]schedule enable[/cyan] first.\n")
             return 1
 

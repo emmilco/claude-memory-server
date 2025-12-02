@@ -3,7 +3,13 @@
 import logging
 from pathlib import Path
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
+from rich.progress import (
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    BarColumn,
+    TimeElapsedColumn,
+)
 from rich.panel import Panel
 from rich.table import Table
 
@@ -118,7 +124,9 @@ class GitIndexCommand:
 
                 # Store file changes
                 if file_changes_dicts:
-                    changes_stored = await store.store_git_file_changes(file_changes_dicts)
+                    changes_stored = await store.store_git_file_changes(
+                        file_changes_dicts
+                    )
                 else:
                     changes_stored = 0
 
@@ -147,12 +155,14 @@ class GitIndexCommand:
                     "Check logs for details.[/yellow]"
                 )
 
-            console.print("\n[bold green]✓ Git history indexed successfully![/bold green]")
-
-        except ImportError as e:
             console.print(
-                f"[bold red]✗ Error:[/bold red] GitPython not installed.\n"
-                f"Install with: pip install GitPython>=3.1.40"
+                "\n[bold green]✓ Git history indexed successfully![/bold green]"
+            )
+
+        except ImportError:
+            console.print(
+                "[bold red]✗ Error:[/bold red] GitPython not installed.\n"
+                "Install with: pip install GitPython>=3.1.40"
             )
             raise
 

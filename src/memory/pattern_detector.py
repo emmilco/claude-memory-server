@@ -6,7 +6,7 @@ the user would benefit from relevant code or memory context.
 
 import re
 import logging
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional
 from dataclasses import dataclass
 from enum import Enum
 
@@ -236,9 +236,7 @@ class PatternDetector:
             search_strategy=search_strategy,
         )
 
-    def _extract_entities(
-        self, message: str, pattern_type: PatternType
-    ) -> List[str]:
+    def _extract_entities(self, message: str, pattern_type: PatternType) -> List[str]:
         """
         Extract relevant entities from the message.
 
@@ -274,7 +272,9 @@ class PatternDetector:
 
         # Deduplicate and clean (preserve order using dict)
         cleaned = [e.strip().lower() for e in entities if e.strip()]
-        entities = list(dict.fromkeys(cleaned))  # Preserves insertion order (Python 3.7+)
+        entities = list(
+            dict.fromkeys(cleaned)
+        )  # Preserves insertion order (Python 3.7+)
 
         return entities[:10]  # Limit to top 10 entities
 
@@ -382,10 +382,12 @@ class PatternDetector:
         explanation = f"Detected {len(patterns)} pattern(s):\n\n"
 
         for i, pattern in enumerate(patterns, 1):
-            explanation += f"{i}. {pattern.pattern_type.value.replace('_', ' ').title()}\n"
+            explanation += (
+                f"{i}. {pattern.pattern_type.value.replace('_', ' ').title()}\n"
+            )
             explanation += f"   Confidence: {pattern.confidence:.2%}\n"
-            explanation += f"   Trigger: \"{pattern.trigger_text}\"\n"
-            explanation += f"   Search query: \"{pattern.search_query}\"\n"
+            explanation += f'   Trigger: "{pattern.trigger_text}"\n'
+            explanation += f'   Search query: "{pattern.search_query}"\n'
             explanation += f"   Strategy: {pattern.search_strategy}\n"
             if pattern.entities:
                 explanation += f"   Entities: {', '.join(pattern.entities[:5])}\n"

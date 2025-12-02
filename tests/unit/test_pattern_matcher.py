@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import Mock, AsyncMock
 
-from src.review.pattern_matcher import PatternMatcher, PatternMatch
+from src.review.pattern_matcher import PatternMatcher
 from src.review.patterns import CodeSmellPattern
 from tests.conftest import mock_embedding
 
@@ -12,7 +12,9 @@ from tests.conftest import mock_embedding
 def mock_embedding_generator():
     """Mock embedding generator."""
     generator = Mock()
-    generator.generate_embedding = AsyncMock(return_value=mock_embedding(value=0.1))  # Mock embedding (768-dim)
+    generator.generate_embedding = AsyncMock(
+        return_value=mock_embedding(value=0.1)
+    )  # Mock embedding (768-dim)
     return generator
 
 
@@ -35,7 +37,9 @@ class TestPatternMatcher:
     """Test pattern matching functionality."""
 
     @pytest.mark.asyncio
-    async def test_find_matches_with_similar_code(self, mock_embedding_generator, test_pattern):
+    async def test_find_matches_with_similar_code(
+        self, mock_embedding_generator, test_pattern
+    ):
         """Test finding matches with similar code."""
         matcher = PatternMatcher(mock_embedding_generator)
 
@@ -59,7 +63,9 @@ class TestPatternMatcher:
         assert matches[0].similarity_score > 0.75
 
     @pytest.mark.asyncio
-    async def test_find_matches_filters_by_language(self, mock_embedding_generator, test_pattern):
+    async def test_find_matches_filters_by_language(
+        self, mock_embedding_generator, test_pattern
+    ):
         """Test that patterns are filtered by language."""
         matcher = PatternMatcher(mock_embedding_generator)
 
@@ -74,7 +80,9 @@ class TestPatternMatcher:
         assert len(matches) == 0
 
     @pytest.mark.asyncio
-    async def test_find_matches_applies_threshold(self, mock_embedding_generator, test_pattern):
+    async def test_find_matches_applies_threshold(
+        self, mock_embedding_generator, test_pattern
+    ):
         """Test that similarity threshold is applied correctly."""
         matcher = PatternMatcher(mock_embedding_generator)
 
@@ -95,7 +103,9 @@ class TestPatternMatcher:
             threshold=0.80,  # High threshold
         )
 
-        assert len(matches) == 0  # Should not match due to low similarity (orthogonal = 0)
+        assert (
+            len(matches) == 0
+        )  # Should not match due to low similarity (orthogonal = 0)
 
     @pytest.mark.asyncio
     async def test_find_matches_sorts_by_similarity(self, mock_embedding_generator):
@@ -177,7 +187,9 @@ class TestPatternMatcher:
         assert matches[0].similarity_score >= 0.90
 
     @pytest.mark.asyncio
-    async def test_cache_pattern_embeddings(self, mock_embedding_generator, test_pattern):
+    async def test_cache_pattern_embeddings(
+        self, mock_embedding_generator, test_pattern
+    ):
         """Test that pattern embeddings are cached."""
         matcher = PatternMatcher(mock_embedding_generator)
 

@@ -114,7 +114,7 @@ def delete_collection(name: str):
     if click.confirm("Are you sure?"):
         try:
             manager.delete_collection(collection.id)
-            console.print(f"[green]✓ Collection deleted[/green]")
+            console.print("[green]✓ Collection deleted[/green]")
         except Exception as e:
             console.print(f"[red]Failed to delete collection: {e}[/red]")
 

@@ -7,7 +7,9 @@ import asyncio
 
 @pytest.mark.performance
 @pytest.mark.asyncio
-async def test_indexing_throughput_above_1_file_per_sec(temp_code_directory, fresh_server):
+async def test_indexing_throughput_above_1_file_per_sec(
+    temp_code_directory, fresh_server
+):
     """SPEC F007-R003: Indexing throughput must be >1 file/sec.
 
     Target: >1 file/sec
@@ -21,9 +23,7 @@ async def test_indexing_throughput_above_1_file_per_sec(temp_code_directory, fre
     # Measure indexing throughput
     start = time.perf_counter()
     result = await server.index_codebase(
-        directory_path=str(code_dir),
-        project_name="throughput_test",
-        recursive=False
+        directory_path=str(code_dir), project_name="throughput_test", recursive=False
     )
     elapsed = time.perf_counter() - start
 
@@ -31,7 +31,7 @@ async def test_indexing_throughput_above_1_file_per_sec(temp_code_directory, fre
     files_per_sec = files_indexed / elapsed
 
     print(f"\n{'='*50}")
-    print(f"INDEXING THROUGHPUT PERFORMANCE RESULTS")
+    print("INDEXING THROUGHPUT PERFORMANCE RESULTS")
     print(f"{'='*50}")
     print(f"Files indexed: {files_indexed}")
     print(f"Time elapsed: {elapsed:.2f}s")
@@ -59,23 +59,19 @@ async def test_concurrent_request_throughput(indexed_test_project):
     async def search_task(i: int):
         """Single search task."""
         query = f"function_{i % 10}"
-        return await server.search_code(
-            query=query,
-            project_name="perf_test",
-            limit=5
-        )
+        return await server.search_code(query=query, project_name="perf_test", limit=5)
 
     start = time.perf_counter()
     tasks = [search_task(i) for i in range(100)]
-    results = await asyncio.gather(*tasks)
+    await asyncio.gather(*tasks)
     elapsed = time.perf_counter() - start
 
     req_per_sec = 100 / elapsed
 
     print(f"\n{'='*50}")
-    print(f"CONCURRENT REQUEST THROUGHPUT")
+    print("CONCURRENT REQUEST THROUGHPUT")
     print(f"{'='*50}")
-    print(f"Requests: 100")
+    print("Requests: 100")
     print(f"Time elapsed: {elapsed:.2f}s")
     print(f"Throughput: {req_per_sec:.2f} req/sec")
     print(f"Avg latency per request: {(elapsed / 100) * 1000:.2f}ms")
@@ -105,20 +101,20 @@ async def test_memory_store_throughput(fresh_server):
             content=f"Performance test memory {i}",
             category="fact",
             importance=0.5,
-            tags=[f"tag_{i % 5}"]
+            tags=[f"tag_{i % 5}"],
         )
 
     elapsed = time.perf_counter() - start
     memories_per_sec = 100 / elapsed
 
-    print(f"\nMemory Storage Throughput:")
-    print(f"  Memories stored: 100")
+    print("\nMemory Storage Throughput:")
+    print("  Memories stored: 100")
     print(f"  Time elapsed: {elapsed:.2f}s")
     print(f"  Throughput: {memories_per_sec:.2f} memories/sec")
 
-    assert memories_per_sec > 20, (
-        f"Memory storage throughput {memories_per_sec:.2f} memories/sec below 20"
-    )
+    assert (
+        memories_per_sec > 20
+    ), f"Memory storage throughput {memories_per_sec:.2f} memories/sec below 20"
 
 
 @pytest.mark.performance
@@ -134,9 +130,7 @@ async def test_batch_operation_throughput(fresh_server):
     start = time.perf_counter()
     for i in range(10):
         await server.store_memory(
-            content=f"Individual memory {i}",
-            category="fact",
-            importance=0.5
+            content=f"Individual memory {i}", category="fact", importance=0.5
         )
     individual_elapsed = time.perf_counter() - start
 
@@ -144,9 +138,7 @@ async def test_batch_operation_throughput(fresh_server):
     start = time.perf_counter()
     tasks = [
         server.store_memory(
-            content=f"Batch memory {i}",
-            category="fact",
-            importance=0.5
+            content=f"Batch memory {i}", category="fact", importance=0.5
         )
         for i in range(10)
     ]
@@ -155,20 +147,22 @@ async def test_batch_operation_throughput(fresh_server):
 
     speedup = individual_elapsed / batch_elapsed
 
-    print(f"\nBatch Operation Performance:")
+    print("\nBatch Operation Performance:")
     print(f"  Individual (sequential): {individual_elapsed:.2f}s")
     print(f"  Concurrent (parallel): {batch_elapsed:.2f}s")
     print(f"  Speedup: {speedup:.2f}x")
 
     # Batch should be at least 1.5x faster
-    assert speedup > 1.5, (
-        f"Batch operations only {speedup:.2f}x faster, expected >1.5x speedup"
-    )
+    assert (
+        speedup > 1.5
+    ), f"Batch operations only {speedup:.2f}x faster, expected >1.5x speedup"
 
 
 @pytest.mark.performance
 @pytest.mark.asyncio
-async def test_throughput_degradation_over_time(indexed_test_project, performance_tracker):
+async def test_throughput_degradation_over_time(
+    indexed_test_project, performance_tracker
+):
     """Throughput should remain stable over extended operation.
 
     Run searches in 5 batches and verify throughput doesn't degrade.
@@ -183,16 +177,14 @@ async def test_throughput_degradation_over_time(indexed_test_project, performanc
 
         for i in range(50):
             await server.search_code(
-                query=f"function_{i % 10}",
-                project_name="perf_test",
-                limit=5
+                query=f"function_{i % 10}", project_name="perf_test", limit=5
             )
 
         elapsed = time.perf_counter() - start
         throughput = 50 / elapsed
         batch_throughputs.append(throughput)
 
-    print(f"\nThroughput over Time (5 batches of 50 requests):")
+    print("\nThroughput over Time (5 batches of 50 requests):")
     for i, throughput in enumerate(batch_throughputs, 1):
         print(f"  Batch {i}: {throughput:.2f} req/sec")
 
@@ -206,6 +198,6 @@ async def test_throughput_degradation_over_time(indexed_test_project, performanc
     print(f"  Degradation: {degradation * 100:.1f}%")
 
     # Throughput should not degrade by more than 20%
-    assert degradation < 0.20, (
-        f"Throughput degraded by {degradation * 100:.1f}% over time, exceeds 20% threshold"
-    )
+    assert (
+        degradation < 0.20
+    ), f"Throughput degraded by {degradation * 100:.1f}% over time, exceeds 20% threshold"

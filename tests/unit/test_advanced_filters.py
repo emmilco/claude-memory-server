@@ -1,6 +1,5 @@
 """Tests for advanced memory search filters (FEAT-042)."""
 
-import pytest
 from datetime import datetime, timedelta, UTC
 from src.core.models import (
     AdvancedSearchFilters,
@@ -29,10 +28,7 @@ class TestAdvancedSearchFilters:
         now = datetime.now(UTC)
         week_ago = now - timedelta(days=7)
 
-        filters = AdvancedSearchFilters(
-            created_after=week_ago,
-            created_before=now
-        )
+        filters = AdvancedSearchFilters(created_after=week_ago, created_before=now)
 
         assert filters.created_after == week_ago
         assert filters.created_before == now
@@ -42,7 +38,7 @@ class TestAdvancedSearchFilters:
         filters = AdvancedSearchFilters(
             tags_any=["python", "javascript"],
             tags_all=["backend", "api"],
-            tags_none=["deprecated", "legacy"]
+            tags_none=["deprecated", "legacy"],
         )
 
         assert filters.tags_any == ["python", "javascript"]
@@ -54,7 +50,7 @@ class TestAdvancedSearchFilters:
         filters = AdvancedSearchFilters(
             tags_any=["Python", "  JavaScript  "],
             tags_all=["Backend", "API"],
-            tags_none=["DEPRECATED"]
+            tags_none=["DEPRECATED"],
         )
 
         assert filters.tags_any == ["python", "javascript"]
@@ -92,8 +88,7 @@ class TestAdvancedSearchFilters:
     def test_provenance_filtering(self):
         """Test provenance filtering."""
         filters = AdvancedSearchFilters(
-            min_trust_score=0.8,
-            source=ProvenanceSource.USER_EXPLICIT
+            min_trust_score=0.8, source=ProvenanceSource.USER_EXPLICIT
         )
 
         assert filters.min_trust_score == 0.8
@@ -108,20 +103,16 @@ class TestAdvancedSearchFilters:
         filters = AdvancedSearchFilters(min_trust_score=1.0)
         assert filters.min_trust_score == 1.0
 
+
 class TestQueryRequestWithAdvancedFilters:
     """Test QueryRequest integration with advanced filters."""
 
     def test_query_request_with_advanced_filters(self):
         """Test QueryRequest accepts advanced filters."""
-        adv_filters = AdvancedSearchFilters(
-            tags_any=["python"],
-            min_trust_score=0.7
-        )
+        adv_filters = AdvancedSearchFilters(tags_any=["python"], min_trust_score=0.7)
 
         request = QueryRequest(
-            query="test query",
-            limit=10,
-            advanced_filters=adv_filters
+            query="test query", limit=10, advanced_filters=adv_filters
         )
 
         assert request.advanced_filters is not None
@@ -130,10 +121,7 @@ class TestQueryRequestWithAdvancedFilters:
 
     def test_query_request_without_advanced_filters(self):
         """Test QueryRequest without advanced filters."""
-        request = QueryRequest(
-            query="test query",
-            limit=10
-        )
+        request = QueryRequest(query="test query", limit=10)
 
         assert request.advanced_filters is None
 
@@ -150,7 +138,7 @@ class TestSearchFiltersWithAdvancedFilters:
         filters = SearchFilters(
             category=MemoryCategory.FACT,
             min_importance=0.5,
-            advanced_filters=adv_filters
+            advanced_filters=adv_filters,
         )
 
         assert filters.advanced_filters is not None
@@ -158,13 +146,10 @@ class TestSearchFiltersWithAdvancedFilters:
 
     def test_search_filters_to_dict_with_advanced(self):
         """Test SearchFilters.to_dict() includes advanced filters."""
-        adv_filters = AdvancedSearchFilters(
-            tags_any=["test"]
-        )
+        adv_filters = AdvancedSearchFilters(tags_any=["test"])
 
         filters = SearchFilters(
-            category=MemoryCategory.FACT,
-            advanced_filters=adv_filters
+            category=MemoryCategory.FACT, advanced_filters=adv_filters
         )
 
         filter_dict = filters.to_dict()
@@ -180,10 +165,7 @@ class TestAdvancedFiltersUseCases:
         """Test filtering for recent Python memories."""
         week_ago = datetime.now(UTC) - timedelta(days=7)
 
-        filters = AdvancedSearchFilters(
-            created_after=week_ago,
-            tags_all=["python"]
-        )
+        filters = AdvancedSearchFilters(created_after=week_ago, tags_all=["python"])
 
         assert filters.created_after == week_ago
         assert filters.tags_all == ["python"]
@@ -192,7 +174,7 @@ class TestAdvancedFiltersUseCases:
         """Test excluding deprecated memories."""
         filters = AdvancedSearchFilters(
             tags_none=["deprecated", "legacy"],
-            lifecycle_states=[LifecycleState.ACTIVE, LifecycleState.RECENT]
+            lifecycle_states=[LifecycleState.ACTIVE, LifecycleState.RECENT],
         )
 
         assert "deprecated" in filters.tags_none
@@ -203,7 +185,7 @@ class TestAdvancedFiltersUseCases:
         filters = AdvancedSearchFilters(
             min_trust_score=0.9,
             source=ProvenanceSource.USER_EXPLICIT,
-            lifecycle_states=[LifecycleState.ACTIVE]
+            lifecycle_states=[LifecycleState.ACTIVE],
         )
 
         assert filters.min_trust_score == 0.9
@@ -214,7 +196,7 @@ class TestAdvancedFiltersUseCases:
         filters = AdvancedSearchFilters(
             tags_any=["python", "javascript", "typescript"],  # Any of these
             tags_all=["backend"],  # Must have this
-            tags_none=["deprecated"]  # Must not have this
+            tags_none=["deprecated"],  # Must not have this
         )
 
         assert len(filters.tags_any) == 3
@@ -227,7 +209,7 @@ class TestAdvancedFiltersUseCases:
 
         filters = AdvancedSearchFilters(
             created_after=month_ago,
-            exclude_categories=[MemoryCategory.EVENT, MemoryCategory.CONTEXT]
+            exclude_categories=[MemoryCategory.EVENT, MemoryCategory.CONTEXT],
         )
 
         assert filters.created_after == month_ago
@@ -246,9 +228,7 @@ class TestAdvancedFiltersUseCases:
         """Test filtering by recent access time."""
         day_ago = datetime.now(UTC) - timedelta(days=1)
 
-        filters = AdvancedSearchFilters(
-            accessed_after=day_ago
-        )
+        filters = AdvancedSearchFilters(accessed_after=day_ago)
 
         assert filters.accessed_after == day_ago
 
@@ -257,10 +237,7 @@ class TestAdvancedFiltersUseCases:
         week_ago = datetime.now(UTC) - timedelta(days=7)
         today = datetime.now(UTC)
 
-        filters = AdvancedSearchFilters(
-            updated_after=week_ago,
-            updated_before=today
-        )
+        filters = AdvancedSearchFilters(updated_after=week_ago, updated_before=today)
 
         assert filters.updated_after == week_ago
         assert filters.updated_before == today
@@ -279,7 +256,7 @@ class TestFilterCombinations:
             created_after=week_ago,
             created_before=now,
             updated_after=day_ago,
-            accessed_after=day_ago
+            accessed_after=day_ago,
         )
 
         assert filters.created_after == week_ago
@@ -291,7 +268,7 @@ class TestFilterCombinations:
         filters = AdvancedSearchFilters(
             tags_any=["python", "java"],
             tags_all=["backend", "api"],
-            tags_none=["deprecated", "old"]
+            tags_none=["deprecated", "old"],
         )
 
         assert len(filters.tags_any) == 2
@@ -311,7 +288,7 @@ class TestFilterCombinations:
             exclude_categories=[MemoryCategory.EVENT],
             exclude_projects=["old-project"],
             min_trust_score=0.8,
-            source=ProvenanceSource.USER_EXPLICIT
+            source=ProvenanceSource.USER_EXPLICIT,
         )
 
         # Verify all filters are set

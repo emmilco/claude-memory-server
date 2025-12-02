@@ -28,9 +28,9 @@ logger = logging.getLogger(__name__)
 class HealthCheckLevel(Enum):
     """Health check thoroughness levels."""
 
-    FAST = "fast"      # <1ms: ping/readiness check
+    FAST = "fast"  # <1ms: ping/readiness check
     MEDIUM = "medium"  # <10ms: collection list
-    DEEP = "deep"      # <50ms: actual query test
+    DEEP = "deep"  # <50ms: actual query test
 
 
 @dataclass
@@ -66,9 +66,9 @@ class ConnectionHealthChecker:
 
     def __init__(
         self,
-        fast_timeout: float = 0.05,     # 50ms (was 1ms - too aggressive)
-        medium_timeout: float = 0.1,    # 100ms (was 10ms)
-        deep_timeout: float = 0.2,      # 200ms (was 50ms)
+        fast_timeout: float = 0.05,  # 50ms (was 1ms - too aggressive)
+        medium_timeout: float = 0.1,  # 100ms (was 10ms)
+        deep_timeout: float = 0.2,  # 200ms (was 50ms)
     ):
         """Initialize health checker.
 
@@ -169,7 +169,7 @@ class ConnectionHealthChecker:
                 loop = asyncio.get_event_loop()
                 return await loop.run_in_executor(
                     None,
-                    lambda: client.get_collections()  # Lightweight operation
+                    lambda: client.get_collections(),  # Lightweight operation
                 )
 
             await asyncio.wait_for(check(), timeout=self.fast_timeout)
@@ -195,12 +195,10 @@ class ConnectionHealthChecker:
             bool: True if healthy
         """
         try:
+
             async def check():
                 loop = asyncio.get_event_loop()
-                collections = await loop.run_in_executor(
-                    None,
-                    client.get_collections
-                )
+                collections = await loop.run_in_executor(None, client.get_collections)
                 # Verify we got a valid response
                 return collections is not None
 
@@ -208,7 +206,9 @@ class ConnectionHealthChecker:
             return result
 
         except asyncio.TimeoutError:
-            logger.debug(f"Medium health check timeout (>{self.medium_timeout*1000:.1f}ms)")
+            logger.debug(
+                f"Medium health check timeout (>{self.medium_timeout*1000:.1f}ms)"
+            )
             return False
         except (UnexpectedResponse, ResponseHandlingException, ConnectionError) as e:
             logger.debug(f"Medium health check connection error: {e}")
@@ -227,14 +227,12 @@ class ConnectionHealthChecker:
             bool: True if healthy
         """
         try:
+
             async def check():
                 loop = asyncio.get_event_loop()
 
                 # Get collections first
-                collections = await loop.run_in_executor(
-                    None,
-                    client.get_collections
-                )
+                collections = await loop.run_in_executor(None, client.get_collections)
 
                 if not collections or not collections.collections:
                     # No collections to query, but connection works
@@ -242,11 +240,7 @@ class ConnectionHealthChecker:
 
                 # Try to count points in first collection (lightweight query)
                 first_collection = collections.collections[0].name
-                count = await loop.run_in_executor(
-                    None,
-                    client.count,
-                    first_collection
-                )
+                count = await loop.run_in_executor(None, client.count, first_collection)
 
                 return count is not None
 
@@ -269,19 +263,21 @@ class ConnectionHealthChecker:
         Returns:
             dict: Statistics including total checks, failures, and per-level metrics
         """
-        failure_rate = (self.total_failures / self.total_checks * 100) if self.total_checks > 0 else 0.0
+        failure_rate = (
+            (self.total_failures / self.total_checks * 100)
+            if self.total_checks > 0
+            else 0.0
+        )
 
         return {
             "total_checks": self.total_checks,
             "total_failures": self.total_failures,
             "failure_rate_percent": round(failure_rate, 2),
             "checks_by_level": {
-                level.value: count
-                for level, count in self.checks_by_level.items()
+                level.value: count for level, count in self.checks_by_level.items()
             },
             "failures_by_level": {
-                level.value: count
-                for level, count in self.failures_by_level.items()
+                level.value: count for level, count in self.failures_by_level.items()
             },
         }
 

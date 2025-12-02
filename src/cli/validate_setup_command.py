@@ -10,6 +10,7 @@ import requests
 try:
     from rich.console import Console
     from rich.panel import Panel
+
     RICH_AVAILABLE = True
 except ImportError:
     RICH_AVAILABLE = False
@@ -73,10 +74,7 @@ class ValidateSetupCommand:
         """Check if Docker is installed and running."""
         try:
             result = subprocess.run(
-                ["docker", "ps"],
-                capture_output=True,
-                text=True,
-                timeout=5
+                ["docker", "ps"], capture_output=True, text=True, timeout=5
             )
             if result.returncode == 0:
                 return True, "Docker is running"
@@ -123,9 +121,17 @@ class ValidateSetupCommand:
             url = config.qdrant_url
 
             if backend == "qdrant":
-                return True, f"Configured for Qdrant at {url}", {"backend": backend, "url": url}
+                return (
+                    True,
+                    f"Configured for Qdrant at {url}",
+                    {"backend": backend, "url": url},
+                )
             else:
-                return False, f"Configured for {backend} (Qdrant required)", {"backend": backend, "url": url}
+                return (
+                    False,
+                    f"Configured for {backend} (Qdrant required)",
+                    {"backend": backend, "url": url},
+                )
         except Exception as e:
             return False, f"Config error: {e}", {}
 
@@ -166,7 +172,9 @@ class ValidateSetupCommand:
             elif not qdrant_ok and not docker_ok:
                 self.print_warning("Cannot start Qdrant without Docker")
         else:
-            self.print_info(f"Backend set to {config_data.get('backend')} - skipping Qdrant check")
+            self.print_info(
+                f"Backend set to {config_data.get('backend')} - skipping Qdrant check"
+            )
             self.print_warning("SQLite backend is deprecated for code search")
             self.print_info("Update config to use Qdrant for semantic search")
 
@@ -181,7 +189,7 @@ class ValidateSetupCommand:
                         f"[green]✓ All checks passed ({self.checks_passed}/{total})[/green]\n"
                         "Your setup is ready for semantic code search!",
                         title="Setup Status",
-                        border_style="green"
+                        border_style="green",
                     )
                 )
             else:
@@ -190,7 +198,7 @@ class ValidateSetupCommand:
                         f"[red]✗ {self.checks_failed} check(s) failed ({self.checks_passed}/{total} passed)[/red]\n"
                         "Please fix the issues above before using semantic code search.",
                         title="Setup Status",
-                        border_style="red"
+                        border_style="red",
                     )
                 )
         else:
@@ -198,7 +206,9 @@ class ValidateSetupCommand:
                 print(f"\n✓ All checks passed ({self.checks_passed}/{total})")
                 print("Your setup is ready for semantic code search!")
             else:
-                print(f"\n✗ {self.checks_failed} check(s) failed ({self.checks_passed}/{total} passed)")
+                print(
+                    f"\n✗ {self.checks_failed} check(s) failed ({self.checks_passed}/{total} passed)"
+                )
                 print("Please fix the issues above before using semantic code search.")
 
         # Return exit code

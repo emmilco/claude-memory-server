@@ -12,7 +12,7 @@ import pytest_asyncio
 from src.config import ServerConfig
 from src.store.readonly_wrapper import ReadOnlyStoreWrapper
 from src.store.qdrant_store import QdrantMemoryStore
-from src.core.models import MemoryUnit, MemoryCategory, MemoryScope, SearchFilters
+from src.core.models import MemoryCategory, MemoryScope, SearchFilters
 from src.core.exceptions import ReadOnlyError
 
 
@@ -127,7 +127,7 @@ class TestReadOnlyModeAllowsReads:
         """Test that retrieve() works in read-only mode."""
         # First, add some data to the underlying store
         await qdrant_store.initialize()
-        memory_id = await qdrant_store.store(
+        await qdrant_store.store(
             content="test content",
             embedding=[0.1] * 768,
             metadata={
@@ -217,6 +217,7 @@ class TestReadOnlyModeAllowsReads:
 
         # Add some data with unique content
         import uuid
+
         test_id = str(uuid.uuid4())[:8]
 
         for i in range(3):
@@ -278,7 +279,9 @@ class TestReadOnlyModeIntegration:
     """Integration tests for read-only mode."""
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="Flaky under parallel execution due to Qdrant eventual consistency - see TEST-029")
+    @pytest.mark.skip(
+        reason="Flaky under parallel execution due to Qdrant eventual consistency - see TEST-029"
+    )
     async def test_readonly_mode_preserves_existing_data(self, qdrant_store):
         """Test that read-only mode doesn't affect existing data.
 
@@ -307,6 +310,7 @@ class TestReadOnlyModeIntegration:
         # Verify all data is still accessible
         # Retry with timeout to handle Qdrant's eventual consistency
         import asyncio
+
         for memory_id in original_ids:
             # Retry up to 10 times with 500ms delay (5 seconds total)
             memory = None
@@ -316,7 +320,9 @@ class TestReadOnlyModeIntegration:
                     break
                 await asyncio.sleep(0.5)
 
-            assert memory is not None, f"Memory {memory_id} not found after 10 retries (5s)"
+            assert (
+                memory is not None
+            ), f"Memory {memory_id} not found after 10 retries (5s)"
             assert "original content" in memory.content
 
     @pytest.mark.asyncio
@@ -350,5 +356,3 @@ class TestReadOnlyModeWithConfig:
 # ============================================================================
 # Summary
 # ============================================================================
-
-

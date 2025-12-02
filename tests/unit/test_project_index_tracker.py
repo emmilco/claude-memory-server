@@ -6,7 +6,7 @@ import asyncio
 import tempfile
 import sqlite3
 from pathlib import Path
-from datetime import datetime, UTC, timedelta
+from datetime import datetime, UTC
 
 from src.memory.project_index_tracker import ProjectIndexTracker, ProjectIndexMetadata
 from src.core.exceptions import StorageError
@@ -179,6 +179,7 @@ class TestProjectIndexTrackerInitialization:
             ro_dir.mkdir()
             # Make directory read-only
             import os
+
             os.chmod(ro_dir, 0o444)
 
             try:
@@ -347,7 +348,9 @@ class TestProjectIndexTrackerStaleness:
         assert is_stale is False
 
     @pytest.mark.asyncio
-    async def test_is_stale_true_after_file_modification(self, tracker, sample_project_dir):
+    async def test_is_stale_true_after_file_modification(
+        self, tracker, sample_project_dir
+    ):
         """Test that project becomes stale after file modification."""
         # Index project
         await tracker.update_metadata(
@@ -467,6 +470,7 @@ class TestProjectIndexTrackerConcurrency:
     @pytest.mark.asyncio
     async def test_concurrent_updates(self, tracker):
         """Test concurrent metadata updates."""
+
         async def update_project(name: str, files: int):
             await tracker.update_metadata(name, files, files * 5)
 

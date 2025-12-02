@@ -1,6 +1,5 @@
 """Index command for CLI - indexes code files into vector storage."""
 
-import asyncio
 import logging
 from pathlib import Path
 from typing import Optional
@@ -8,9 +7,17 @@ import time
 
 try:
     from rich.console import Console
-    from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TimeRemainingColumn, TaskProgressColumn
+    from rich.progress import (
+        Progress,
+        SpinnerColumn,
+        BarColumn,
+        TextColumn,
+        TimeRemainingColumn,
+        TaskProgressColumn,
+    )
     from rich.panel import Panel
     from rich.table import Table
+
     RICH_AVAILABLE = True
 except ImportError:
     RICH_AVAILABLE = False
@@ -29,12 +36,21 @@ class IndexCommand:
         self.config = get_config()
         self.console = Console() if RICH_AVAILABLE else None
 
-    def _print_rich_summary(self, project_name: str, path: Path, result: dict, elapsed: float, recursive: bool):
+    def _print_rich_summary(
+        self,
+        project_name: str,
+        path: Path,
+        result: dict,
+        elapsed: float,
+        recursive: bool,
+    ):
         """Print rich formatted summary."""
         self.console.print()
 
         # Create summary table
-        table = Table(title="[bold green]✓ Indexing Complete[/bold green]", show_header=False)
+        table = Table(
+            title="[bold green]✓ Indexing Complete[/bold green]", show_header=False
+        )
         table.add_column("Metric", style="cyan", width=25)
         table.add_column("Value", style="white")
 
@@ -45,34 +61,45 @@ class IndexCommand:
         table.add_row("Files found", f"{result['total_files']:,}")
         table.add_row("Files indexed", f"[green]{result['indexed_files']:,}[/green]")
         table.add_row("Files skipped", f"[yellow]{result['skipped_files']:,}[/yellow]")
-        if result['failed_files']:
+        if result["failed_files"]:
             table.add_row("Files failed", f"[red]{len(result['failed_files']):,}[/red]")
-        if result.get('cleaned_entries', 0) > 0:
-            table.add_row("Stale entries cleaned", f"[dim]{result['cleaned_entries']:,}[/dim]")
+        if result.get("cleaned_entries", 0) > 0:
+            table.add_row(
+                "Stale entries cleaned", f"[dim]{result['cleaned_entries']:,}[/dim]"
+            )
         table.add_row("", "")  # Spacer
         table.add_row("Semantic units", f"[bold]{result['total_units']:,}[/bold]")
         table.add_row("", "")  # Spacer
         table.add_row("Time elapsed", f"{elapsed:.2f}s")
 
-        if result['indexed_files'] > 0:
-            files_per_sec = result['indexed_files'] / elapsed
-            units_per_sec = result['total_units'] / elapsed
-            table.add_row("Throughput", f"{files_per_sec:.2f} files/sec, {units_per_sec:.1f} units/sec")
+        if result["indexed_files"] > 0:
+            files_per_sec = result["indexed_files"] / elapsed
+            units_per_sec = result["total_units"] / elapsed
+            table.add_row(
+                "Throughput",
+                f"{files_per_sec:.2f} files/sec, {units_per_sec:.1f} units/sec",
+            )
 
         self.console.print(table)
 
         # Show failed files if any
-        if result['failed_files']:
+        if result["failed_files"]:
             self.console.print()
-            self.console.print(f"[bold yellow]⚠ Failed Files ({len(result['failed_files'])}):[/bold yellow]")
-            for failed_file in result['failed_files'][:10]:  # Show first 10
+            self.console.print(
+                f"[bold yellow]⚠ Failed Files ({len(result['failed_files'])}):[/bold yellow]"
+            )
+            for failed_file in result["failed_files"][:10]:  # Show first 10
                 self.console.print(f"  [dim]• {failed_file}[/dim]")
-            if len(result['failed_files']) > 10:
-                self.console.print(f"  [dim]... and {len(result['failed_files']) - 10} more[/dim]")
+            if len(result["failed_files"]) > 10:
+                self.console.print(
+                    f"  [dim]... and {len(result['failed_files']) - 10} more[/dim]"
+                )
 
         self.console.print()
 
-    def _print_plain_summary(self, project_name: str, path: Path, result: dict, elapsed: float):
+    def _print_plain_summary(
+        self, project_name: str, path: Path, result: dict, elapsed: float
+    ):
         """Print plain text summary."""
         print("\n" + "=" * 60)
         print("INDEXING COMPLETE")
@@ -85,18 +112,20 @@ class IndexCommand:
         print(f"Semantic units indexed: {result['total_units']}")
         print(f"Total time: {elapsed:.2f}s")
 
-        if result['failed_files']:
+        if result["failed_files"]:
             print(f"\nFailed files ({len(result['failed_files'])}):")
-            for failed_file in result['failed_files']:
+            for failed_file in result["failed_files"]:
                 print(f"  - {failed_file}")
 
         print("=" * 60 + "\n")
 
         # Calculate throughput
-        if result['indexed_files'] > 0:
-            files_per_sec = result['indexed_files'] / elapsed
-            units_per_sec = result['total_units'] / elapsed
-            print(f"Throughput: {files_per_sec:.2f} files/sec, {units_per_sec:.2f} units/sec\n")
+        if result["indexed_files"] > 0:
+            files_per_sec = result["indexed_files"] / elapsed
+            units_per_sec = result["total_units"] / elapsed
+            print(
+                f"Throughput: {files_per_sec:.2f} files/sec, {units_per_sec:.2f} units/sec\n"
+            )
 
     async def run(self, args):
         """
@@ -182,7 +211,12 @@ class IndexCommand:
 
                         error_count = 0
 
-                        def progress_callback(current: int, total: int, current_file: Optional[str], error_info: Optional[dict]):
+                        def progress_callback(
+                            current: int,
+                            total: int,
+                            current_file: Optional[str],
+                            error_info: Optional[dict],
+                        ):
                             """Update progress bar with indexing status."""
                             nonlocal error_count
 
@@ -200,14 +234,22 @@ class IndexCommand:
                                         description=f"[cyan]Indexing[/cyan] [yellow]({error_count} errors)[/yellow] - [dim]{current_file}[/dim]",
                                     )
                                 else:
-                                    desc = f"[cyan]Indexing[/cyan]"
+                                    desc = "[cyan]Indexing[/cyan]"
                                     if error_count > 0:
-                                        desc += f" [yellow]({error_count} errors)[/yellow]"
+                                        desc += (
+                                            f" [yellow]({error_count} errors)[/yellow]"
+                                        )
                                     desc += f" - [dim]{current_file}[/dim]"
-                                    prog.update(task, completed=current, description=desc)
+                                    prog.update(
+                                        task, completed=current, description=desc
+                                    )
                             else:
                                 # Initial callback with total count
-                                prog.update(task, total=total, description=f"[cyan]Indexing {total} files...[/cyan]")
+                                prog.update(
+                                    task,
+                                    total=total,
+                                    description=f"[cyan]Indexing {total} files...[/cyan]",
+                                )
 
                         result = await indexer.index_directory(
                             path,
@@ -217,7 +259,11 @@ class IndexCommand:
                         )
 
                         # Final update
-                        prog.update(task, completed=result['total_files'], description="[green]✓ Indexing complete[/green]")
+                        prog.update(
+                            task,
+                            completed=result["total_files"],
+                            description="[green]✓ Indexing complete[/green]",
+                        )
                 else:
                     result = await indexer.index_directory(
                         path,
@@ -229,7 +275,9 @@ class IndexCommand:
 
                 # Show summary
                 if self.console and RICH_AVAILABLE:
-                    self._print_rich_summary(project_name, path, result, elapsed, args.recursive)
+                    self._print_rich_summary(
+                        project_name, path, result, elapsed, args.recursive
+                    )
                 else:
                     self._print_plain_summary(project_name, path, result, elapsed)
 

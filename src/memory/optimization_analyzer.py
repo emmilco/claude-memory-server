@@ -3,7 +3,7 @@
 import mimetypes
 import logging
 from pathlib import Path
-from typing import List, Dict, Optional, Set, Tuple
+from typing import List, Dict, Optional
 from dataclasses import dataclass, field
 from collections import defaultdict
 
@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class FileStats:
     """Statistics for a single file."""
+
     path: Path
     size_bytes: int
     is_binary: bool
@@ -23,6 +24,7 @@ class FileStats:
 @dataclass
 class DirectoryInfo:
     """Information about a directory."""
+
     path: Path
     file_count: int
     total_size_bytes: int
@@ -32,6 +34,7 @@ class DirectoryInfo:
 @dataclass
 class OptimizationSuggestion:
     """A single optimization suggestion."""
+
     type: str  # 'exclude_binary', 'exclude_directory', 'exclude_pattern'
     description: str
     pattern: str  # .ragignore pattern
@@ -50,6 +53,7 @@ class OptimizationSuggestion:
 @dataclass
 class AnalysisResult:
     """Result of optimization analysis."""
+
     total_files: int
     total_size_mb: float
     indexable_files: int  # Files that would be indexed
@@ -73,58 +77,149 @@ class OptimizationAnalyzer:
 
     # Supported source code extensions (what we want to index)
     SOURCE_EXTENSIONS = {
-        ".py", ".js", ".jsx", ".ts", ".tsx",
-        ".java", ".go", ".rs", ".cpp", ".c", ".h",
-        ".rb", ".php", ".swift", ".kt", ".scala",
-        ".css", ".scss", ".sass", ".less",
-        ".html", ".vue", ".svelte",
-        ".json", ".yaml", ".yml", ".toml",
-        ".md", ".rst", ".txt",
+        ".py",
+        ".js",
+        ".jsx",
+        ".ts",
+        ".tsx",
+        ".java",
+        ".go",
+        ".rs",
+        ".cpp",
+        ".c",
+        ".h",
+        ".rb",
+        ".php",
+        ".swift",
+        ".kt",
+        ".scala",
+        ".css",
+        ".scss",
+        ".sass",
+        ".less",
+        ".html",
+        ".vue",
+        ".svelte",
+        ".json",
+        ".yaml",
+        ".yml",
+        ".toml",
+        ".md",
+        ".rst",
+        ".txt",
     }
 
     # Binary file extensions to exclude
     BINARY_EXTENSIONS = {
         # Images
-        ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".ico", ".svg", ".webp",
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".gif",
+        ".bmp",
+        ".ico",
+        ".svg",
+        ".webp",
         # Videos
-        ".mp4", ".avi", ".mov", ".wmv", ".flv", ".webm",
+        ".mp4",
+        ".avi",
+        ".mov",
+        ".wmv",
+        ".flv",
+        ".webm",
         # Audio
-        ".mp3", ".wav", ".flac", ".aac", ".ogg",
+        ".mp3",
+        ".wav",
+        ".flac",
+        ".aac",
+        ".ogg",
         # Archives
-        ".zip", ".tar", ".gz", ".bz2", ".7z", ".rar",
+        ".zip",
+        ".tar",
+        ".gz",
+        ".bz2",
+        ".7z",
+        ".rar",
         # Executables
-        ".exe", ".dll", ".so", ".dylib", ".bin",
+        ".exe",
+        ".dll",
+        ".so",
+        ".dylib",
+        ".bin",
         # Documents
-        ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+        ".pdf",
+        ".doc",
+        ".docx",
+        ".xls",
+        ".xlsx",
+        ".ppt",
+        ".pptx",
         # Databases
-        ".db", ".sqlite", ".sqlite3",
+        ".db",
+        ".sqlite",
+        ".sqlite3",
         # Fonts
-        ".ttf", ".otf", ".woff", ".woff2", ".eot",
+        ".ttf",
+        ".otf",
+        ".woff",
+        ".woff2",
+        ".eot",
     }
 
     # Directories to always exclude
     EXCLUDE_DIRECTORIES = {
         # Dependencies
-        "node_modules", "bower_components",
-        "vendor", "third_party", "external",
+        "node_modules",
+        "bower_components",
+        "vendor",
+        "third_party",
+        "external",
         # Python virtual environments
-        "venv", "env", ".venv", ".env", "virtualenv", ".virtualenv",
+        "venv",
+        "env",
+        ".venv",
+        ".env",
+        "virtualenv",
+        ".virtualenv",
         "site-packages",
         # Build outputs
-        "dist", "build", "out", "target", "bin", "obj",
-        ".next", ".nuxt", ".vuepress", ".docusaurus",
-        "cmake-build-debug", "cmake-build-release",
+        "dist",
+        "build",
+        "out",
+        "target",
+        "bin",
+        "obj",
+        ".next",
+        ".nuxt",
+        ".vuepress",
+        ".docusaurus",
+        "cmake-build-debug",
+        "cmake-build-release",
         # Caches
-        ".cache", "__pycache__", ".pytest_cache", ".mypy_cache",
-        ".ruff_cache", ".turbo", ".parcel-cache", ".webpack",
+        ".cache",
+        "__pycache__",
+        ".pytest_cache",
+        ".mypy_cache",
+        ".ruff_cache",
+        ".turbo",
+        ".parcel-cache",
+        ".webpack",
         # Version control
-        ".git", ".svn", ".hg",
+        ".git",
+        ".svn",
+        ".hg",
         # IDE
-        ".idea", ".vscode", ".vs", ".eclipse",
+        ".idea",
+        ".vscode",
+        ".vs",
+        ".eclipse",
         # OS
-        ".DS_Store", "Thumbs.db",
+        ".DS_Store",
+        "Thumbs.db",
         # Coverage
-        ".coverage", "htmlcov", "coverage",
+        ".coverage",
+        "htmlcov",
+        "coverage",
     }
 
     # Default time per file (100ms)
@@ -183,11 +278,14 @@ class OptimizationAnalyzer:
 
         # Calculate totals
         total_files = len(self.file_stats)
-        total_size_mb = sum(f.size_bytes for f in self.file_stats.values()) / (1024 * 1024)
+        total_size_mb = sum(f.size_bytes for f in self.file_stats.values()) / (
+            1024 * 1024
+        )
 
         # Calculate indexable files (source code files not in excluded dirs)
         indexable_files = sum(
-            1 for f in self.file_stats.values()
+            1
+            for f in self.file_stats.values()
             if f.path.suffix in self.SOURCE_EXTENSIONS
             and not self._in_excluded_directory(f.path)
         )
@@ -199,7 +297,11 @@ class OptimizationAnalyzer:
         # Estimate speedup
         baseline_time = total_files * self.DEFAULT_TIME_PER_FILE
         optimized_time = max(1.0, baseline_time - total_time_savings)
-        speedup = baseline_time / optimized_time if baseline_time > 0 and optimized_time > 0 else 1.0
+        speedup = (
+            baseline_time / optimized_time
+            if baseline_time > 0 and optimized_time > 0
+            else 1.0
+        )
 
         result = AnalysisResult(
             total_files=total_files,
@@ -225,15 +327,26 @@ class OptimizationAnalyzer:
 
             # Skip hidden files (but allow .git, .cache, etc. directories)
             skip = False
-            for part in file_path.relative_to(self.directory).parts[:-1]:  # Check dirs, not file itself
-                if part.startswith(".") and part not in {".git", ".cache", ".vscode", ".idea"}:
+            for part in file_path.relative_to(self.directory).parts[
+                :-1
+            ]:  # Check dirs, not file itself
+                if part.startswith(".") and part not in {
+                    ".git",
+                    ".cache",
+                    ".vscode",
+                    ".idea",
+                }:
                     skip = True
                     break
             if skip:
                 continue
 
             # Skip hidden files (not directories)
-            if file_path.name.startswith(".") and file_path.name not in {".gitignore", ".ragignore", ".env.example"}:
+            if file_path.name.startswith(".") and file_path.name not in {
+                ".gitignore",
+                ".ragignore",
+                ".env.example",
+            }:
                 continue
 
             try:
@@ -369,8 +482,14 @@ class OptimizationAnalyzer:
         # Suggest exclusions for each category
         category_patterns = {
             "node_modules": ("node_modules/", "Node.js dependencies"),
-            "venv": ("venv/", "Python virtual environments (also exclude .venv/, env/)"),
-            "build": ("dist/", "Build output directories (also exclude build/, out/, target/)"),
+            "venv": (
+                "venv/",
+                "Python virtual environments (also exclude .venv/, env/)",
+            ),
+            "build": (
+                "dist/",
+                "Build output directories (also exclude build/, out/, target/)",
+            ),
             "cache": ("__pycache__/", "Python cache directories"),
             "git": (".git/", "Git repository metadata"),
             "vendor": ("vendor/", "Third-party dependencies"),
@@ -420,9 +539,9 @@ class OptimizationAnalyzer:
 
         # Find large binaries
         large_binaries = [
-            f for f in self.file_stats.values()
-            if f.is_binary
-            and f.size_bytes > self.large_file_threshold_mb * 1024 * 1024
+            f
+            for f in self.file_stats.values()
+            if f.is_binary and f.size_bytes > self.large_file_threshold_mb * 1024 * 1024
         ]
 
         if not large_binaries:
@@ -458,7 +577,8 @@ class OptimizationAnalyzer:
     def _suggest_log_exclusions(self) -> List[OptimizationSuggestion]:
         """Suggest excluding log files."""
         log_files = [
-            f for f in self.file_stats.values()
+            f
+            for f in self.file_stats.values()
             if f.category == "log" or f.path.suffix == ".log"
         ]
 

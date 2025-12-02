@@ -19,6 +19,7 @@ TEST_QDRANT_URL = os.environ.get("CLAUDE_RAG_QDRANT_URL", "http://localhost:6333
 # Test embedding dimension (matches DEFAULT_EMBEDDING_DIM from src.config)
 # Use 768-dim for all-mpnet-base-v2 (current default model)
 from src.config import DEFAULT_EMBEDDING_DIM
+
 TEST_EMBEDDING_DIM = DEFAULT_EMBEDDING_DIM
 
 
@@ -60,8 +61,9 @@ def _apply_early_patches():
     # Patch IndexingFeatures defaults to disable auto-indexing in tests
     # This is necessary because ServerConfig may be instantiated before env vars are read
     from src.config import IndexingFeatures
-    IndexingFeatures.model_fields['auto_index_enabled'].default = False
-    IndexingFeatures.model_fields['auto_index_on_startup'].default = False
+
+    IndexingFeatures.model_fields["auto_index_enabled"].default = False
+    IndexingFeatures.model_fields["auto_index_on_startup"].default = False
 
     # Apply embedding patches to prevent model loading
     from src.embeddings.generator import EmbeddingGenerator
@@ -70,7 +72,9 @@ def _apply_early_patches():
 
     # Store originals for tests that need them
     EmbeddingGenerator._original_initialize = EmbeddingGenerator.initialize
-    ParallelEmbeddingGenerator._original_initialize = ParallelEmbeddingGenerator.initialize
+    ParallelEmbeddingGenerator._original_initialize = (
+        ParallelEmbeddingGenerator.initialize
+    )
 
     async def noop_initialize(self):
         """No-op initialize that will be replaced by fixture mock."""
@@ -102,6 +106,7 @@ _apply_early_patches()
 try:
     from mcp_performance_core import parse_source_file as rust_parse_source_file
     import mcp_performance_core
+
     RUST_AVAILABLE = True
 except ImportError:
     RUST_AVAILABLE = False
@@ -117,22 +122,27 @@ def mock_embedding_cache():
     """Pre-computed embeddings for common test phrases."""
     # Get vector size from config (matches embedding model)
     from src.config import get_config
+
     config = get_config()
-    model_dims = {"all-MiniLM-L6-v2": 384, "all-MiniLM-L12-v2": 384, "all-mpnet-base-v2": 768}
+    model_dims = {
+        "all-MiniLM-L6-v2": 384,
+        "all-MiniLM-L12-v2": 384,
+        "all-mpnet-base-v2": 768,
+    }
     dim = model_dims.get(config.embedding_model, 768)
 
     # Generate deterministic embeddings for common test phrases
     base_embedding = [0.0] * dim
 
     return {
-        "def authenticate": [0.1, 0.2, 0.3] + base_embedding[:dim-3],
-        "user authentication": [0.2, 0.3, 0.1] + base_embedding[:dim-3],
-        "login function": [0.3, 0.1, 0.2] + base_embedding[:dim-3],
-        "database connection": [0.4, 0.2, 0.1] + base_embedding[:dim-3],
-        "test function": [0.5, 0.3, 0.2] + base_embedding[:dim-3],
-        "api request": [0.6, 0.4, 0.1] + base_embedding[:dim-3],
-        "def test": [0.2, 0.5, 0.3] + base_embedding[:dim-3],
-        "class User": [0.3, 0.2, 0.5] + base_embedding[:dim-3],
+        "def authenticate": [0.1, 0.2, 0.3] + base_embedding[: dim - 3],
+        "user authentication": [0.2, 0.3, 0.1] + base_embedding[: dim - 3],
+        "login function": [0.3, 0.1, 0.2] + base_embedding[: dim - 3],
+        "database connection": [0.4, 0.2, 0.1] + base_embedding[: dim - 3],
+        "test function": [0.5, 0.3, 0.2] + base_embedding[: dim - 3],
+        "api request": [0.6, 0.4, 0.1] + base_embedding[: dim - 3],
+        "def test": [0.2, 0.5, 0.3] + base_embedding[: dim - 3],
+        "class User": [0.3, 0.2, 0.5] + base_embedding[: dim - 3],
         "_embedding_dim": dim,  # Store dim for mock_embeddings fixture
     }
 
@@ -203,6 +213,7 @@ def mock_embeddings_globally(request, monkeypatch, mock_embedding_cache):
 
     # Also mock batch generation if it exists
     try:
+
         async def mock_generate_batch(self, texts):
             """Generate mock embeddings for batch of texts."""
             return [await mock_generate(self, text) for text in texts]
@@ -226,9 +237,13 @@ def mock_embeddings_globally(request, monkeypatch, mock_embedding_cache):
         """Generate mock embeddings for batch in parallel generator."""
         return [await mock_generate(self, text) for text in texts]
 
-    monkeypatch.setattr(ParallelEmbeddingGenerator, "initialize", mock_parallel_initialize)
+    monkeypatch.setattr(
+        ParallelEmbeddingGenerator, "initialize", mock_parallel_initialize
+    )
     monkeypatch.setattr(ParallelEmbeddingGenerator, "generate", mock_parallel_generate)
-    monkeypatch.setattr(ParallelEmbeddingGenerator, "batch_generate", mock_parallel_batch_generate)
+    monkeypatch.setattr(
+        ParallelEmbeddingGenerator, "batch_generate", mock_parallel_batch_generate
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -283,7 +298,7 @@ def small_test_project(tmp_path):
         "db.py": "def connect_database():\n    return DatabaseConnection()",
         "api.py": "def handle_request(req):\n    return process_api_request(req)",
         "utils.py": "def test_function():\n    return 'test result'",
-        "models.py": "class User:\n    def __init__(self, name):\n        self.name = name"
+        "models.py": "class User:\n    def __init__(self, name):\n        self.name = name",
     }
 
     for filename, content in test_files.items():
@@ -296,12 +311,14 @@ def small_test_project(tmp_path):
 # Phase 2: Fixture Optimization (Session-scoped resources)
 # ============================================================================
 
+
 class LazyResource:
     """Lazy initialization wrapper for expensive resources.
 
     Resources are only created when first accessed, reducing
     test startup time for tests that don't use all fixtures.
     """
+
     def __init__(self, factory: Callable):
         self._factory = factory
         self._instance = None
@@ -323,8 +340,10 @@ def lazy_embedding_model():
     Most unit tests should use mock_embeddings fixture instead.
     This is for integration tests that need actual embedding generation.
     """
+
     async def create_model():
         from src.embeddings.generator import EmbeddingGenerator
+
         return EmbeddingGenerator()
 
     return LazyResource(create_model)
@@ -365,6 +384,7 @@ async def clean_db(session_db_path):
 # Phase 3: Advanced Optimizations (Test data factories)
 # ============================================================================
 
+
 @pytest.fixture
 def test_project_factory(tmp_path):
     """Factory for creating test projects with custom sizes.
@@ -372,8 +392,10 @@ def test_project_factory(tmp_path):
     Usage:
         project = test_project_factory(name="my_test", files=10)
     """
-    def create_project(name: str = "test_project", files: int = 5,
-                      language: str = "python") -> Path:
+
+    def create_project(
+        name: str = "test_project", files: int = 5, language: str = "python"
+    ) -> Path:
         """Create a test project with specified number of files.
 
         Args:
@@ -420,13 +442,14 @@ def memory_factory():
     Usage:
         memory = memory_factory(content="test", importance=0.8)
     """
+
     def create_memory(
         content: str = "Test memory content",
         importance: float = 0.5,
         context_level: str = "global",
         category: str = "general",
         tags: List[str] = None,
-        metadata: Dict[str, Any] = None
+        metadata: Dict[str, Any] = None,
     ) -> Dict[str, Any]:
         """Create a memory dictionary with sensible defaults."""
         from datetime import datetime
@@ -451,11 +474,12 @@ def code_sample_factory():
     Usage:
         python_code = code_sample_factory("python", functions=3)
     """
+
     def create_code_sample(
         language: str = "python",
         functions: int = 1,
         classes: int = 0,
-        complexity: str = "simple"
+        complexity: str = "simple",
     ) -> str:
         """Generate code samples for testing.
 
@@ -474,7 +498,7 @@ def code_sample_factory():
             # Generate classes
             for i in range(classes):
                 code_parts.append(f"class TestClass{i}:")
-                code_parts.append(f"    def __init__(self):")
+                code_parts.append("    def __init__(self):")
                 code_parts.append(f"        self.value = {i}")
                 code_parts.append("")
 
@@ -486,13 +510,13 @@ def code_sample_factory():
                 elif complexity == "medium":
                     code_parts.append(f"def test_function_{i}(x, y):")
                     code_parts.append(f"    result = x + y + {i}")
-                    code_parts.append(f"    return result")
+                    code_parts.append("    return result")
                 else:  # complex
                     code_parts.append(f"async def test_function_{i}(x, y, z=None):")
-                    code_parts.append(f"    if z is None:")
+                    code_parts.append("    if z is None:")
                     code_parts.append(f"        z = {i}")
-                    code_parts.append(f"    result = await process(x, y, z)")
-                    code_parts.append(f"    return result")
+                    code_parts.append("    result = await process(x, y, z)")
+                    code_parts.append("    return result")
                 code_parts.append("")
 
             return "\n".join(code_parts)
@@ -512,6 +536,7 @@ def code_sample_factory():
 # Pool size matches pytest -n 4 default (see pytest.ini)
 COLLECTION_POOL = [f"test_pool_{i}" for i in range(4)]
 _collection_cycle = cycle(COLLECTION_POOL)
+
 
 # Worker ID to collection mapping (Option E: worker-specific isolation)
 # Each worker gets a dedicated collection to eliminate cross-worker data contamination
@@ -554,6 +579,7 @@ def qdrant_client():
 
     # Wait for Qdrant to be ready (handles ephemeral test instances)
     import requests
+
     max_retries = 10
     retry_delay = 0.2
 
@@ -608,8 +634,13 @@ def setup_qdrant_pool(qdrant_client):
 
     # Get vector size from config (matches embedding model)
     from src.config import get_config
+
     config = get_config()
-    model_dims = {"all-MiniLM-L6-v2": 384, "all-MiniLM-L12-v2": 384, "all-mpnet-base-v2": 768}
+    model_dims = {
+        "all-MiniLM-L6-v2": 384,
+        "all-MiniLM-L12-v2": 384,
+        "all-mpnet-base-v2": 768,
+    }
     vector_size = model_dims.get(config.embedding_model, 768)
 
     for name in COLLECTION_POOL:
@@ -618,7 +649,9 @@ def setup_qdrant_pool(qdrant_client):
                 # Create only if doesn't exist
                 qdrant_client.create_collection(
                     collection_name=name,
-                    vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE)
+                    vectors_config=VectorParams(
+                        size=vector_size, distance=Distance.COSINE
+                    ),
                 )
         except Exception:
             # Creation failure is not critical - collection might exist
@@ -629,6 +662,7 @@ def setup_qdrant_pool(qdrant_client):
     # Clean up all test collections at end of session
     # This prevents data accumulation across test runs
     from qdrant_client.models import PointIdsList
+
     for name in COLLECTION_POOL:
         try:
             # Delete all points (scroll in batches to handle large collections)
@@ -637,14 +671,13 @@ def setup_qdrant_pool(qdrant_client):
                     collection_name=name,
                     limit=1000,
                     with_payload=False,
-                    with_vectors=False
+                    with_vectors=False,
                 )
                 if not points:
                     break
                 point_ids = [p.id for p in points]
                 qdrant_client.delete(
-                    collection_name=name,
-                    points_selector=PointIdsList(points=point_ids)
+                    collection_name=name, points_selector=PointIdsList(points=point_ids)
                 )
         except Exception:
             pass  # Collection might not exist or be inaccessible
@@ -675,8 +708,6 @@ def unique_qdrant_collection(monkeypatch, qdrant_client, setup_qdrant_pool, work
     when multiple tests run sequentially on the same worker.
     """
     import os
-    from qdrant_client.models import PointIdsList
-    import time
     import uuid
 
     storage_backend = os.getenv("CLAUDE_RAG_STORAGE_BACKEND", "qdrant")
@@ -732,11 +763,14 @@ def throttled_qdrant(qdrant_client):
         def __getattr__(self, name):
             attr = getattr(self._client, name)
             if callable(attr):
+
                 def throttled(*args, **kwargs):
                     # Small delay to stagger operations
                     import time
+
                     time.sleep(0.01)  # 10ms stagger
                     return attr(*args, **kwargs)
+
                 return throttled
             return attr
 
@@ -746,6 +780,7 @@ def throttled_qdrant(qdrant_client):
 # ============================================================================
 # Test Project Isolation (TEST-016 Fix)
 # ============================================================================
+
 
 @pytest.fixture
 def test_project_name(request):
@@ -770,6 +805,7 @@ def test_project_name(request):
     The name format is: test_{test_name}_{random_8chars}
     """
     import uuid
+
     # Use test name + random suffix for uniqueness
     test_name = request.node.name[:30]  # Truncate long test names
     unique_suffix = uuid.uuid4().hex[:8]
@@ -779,6 +815,7 @@ def test_project_name(request):
 # ============================================================================
 # Automatic Test Marker Application (TEST-011)
 # ============================================================================
+
 
 def pytest_collection_modifyitems(config, items):
     """Auto-apply markers based on test location and characteristics.
@@ -820,6 +857,7 @@ def pytest_collection_modifyitems(config, items):
         if "requires_gpu" in item.keywords:
             try:
                 import torch
+
                 if not torch.cuda.is_available():
                     item.add_marker(pytest.mark.skip(reason="GPU not available"))
             except ImportError:
@@ -828,13 +866,20 @@ def pytest_collection_modifyitems(config, items):
         # Skip timing-sensitive tests in parallel execution
         if "skip_ci" in item.keywords:
             # Check if running under pytest-xdist (parallel execution)
-            if hasattr(config, "workerinput") or getattr(config, "option", None) and getattr(config.option, "numprocesses", None):
-                item.add_marker(pytest.mark.skip(reason="Timing-sensitive under parallel execution"))
+            if (
+                hasattr(config, "workerinput")
+                or getattr(config, "option", None)
+                and getattr(config.option, "numprocesses", None)
+            ):
+                item.add_marker(
+                    pytest.mark.skip(reason="Timing-sensitive under parallel execution")
+                )
 
         # Skip Docker tests if Docker not running
         if "requires_docker" in item.keywords:
             try:
                 import docker
+
                 client = docker.from_env()
                 client.ping()
             except Exception:

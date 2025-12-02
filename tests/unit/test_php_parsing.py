@@ -10,12 +10,11 @@ This test suite verifies comprehensive PHP support including:
 - Performance requirements
 """
 
-import pytest
 from mcp_performance_core import parse_source_file
 
 
 # Sample PHP code with various constructs
-SAMPLE_PHP = '''<?php
+SAMPLE_PHP = """<?php
 
 namespace App\\Models;
 
@@ -79,10 +78,10 @@ function calculateTotal($items) {
 function formatCurrency($amount) {
     return "$" . number_format($amount, 2);
 }
-?>'''
+?>"""
 
 
-INTERFACE_PHP = '''<?php
+INTERFACE_PHP = """<?php
 
 interface Serializable {
     public function serialize();
@@ -92,10 +91,10 @@ interface Serializable {
 interface JsonSerializable {
     public function jsonSerialize();
 }
-?>'''
+?>"""
 
 
-TRAIT_PHP = '''<?php
+TRAIT_PHP = """<?php
 
 trait Logger {
     public function log($message) {
@@ -118,10 +117,10 @@ trait Cacheable {
         $this->cache[$key] = $value;
     }
 }
-?>'''
+?>"""
 
 
-NAMESPACE_PHP = '''<?php
+NAMESPACE_PHP = """<?php
 
 namespace App\\Controllers\\Admin;
 
@@ -138,10 +137,10 @@ class EmailService {
         // Send email logic
     }
 }
-?>'''
+?>"""
 
 
-ABSTRACT_CLASS_PHP = '''<?php
+ABSTRACT_CLASS_PHP = """<?php
 
 abstract class Animal {
     protected $name;
@@ -162,7 +161,7 @@ class Dog extends Animal {
         return "Woof!";
     }
 }
-?>'''
+?>"""
 
 
 class TestPhpFileParsing:
@@ -194,12 +193,12 @@ class TestPhpUnitExtraction:
         result = parse_source_file("test.php", SAMPLE_PHP)
         if len(result.units) > 0:
             unit = result.units[0]
-            assert hasattr(unit, 'unit_type')
-            assert hasattr(unit, 'name')
-            assert hasattr(unit, 'start_line')
-            assert hasattr(unit, 'end_line')
-            assert hasattr(unit, 'content')
-            assert hasattr(unit, 'language')
+            assert hasattr(unit, "unit_type")
+            assert hasattr(unit, "name")
+            assert hasattr(unit, "start_line")
+            assert hasattr(unit, "end_line")
+            assert hasattr(unit, "content")
+            assert hasattr(unit, "language")
             assert unit.language == "Php"
 
 
@@ -359,14 +358,14 @@ class TestPhpEdgeCases:
 
     def test_php_tags(self):
         """Test that PHP tags don't break parsing."""
-        php_code = '''<?php
+        php_code = """<?php
 
 class Test {
     public function method() {
         echo "Hello";
     }
 }
-?>'''
+?>"""
         result = parse_source_file("tags.php", php_code)
         assert result.language == "Php"
         assert len(result.units) > 0

@@ -1,6 +1,5 @@
 """Watch command for CLI - watches directory and auto-indexes changes."""
 
-import asyncio
 import logging
 from pathlib import Path
 
@@ -64,10 +63,18 @@ class WatchCommand:
 
             # Start watching
             print(f"Watching {path} for changes...")
-            print("Monitoring file types: .py, .js, .ts, .tsx, .jsx, .java, .go, .rs, .c, .cpp, .h, .hpp")
-            print("                        .swift, .kt, .rb, .php, .cs, .sql, .json, .yaml, .yml, .toml, .md")
-            print("Ignoring: .git/, node_modules/, __pycache__/, venv/, .venv/, build/, dist/")
-            print("\nPress Ctrl+C to stop (will finish current file before stopping).\n")
+            print(
+                "Monitoring file types: .py, .js, .ts, .tsx, .jsx, .java, .go, .rs, .c, .cpp, .h, .hpp"
+            )
+            print(
+                "                        .swift, .kt, .rb, .php, .cs, .sql, .json, .yaml, .yml, .toml, .md"
+            )
+            print(
+                "Ignoring: .git/, node_modules/, __pycache__/, venv/, .venv/, build/, dist/"
+            )
+            print(
+                "\nPress Ctrl+C to stop (will finish current file before stopping).\n"
+            )
 
             await service.run_until_stopped()
 

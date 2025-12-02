@@ -1,10 +1,7 @@
 """Integration tests for the complete tagging system."""
 
 import pytest
-import tempfile
 import asyncio
-import uuid
-from pathlib import Path
 
 from src.tagging.auto_tagger import AutoTagger
 from src.tagging.tag_manager import TagManager
@@ -12,7 +9,13 @@ from src.tagging.collection_manager import CollectionManager
 from src.tagging.models import TagCreate, CollectionCreate
 from src.config import ServerConfig
 from src.store.qdrant_store import QdrantMemoryStore
-from src.core.models import MemoryUnit, MemoryCategory, ContextLevel, MemoryScope, SearchFilters
+from src.core.models import (
+    MemoryUnit,
+    MemoryCategory,
+    ContextLevel,
+    MemoryScope,
+    SearchFilters,
+)
 from tests.conftest import mock_embedding
 
 
@@ -34,7 +37,6 @@ def config(unique_qdrant_collection):
 @pytest.fixture
 def store(config):
     """Create and initialize memory store with pooled collection."""
-    import asyncio
     store_instance = QdrantMemoryStore(config)
 
     # Run initialization
@@ -135,8 +137,16 @@ async def test_tag_based_search(store, tag_manager):
     )
 
     # Store memories
-    id1 = await store.store(memory1.content, mock_embedding(value=0.1), memory1.model_dump(exclude={"content"}))
-    id2 = await store.store(memory2.content, mock_embedding(value=0.2), memory2.model_dump(exclude={"content"}))
+    id1 = await store.store(
+        memory1.content,
+        mock_embedding(value=0.1),
+        memory1.model_dump(exclude={"content"}),
+    )
+    await store.store(
+        memory2.content,
+        mock_embedding(value=0.2),
+        memory2.model_dump(exclude={"content"}),
+    )
 
     # Search with tag filter
     filters = SearchFilters(tags=["python"])
@@ -174,8 +184,16 @@ async def test_collection_workflow(collection_manager, store, tag_manager, auto_
         tags=["python"],
     )
 
-    id1 = await store.store(memory1.content, mock_embedding(value=0.1), memory1.model_dump(exclude={"content"}))
-    id2 = await store.store(memory2.content, mock_embedding(value=0.2), memory2.model_dump(exclude={"content"}))
+    id1 = await store.store(
+        memory1.content,
+        mock_embedding(value=0.1),
+        memory1.model_dump(exclude={"content"}),
+    )
+    id2 = await store.store(
+        memory2.content,
+        mock_embedding(value=0.2),
+        memory2.model_dump(exclude={"content"}),
+    )
 
     # Add matching memory to collection
     collection_manager.add_to_collection(collection.id, [id1])
@@ -324,9 +342,7 @@ async def test_collection_update_timestamp(collection_manager):
     """Test that collection updated_at is maintained."""
     import time
 
-    collection = collection_manager.create_collection(
-        CollectionCreate(name="Test")
-    )
+    collection = collection_manager.create_collection(CollectionCreate(name="Test"))
 
     initial_updated_at = collection.updated_at
 
@@ -363,9 +379,7 @@ async def test_list_tags_by_parent(tag_manager):
 @pytest.mark.asyncio
 async def test_remove_memories_from_collection(collection_manager):
     """Test removing multiple memories from collection."""
-    collection = collection_manager.create_collection(
-        CollectionCreate(name="Test")
-    )
+    collection = collection_manager.create_collection(CollectionCreate(name="Test"))
 
     # Add memories
     memory_ids = ["mem-1", "mem-2", "mem-3", "mem-4"]

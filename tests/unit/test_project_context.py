@@ -1,7 +1,5 @@
 """Tests for project context detection and management."""
 
-import pytest
-import os
 import tempfile
 from datetime import datetime, timedelta, UTC
 from pathlib import Path
@@ -75,10 +73,10 @@ class TestProjectContextDetector:
     def test_set_active_context_switching(self):
         """Test switching between projects."""
         # Set first project
-        context1 = self.detector.set_active_context("project-a")
+        self.detector.set_active_context("project-a")
 
         # Switch to second project
-        context2 = self.detector.set_active_context("project-b")
+        self.detector.set_active_context("project-b")
 
         # First context should be archived
         assert len(self.detector.project_history) == 1
@@ -91,8 +89,8 @@ class TestProjectContextDetector:
 
     def test_set_active_context_same_project(self):
         """Test setting same project doesn't create history."""
-        context1 = self.detector.set_active_context("project-a")
-        context2 = self.detector.set_active_context("project-a")
+        self.detector.set_active_context("project-a")
+        self.detector.set_active_context("project-a")
 
         # Should not create history entry
         assert len(self.detector.project_history) == 0
@@ -202,7 +200,9 @@ class TestProjectContextDetector:
             self.detector.track_file_activity(str(test_file))
 
             # Should increment activity count
-            assert self.detector.current_context.file_activity_count == initial_count + 1
+            assert (
+                self.detector.current_context.file_activity_count == initial_count + 1
+            )
 
     def test_get_project_weight_no_context(self):
         """Test project weight with no active context."""

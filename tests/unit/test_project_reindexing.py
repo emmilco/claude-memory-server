@@ -15,7 +15,6 @@ from pathlib import Path
 
 from src.core.server import MemoryRAGServer
 from src.config import ServerConfig
-from src.store.qdrant_store import QdrantMemoryStore
 
 
 @pytest_asyncio.fixture
@@ -82,7 +81,6 @@ async def server(unique_qdrant_collection):
 async def test_reindex_project_basic(server, test_project_dir):
     """Test basic project reindexing."""
     # Use unique project name to avoid cross-test interference
-    import uuid
     project_name = f"test-project-{uuid.uuid4().hex[:8]}"
 
     # First index
@@ -105,7 +103,6 @@ async def test_reindex_project_basic(server, test_project_dir):
 async def test_reindex_with_clear_existing(server, test_project_dir):
     """Test reindexing with clear_existing flag."""
     # Use unique project name to avoid cross-test interference
-    import uuid
     project_name = f"test-project-{uuid.uuid4().hex[:8]}"
 
     # First index
@@ -134,7 +131,6 @@ async def test_reindex_with_clear_existing(server, test_project_dir):
 async def test_reindex_with_bypass_cache(server, test_project_dir):
     """Test reindexing with bypass_cache flag."""
     # Use unique project name to avoid cross-test interference
-    import uuid
     project_name = f"test-project-{uuid.uuid4().hex[:8]}"
 
     # First index (populate cache)
@@ -163,7 +159,6 @@ async def test_reindex_with_bypass_cache(server, test_project_dir):
 async def test_reindex_with_both_flags(server, test_project_dir):
     """Test reindexing with both clear_existing and bypass_cache."""
     # Use unique project name to avoid cross-test interference
-    import uuid
     project_name = f"test-project-{uuid.uuid4().hex[:8]}"
 
     # First index
@@ -235,7 +230,6 @@ async def test_reindex_empty_directory(server):
 async def test_reindex_stats_accuracy(server, test_project_dir):
     """Test that reindexing statistics are accurate."""
     # Use unique project name to avoid cross-test interference
-    import uuid
     project_name = f"test-project-{uuid.uuid4().hex[:8]}"
 
     result = await server.reindex_project(
@@ -267,7 +261,6 @@ async def test_reindex_stats_accuracy(server, test_project_dir):
 async def test_reindex_multiple_projects(server, test_project_dir):
     """Test reindexing same project multiple times."""
     # Use unique project name to avoid cross-test interference
-    import uuid
     project_name = f"test-project-{uuid.uuid4().hex[:8]}"
 
     # Index first time
@@ -305,18 +298,19 @@ async def test_reindex_multiple_projects(server, test_project_dir):
 async def test_reindex_with_progress_callback(server, test_project_dir):
     """Test reindexing with progress callback."""
     # Use unique project name to avoid cross-test interference
-    import uuid
     project_name = f"test-project-{uuid.uuid4().hex[:8]}"
 
     progress_calls = []
 
     def progress_callback(current, total, current_file, error_info):
-        progress_calls.append({
-            "current": current,
-            "total": total,
-            "file": current_file,
-            "error": error_info,
-        })
+        progress_calls.append(
+            {
+                "current": current,
+                "total": total,
+                "file": current_file,
+                "error": error_info,
+            }
+        )
 
     result = await server.reindex_project(
         project_name=project_name,

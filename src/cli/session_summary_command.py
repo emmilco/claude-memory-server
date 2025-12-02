@@ -67,7 +67,9 @@ def _display_session_summary(tracker: TokenTracker, session_id: str) -> None:
     relevance_color = (
         "green"
         if summary["avg_relevance"] > 0.8
-        else "yellow" if summary["avg_relevance"] > 0.6 else "red"
+        else "yellow"
+        if summary["avg_relevance"] > 0.6
+        else "red"
     )
     summary_text.append(
         f"{summary['avg_relevance']:.2f}\n", style=f"bold {relevance_color}"

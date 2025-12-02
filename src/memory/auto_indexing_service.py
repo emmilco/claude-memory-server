@@ -3,11 +3,12 @@
 import asyncio
 import logging
 from pathlib import Path
-from typing import Optional, Callable, Dict, Any, List
+from typing import Optional, Callable, Dict, Any
 from datetime import datetime, UTC
 
 try:
     import pathspec
+
     PATHSPEC_AVAILABLE = True
 except ImportError:
     PATHSPEC_AVAILABLE = False
@@ -111,11 +112,10 @@ class AutoIndexingService:
 
         # Exclude pattern matching
         self.exclude_spec: Optional[Any] = None
-        if PATHSPEC_AVAILABLE and hasattr(config, 'auto_index_exclude_patterns'):
+        if PATHSPEC_AVAILABLE and hasattr(config, "auto_index_exclude_patterns"):
             try:
                 self.exclude_spec = pathspec.PathSpec.from_lines(
-                    'gitwildmatch',
-                    config.auto_index_exclude_patterns
+                    "gitwildmatch", config.auto_index_exclude_patterns
                 )
             except Exception as e:
                 logger.warning(f"Failed to compile exclude patterns: {e}")
@@ -135,8 +135,8 @@ class AutoIndexingService:
             raise IndexingError(
                 f"Failed to initialize auto-indexing service: {e}",
                 solution="Check storage backend connection and configuration. "
-                        "Ensure database is accessible.",
-                docs_url="https://docs.claude-memory.com/auto-indexing"
+                "Ensure database is accessible.",
+                docs_url="https://docs.claude-memory.com/auto-indexing",
             ) from e
 
     async def should_auto_index(self) -> bool:
@@ -200,9 +200,18 @@ class AutoIndexingService:
             Number of indexable files
         """
         count = 0
-        supported_extensions = {'.py', '.js', '.jsx', '.ts', '.tsx', '.java', '.go', '.rs'}
+        supported_extensions = {
+            ".py",
+            ".js",
+            ".jsx",
+            ".ts",
+            ".tsx",
+            ".java",
+            ".go",
+            ".rs",
+        }
 
-        for file_path in self.project_path.rglob('*'):
+        for file_path in self.project_path.rglob("*"):
             if not file_path.is_file():
                 continue
 
@@ -217,8 +226,7 @@ class AutoIndexingService:
         return count
 
     async def _index_in_foreground(
-        self,
-        progress_callback: Optional[Callable] = None
+        self, progress_callback: Optional[Callable] = None
     ) -> Dict[str, Any]:
         """
         Index project in foreground (blocking).
@@ -247,18 +255,20 @@ class AutoIndexingService:
             # Update tracker metadata
             await self.tracker.update_metadata(
                 project_name=self.project_name,
-                total_files=result['indexed_files'],
-                total_units=result['total_units'],
+                total_files=result["indexed_files"],
+                total_units=result["total_units"],
                 is_watching=False,
             )
 
             self.progress.status = "complete"
             self.progress.end_time = datetime.now(UTC)
-            self.progress.total_files = result['indexed_files']
-            self.progress.files_completed = result['indexed_files']
+            self.progress.total_files = result["indexed_files"]
+            self.progress.files_completed = result["indexed_files"]
 
-            logger.info(f"Foreground indexing complete for {self.project_name}: "
-                       f"{result['indexed_files']} files, {result['total_units']} units")
+            logger.info(
+                f"Foreground indexing complete for {self.project_name}: "
+                f"{result['indexed_files']} files, {result['total_units']} units"
+            )
 
             return result
 
@@ -270,8 +280,7 @@ class AutoIndexingService:
             raise
 
     async def _index_in_background(
-        self,
-        progress_callback: Optional[Callable] = None
+        self, progress_callback: Optional[Callable] = None
     ) -> Dict[str, Any]:
         """
         Index project in background (non-blocking).
@@ -300,18 +309,20 @@ class AutoIndexingService:
             # Update tracker metadata
             await self.tracker.update_metadata(
                 project_name=self.project_name,
-                total_files=result['indexed_files'],
-                total_units=result['total_units'],
+                total_files=result["indexed_files"],
+                total_units=result["total_units"],
                 is_watching=False,
             )
 
             self.progress.status = "complete"
             self.progress.end_time = datetime.now(UTC)
-            self.progress.total_files = result['indexed_files']
-            self.progress.files_completed = result['indexed_files']
+            self.progress.total_files = result["indexed_files"]
+            self.progress.files_completed = result["indexed_files"]
 
-            logger.info(f"Background indexing complete for {self.project_name}: "
-                       f"{result['indexed_files']} files, {result['total_units']} units")
+            logger.info(
+                f"Background indexing complete for {self.project_name}: "
+                f"{result['indexed_files']} files, {result['total_units']} units"
+            )
 
             return result
 
@@ -323,9 +334,7 @@ class AutoIndexingService:
             raise
 
     async def start_auto_indexing(
-        self,
-        force: bool = False,
-        progress_callback: Optional[Callable] = None
+        self, force: bool = False, progress_callback: Optional[Callable] = None
     ) -> Optional[Dict[str, Any]]:
         """
         Start auto-indexing if needed.
@@ -357,7 +366,9 @@ class AutoIndexingService:
 
         if file_count > size_threshold:
             # Background mode for large projects
-            logger.info(f"Using background mode (file_count={file_count} > threshold={size_threshold})")
+            logger.info(
+                f"Using background mode (file_count={file_count} > threshold={size_threshold})"
+            )
 
             # Start background task
             self.indexing_task = asyncio.create_task(
@@ -368,11 +379,13 @@ class AutoIndexingService:
             return {
                 "mode": "background",
                 "file_count": file_count,
-                "status": "indexing"
+                "status": "indexing",
             }
         else:
             # Foreground mode for small projects
-            logger.info(f"Using foreground mode (file_count={file_count} <= threshold={size_threshold})")
+            logger.info(
+                f"Using foreground mode (file_count={file_count} <= threshold={size_threshold})"
+            )
             result = await self._index_in_foreground(progress_callback)
             result["mode"] = "foreground"
             return result
@@ -426,7 +439,9 @@ class AutoIndexingService:
         """
         return self.progress.to_dict()
 
-    async def wait_for_completion(self, timeout: Optional[float] = None) -> Dict[str, Any]:
+    async def wait_for_completion(
+        self, timeout: Optional[float] = None
+    ) -> Dict[str, Any]:
         """
         Wait for background indexing to complete.
 
@@ -447,7 +462,9 @@ class AutoIndexingService:
         else:
             return await self.indexing_task
 
-    async def trigger_reindex(self, progress_callback: Optional[Callable] = None) -> Dict[str, Any]:
+    async def trigger_reindex(
+        self, progress_callback: Optional[Callable] = None
+    ) -> Dict[str, Any]:
         """
         Manually trigger a full re-index.
 
@@ -458,7 +475,9 @@ class AutoIndexingService:
             Indexing result
         """
         logger.info(f"Manual re-index triggered for {self.project_name}")
-        return await self.start_auto_indexing(force=True, progress_callback=progress_callback)
+        return await self.start_auto_indexing(
+            force=True, progress_callback=progress_callback
+        )
 
     async def close(self) -> None:
         """Clean up resources."""

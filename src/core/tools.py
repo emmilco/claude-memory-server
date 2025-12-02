@@ -8,7 +8,6 @@ from src.core.models import (
     MemoryCategory,
     SearchFilters,
     MemoryResult,
-    QueryRequest,
 )
 from src.store.base import MemoryStore
 from src.embeddings.generator import EmbeddingGenerator

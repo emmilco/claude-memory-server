@@ -1,8 +1,7 @@
 """Pattern matching for code review."""
 
-import asyncio
 from dataclasses import dataclass
-from typing import List, Dict, Optional
+from typing import List, Dict
 import logging
 
 from .patterns import CodeSmellPattern
@@ -49,7 +48,9 @@ class PatternMatcher:
             return self._pattern_embeddings_cache[pattern.id]
 
         # Generate embedding from example code
-        embedding = await self.embedding_generator.generate_embedding(pattern.example_code)
+        embedding = await self.embedding_generator.generate_embedding(
+            pattern.example_code
+        )
 
         # Cache it
         self._pattern_embeddings_cache[pattern.id] = embedding

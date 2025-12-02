@@ -43,7 +43,7 @@ async def benchmark_embedding_generation():
     # Benchmark batch generation
     print("\n2. Batch Embedding Generation (200 docs):")
     start = time.time()
-    embeddings = await generator.batch_generate(test_texts)
+    await generator.batch_generate(test_texts)
     batch_time = time.time() - start
 
     throughput = len(test_texts) / batch_time
@@ -52,12 +52,13 @@ async def benchmark_embedding_generation():
     print(f"   Total time: {batch_time:.2f}s")
     print(f"   Average per doc: {avg_time:.2f}ms")
     print(f"   Throughput: {throughput:.1f} docs/sec")
-    print(f"   Target: 100+ docs/sec")
+    print("   Target: 100+ docs/sec")
     print(f"   Status: {'✅ PASS' if throughput >= 100 else '❌ FAIL'}")
 
     # Test with Rust
     print("\n3. Rust Acceleration:")
     from src.embeddings.rust_bridge import RustBridge
+
     if RustBridge.is_rust_available():
         print("   Rust module: ✅ Available")
 
@@ -68,6 +69,7 @@ async def benchmark_embedding_generation():
         start = time.time()
         for _ in range(10):
             from src.embeddings.rust_bridge import batch_normalize_embeddings_python
+
             batch_normalize_embeddings_python(test_vectors)
         python_time = time.time() - start
 
@@ -81,7 +83,7 @@ async def benchmark_embedding_generation():
         print(f"   Python time: {python_time * 1000:.2f}ms")
         print(f"   Rust time: {rust_time * 1000:.2f}ms")
         print(f"   Speedup: {speedup:.1f}x")
-        print(f"   Target: 10-50x speedup")
+        print("   Target: 10-50x speedup")
         print(f"   Status: {'✅ PASS' if speedup >= 10 else '❌ FAIL'}")
     else:
         print("   Rust module: ❌ Not available (using Python fallback)")
@@ -153,7 +155,7 @@ async def benchmark_vector_search():
 
     avg_query_time = sum(query_times) / len(query_times)
     print(f"\n   Average query time: {avg_query_time:.2f}ms")
-    print(f"   Target: <50ms for 10K docs")
+    print("   Target: <50ms for 10K docs")
     print(f"   Dataset size: {num_docs} docs (1K)")
     print(f"   Status: {'✅ PASS' if avg_query_time < 50 else '❌ FAIL'}")
 
@@ -217,7 +219,9 @@ async def benchmark_cache_performance():
         assert cached is not None
     second_pass_time = time.time() - start
 
-    speedup = first_pass_time / second_pass_time if second_pass_time > 0 else float('inf')
+    speedup = (
+        first_pass_time / second_pass_time if second_pass_time > 0 else float("inf")
+    )
 
     stats = cache.get_stats()
     hit_rate = stats["hit_rate"]
@@ -227,7 +231,7 @@ async def benchmark_cache_performance():
     print(f"   Speedup: {speedup:.1f}x")
     print(f"   Hit rate: {hit_rate * 100:.1f}%")
     print(f"   Cache entries: {stats['total_entries']}")
-    print(f"   Target hit rate: 90%+")
+    print("   Target hit rate: 90%+")
     print(f"   Status: {'✅ PASS' if hit_rate >= 0.9 else '❌ FAIL'}")
 
     cache.close()
@@ -270,7 +274,12 @@ async def benchmark_specialized_tools():
 
     tools = [
         ("retrieve_preferences", server.retrieve_preferences),
-        ("retrieve_project_context", lambda q, **kw: server.retrieve_project_context(q, use_current_project=False, **kw)),
+        (
+            "retrieve_project_context",
+            lambda q, **kw: server.retrieve_project_context(
+                q, use_current_project=False, **kw
+            ),
+        ),
         ("retrieve_session_state", server.retrieve_session_state),
     ]
 
@@ -331,6 +340,7 @@ async def main():
     except Exception as e:
         print(f"\n❌ Benchmark failed: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

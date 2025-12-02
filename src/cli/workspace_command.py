@@ -1,13 +1,11 @@
 """Workspace management commands for CLI."""
 
-import asyncio
 import logging
-from typing import Optional, List
 
 try:
     from rich.console import Console
     from rich.table import Table
-    from rich.panel import Panel
+
     RICH_AVAILABLE = True
 except ImportError:
     RICH_AVAILABLE = False
@@ -36,13 +34,13 @@ class WorkspaceCommand:
         """
         # Map subcommands to handlers
         handlers = {
-            'list': self._list_workspaces,
-            'create': self._create_workspace,
-            'delete': self._delete_workspace,
-            'info': self._get_workspace_info,
-            'add-repo': self._add_repository,
-            'remove-repo': self._remove_repository,
-            'repos': self._list_repositories,
+            "list": self._list_workspaces,
+            "create": self._create_workspace,
+            "delete": self._delete_workspace,
+            "info": self._get_workspace_info,
+            "add-repo": self._add_repository,
+            "remove-repo": self._remove_repository,
+            "repos": self._list_repositories,
         }
 
         handler = handlers.get(args.workspace_subcommand)
@@ -63,7 +61,7 @@ class WorkspaceCommand:
 
             # Get workspaces
             workspaces = await workspace_manager.list_workspaces(
-                tags=args.tags.split(',') if args.tags else None
+                tags=args.tags.split(",") if args.tags else None
             )
 
             if not workspaces:
@@ -92,12 +90,13 @@ class WorkspaceCommand:
 
             # Generate workspace ID from name
             import re
-            workspace_id = re.sub(r'[^a-z0-9]+', '-', args.name.lower()).strip('-')
+
+            workspace_id = re.sub(r"[^a-z0-9]+", "-", args.name.lower()).strip("-")
 
             # Parse repository IDs
             repo_ids = []
             if args.repos:
-                repo_ids = [r.strip() for r in args.repos.split(',')]
+                repo_ids = [r.strip() for r in args.repos.split(",")]
 
             # Create workspace
             workspace = await workspace_manager.create_workspace(
@@ -106,7 +105,7 @@ class WorkspaceCommand:
                 description=args.description,
                 repository_ids=repo_ids,
                 auto_index=not args.no_auto_index,
-                cross_repo_search_enabled=not args.no_cross_search
+                cross_repo_search_enabled=not args.no_cross_search,
             )
 
             self._print_success(f"Workspace created: {workspace.name}")
@@ -116,7 +115,9 @@ class WorkspaceCommand:
             if workspace.repository_ids:
                 self._print_info(f"Repositories: {len(workspace.repository_ids)}")
             self._print_info(f"Auto-index: {workspace.auto_index}")
-            self._print_info(f"Cross-repo search: {workspace.cross_repo_search_enabled}")
+            self._print_info(
+                f"Cross-repo search: {workspace.cross_repo_search_enabled}"
+            )
 
         except Exception as e:
             self._print_error(f"Failed to create workspace: {e}")
@@ -211,7 +212,9 @@ class WorkspaceCommand:
             # Add repository
             await workspace_manager.add_repository(args.workspace_id, args.repo_id)
 
-            self._print_success(f"Repository added to workspace: {repo.name} → {workspace.name}")
+            self._print_success(
+                f"Repository added to workspace: {repo.name} → {workspace.name}"
+            )
 
         except Exception as e:
             self._print_error(f"Failed to add repository to workspace: {e}")
@@ -230,13 +233,15 @@ class WorkspaceCommand:
             # Remove repository
             await workspace_manager.remove_repository(args.workspace_id, args.repo_id)
 
-            self._print_success(f"Repository removed from workspace")
+            self._print_success("Repository removed from workspace")
             self._print_info(f"Workspace ID: {args.workspace_id}")
             self._print_info(f"Repository ID: {args.repo_id}")
 
         except Exception as e:
             self._print_error(f"Failed to remove repository from workspace: {e}")
-            logger.error(f"Failed to remove repository from workspace: {e}", exc_info=True)
+            logger.error(
+                f"Failed to remove repository from workspace: {e}", exc_info=True
+            )
 
     async def _list_repositories(self, args):
         """List repositories in a workspace."""
@@ -273,7 +278,9 @@ class WorkspaceCommand:
 
         except Exception as e:
             self._print_error(f"Failed to list repositories in workspace: {e}")
-            logger.error(f"Failed to list repositories in workspace: {e}", exc_info=True)
+            logger.error(
+                f"Failed to list repositories in workspace: {e}", exc_info=True
+            )
 
     def _print_rich_workspaces(self, workspaces):
         """Print workspaces in rich format."""
@@ -292,7 +299,7 @@ class WorkspaceCommand:
                 ws.description or "-",
                 str(len(ws.repository_ids)),
                 "✓" if ws.auto_index else "✗",
-                "✓" if ws.cross_repo_search_enabled else "✗"
+                "✓" if ws.cross_repo_search_enabled else "✗",
             )
 
         self.console.print()
@@ -320,7 +327,10 @@ class WorkspaceCommand:
     def _print_rich_workspace_info(self, workspace, repositories):
         """Print detailed workspace info in rich format."""
         # Main info table
-        table = Table(title=f"[bold cyan]Workspace: {workspace.name}[/bold cyan]", show_header=False)
+        table = Table(
+            title=f"[bold cyan]Workspace: {workspace.name}[/bold cyan]",
+            show_header=False,
+        )
         table.add_column("Field", style="cyan", width=20)
         table.add_column("Value", style="white")
 
@@ -332,7 +342,9 @@ class WorkspaceCommand:
 
         table.add_row("Repositories", str(len(workspace.repository_ids)))
         table.add_row("Auto-index", "✓" if workspace.auto_index else "✗")
-        table.add_row("Cross-repo search", "✓" if workspace.cross_repo_search_enabled else "✗")
+        table.add_row(
+            "Cross-repo search", "✓" if workspace.cross_repo_search_enabled else "✗"
+        )
 
         if workspace.tags:
             table.add_row("Tags", ", ".join(workspace.tags))
@@ -346,7 +358,9 @@ class WorkspaceCommand:
         # Repositories
         if repositories:
             self.console.print()
-            repo_table = Table(title=f"[bold cyan]Repositories ({len(repositories)})[/bold cyan]")
+            repo_table = Table(
+                title=f"[bold cyan]Repositories ({len(repositories)})[/bold cyan]"
+            )
             repo_table.add_column("Name", style="cyan")
             repo_table.add_column("Status", style="bold")
             repo_table.add_column("Files", justify="right")
@@ -369,7 +383,7 @@ class WorkspaceCommand:
                     repo.name,
                     status_text,
                     f"{repo.file_count:,}" if repo.file_count else "-",
-                    f"{repo.unit_count:,}" if repo.unit_count else "-"
+                    f"{repo.unit_count:,}" if repo.unit_count else "-",
                 )
 
             self.console.print(repo_table)
@@ -404,7 +418,9 @@ class WorkspaceCommand:
 
     def _print_rich_repositories(self, workspace_name, repositories):
         """Print repositories in rich format."""
-        table = Table(title=f"[bold cyan]Repositories in '{workspace_name}'[/bold cyan]")
+        table = Table(
+            title=f"[bold cyan]Repositories in '{workspace_name}'[/bold cyan]"
+        )
         table.add_column("Name", style="cyan")
         table.add_column("ID", style="dim", max_width=15)
         table.add_column("Status", style="bold")
@@ -429,7 +445,7 @@ class WorkspaceCommand:
                 repo.id[:12] + "...",
                 status_text,
                 f"{repo.file_count:,}" if repo.file_count else "-",
-                f"{repo.unit_count:,}" if repo.unit_count else "-"
+                f"{repo.unit_count:,}" if repo.unit_count else "-",
             )
 
         self.console.print()
@@ -477,111 +493,62 @@ class WorkspaceCommand:
 def add_workspace_parser(subparsers):
     """Add workspace command parser."""
     workspace_parser = subparsers.add_parser(
-        'workspace',
-        aliases=['ws'],
-        help='Manage workspaces'
+        "workspace", aliases=["ws"], help="Manage workspaces"
     )
 
     workspace_subparsers = workspace_parser.add_subparsers(
-        dest='workspace_subcommand',
-        help='Workspace subcommands'
+        dest="workspace_subcommand", help="Workspace subcommands"
     )
 
     # List workspaces
-    list_parser = workspace_subparsers.add_parser(
-        'list',
-        help='List all workspaces'
-    )
-    list_parser.add_argument(
-        '--tags',
-        help='Filter by tags (comma-separated)'
-    )
+    list_parser = workspace_subparsers.add_parser("list", help="List all workspaces")
+    list_parser.add_argument("--tags", help="Filter by tags (comma-separated)")
 
     # Create workspace
     create_parser = workspace_subparsers.add_parser(
-        'create',
-        help='Create a new workspace'
+        "create", help="Create a new workspace"
+    )
+    create_parser.add_argument("name", help="Workspace name")
+    create_parser.add_argument("--description", help="Workspace description")
+    create_parser.add_argument(
+        "--repos", help="Repository IDs to add (comma-separated)"
     )
     create_parser.add_argument(
-        'name',
-        help='Workspace name'
+        "--no-auto-index", action="store_true", help="Disable auto-indexing"
     )
     create_parser.add_argument(
-        '--description',
-        help='Workspace description'
-    )
-    create_parser.add_argument(
-        '--repos',
-        help='Repository IDs to add (comma-separated)'
-    )
-    create_parser.add_argument(
-        '--no-auto-index',
-        action='store_true',
-        help='Disable auto-indexing'
-    )
-    create_parser.add_argument(
-        '--no-cross-search',
-        action='store_true',
-        help='Disable cross-repo search'
+        "--no-cross-search", action="store_true", help="Disable cross-repo search"
     )
 
     # Delete workspace
-    delete_parser = workspace_subparsers.add_parser(
-        'delete',
-        help='Delete a workspace'
-    )
-    delete_parser.add_argument(
-        'workspace_id',
-        help='Workspace ID'
-    )
+    delete_parser = workspace_subparsers.add_parser("delete", help="Delete a workspace")
+    delete_parser.add_argument("workspace_id", help="Workspace ID")
 
     # Get workspace info
     info_parser = workspace_subparsers.add_parser(
-        'info',
-        help='Get detailed workspace information'
+        "info", help="Get detailed workspace information"
     )
-    info_parser.add_argument(
-        'workspace_id',
-        help='Workspace ID'
-    )
+    info_parser.add_argument("workspace_id", help="Workspace ID")
 
     # Add repository to workspace
     add_repo_parser = workspace_subparsers.add_parser(
-        'add-repo',
-        help='Add a repository to a workspace'
+        "add-repo", help="Add a repository to a workspace"
     )
-    add_repo_parser.add_argument(
-        'workspace_id',
-        help='Workspace ID'
-    )
-    add_repo_parser.add_argument(
-        'repo_id',
-        help='Repository ID'
-    )
+    add_repo_parser.add_argument("workspace_id", help="Workspace ID")
+    add_repo_parser.add_argument("repo_id", help="Repository ID")
 
     # Remove repository from workspace
     remove_repo_parser = workspace_subparsers.add_parser(
-        'remove-repo',
-        help='Remove a repository from a workspace'
+        "remove-repo", help="Remove a repository from a workspace"
     )
-    remove_repo_parser.add_argument(
-        'workspace_id',
-        help='Workspace ID'
-    )
-    remove_repo_parser.add_argument(
-        'repo_id',
-        help='Repository ID'
-    )
+    remove_repo_parser.add_argument("workspace_id", help="Workspace ID")
+    remove_repo_parser.add_argument("repo_id", help="Repository ID")
 
     # List repositories in workspace
     repos_parser = workspace_subparsers.add_parser(
-        'repos',
-        help='List repositories in a workspace'
+        "repos", help="List repositories in a workspace"
     )
-    repos_parser.add_argument(
-        'workspace_id',
-        help='Workspace ID'
-    )
+    repos_parser.add_argument("workspace_id", help="Workspace ID")
 
     return workspace_parser
 

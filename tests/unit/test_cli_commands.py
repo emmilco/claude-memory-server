@@ -1,9 +1,7 @@
 """Comprehensive tests for CLI commands (index and watch)."""
 
 import pytest
-import pytest_asyncio
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch, ANY
+from unittest.mock import AsyncMock, patch, ANY
 from argparse import Namespace
 from src.cli.index_command import IndexCommand
 from src.cli.watch_command import WatchCommand
@@ -50,9 +48,7 @@ class TestClass:
     async def test_index_single_file_success(self, index_command, temp_python_file):
         """Test successful indexing of a single file."""
         args = Namespace(
-            path=str(temp_python_file),
-            project_name="test-project",
-            recursive=True
+            path=str(temp_python_file), project_name="test-project", recursive=True
         )
 
         with patch("src.cli.index_command.IncrementalIndexer") as mock_indexer_class:
@@ -63,7 +59,7 @@ class TestClass:
                 "file_path": str(temp_python_file),
                 "language": "python",
                 "units_indexed": 2,
-                "parse_time_ms": 5.5
+                "parse_time_ms": 5.5,
             }
 
             # Run command
@@ -81,9 +77,7 @@ class TestClass:
     async def test_index_directory_recursive(self, index_command, temp_directory):
         """Test indexing a directory with recursive option."""
         args = Namespace(
-            path=str(temp_directory),
-            project_name="test-project",
-            recursive=True
+            path=str(temp_directory), project_name="test-project", recursive=True
         )
 
         with patch("src.cli.index_command.IncrementalIndexer") as mock_indexer_class:
@@ -95,7 +89,7 @@ class TestClass:
                 "indexed_files": 3,
                 "skipped_files": 0,
                 "total_units": 10,
-                "failed_files": []
+                "failed_files": [],
             }
 
             # Run command
@@ -109,16 +103,14 @@ class TestClass:
                 temp_directory,
                 recursive=True,
                 show_progress=False,
-                progress_callback=ANY
+                progress_callback=ANY,
             )
 
     @pytest.mark.asyncio
     async def test_index_directory_non_recursive(self, index_command, temp_directory):
         """Test indexing a directory without recursion."""
         args = Namespace(
-            path=str(temp_directory),
-            project_name="test-project",
-            recursive=False
+            path=str(temp_directory), project_name="test-project", recursive=False
         )
 
         with patch("src.cli.index_command.IncrementalIndexer") as mock_indexer_class:
@@ -130,7 +122,7 @@ class TestClass:
                 "indexed_files": 2,
                 "skipped_files": 0,
                 "total_units": 5,
-                "failed_files": []
+                "failed_files": [],
             }
 
             # Run command
@@ -144,16 +136,18 @@ class TestClass:
                 temp_directory,
                 recursive=False,
                 show_progress=False,
-                progress_callback=ANY
+                progress_callback=ANY,
             )
 
     @pytest.mark.asyncio
-    async def test_index_auto_project_name_from_directory(self, index_command, temp_directory):
+    async def test_index_auto_project_name_from_directory(
+        self, index_command, temp_directory
+    ):
         """Test automatic project name detection from directory."""
         args = Namespace(
             path=str(temp_directory),
             project_name=None,  # No project name provided
-            recursive=True
+            recursive=True,
         )
 
         with patch("src.cli.index_command.IncrementalIndexer") as mock_indexer_class:
@@ -165,7 +159,7 @@ class TestClass:
                 "indexed_files": 1,
                 "skipped_files": 0,
                 "total_units": 1,
-                "failed_files": []
+                "failed_files": [],
             }
 
             # Run command
@@ -176,15 +170,19 @@ class TestClass:
 
             # Verify project name was auto-detected (should be directory name)
             expected_project_name = temp_directory.name
-            mock_indexer_class.assert_called_once_with(project_name=expected_project_name)
+            mock_indexer_class.assert_called_once_with(
+                project_name=expected_project_name
+            )
 
     @pytest.mark.asyncio
-    async def test_index_auto_project_name_from_file(self, index_command, temp_python_file):
+    async def test_index_auto_project_name_from_file(
+        self, index_command, temp_python_file
+    ):
         """Test automatic project name detection from file (uses parent directory)."""
         args = Namespace(
             path=str(temp_python_file),
             project_name=None,  # No project name provided
-            recursive=True
+            recursive=True,
         )
 
         with patch("src.cli.index_command.IncrementalIndexer") as mock_indexer_class:
@@ -195,7 +193,7 @@ class TestClass:
                 "file_path": str(temp_python_file),
                 "language": "python",
                 "units_indexed": 2,
-                "parse_time_ms": 5.5
+                "parse_time_ms": 5.5,
             }
 
             # Run command
@@ -206,16 +204,16 @@ class TestClass:
 
             # Verify project name was auto-detected (should be parent directory name)
             expected_project_name = temp_python_file.parent.name
-            mock_indexer_class.assert_called_once_with(project_name=expected_project_name)
+            mock_indexer_class.assert_called_once_with(
+                project_name=expected_project_name
+            )
 
     @pytest.mark.asyncio
     async def test_index_nonexistent_path(self, index_command, tmp_path):
         """Test handling of non-existent path."""
         nonexistent_path = tmp_path / "does_not_exist"
         args = Namespace(
-            path=str(nonexistent_path),
-            project_name="test-project",
-            recursive=True
+            path=str(nonexistent_path), project_name="test-project", recursive=True
         )
 
         # IndexCommand.run() logs the error and returns early without raising
@@ -230,9 +228,7 @@ class TestClass:
     async def test_index_with_failed_files(self, index_command, temp_directory):
         """Test indexing with some failed files."""
         args = Namespace(
-            path=str(temp_directory),
-            project_name="test-project",
-            recursive=True
+            path=str(temp_directory), project_name="test-project", recursive=True
         )
 
         with patch("src.cli.index_command.IncrementalIndexer") as mock_indexer_class:
@@ -244,7 +240,7 @@ class TestClass:
                 "indexed_files": 2,
                 "skipped_files": 0,
                 "total_units": 8,
-                "failed_files": ["failed_file.py"]
+                "failed_files": ["failed_file.py"],
             }
 
             # Run command
@@ -260,9 +256,7 @@ class TestClass:
     async def test_index_exception_handling(self, index_command, temp_python_file):
         """Test exception handling during indexing."""
         args = Namespace(
-            path=str(temp_python_file),
-            project_name="test-project",
-            recursive=True
+            path=str(temp_python_file), project_name="test-project", recursive=True
         )
 
         with patch("src.cli.index_command.IncrementalIndexer") as mock_indexer_class:
@@ -282,9 +276,7 @@ class TestClass:
     async def test_index_throughput_calculation(self, index_command, temp_directory):
         """Test that throughput is calculated and displayed correctly."""
         args = Namespace(
-            path=str(temp_directory),
-            project_name="test-project",
-            recursive=True
+            path=str(temp_directory), project_name="test-project", recursive=True
         )
 
         with patch("src.cli.index_command.IncrementalIndexer") as mock_indexer_class:
@@ -296,7 +288,7 @@ class TestClass:
                 "indexed_files": 10,
                 "skipped_files": 0,
                 "total_units": 50,
-                "failed_files": []
+                "failed_files": [],
             }
 
             # Run command
@@ -326,10 +318,7 @@ class TestWatchCommand:
     @pytest.mark.asyncio
     async def test_watch_successful_initialization(self, watch_command, temp_directory):
         """Test successful watch initialization and initial indexing."""
-        args = Namespace(
-            path=str(temp_directory),
-            project_name="test-project"
-        )
+        args = Namespace(path=str(temp_directory), project_name="test-project")
 
         with patch("src.cli.watch_command.IndexingService") as mock_service_class:
             # Setup mock
@@ -337,7 +326,7 @@ class TestWatchCommand:
             mock_service_class.return_value = mock_service
             mock_service.index_initial.return_value = {
                 "indexed_files": 5,
-                "total_units": 20
+                "total_units": 20,
             }
             # Simulate immediate stop
             mock_service.run_until_stopped.side_effect = KeyboardInterrupt()
@@ -359,7 +348,7 @@ class TestWatchCommand:
         """Test automatic project name detection."""
         args = Namespace(
             path=str(temp_directory),
-            project_name=None  # No project name provided
+            project_name=None,  # No project name provided
         )
 
         with patch("src.cli.watch_command.IndexingService") as mock_service_class:
@@ -368,7 +357,7 @@ class TestWatchCommand:
             mock_service_class.return_value = mock_service
             mock_service.index_initial.return_value = {
                 "indexed_files": 1,
-                "total_units": 5
+                "total_units": 5,
             }
             mock_service.run_until_stopped.side_effect = KeyboardInterrupt()
 
@@ -381,18 +370,14 @@ class TestWatchCommand:
             # Verify project name was auto-detected (should be directory name)
             expected_project_name = temp_directory.name
             mock_service_class.assert_called_once_with(
-                watch_path=temp_directory,
-                project_name=expected_project_name
+                watch_path=temp_directory, project_name=expected_project_name
             )
 
     @pytest.mark.asyncio
     async def test_watch_nonexistent_path(self, watch_command, tmp_path):
         """Test handling of non-existent path."""
         nonexistent_path = tmp_path / "does_not_exist"
-        args = Namespace(
-            path=str(nonexistent_path),
-            project_name="test-project"
-        )
+        args = Namespace(path=str(nonexistent_path), project_name="test-project")
 
         # WatchCommand.run() logs the error and returns early without raising
         # The Path.exists() check happens before service initialization
@@ -408,10 +393,7 @@ class TestWatchCommand:
         file_path = tmp_path / "test.py"
         file_path.write_text("def func(): pass")
 
-        args = Namespace(
-            path=str(file_path),
-            project_name="test-project"
-        )
+        args = Namespace(path=str(file_path), project_name="test-project")
 
         # Should log error and return (path must be directory)
         result = await watch_command.run(args)
@@ -421,12 +403,11 @@ class TestWatchCommand:
         # If we get here without exception, test passes
 
     @pytest.mark.asyncio
-    async def test_watch_keyboard_interrupt_handling(self, watch_command, temp_directory):
+    async def test_watch_keyboard_interrupt_handling(
+        self, watch_command, temp_directory
+    ):
         """Test graceful handling of Ctrl+C (KeyboardInterrupt)."""
-        args = Namespace(
-            path=str(temp_directory),
-            project_name="test-project"
-        )
+        args = Namespace(path=str(temp_directory), project_name="test-project")
 
         with patch("src.cli.watch_command.IndexingService") as mock_service_class:
             # Setup mock
@@ -434,7 +415,7 @@ class TestWatchCommand:
             mock_service_class.return_value = mock_service
             mock_service.index_initial.return_value = {
                 "indexed_files": 1,
-                "total_units": 5
+                "total_units": 5,
             }
             # Simulate Ctrl+C
             mock_service.run_until_stopped.side_effect = KeyboardInterrupt()
@@ -451,10 +432,7 @@ class TestWatchCommand:
     @pytest.mark.asyncio
     async def test_watch_exception_handling(self, watch_command, temp_directory):
         """Test exception handling during watch."""
-        args = Namespace(
-            path=str(temp_directory),
-            project_name="test-project"
-        )
+        args = Namespace(path=str(temp_directory), project_name="test-project")
 
         with patch("src.cli.watch_command.IndexingService") as mock_service_class:
             # Setup mock to raise exception during run
@@ -462,7 +440,7 @@ class TestWatchCommand:
             mock_service_class.return_value = mock_service
             mock_service.index_initial.return_value = {
                 "indexed_files": 1,
-                "total_units": 5
+                "total_units": 5,
             }
             mock_service.run_until_stopped.side_effect = Exception("Test error")
 
@@ -476,10 +454,7 @@ class TestWatchCommand:
     @pytest.mark.asyncio
     async def test_watch_custom_project_name(self, watch_command, temp_directory):
         """Test watch with custom project name."""
-        args = Namespace(
-            path=str(temp_directory),
-            project_name="custom-project-name"
-        )
+        args = Namespace(path=str(temp_directory), project_name="custom-project-name")
 
         with patch("src.cli.watch_command.IndexingService") as mock_service_class:
             # Setup mock
@@ -487,7 +462,7 @@ class TestWatchCommand:
             mock_service_class.return_value = mock_service
             mock_service.index_initial.return_value = {
                 "indexed_files": 1,
-                "total_units": 5
+                "total_units": 5,
             }
             mock_service.run_until_stopped.side_effect = KeyboardInterrupt()
 
@@ -499,6 +474,5 @@ class TestWatchCommand:
 
             # Verify custom project name was used
             mock_service_class.assert_called_once_with(
-                watch_path=temp_directory,
-                project_name="custom-project-name"
+                watch_path=temp_directory, project_name="custom-project-name"
             )

@@ -2,7 +2,6 @@
 
 import pytest
 import pytest_asyncio
-from pathlib import Path
 from src.config import ServerConfig
 from src.core.server import MemoryRAGServer
 from src.core.exceptions import ValidationError
@@ -151,27 +150,24 @@ class TestSearchAllProjects:
         current_project = server.project_name or "test-project-1"
 
         # Opt in the project for cross-project search
-        if hasattr(server, 'consent_manager') and server.consent_manager:
+        if hasattr(server, "consent_manager") and server.consent_manager:
             server.consent_manager.opt_in(current_project)
 
         # Index with current project name
         await server.index_codebase(
             directory_path=str(small_test_project),
             project_name=current_project,
-            recursive=False
+            recursive=False,
         )
 
         # Search across projects
-        result = await server.search_all_projects(
-            query="test function",
-            limit=5
-        )
+        result = await server.search_all_projects(query="test function", limit=5)
 
         # Should have results from the indexed project (if opted in)
         assert "results" in result
         assert "projects_searched" in result
         # If consent manager exists and project was opted in, it should be searched
-        if hasattr(server, 'consent_manager') and server.consent_manager:
+        if hasattr(server, "consent_manager") and server.consent_manager:
             assert current_project in result["projects_searched"]
         assert "query_time_ms" in result
 
@@ -182,17 +178,14 @@ class TestSearchAllProjects:
         await server.index_codebase(
             directory_path=str(small_test_project),
             project_name="test-project",
-            recursive=False
+            recursive=False,
         )
 
         # Opt in
         if server.cross_project_consent:
             server.cross_project_consent.opt_in("test-project")
 
-        result = await server.search_all_projects(
-            query="test",
-            limit=3
-        )
+        result = await server.search_all_projects(query="test", limit=3)
 
         # Verify result structure
         assert "total_found" in result

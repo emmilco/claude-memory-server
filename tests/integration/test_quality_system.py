@@ -8,16 +8,11 @@ Tests the complete quality analysis pipeline including:
 """
 
 import pytest
-import asyncio
 import tempfile
 from pathlib import Path
 
-from src.memory.incremental_indexer import IncrementalIndexer
-from src.store.qdrant_store import QdrantMemoryStore
-from src.embeddings.generator import EmbeddingGenerator
 from src.analysis.quality_analyzer import QualityAnalyzer
 from src.memory.duplicate_detector import DuplicateDetector
-from src.core.server import MemoryRAGServer
 from src.config import ServerConfig
 
 
@@ -97,10 +92,10 @@ async def test_quality_analyzer_basic(config):
 
     # Create a code unit
     code_unit = {
-        'content': COMPLEX_CODE,
-        'unit_type': 'function',
-        'language': 'python',
-        'signature': 'def validate_user(...)',
+        "content": COMPLEX_CODE,
+        "unit_type": "function",
+        "language": "python",
+        "signature": "def validate_user(...)",
     }
 
     # Analyze metrics
@@ -123,9 +118,9 @@ async def test_quality_analyzer_simple_code(config):
     analyzer = QualityAnalyzer()
 
     code_unit = {
-        'content': SIMPLE_CLEAN_CODE,
-        'unit_type': 'function',
-        'language': 'python',
+        "content": SIMPLE_CLEAN_CODE,
+        "unit_type": "function",
+        "language": "python",
     }
 
     metrics = analyzer.calculate_quality_metrics(
@@ -154,9 +149,9 @@ async def test_quality_analyzer_flags(config):
     analyzer = QualityAnalyzer()
 
     code_unit = {
-        'content': COMPLEX_CODE,
-        'unit_type': 'function',
-        'language': 'python',
+        "content": COMPLEX_CODE,
+        "unit_type": "function",
+        "language": "python",
     }
 
     metrics = analyzer.calculate_quality_metrics(code_unit, duplication_score=0.0)
@@ -174,9 +169,9 @@ async def test_maintainability_index_calculation(config):
 
     # Test with simple code (should be maintainable)
     simple_unit = {
-        'content': 'def foo(): return 42',
-        'unit_type': 'function',
-        'language': 'python',
+        "content": "def foo(): return 42",
+        "unit_type": "function",
+        "language": "python",
     }
 
     metrics = analyzer.calculate_quality_metrics(simple_unit, duplication_score=0.0)
@@ -184,8 +179,8 @@ async def test_maintainability_index_calculation(config):
 
     # Test with complex code (should be less maintainable)
     metrics_complex = analyzer.calculate_quality_metrics(
-        {'content': COMPLEX_CODE, 'unit_type': 'function', 'language': 'python'},
-        duplication_score=0.0
+        {"content": COMPLEX_CODE, "unit_type": "function", "language": "python"},
+        duplication_score=0.0,
     )
     # Complex code should have lower MI
     assert isinstance(metrics_complex.maintainability_index, int)
@@ -198,9 +193,9 @@ async def test_quality_analyzer_empty_code(config):
     analyzer = QualityAnalyzer()
 
     empty_unit = {
-        'content': '',
-        'unit_type': 'function',
-        'language': 'python',
+        "content": "",
+        "unit_type": "function",
+        "language": "python",
     }
 
     metrics = analyzer.calculate_quality_metrics(empty_unit, duplication_score=0.0)
@@ -219,13 +214,13 @@ async def test_complexity_classification(config):
 
     # Test different complexity levels
     for content, expected_min in [
-        ('def foo(): return 1', 1),  # Simple
+        ("def foo(): return 1", 1),  # Simple
         (COMPLEX_CODE, 5),  # Complex
     ]:
         unit = {
-            'content': content,
-            'unit_type': 'function',
-            'language': 'python',
+            "content": content,
+            "unit_type": "function",
+            "language": "python",
         }
         metrics = analyzer.calculate_quality_metrics(unit, duplication_score=0.0)
         assert metrics.cyclomatic_complexity >= expected_min - 1
@@ -245,9 +240,9 @@ def process(data):
 '''
 
     unit = {
-        'content': documented,
-        'unit_type': 'function',
-        'language': 'python',
+        "content": documented,
+        "unit_type": "function",
+        "language": "python",
     }
 
     metrics = analyzer.calculate_quality_metrics(unit, duplication_score=0.0)
@@ -262,12 +257,12 @@ async def test_quality_metrics_without_documentation(config):
     """Test quality metrics without documentation."""
     analyzer = QualityAnalyzer()
 
-    undocumented = 'def process(data):\n    return data'
+    undocumented = "def process(data):\n    return data"
 
     unit = {
-        'content': undocumented,
-        'unit_type': 'function',
-        'language': 'python',
+        "content": undocumented,
+        "unit_type": "function",
+        "language": "python",
     }
 
     metrics = analyzer.calculate_quality_metrics(unit, duplication_score=0.0)
@@ -283,9 +278,9 @@ async def test_duplication_score_handling(config):
     analyzer = QualityAnalyzer()
 
     unit = {
-        'content': 'def func(): pass',
-        'unit_type': 'function',
-        'language': 'python',
+        "content": "def func(): pass",
+        "unit_type": "function",
+        "language": "python",
     }
 
     # Test with no duplication
@@ -310,9 +305,9 @@ async def test_quality_analyzer_parameter_count(config):
 '''
 
     unit = {
-        'content': many_params,
-        'unit_type': 'function',
-        'language': 'python',
+        "content": many_params,
+        "unit_type": "function",
+        "language": "python",
     }
 
     metrics = analyzer.calculate_quality_metrics(unit, duplication_score=0.0)
@@ -328,9 +323,9 @@ async def test_quality_flags_presence(config):
     analyzer = QualityAnalyzer()
 
     unit = {
-        'content': COMPLEX_CODE,
-        'unit_type': 'function',
-        'language': 'python',
+        "content": COMPLEX_CODE,
+        "unit_type": "function",
+        "language": "python",
     }
 
     metrics = analyzer.calculate_quality_metrics(unit, duplication_score=0.0)
@@ -346,9 +341,9 @@ async def test_multiple_code_units_analysis(config):
     analyzer = QualityAnalyzer()
 
     units = [
-        {'content': 'def a(): return 1', 'unit_type': 'function', 'language': 'python'},
-        {'content': SIMPLE_CLEAN_CODE, 'unit_type': 'function', 'language': 'python'},
-        {'content': COMPLEX_CODE, 'unit_type': 'function', 'language': 'python'},
+        {"content": "def a(): return 1", "unit_type": "function", "language": "python"},
+        {"content": SIMPLE_CLEAN_CODE, "unit_type": "function", "language": "python"},
+        {"content": COMPLEX_CODE, "unit_type": "function", "language": "python"},
     ]
 
     results = []
@@ -368,19 +363,19 @@ async def test_quality_metrics_nesting_depth(config):
     """Test nesting depth detection."""
     analyzer = QualityAnalyzer()
 
-    deeply_nested = '''
+    deeply_nested = """
 def func():
     if True:
         if True:
             if True:
                 if True:
                     return 1
-'''
+"""
 
     unit = {
-        'content': deeply_nested,
-        'unit_type': 'function',
-        'language': 'python',
+        "content": deeply_nested,
+        "unit_type": "function",
+        "language": "python",
     }
 
     metrics = analyzer.calculate_quality_metrics(unit, duplication_score=0.0)
@@ -396,9 +391,9 @@ async def test_quality_analyzer_consistency(config):
     analyzer = QualityAnalyzer()
 
     unit = {
-        'content': COMPLEX_CODE,
-        'unit_type': 'function',
-        'language': 'python',
+        "content": COMPLEX_CODE,
+        "unit_type": "function",
+        "language": "python",
     }
 
     # Run analysis multiple times
@@ -419,20 +414,22 @@ async def test_hotspot_ranking_by_severity(config):
 
     # Simple code - should have low severity
     simple = {
-        'content': 'def f(): return 1',
-        'unit_type': 'function',
-        'language': 'python',
+        "content": "def f(): return 1",
+        "unit_type": "function",
+        "language": "python",
     }
 
     # Complex code - may have higher severity
     complex_unit = {
-        'content': COMPLEX_CODE,
-        'unit_type': 'function',
-        'language': 'python',
+        "content": COMPLEX_CODE,
+        "unit_type": "function",
+        "language": "python",
     }
 
     simple_metrics = analyzer.calculate_quality_metrics(simple, duplication_score=0.0)
-    complex_metrics = analyzer.calculate_quality_metrics(complex_unit, duplication_score=0.0)
+    complex_metrics = analyzer.calculate_quality_metrics(
+        complex_unit, duplication_score=0.0
+    )
 
     # Complex should have higher complexity
     assert complex_metrics.cyclomatic_complexity >= simple_metrics.cyclomatic_complexity
@@ -460,9 +457,9 @@ async def test_quality_analyzer_line_count(config):
 '''
 
     unit = {
-        'content': long_code,
-        'unit_type': 'function',
-        'language': 'python',
+        "content": long_code,
+        "unit_type": "function",
+        "language": "python",
     }
 
     metrics = analyzer.calculate_quality_metrics(unit, duplication_score=0.0)

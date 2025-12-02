@@ -7,15 +7,13 @@ simulating how users actually interact with the tool.
 import pytest
 import subprocess
 import sys
-import os
-import tempfile
-import json
 from pathlib import Path
 
 
 # ============================================================================
 # CLI Test Helpers
 # ============================================================================
+
 
 def run_cli(*args, check=True, timeout=60, capture_output=True):
     """Run a CLI command and return the result.
@@ -43,6 +41,7 @@ def run_cli(*args, check=True, timeout=60, capture_output=True):
 # ============================================================================
 # Health Command Tests (3 tests)
 # ============================================================================
+
 
 @pytest.mark.e2e
 def test_health_command_runs():
@@ -84,8 +83,11 @@ def test_health_command_checks_storage():
 # Status Command Tests (2 tests)
 # ============================================================================
 
+
 @pytest.mark.e2e
-@pytest.mark.skip(reason="Status command hangs on Qdrant connection - needs investigation")
+@pytest.mark.skip(
+    reason="Status command hangs on Qdrant connection - needs investigation"
+)
 def test_status_command_runs():
     """Test: Status command executes and shows server info."""
     result = run_cli("status", check=False, timeout=60)
@@ -95,23 +97,30 @@ def test_status_command_runs():
 
     output = result.stdout + result.stderr
     # Should contain status information
-    assert any(word in output.lower() for word in ["status", "server", "memory", "project"])
+    assert any(
+        word in output.lower() for word in ["status", "server", "memory", "project"]
+    )
 
 
 @pytest.mark.e2e
-@pytest.mark.skip(reason="Status command hangs on Qdrant connection - needs investigation")
+@pytest.mark.skip(
+    reason="Status command hangs on Qdrant connection - needs investigation"
+)
 def test_status_command_shows_config():
     """Test: Status command shows configuration details."""
     result = run_cli("status", check=False, timeout=60)
 
     output = result.stdout + result.stderr
     # Should show some configuration info
-    assert any(word in output.lower() for word in ["qdrant", "sqlite", "backend", "config"])
+    assert any(
+        word in output.lower() for word in ["qdrant", "sqlite", "backend", "config"]
+    )
 
 
 # ============================================================================
 # Index Command Tests (3 tests)
 # ============================================================================
+
 
 @pytest.mark.e2e
 def test_index_command_help():
@@ -154,8 +163,10 @@ class Calculator:
 
     # Run index command
     result = run_cli(
-        "index", str(tmp_path),
-        "--project-name", "cli-test-project",
+        "index",
+        str(tmp_path),
+        "--project-name",
+        "cli-test-project",
         check=False,
         timeout=60,
     )
@@ -163,12 +174,15 @@ class Calculator:
     # Should complete (may have warnings but should index)
     output = result.stdout + result.stderr
     # Should mention indexing activity
-    assert any(word in output.lower() for word in ["index", "file", "process", "complet"])
+    assert any(
+        word in output.lower() for word in ["index", "file", "process", "complet"]
+    )
 
 
 # ============================================================================
 # Validate Commands Tests (2 tests)
 # ============================================================================
+
 
 @pytest.mark.e2e
 def test_validate_install_command():
@@ -179,7 +193,9 @@ def test_validate_install_command():
     output = result.stdout + result.stderr
     assert output  # Should have some output
     # Should check prerequisites
-    assert any(word in output.lower() for word in ["python", "check", "install", "valid"])
+    assert any(
+        word in output.lower() for word in ["python", "check", "install", "valid"]
+    )
 
 
 @pytest.mark.e2e
@@ -198,6 +214,7 @@ def test_cli_help():
 # ============================================================================
 # Prune Command Tests (2 tests)
 # ============================================================================
+
 
 @pytest.mark.e2e
 def test_prune_command_dry_run():
@@ -225,6 +242,7 @@ def test_prune_command_help():
 # Analytics Command Tests (2 tests)
 # ============================================================================
 
+
 @pytest.mark.e2e
 def test_analytics_command_runs():
     """Test: Analytics command shows usage data."""
@@ -234,7 +252,10 @@ def test_analytics_command_runs():
     output = result.stdout + result.stderr
     assert output
     # Should mention analytics-related info
-    assert any(word in output.lower() for word in ["token", "usage", "analytic", "saving", "no data", "period"])
+    assert any(
+        word in output.lower()
+        for word in ["token", "usage", "analytic", "saving", "no data", "period"]
+    )
 
 
 @pytest.mark.e2e
@@ -251,6 +272,7 @@ def test_analytics_command_period_flag():
 # Health Monitor Command Tests (3 tests)
 # ============================================================================
 
+
 @pytest.mark.e2e
 def test_health_monitor_status():
     """Test: Health monitor status subcommand works."""
@@ -259,7 +281,9 @@ def test_health_monitor_status():
     output = result.stdout + result.stderr
     # Should show health status information
     assert output
-    assert any(word in output.lower() for word in ["health", "status", "ok", "error", "check"])
+    assert any(
+        word in output.lower() for word in ["health", "status", "ok", "error", "check"]
+    )
 
 
 @pytest.mark.e2e
@@ -270,7 +294,9 @@ def test_health_monitor_report():
     output = result.stdout + result.stderr
     assert output
     # Should produce a report
-    assert any(word in output.lower() for word in ["report", "health", "metric", "status"])
+    assert any(
+        word in output.lower() for word in ["report", "health", "metric", "status"]
+    )
 
 
 @pytest.mark.e2e
@@ -286,6 +312,7 @@ def test_health_monitor_fix_dry_run():
 # ============================================================================
 # Git Commands Tests (2 tests)
 # ============================================================================
+
 
 @pytest.mark.e2e
 def test_git_index_help():

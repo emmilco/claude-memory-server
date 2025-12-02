@@ -1,7 +1,7 @@
 """Query suggestion system for better discoverability."""
 
 import logging
-from typing import List, Dict, Any, Optional, Set
+from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 from collections import Counter
 
@@ -212,11 +212,13 @@ class QuerySuggester:
         # 1. Intent-based templates (if intent provided)
         if intent and intent in self.INTENT_TEMPLATES:
             for template in self.INTENT_TEMPLATES[intent][:3]:
-                suggestions.append(QuerySuggestion(
-                    query=template,
-                    category="template",
-                    description=f"Common {intent} pattern",
-                ))
+                suggestions.append(
+                    QuerySuggestion(
+                        query=template,
+                        category="template",
+                        description=f"Common {intent} pattern",
+                    )
+                )
 
         # 2. Project-specific suggestions (from indexed content)
         project_suggestions = await self._get_project_suggestions(
@@ -283,7 +285,9 @@ class QuerySuggester:
             top_classes = Counter()
 
             for memory in memories:
-                metadata = memory.get("metadata", {}) if isinstance(memory, dict) else {}
+                metadata = (
+                    memory.get("metadata", {}) if isinstance(memory, dict) else {}
+                )
 
                 # Count languages
                 lang = metadata.get("language", "")
@@ -339,21 +343,25 @@ class QuerySuggester:
         if top_classes:
             # Suggest searching for most common class
             class_name = top_classes[0]
-            suggestions.append(QuerySuggestion(
-                query=f"{class_name} implementation",
-                category="project",
-                description=f"Based on commonly used class in your project",
-            ))
+            suggestions.append(
+                QuerySuggestion(
+                    query=f"{class_name} implementation",
+                    category="project",
+                    description="Based on commonly used class in your project",
+                )
+            )
 
         # Suggest based on languages
         languages = indexed_stats.get("languages", {})
         if languages:
             main_lang = max(languages.items(), key=lambda x: x[1])[0]
-            suggestions.append(QuerySuggestion(
-                query=f"{main_lang} utility functions",
-                category="project",
-                description=f"Explore {main_lang} helpers in this project",
-            ))
+            suggestions.append(
+                QuerySuggestion(
+                    query=f"{main_lang} utility functions",
+                    category="project",
+                    description=f"Explore {main_lang} helpers in this project",
+                )
+            )
 
         return suggestions
 
@@ -374,13 +382,21 @@ class QuerySuggester:
         # Check context for domain keywords
         if context:
             context_lower = context.lower()
-            if any(word in context_lower for word in ["auth", "login", "password", "token"]):
+            if any(
+                word in context_lower for word in ["auth", "login", "password", "token"]
+            ):
                 return "auth"
-            if any(word in context_lower for word in ["database", "sql", "query", "db"]):
+            if any(
+                word in context_lower for word in ["database", "sql", "query", "db"]
+            ):
                 return "database"
-            if any(word in context_lower for word in ["api", "endpoint", "route", "rest"]):
+            if any(
+                word in context_lower for word in ["api", "endpoint", "route", "rest"]
+            ):
                 return "api"
-            if any(word in context_lower for word in ["error", "exception", "catch", "try"]):
+            if any(
+                word in context_lower for word in ["error", "exception", "catch", "try"]
+            ):
                 return "error"
 
         # Check top classes for domain hints
@@ -391,7 +407,9 @@ class QuerySuggester:
                 return "auth"
             if any(word in classes_str for word in ["repository", "model", "entity"]):
                 return "database"
-            if any(word in classes_str for word in ["controller", "handler", "endpoint"]):
+            if any(
+                word in classes_str for word in ["controller", "handler", "endpoint"]
+            ):
                 return "api"
 
         return None

@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from typing import List, Optional, Union
+from typing import List, Optional
 from concurrent.futures import ThreadPoolExecutor
 import time
 
@@ -12,7 +12,7 @@ from src.config import ServerConfig
 from src.core.exceptions import EmbeddingError
 from src.embeddings.rust_bridge import RustBridge
 from src.embeddings.cache import EmbeddingCache
-from src.embeddings.gpu_utils import detect_cuda, get_gpu_info, get_optimal_device
+from src.embeddings.gpu_utils import get_gpu_info, get_optimal_device
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +45,7 @@ class EmbeddingGenerator:
         """
         if config is None:
             from src.config import get_config
+
             config = get_config()
 
         self.config = config
@@ -143,8 +144,12 @@ class EmbeddingGenerator:
                 logger.info(f"Model moved to {self.device}")
 
                 # Set GPU memory fraction if using CUDA
-                if self.device == "cuda" and self.config.performance.gpu_memory_fraction < 1.0:
+                if (
+                    self.device == "cuda"
+                    and self.config.performance.gpu_memory_fraction < 1.0
+                ):
                     import torch
+
                     torch.cuda.set_per_process_memory_fraction(
                         self.config.performance.gpu_memory_fraction, 0
                     )
@@ -192,9 +197,7 @@ class EmbeddingGenerator:
             # Run generation in thread pool to avoid blocking
             loop = asyncio.get_event_loop()
             embedding = await loop.run_in_executor(
-                self.executor,
-                self._generate_sync,
-                text
+                self.executor, self._generate_sync, text
             )
 
             # Cache the result
@@ -263,10 +266,10 @@ class EmbeddingGenerator:
             cache_results = None
             texts_to_generate = texts
             indices_to_generate = list(range(len(texts)))
-            
+
             if self.cache and self.cache.enabled:
                 cache_results = await self.cache.batch_get(texts, self.model_name)
-                
+
                 # Find which texts need generation
                 texts_to_generate = []
                 indices_to_generate = []
@@ -274,7 +277,7 @@ class EmbeddingGenerator:
                     if cached is None:
                         texts_to_generate.append(texts[i])
                         indices_to_generate.append(i)
-                
+
                 if not texts_to_generate:
                     # All texts were cached
                     return cache_results
@@ -286,14 +289,14 @@ class EmbeddingGenerator:
                 self._batch_generate_sync,
                 texts_to_generate,
                 batch_size,
-                show_progress
+                show_progress,
             )
-            
+
             # Cache generated embeddings
             if self.cache and self.cache.enabled:
                 for text, embedding in zip(texts_to_generate, generated_embeddings):
                     await self.cache.set(text, self.model_name, embedding)
-            
+
             # Merge results back into original order
             if cache_results is not None:
                 for i, generated in zip(indices_to_generate, generated_embeddings):
@@ -328,11 +331,13 @@ class EmbeddingGenerator:
         total_batches = (len(texts) + batch_size - 1) // batch_size
 
         for i in range(0, len(texts), batch_size):
-            batch = texts[i:i + batch_size]
+            batch = texts[i : i + batch_size]
             batch_num = i // batch_size + 1
 
             if show_progress:
-                logger.info(f"Processing batch {batch_num}/{total_batches} ({len(batch)} texts)")
+                logger.info(
+                    f"Processing batch {batch_num}/{total_batches} ({len(batch)} texts)"
+                )
 
             # Generate embeddings for batch
             embeddings = model.encode(
@@ -371,7 +376,10 @@ class EmbeddingGenerator:
             dict: Benchmark results with timing and throughput metrics.
         """
         # Generate sample texts
-        sample_texts = [f"This is sample text number {i} for benchmarking." for i in range(num_texts)]
+        sample_texts = [
+            f"This is sample text number {i} for benchmarking."
+            for i in range(num_texts)
+        ]
 
         # Single embedding benchmark
         start = time.time()
@@ -424,4 +432,3 @@ class EmbeddingGenerator:
         except Exception as e:
             # Log but don't raise in __del__
             logger.debug(f"Error during EmbeddingGenerator cleanup: {e}")
-

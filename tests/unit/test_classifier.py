@@ -1,6 +1,5 @@
 """Tests for context level classifier."""
 
-import pytest
 from src.memory.classifier import (
     ContextLevelClassifier,
     get_classifier,
@@ -34,9 +33,7 @@ class TestContextLevelClassifier:
 
         for content in examples:
             result = classifier.classify(content, MemoryCategory.PREFERENCE)
-            assert (
-                result == ContextLevel.USER_PREFERENCE
-            ), f"Failed for: {content}"
+            assert result == ContextLevel.USER_PREFERENCE, f"Failed for: {content}"
 
     def test_classify_project_context(self):
         """Test classification of project context content."""
@@ -52,9 +49,7 @@ class TestContextLevelClassifier:
 
         for content in examples:
             result = classifier.classify(content, MemoryCategory.FACT)
-            assert (
-                result == ContextLevel.PROJECT_CONTEXT
-            ), f"Failed for: {content}"
+            assert result == ContextLevel.PROJECT_CONTEXT, f"Failed for: {content}"
 
     def test_classify_session_state(self):
         """Test classification of session state content."""
@@ -145,8 +140,14 @@ class TestContextLevelClassifier:
         assert 0.99 <= total <= 1.01, f"Scores should sum to 1.0, got {total}"
 
         # User preference should have highest confidence
-        assert confidence[ContextLevel.USER_PREFERENCE] > confidence[ContextLevel.PROJECT_CONTEXT]
-        assert confidence[ContextLevel.USER_PREFERENCE] > confidence[ContextLevel.SESSION_STATE]
+        assert (
+            confidence[ContextLevel.USER_PREFERENCE]
+            > confidence[ContextLevel.PROJECT_CONTEXT]
+        )
+        assert (
+            confidence[ContextLevel.USER_PREFERENCE]
+            > confidence[ContextLevel.SESSION_STATE]
+        )
 
     def test_default_for_category(self):
         """Test default classification for each category."""
@@ -305,6 +306,7 @@ def test_classifier_coverage_summary():
     # If we reach here, all classification tests have passed
     # Verify the ContextLevelClassifier can be imported and instantiated
     from src.memory.classifier import ContextLevelClassifier
+
     classifier = ContextLevelClassifier()
     assert classifier is not None
-    assert hasattr(classifier, 'classify')
+    assert hasattr(classifier, "classify")

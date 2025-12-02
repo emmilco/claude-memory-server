@@ -12,11 +12,9 @@ Tests for:
 import pytest
 import pytest_asyncio
 import asyncio
-from datetime import datetime, UTC
 
 from src.store.call_graph_store import QdrantCallGraphStore
-from src.graph.call_graph import CallGraph, CallSite, FunctionNode, InterfaceImplementation
-from src.core.exceptions import StorageError, MemoryNotFoundError
+from src.graph.call_graph import CallSite, FunctionNode, InterfaceImplementation
 from src.config import ServerConfig
 
 
@@ -42,7 +40,7 @@ async def store(config, worker_id):
     try:
         await store.delete_project_call_graph("test_project")
         await store.delete_project_call_graph("edge_case_project")
-    except:
+    except Exception:
         pass
 
     yield store
@@ -53,7 +51,7 @@ async def store(config, worker_id):
         await store.delete_project_call_graph("edge_case_project")
         if store.client:
             store.client.delete_collection(collection_name)
-    except:
+    except Exception:
         pass
 
 
@@ -70,7 +68,7 @@ class TestErrorHandling:
             file_path="/test.py",
             language="python",
             start_line=1,
-            end_line=10
+            end_line=10,
         )
 
         # Should handle gracefully
@@ -91,7 +89,7 @@ class TestErrorHandling:
             file_path="/路径/文件.py",
             language="python",
             start_line=1,
-            end_line=10
+            end_line=10,
         )
 
         node_id = await store.store_function_node(node, "test_project")
@@ -111,7 +109,7 @@ class TestErrorHandling:
             file_path="/test.py",
             language="python",
             start_line=1,
-            end_line=10
+            end_line=10,
         )
         await store.store_function_node(node, "test_project")
 
@@ -140,7 +138,7 @@ class TestErrorHandling:
             file_path="/test.cpp",
             language="cpp",
             start_line=1,
-            end_line=10
+            end_line=10,
         )
 
         await store.store_function_node(node, "test_project")
@@ -185,16 +183,13 @@ class TestConcurrentOperations:
                 file_path=f"/file_{i}.py",
                 language="python",
                 start_line=1,
-                end_line=10
+                end_line=10,
             )
             for i in range(10)
         ]
 
         # Store all concurrently
-        tasks = [
-            store.store_function_node(node, "test_project")
-            for node in nodes
-        ]
+        tasks = [store.store_function_node(node, "test_project") for node in nodes]
         node_ids = await asyncio.gather(*tasks)
 
         # All should succeed
@@ -212,12 +207,7 @@ class TestConcurrentOperations:
         # First create functions
         for i in range(5):
             node = FunctionNode(
-                f"func_{i}",
-                f"func_{i}",
-                "/test.py",
-                "python",
-                i * 10,
-                i * 10 + 5
+                f"func_{i}", f"func_{i}", "/test.py", "python", i * 10, i * 10 + 5
             )
             await store.store_function_node(node, "test_project")
 
@@ -225,9 +215,13 @@ class TestConcurrentOperations:
         tasks = []
         for i in range(5):
             call_sites = [
-                CallSite(f"func_{i}", "/test.py", i * 10 + 1, f"func_{(i+1) % 5}", "/test.py")
+                CallSite(
+                    f"func_{i}", "/test.py", i * 10 + 1, f"func_{(i+1) % 5}", "/test.py"
+                )
             ]
-            tasks.append(store.store_call_sites(f"func_{i}", call_sites, "test_project"))
+            tasks.append(
+                store.store_call_sites(f"func_{i}", call_sites, "test_project")
+            )
 
         await asyncio.gather(*tasks)
 
@@ -247,10 +241,12 @@ class TestConcurrentOperations:
                     f"Impl_{i}",
                     f"/impl_{i}.py",
                     "python",
-                    ["method1", "method2"]
+                    ["method1", "method2"],
                 )
             ]
-            tasks.append(store.store_implementations(f"Interface_{i}", impls, "test_project"))
+            tasks.append(
+                store.store_implementations(f"Interface_{i}", impls, "test_project")
+            )
 
         await asyncio.gather(*tasks)
 
@@ -267,10 +263,7 @@ class TestConcurrentOperations:
         await store.store_function_node(node, "test_project")
 
         # Load concurrently from multiple tasks
-        tasks = [
-            store.load_call_graph("test_project")
-            for _ in range(10)
-        ]
+        tasks = [store.load_call_graph("test_project") for _ in range(10)]
         graphs = await asyncio.gather(*tasks)
 
         # All should succeed and return same data
@@ -293,14 +286,14 @@ class TestDataIntegrity:
         helper_node = FunctionNode("helper", "helper", "/helper.py", "python", 1, 10)
         await store.store_function_node(helper_node, "test_project")
 
-        call_sites = [
-            CallSite("func", "/test.py", 5, "helper", "/helper.py")
-        ]
+        call_sites = [CallSite("func", "/test.py", 5, "helper", "/helper.py")]
         await store.store_call_sites("func", call_sites, "test_project")
 
         # Update function (change end_line) - resubmit with call_sites in metadata
         node.end_line = 20
-        await store.store_function_node(node, "test_project", calls_to=["helper"], called_by=[])
+        await store.store_function_node(
+            node, "test_project", calls_to=["helper"], called_by=[]
+        )
 
         # Re-store call sites after update
         await store.store_call_sites("func", call_sites, "test_project")
@@ -336,7 +329,7 @@ class TestDataIntegrity:
                 f"Plugin_{i}",
                 f"/plugin_{i}.py",
                 "python",
-                ["execute", "configure"]
+                ["execute", "configure"],
             )
             for i in range(50)
         ]
@@ -359,7 +352,7 @@ class TestDataIntegrity:
             start_line=1,
             end_line=100,
             parameters=params,
-            return_type="Dict[str, List[Tuple[int, str]]]"
+            return_type="Dict[str, List[Tuple[int, str]]]",
         )
 
         await store.store_function_node(node, "test_project")
@@ -378,7 +371,9 @@ class TestProjectIsolation:
     async def test_same_function_different_projects(self, store):
         """Test same function name in different projects."""
         node1 = FunctionNode("test", "test", "/test.py", "python", 1, 10)
-        node2 = FunctionNode("test", "test", "/test.py", "python", 20, 30)  # Different line
+        node2 = FunctionNode(
+            "test", "test", "/test.py", "python", 20, 30
+        )  # Different line
 
         await store.store_function_node(node1, "project_a")
         await store.store_function_node(node2, "project_b")
@@ -413,11 +408,7 @@ class TestProjectIsolation:
     async def test_implementations_isolated_by_project(self, store):
         """Test that implementations are isolated by project."""
         impl = InterfaceImplementation(
-            "Storage",
-            "RedisStorage",
-            "/redis.py",
-            "python",
-            ["get", "set"]
+            "Storage", "RedisStorage", "/redis.py", "python", ["get", "set"]
         )
 
         await store.store_implementations("Storage", [impl], "project_a")
@@ -470,7 +461,7 @@ class TestRecoveryAndResilience:
             node,
             "test_project",
             calls_to=["nonexistent_callee"],  # Callee doesn't exist
-            called_by=[]
+            called_by=[],
         )
 
         # Should still load without errors

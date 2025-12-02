@@ -1,12 +1,15 @@
 """Tests for structural/relational query tools (FEAT-059)."""
 
 import pytest
-import asyncio
-from pathlib import Path
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, patch
 
 from src.core.server import MemoryRAGServer
-from src.graph.call_graph import CallGraph, CallSite, FunctionNode, InterfaceImplementation
+from src.graph.call_graph import (
+    CallGraph,
+    CallSite,
+    FunctionNode,
+    InterfaceImplementation,
+)
 from src.config import ServerConfig
 
 
@@ -26,7 +29,7 @@ async def server(config):
     server = MemoryRAGServer(config)
     server.project_name = "test_project"
     # Mock the call graph store
-    with patch('src.store.call_graph_store.QdrantCallGraphStore'):
+    with patch("src.store.call_graph_store.QdrantCallGraphStore"):
         yield server
 
 
@@ -91,69 +94,78 @@ def sample_call_graph():
 
     # Add call relationships
     # main -> process_request
-    graph.add_call(CallSite(
-        caller_function="main",
-        caller_file="/test/main.py",
-        caller_line=5,
-        callee_function="process_request",
-        callee_file="/test/api.py",
-        call_type="direct"
-    ))
+    graph.add_call(
+        CallSite(
+            caller_function="main",
+            caller_file="/test/main.py",
+            caller_line=5,
+            callee_function="process_request",
+            callee_file="/test/api.py",
+            call_type="direct",
+        )
+    )
 
     # process_request -> validate
-    graph.add_call(CallSite(
-        caller_function="process_request",
-        caller_file="/test/api.py",
-        caller_line=25,
-        callee_function="validate",
-        callee_file="/test/validation.py",
-        call_type="direct"
-    ))
+    graph.add_call(
+        CallSite(
+            caller_function="process_request",
+            caller_file="/test/api.py",
+            caller_line=25,
+            callee_function="validate",
+            callee_file="/test/validation.py",
+            call_type="direct",
+        )
+    )
 
     # process_request -> database_query
-    graph.add_call(CallSite(
-        caller_function="process_request",
-        caller_file="/test/api.py",
-        caller_line=30,
-        callee_function="database_query",
-        callee_file="/test/db.py",
-        call_type="direct"
-    ))
+    graph.add_call(
+        CallSite(
+            caller_function="process_request",
+            caller_file="/test/api.py",
+            caller_line=30,
+            callee_function="database_query",
+            callee_file="/test/db.py",
+            call_type="direct",
+        )
+    )
 
     # Add interface implementation
-    graph.add_implementation(InterfaceImplementation(
-        interface_name="Storage",
-        implementation_name="RedisStorage",
-        file_path="/test/redis_storage.py",
-        language="python",
-        methods=["get", "set", "delete", "clear"]
-    ))
+    graph.add_implementation(
+        InterfaceImplementation(
+            interface_name="Storage",
+            implementation_name="RedisStorage",
+            file_path="/test/redis_storage.py",
+            language="python",
+            methods=["get", "set", "delete", "clear"],
+        )
+    )
 
-    graph.add_implementation(InterfaceImplementation(
-        interface_name="Storage",
-        implementation_name="MemoryStorage",
-        file_path="/test/memory_storage.py",
-        language="python",
-        methods=["get", "set", "delete"]
-    ))
+    graph.add_implementation(
+        InterfaceImplementation(
+            interface_name="Storage",
+            implementation_name="MemoryStorage",
+            file_path="/test/memory_storage.py",
+            language="python",
+            methods=["get", "set", "delete"],
+        )
+    )
 
     return graph
 
 
 # find_callers tests
 
+
 @pytest.mark.asyncio
 async def test_find_callers_direct_single_caller(server, sample_call_graph):
     """Test finding direct callers with a single caller."""
-    with patch('src.store.call_graph_store.QdrantCallGraphStore') as MockStore:
+    with patch("src.store.call_graph_store.QdrantCallGraphStore") as MockStore:
         mock_store = AsyncMock()
         mock_store.load_call_graph = AsyncMock(return_value=sample_call_graph)
         MockStore.return_value = mock_store
 
         result = await server.find_callers(
-            function_name="process_request",
-            include_indirect=False,
-            max_depth=1
+            function_name="process_request", include_indirect=False, max_depth=1
         )
 
         assert result["function"] == "process_request"
@@ -167,23 +179,24 @@ async def test_find_callers_direct_single_caller(server, sample_call_graph):
 async def test_find_callers_multiple_callers(server, sample_call_graph):
     """Test finding multiple direct callers."""
     # Add another caller to validate
-    sample_call_graph.add_call(CallSite(
-        caller_function="main",
-        caller_file="/test/main.py",
-        caller_line=7,
-        callee_function="validate",
-        callee_file="/test/validation.py",
-        call_type="direct"
-    ))
+    sample_call_graph.add_call(
+        CallSite(
+            caller_function="main",
+            caller_file="/test/main.py",
+            caller_line=7,
+            callee_function="validate",
+            callee_file="/test/validation.py",
+            call_type="direct",
+        )
+    )
 
-    with patch('src.store.call_graph_store.QdrantCallGraphStore') as MockStore:
+    with patch("src.store.call_graph_store.QdrantCallGraphStore") as MockStore:
         mock_store = AsyncMock()
         mock_store.load_call_graph = AsyncMock(return_value=sample_call_graph)
         MockStore.return_value = mock_store
 
         result = await server.find_callers(
-            function_name="validate",
-            include_indirect=False
+            function_name="validate", include_indirect=False
         )
 
         assert result["total_callers"] >= 2
@@ -195,15 +208,13 @@ async def test_find_callers_multiple_callers(server, sample_call_graph):
 @pytest.mark.asyncio
 async def test_find_callers_indirect_depth_2(server, sample_call_graph):
     """Test finding indirect callers with depth=2."""
-    with patch('src.store.call_graph_store.QdrantCallGraphStore') as MockStore:
+    with patch("src.store.call_graph_store.QdrantCallGraphStore") as MockStore:
         mock_store = AsyncMock()
         mock_store.load_call_graph = AsyncMock(return_value=sample_call_graph)
         MockStore.return_value = mock_store
 
         result = await server.find_callers(
-            function_name="validate",
-            include_indirect=True,
-            max_depth=2
+            function_name="validate", include_indirect=True, max_depth=2
         )
 
         # Should find process_request (direct caller)
@@ -217,14 +228,13 @@ async def test_find_callers_indirect_depth_2(server, sample_call_graph):
 @pytest.mark.asyncio
 async def test_find_callers_function_not_found(server, sample_call_graph):
     """Test finding callers for non-existent function."""
-    with patch('src.store.call_graph_store.QdrantCallGraphStore') as MockStore:
+    with patch("src.store.call_graph_store.QdrantCallGraphStore") as MockStore:
         mock_store = AsyncMock()
         mock_store.load_call_graph = AsyncMock(return_value=sample_call_graph)
         MockStore.return_value = mock_store
 
         result = await server.find_callers(
-            function_name="nonexistent_function",
-            include_indirect=False
+            function_name="nonexistent_function", include_indirect=False
         )
 
         assert result["total_callers"] == 0
@@ -236,49 +246,48 @@ async def test_find_callers_respects_limit(server, sample_call_graph):
     """Test that limit parameter is respected."""
     # Add many callers
     for i in range(20):
-        sample_call_graph.add_call(CallSite(
-            caller_function=f"caller_{i}",
-            caller_file=f"/test/caller_{i}.py",
-            caller_line=10,
-            callee_function="validate",
-            call_type="direct"
-        ))
-        sample_call_graph.add_function(FunctionNode(
-            name=f"caller_{i}",
-            qualified_name=f"caller_{i}",
-            file_path=f"/test/caller_{i}.py",
-            language="python",
-            start_line=1,
-            end_line=20,
-        ))
+        sample_call_graph.add_call(
+            CallSite(
+                caller_function=f"caller_{i}",
+                caller_file=f"/test/caller_{i}.py",
+                caller_line=10,
+                callee_function="validate",
+                call_type="direct",
+            )
+        )
+        sample_call_graph.add_function(
+            FunctionNode(
+                name=f"caller_{i}",
+                qualified_name=f"caller_{i}",
+                file_path=f"/test/caller_{i}.py",
+                language="python",
+                start_line=1,
+                end_line=20,
+            )
+        )
 
-    with patch('src.store.call_graph_store.QdrantCallGraphStore') as MockStore:
+    with patch("src.store.call_graph_store.QdrantCallGraphStore") as MockStore:
         mock_store = AsyncMock()
         mock_store.load_call_graph = AsyncMock(return_value=sample_call_graph)
         MockStore.return_value = mock_store
 
-        result = await server.find_callers(
-            function_name="validate",
-            limit=10
-        )
+        result = await server.find_callers(function_name="validate", limit=10)
 
         assert len(result["callers"]) <= 10
 
 
 # find_callees tests
 
+
 @pytest.mark.asyncio
 async def test_find_callees_direct_single_callee(server, sample_call_graph):
     """Test finding direct callees with a single callee."""
-    with patch('src.store.call_graph_store.QdrantCallGraphStore') as MockStore:
+    with patch("src.store.call_graph_store.QdrantCallGraphStore") as MockStore:
         mock_store = AsyncMock()
         mock_store.load_call_graph = AsyncMock(return_value=sample_call_graph)
         MockStore.return_value = mock_store
 
-        result = await server.find_callees(
-            function_name="main",
-            include_indirect=False
-        )
+        result = await server.find_callees(function_name="main", include_indirect=False)
 
         assert result["function"] == "main"
         assert result["total_callees"] >= 1
@@ -289,14 +298,13 @@ async def test_find_callees_direct_single_callee(server, sample_call_graph):
 @pytest.mark.asyncio
 async def test_find_callees_multiple_callees(server, sample_call_graph):
     """Test finding multiple direct callees."""
-    with patch('src.store.call_graph_store.QdrantCallGraphStore') as MockStore:
+    with patch("src.store.call_graph_store.QdrantCallGraphStore") as MockStore:
         mock_store = AsyncMock()
         mock_store.load_call_graph = AsyncMock(return_value=sample_call_graph)
         MockStore.return_value = mock_store
 
         result = await server.find_callees(
-            function_name="process_request",
-            include_indirect=False
+            function_name="process_request", include_indirect=False
         )
 
         assert result["total_callees"] >= 2
@@ -308,15 +316,13 @@ async def test_find_callees_multiple_callees(server, sample_call_graph):
 @pytest.mark.asyncio
 async def test_find_callees_indirect_depth_3(server, sample_call_graph):
     """Test finding indirect callees with depth=3."""
-    with patch('src.store.call_graph_store.QdrantCallGraphStore') as MockStore:
+    with patch("src.store.call_graph_store.QdrantCallGraphStore") as MockStore:
         mock_store = AsyncMock()
         mock_store.load_call_graph = AsyncMock(return_value=sample_call_graph)
         MockStore.return_value = mock_store
 
         result = await server.find_callees(
-            function_name="main",
-            include_indirect=True,
-            max_depth=3
+            function_name="main", include_indirect=True, max_depth=3
         )
 
         # Should find process_request (direct) and validate/database_query (indirect)
@@ -327,14 +333,13 @@ async def test_find_callees_indirect_depth_3(server, sample_call_graph):
 @pytest.mark.asyncio
 async def test_find_callees_empty_function(server, sample_call_graph):
     """Test finding callees for function with no calls."""
-    with patch('src.store.call_graph_store.QdrantCallGraphStore') as MockStore:
+    with patch("src.store.call_graph_store.QdrantCallGraphStore") as MockStore:
         mock_store = AsyncMock()
         mock_store.load_call_graph = AsyncMock(return_value=sample_call_graph)
         MockStore.return_value = mock_store
 
         result = await server.find_callees(
-            function_name="database_query",
-            include_indirect=False
+            function_name="database_query", include_indirect=False
         )
 
         assert result["total_callees"] == 0
@@ -342,6 +347,7 @@ async def test_find_callees_empty_function(server, sample_call_graph):
 
 
 # find_implementations tests
+
 
 @pytest.mark.asyncio
 async def test_find_implementations_single_impl(server):
@@ -352,18 +358,16 @@ async def test_find_implementations_single_impl(server):
             implementation_name="FileLogger",
             file_path="/test/file_logger.py",
             language="python",
-            methods=["log", "error", "warning"]
+            methods=["log", "error", "warning"],
         )
     ]
 
-    with patch('src.store.call_graph_store.QdrantCallGraphStore') as MockStore:
+    with patch("src.store.call_graph_store.QdrantCallGraphStore") as MockStore:
         mock_store = AsyncMock()
         mock_store.get_implementations = AsyncMock(return_value=mock_impls)
         MockStore.return_value = mock_store
 
-        result = await server.find_implementations(
-            interface_name="Logger"
-        )
+        result = await server.find_implementations(interface_name="Logger")
 
         assert result["interface"] == "Logger"
         assert result["total_implementations"] == 1
@@ -380,25 +384,23 @@ async def test_find_implementations_multiple_impls(server):
             implementation_name="RedisStorage",
             file_path="/test/redis.py",
             language="python",
-            methods=["get", "set", "delete", "clear"]
+            methods=["get", "set", "delete", "clear"],
         ),
         InterfaceImplementation(
             interface_name="Storage",
             implementation_name="MemoryStorage",
             file_path="/test/memory.py",
             language="python",
-            methods=["get", "set", "delete"]
-        )
+            methods=["get", "set", "delete"],
+        ),
     ]
 
-    with patch('src.store.call_graph_store.QdrantCallGraphStore') as MockStore:
+    with patch("src.store.call_graph_store.QdrantCallGraphStore") as MockStore:
         mock_store = AsyncMock()
         mock_store.get_implementations = AsyncMock(return_value=mock_impls)
         MockStore.return_value = mock_store
 
-        result = await server.find_implementations(
-            interface_name="Storage"
-        )
+        result = await server.find_implementations(interface_name="Storage")
 
         assert result["total_implementations"] == 2
         impl_names = [impl["class_name"] for impl in result["implementations"]]
@@ -415,25 +417,24 @@ async def test_find_implementations_filter_by_language(server):
             implementation_name="RedisStorage",
             file_path="/test/redis.py",
             language="python",
-            methods=["get", "set"]
+            methods=["get", "set"],
         ),
         InterfaceImplementation(
             interface_name="Storage",
             implementation_name="JRedisStorage",
             file_path="/test/Redis.java",
             language="java",
-            methods=["get", "set"]
-        )
+            methods=["get", "set"],
+        ),
     ]
 
-    with patch('src.store.call_graph_store.QdrantCallGraphStore') as MockStore:
+    with patch("src.store.call_graph_store.QdrantCallGraphStore") as MockStore:
         mock_store = AsyncMock()
         mock_store.get_implementations = AsyncMock(return_value=mock_impls)
         MockStore.return_value = mock_store
 
         result = await server.find_implementations(
-            interface_name="Storage",
-            language="python"
+            interface_name="Storage", language="python"
         )
 
         assert result["total_implementations"] == 1
@@ -444,7 +445,7 @@ async def test_find_implementations_filter_by_language(server):
 @pytest.mark.asyncio
 async def test_find_implementations_interface_not_found(server):
     """Test finding implementations for non-existent interface."""
-    with patch('src.store.call_graph_store.QdrantCallGraphStore') as MockStore:
+    with patch("src.store.call_graph_store.QdrantCallGraphStore") as MockStore:
         mock_store = AsyncMock()
         mock_store.get_implementations = AsyncMock(return_value=[])
         MockStore.return_value = mock_store
@@ -459,6 +460,7 @@ async def test_find_implementations_interface_not_found(server):
 
 # find_dependencies tests
 
+
 @pytest.mark.asyncio
 async def test_find_dependencies_direct_imports(server):
     """Test finding direct file dependencies."""
@@ -471,8 +473,7 @@ async def test_find_dependencies_direct_imports(server):
     server.get_file_dependencies = AsyncMock(return_value=mock_result)
 
     result = await server.find_dependencies(
-        file_path="/test/api.py",
-        include_transitive=False
+        file_path="/test/api.py", include_transitive=False
     )
 
     assert result["file"] == "/test/api.py"
@@ -496,9 +497,7 @@ async def test_find_dependencies_transitive_depth_2(server):
     server.get_file_dependencies = AsyncMock(return_value=mock_result)
 
     result = await server.find_dependencies(
-        file_path="/test/api.py",
-        include_transitive=True,
-        depth=2
+        file_path="/test/api.py", include_transitive=True, depth=2
     )
 
     assert result["total_dependencies"] == 2
@@ -510,13 +509,16 @@ async def test_find_dependencies_file_not_indexed(server):
     """Test finding dependencies for non-indexed file."""
     from src.core.exceptions import RetrievalError
 
-    server.get_file_dependencies = AsyncMock(side_effect=RetrievalError("File not indexed"))
+    server.get_file_dependencies = AsyncMock(
+        side_effect=RetrievalError("File not indexed")
+    )
 
     with pytest.raises(RetrievalError):
         await server.find_dependencies(file_path="/test/nonexistent.py")
 
 
 # find_dependents tests
+
 
 @pytest.mark.asyncio
 async def test_find_dependents_single_dependent(server):
@@ -530,8 +532,7 @@ async def test_find_dependents_single_dependent(server):
     server.get_file_dependents = AsyncMock(return_value=mock_result)
 
     result = await server.find_dependents(
-        file_path="/test/api.py",
-        include_transitive=False
+        file_path="/test/api.py", include_transitive=False
     )
 
     assert result["file"] == "/test/api.py"
@@ -552,8 +553,7 @@ async def test_find_dependents_high_impact_radius(server):
     server.get_file_dependents = AsyncMock(return_value=mock_result)
 
     result = await server.find_dependents(
-        file_path="/test/core.py",
-        include_transitive=False
+        file_path="/test/core.py", include_transitive=False
     )
 
     assert result["total_dependents"] == 25
@@ -575,9 +575,7 @@ async def test_find_dependents_transitive_depth_2(server):
     server.get_file_dependents = AsyncMock(return_value=mock_result)
 
     result = await server.find_dependents(
-        file_path="/test/auth.py",
-        include_transitive=True,
-        depth=2
+        file_path="/test/auth.py", include_transitive=True, depth=2
     )
 
     assert result["total_dependents"] == 2
@@ -586,17 +584,17 @@ async def test_find_dependents_transitive_depth_2(server):
 
 # get_call_chain tests
 
+
 @pytest.mark.asyncio
 async def test_get_call_chain_single_path(server, sample_call_graph):
     """Test finding a single call chain."""
-    with patch('src.store.call_graph_store.QdrantCallGraphStore') as MockStore:
+    with patch("src.store.call_graph_store.QdrantCallGraphStore") as MockStore:
         mock_store = AsyncMock()
         mock_store.load_call_graph = AsyncMock(return_value=sample_call_graph)
         MockStore.return_value = mock_store
 
         result = await server.get_call_chain(
-            from_function="main",
-            to_function="validate"
+            from_function="main", to_function="validate"
         )
 
         assert result["from"] == "main"
@@ -612,24 +610,24 @@ async def test_get_call_chain_single_path(server, sample_call_graph):
 async def test_get_call_chain_multiple_paths(server, sample_call_graph):
     """Test finding multiple call chains."""
     # Add alternate path
-    sample_call_graph.add_call(CallSite(
-        caller_function="main",
-        caller_file="/test/main.py",
-        caller_line=8,
-        callee_function="validate",
-        callee_file="/test/validation.py",
-        call_type="direct"
-    ))
+    sample_call_graph.add_call(
+        CallSite(
+            caller_function="main",
+            caller_file="/test/main.py",
+            caller_line=8,
+            callee_function="validate",
+            callee_file="/test/validation.py",
+            call_type="direct",
+        )
+    )
 
-    with patch('src.store.call_graph_store.QdrantCallGraphStore') as MockStore:
+    with patch("src.store.call_graph_store.QdrantCallGraphStore") as MockStore:
         mock_store = AsyncMock()
         mock_store.load_call_graph = AsyncMock(return_value=sample_call_graph)
         MockStore.return_value = mock_store
 
         result = await server.get_call_chain(
-            from_function="main",
-            to_function="validate",
-            max_paths=10
+            from_function="main", to_function="validate", max_paths=10
         )
 
         # Should find at least 2 paths
@@ -640,14 +638,14 @@ async def test_get_call_chain_multiple_paths(server, sample_call_graph):
 @pytest.mark.asyncio
 async def test_get_call_chain_no_path_found(server, sample_call_graph):
     """Test when no call chain exists."""
-    with patch('src.store.call_graph_store.QdrantCallGraphStore') as MockStore:
+    with patch("src.store.call_graph_store.QdrantCallGraphStore") as MockStore:
         mock_store = AsyncMock()
         mock_store.load_call_graph = AsyncMock(return_value=sample_call_graph)
         MockStore.return_value = mock_store
 
         result = await server.get_call_chain(
             from_function="database_query",
-            to_function="main"  # Reverse direction - no path
+            to_function="main",  # Reverse direction - no path
         )
 
         assert result["total_paths"] == 0
@@ -657,7 +655,7 @@ async def test_get_call_chain_no_path_found(server, sample_call_graph):
 @pytest.mark.asyncio
 async def test_get_call_chain_respects_max_depth(server, sample_call_graph):
     """Test that max_depth parameter is respected."""
-    with patch('src.store.call_graph_store.QdrantCallGraphStore') as MockStore:
+    with patch("src.store.call_graph_store.QdrantCallGraphStore") as MockStore:
         mock_store = AsyncMock()
         mock_store.load_call_graph = AsyncMock(return_value=sample_call_graph)
         MockStore.return_value = mock_store
@@ -665,7 +663,7 @@ async def test_get_call_chain_respects_max_depth(server, sample_call_graph):
         result = await server.get_call_chain(
             from_function="main",
             to_function="database_query",
-            max_depth=2  # Path requires depth 3
+            max_depth=2,  # Path requires depth 3
         )
 
         # Should not find path with depth limit
@@ -677,38 +675,42 @@ async def test_get_call_chain_max_paths_limit(server, sample_call_graph):
     """Test that max_paths parameter limits results."""
     # Add multiple paths
     for i in range(10):
-        sample_call_graph.add_function(FunctionNode(
-            name=f"intermediate_{i}",
-            qualified_name=f"intermediate_{i}",
-            file_path=f"/test/inter_{i}.py",
-            language="python",
-            start_line=1,
-            end_line=10,
-        ))
-        sample_call_graph.add_call(CallSite(
-            caller_function="main",
-            caller_file="/test/main.py",
-            caller_line=10 + i,
-            callee_function=f"intermediate_{i}",
-            call_type="direct"
-        ))
-        sample_call_graph.add_call(CallSite(
-            caller_function=f"intermediate_{i}",
-            caller_file=f"/test/inter_{i}.py",
-            caller_line=5,
-            callee_function="validate",
-            call_type="direct"
-        ))
+        sample_call_graph.add_function(
+            FunctionNode(
+                name=f"intermediate_{i}",
+                qualified_name=f"intermediate_{i}",
+                file_path=f"/test/inter_{i}.py",
+                language="python",
+                start_line=1,
+                end_line=10,
+            )
+        )
+        sample_call_graph.add_call(
+            CallSite(
+                caller_function="main",
+                caller_file="/test/main.py",
+                caller_line=10 + i,
+                callee_function=f"intermediate_{i}",
+                call_type="direct",
+            )
+        )
+        sample_call_graph.add_call(
+            CallSite(
+                caller_function=f"intermediate_{i}",
+                caller_file=f"/test/inter_{i}.py",
+                caller_line=5,
+                callee_function="validate",
+                call_type="direct",
+            )
+        )
 
-    with patch('src.store.call_graph_store.QdrantCallGraphStore') as MockStore:
+    with patch("src.store.call_graph_store.QdrantCallGraphStore") as MockStore:
         mock_store = AsyncMock()
         mock_store.load_call_graph = AsyncMock(return_value=sample_call_graph)
         MockStore.return_value = mock_store
 
         result = await server.get_call_chain(
-            from_function="main",
-            to_function="validate",
-            max_paths=5
+            from_function="main", to_function="validate", max_paths=5
         )
 
         assert len(result["paths"]) <= 5

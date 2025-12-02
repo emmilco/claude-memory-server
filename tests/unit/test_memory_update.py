@@ -16,10 +16,7 @@ class TestUpdateMemoryRequest:
 
     def test_valid_request_with_content(self):
         """Test valid update request with content."""
-        request = UpdateMemoryRequest(
-            memory_id="test-123",
-            content="Updated content"
-        )
+        request = UpdateMemoryRequest(memory_id="test-123", content="Updated content")
         assert request.memory_id == "test-123"
         assert request.content == "Updated content"
         assert request.regenerate_embedding is True
@@ -45,10 +42,7 @@ class TestUpdateMemoryRequest:
 
     def test_valid_request_with_only_metadata(self):
         """Test valid update request with only metadata."""
-        request = UpdateMemoryRequest(
-            memory_id="test-123",
-            metadata={"updated": True}
-        )
+        request = UpdateMemoryRequest(memory_id="test-123", metadata={"updated": True})
         assert request.memory_id == "test-123"
         assert request.content is None
         assert request.metadata == {"updated": True}
@@ -64,45 +58,37 @@ class TestUpdateMemoryRequest:
         with pytest.raises(ValidationError):
             UpdateMemoryRequest(
                 memory_id="test-123",
-                content="x" * 60000  # Exceeds 50000 max
+                content="x" * 60000,  # Exceeds 50000 max
             )
 
     def test_invalid_importance_out_of_range(self):
         """Test that importance outside 0.0-1.0 fails."""
         with pytest.raises(ValidationError):
-            UpdateMemoryRequest(
-                memory_id="test-123",
-                importance=1.5
-            )
+            UpdateMemoryRequest(memory_id="test-123", importance=1.5)
 
         with pytest.raises(ValidationError):
-            UpdateMemoryRequest(
-                memory_id="test-123",
-                importance=-0.1
-            )
+            UpdateMemoryRequest(memory_id="test-123", importance=-0.1)
 
     def test_invalid_too_many_tags(self):
         """Test that more than 20 tags fails."""
         with pytest.raises(ValidationError) as exc_info:
             UpdateMemoryRequest(
                 memory_id="test-123",
-                tags=[f"tag{i}" for i in range(25)]  # 25 tags
+                tags=[f"tag{i}" for i in range(25)],  # 25 tags
             )
         assert "Maximum 20 tags allowed" in str(exc_info.value)
 
     def test_tags_validation_strips_whitespace(self):
         """Test that tags are normalized (stripped and lowercased)."""
         request = UpdateMemoryRequest(
-            memory_id="test-123",
-            tags=["  TAG1  ", "Tag2", "  tag3"]
+            memory_id="test-123", tags=["  TAG1  ", "Tag2", "  tag3"]
         )
         assert request.tags == ["tag1", "tag2", "tag3"]
 
     def test_tags_validation_removes_empty(self):
         """Test that empty tags are removed."""
         request = UpdateMemoryRequest(
-            memory_id="test-123",
-            tags=["tag1", "  ", "", "tag2"]
+            memory_id="test-123", tags=["tag1", "  ", "", "tag2"]
         )
         assert request.tags == ["tag1", "tag2"]
 
@@ -111,25 +97,21 @@ class TestUpdateMemoryRequest:
         with pytest.raises(ValidationError) as exc_info:
             UpdateMemoryRequest(
                 memory_id="test-123",
-                tags=["x" * 60]  # 60 characters
+                tags=["x" * 60],  # 60 characters
             )
         assert "Tags must be <= 50 characters" in str(exc_info.value)
 
     def test_preserve_timestamps_flag(self):
         """Test preserve_timestamps flag."""
         request = UpdateMemoryRequest(
-            memory_id="test-123",
-            content="Updated",
-            preserve_timestamps=False
+            memory_id="test-123", content="Updated", preserve_timestamps=False
         )
         assert request.preserve_timestamps is False
 
     def test_regenerate_embedding_flag(self):
         """Test regenerate_embedding flag."""
         request = UpdateMemoryRequest(
-            memory_id="test-123",
-            content="Updated",
-            regenerate_embedding=False
+            memory_id="test-123", content="Updated", regenerate_embedding=False
         )
         assert request.regenerate_embedding is False
 

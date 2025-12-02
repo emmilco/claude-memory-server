@@ -24,7 +24,6 @@ class GitSearchCommand:
         """
         config = get_config()
         query = args.query
-        project_name = args.project_name
         author = args.author
         since = args.since
         until = args.until
@@ -32,8 +31,7 @@ class GitSearchCommand:
 
         console.print(
             Panel.fit(
-                f"[bold cyan]Searching Git History[/bold cyan]\n"
-                f"Query: {query}",
+                f"[bold cyan]Searching Git History[/bold cyan]\n" f"Query: {query}",
                 border_style="cyan",
             )
         )
@@ -49,6 +47,7 @@ class GitSearchCommand:
 
                 if since:
                     from datetime import datetime, timedelta, UTC
+
                     # Simple date parsing
                     if since == "today":
                         since_dt = datetime.now(UTC)
@@ -62,16 +61,25 @@ class GitSearchCommand:
                         try:
                             since_dt = datetime.fromisoformat(since).replace(tzinfo=UTC)
                         except Exception as e:
-                            logger.debug(f"Failed to parse 'since' date as ISO format '{since}': {e}")
+                            logger.debug(
+                                f"Failed to parse 'since' date as ISO format '{since}': {e}"
+                            )
                             try:
-                                since_dt = datetime.strptime(since, "%Y-%m-%d").replace(tzinfo=UTC)
+                                since_dt = datetime.strptime(since, "%Y-%m-%d").replace(
+                                    tzinfo=UTC
+                                )
                             except Exception as e2:
-                                logger.warning(f"Failed to parse 'since' date '{since}' in any format: {e2}")
-                                console.print(f"[yellow]Warning: Could not parse 'since' date: {since}[/yellow]")
+                                logger.warning(
+                                    f"Failed to parse 'since' date '{since}' in any format: {e2}"
+                                )
+                                console.print(
+                                    f"[yellow]Warning: Could not parse 'since' date: {since}[/yellow]"
+                                )
                                 since_dt = None
 
                 if until:
                     from datetime import datetime, timedelta, UTC
+
                     if until == "today":
                         until_dt = datetime.now(UTC)
                     elif until == "yesterday":
@@ -80,12 +88,20 @@ class GitSearchCommand:
                         try:
                             until_dt = datetime.fromisoformat(until).replace(tzinfo=UTC)
                         except Exception as e:
-                            logger.debug(f"Failed to parse 'until' date as ISO format '{until}': {e}")
+                            logger.debug(
+                                f"Failed to parse 'until' date as ISO format '{until}': {e}"
+                            )
                             try:
-                                until_dt = datetime.strptime(until, "%Y-%m-%d").replace(tzinfo=UTC)
+                                until_dt = datetime.strptime(until, "%Y-%m-%d").replace(
+                                    tzinfo=UTC
+                                )
                             except Exception as e2:
-                                logger.warning(f"Failed to parse 'until' date '{until}' in any format: {e2}")
-                                console.print(f"[yellow]Warning: Could not parse 'until' date: {until}[/yellow]")
+                                logger.warning(
+                                    f"Failed to parse 'until' date '{until}' in any format: {e2}"
+                                )
+                                console.print(
+                                    f"[yellow]Warning: Could not parse 'until' date: {until}[/yellow]"
+                                )
                                 until_dt = None
 
                 # Search commits
@@ -120,6 +136,7 @@ class GitSearchCommand:
                 if isinstance(date_str, str):
                     try:
                         from datetime import datetime
+
                         dt = datetime.fromisoformat(date_str)
                         date_str = dt.strftime("%Y-%m-%d %H:%M")
                     except Exception as e:

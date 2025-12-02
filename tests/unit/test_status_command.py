@@ -17,7 +17,7 @@ class TestStatusCommandInitialization:
 
     def test_init_without_rich(self):
         """Test initialization when rich is not available."""
-        with patch('src.cli.status_command.RICH_AVAILABLE', False):
+        with patch("src.cli.status_command.RICH_AVAILABLE", False):
             cmd = StatusCommand()
             assert cmd.console is None
 
@@ -105,19 +105,19 @@ class TestStorageStats:
         """Test getting SQLite storage stats when database exists."""
         cmd = StatusCommand()
 
-        with patch('src.config.get_config') as mock_config:
+        with patch("src.config.get_config") as mock_config:
             config = MagicMock()
             config.storage_backend = "sqlite"
             config.sqlite_path_expanded = Path("/tmp/test.db")
             mock_config.return_value = config
 
-            with patch('src.store.create_memory_store') as mock_create:
+            with patch("src.store.create_memory_store") as mock_create:
                 mock_store = AsyncMock()
                 mock_store.initialize = AsyncMock()
                 mock_create.return_value = mock_store
 
-                with patch.object(Path, 'exists', return_value=True):
-                    with patch.object(Path, 'stat') as mock_stat:
+                with patch.object(Path, "exists", return_value=True):
+                    with patch.object(Path, "stat") as mock_stat:
                         mock_stat.return_value.st_size = 2 * 1024 * 1024  # 2MB
 
                         stats = await cmd.get_storage_stats()
@@ -132,18 +132,18 @@ class TestStorageStats:
         """Test getting SQLite storage stats when database doesn't exist."""
         cmd = StatusCommand()
 
-        with patch('src.config.get_config') as mock_config:
+        with patch("src.config.get_config") as mock_config:
             config = MagicMock()
             config.storage_backend = "sqlite"
             config.sqlite_path_expanded = Path("/tmp/test.db")
             mock_config.return_value = config
 
-            with patch('src.store.create_memory_store') as mock_create:
+            with patch("src.store.create_memory_store") as mock_create:
                 mock_store = AsyncMock()
                 mock_store.initialize = AsyncMock()
                 mock_create.return_value = mock_store
 
-                with patch.object(Path, 'exists', return_value=False):
+                with patch.object(Path, "exists", return_value=False):
                     stats = await cmd.get_storage_stats()
 
                     assert stats["backend"] == "sqlite"
@@ -156,14 +156,14 @@ class TestStorageStats:
         """Test getting Qdrant storage stats."""
         cmd = StatusCommand()
 
-        with patch('src.config.get_config') as mock_config:
+        with patch("src.config.get_config") as mock_config:
             config = MagicMock()
             config.storage_backend = "qdrant"
             config.qdrant_url = "http://localhost:6333"
             config.qdrant_collection_name = "test_collection"
             mock_config.return_value = config
 
-            with patch('src.store.create_memory_store') as mock_create:
+            with patch("src.store.create_memory_store") as mock_create:
                 mock_store = AsyncMock()
                 mock_store.initialize = AsyncMock()
                 mock_create.return_value = mock_store
@@ -180,12 +180,12 @@ class TestStorageStats:
         """Test getting storage stats with error."""
         cmd = StatusCommand()
 
-        with patch('src.config.get_config') as mock_config:
+        with patch("src.config.get_config") as mock_config:
             config = MagicMock()
             config.storage_backend = "sqlite"
             mock_config.return_value = config
 
-            with patch('src.store.create_memory_store') as mock_create:
+            with patch("src.store.create_memory_store") as mock_create:
                 mock_store = AsyncMock()
                 mock_store.initialize = AsyncMock(side_effect=Exception("Store error"))
                 mock_create.return_value = mock_store
@@ -205,22 +205,22 @@ class TestCacheStats:
         """Test getting cache stats when cache exists."""
         cmd = StatusCommand()
 
-        with patch('src.config.get_config') as mock_config:
+        with patch("src.config.get_config") as mock_config:
             config = MagicMock()
             config.embedding_cache_path_expanded = Path("/tmp/cache.db")
             mock_config.return_value = config
 
-            with patch.object(Path, 'exists', return_value=True):
-                with patch.object(Path, 'stat') as mock_stat:
+            with patch.object(Path, "exists", return_value=True):
+                with patch.object(Path, "stat") as mock_stat:
                     mock_stat.return_value.st_size = 5 * 1024 * 1024  # 5MB
 
-                    with patch('src.embeddings.cache.EmbeddingCache') as mock_cache:
+                    with patch("src.embeddings.cache.EmbeddingCache") as mock_cache:
                         mock_instance = MagicMock()
                         mock_instance.get_stats.return_value = {
                             "total_entries": 1000,
                             "hits": 850,
                             "misses": 150,
-                            "hit_rate": 0.85
+                            "hit_rate": 0.85,
                         }
                         mock_cache.return_value = mock_instance
 
@@ -236,12 +236,12 @@ class TestCacheStats:
         """Test getting cache stats when cache doesn't exist."""
         cmd = StatusCommand()
 
-        with patch('src.config.get_config') as mock_config:
+        with patch("src.config.get_config") as mock_config:
             config = MagicMock()
             config.embedding_cache_path_expanded = Path("/tmp/cache.db")
             mock_config.return_value = config
 
-            with patch.object(Path, 'exists', return_value=False):
+            with patch.object(Path, "exists", return_value=False):
                 stats = await cmd.get_cache_stats()
 
                 assert stats["exists"] is False
@@ -252,13 +252,16 @@ class TestCacheStats:
         """Test getting cache stats with error."""
         cmd = StatusCommand()
 
-        with patch('src.config.get_config') as mock_config:
+        with patch("src.config.get_config") as mock_config:
             config = MagicMock()
             config.embedding_cache_path_expanded = Path("/tmp/cache.db")
             mock_config.return_value = config
 
-            with patch.object(Path, 'exists', return_value=True):
-                with patch('src.embeddings.cache.EmbeddingCache', side_effect=Exception("Cache error")):
+            with patch.object(Path, "exists", return_value=True):
+                with patch(
+                    "src.embeddings.cache.EmbeddingCache",
+                    side_effect=Exception("Cache error"),
+                ):
                     stats = await cmd.get_cache_stats()
 
                     assert "error" in stats
@@ -272,7 +275,7 @@ class TestParserInfo:
         """Test getting parser info when Rust is available."""
         cmd = StatusCommand()
 
-        with patch('src.memory.incremental_indexer.RUST_AVAILABLE', True):
+        with patch("src.memory.incremental_indexer.RUST_AVAILABLE", True):
             info = await cmd.get_parser_info()
 
             assert info["mode"] == "rust"
@@ -284,7 +287,7 @@ class TestParserInfo:
         """Test getting parser info when Rust is not available."""
         cmd = StatusCommand()
 
-        with patch('src.memory.incremental_indexer.RUST_AVAILABLE', False):
+        with patch("src.memory.incremental_indexer.RUST_AVAILABLE", False):
             info = await cmd.get_parser_info()
 
             assert info["mode"] == "unavailable"
@@ -300,7 +303,7 @@ class TestEmbeddingInfo:
         """Test getting embedding model info."""
         cmd = StatusCommand()
 
-        with patch('src.config.get_config') as mock_config:
+        with patch("src.config.get_config") as mock_config:
             config = MagicMock()
             config.embedding_model = "all-MiniLM-L6-v2"
             config.embedding_batch_size = 32
@@ -321,11 +324,11 @@ class TestIndexedProjects:
         """Test getting indexed projects when none exist."""
         cmd = StatusCommand()
 
-        with patch('src.config.get_config') as mock_config:
+        with patch("src.config.get_config") as mock_config:
             config = MagicMock()
             mock_config.return_value = config
 
-            with patch('src.store.create_memory_store') as mock_create:
+            with patch("src.store.create_memory_store") as mock_create:
                 mock_store = AsyncMock()
                 mock_store.initialize = AsyncMock()
                 mock_create.return_value = mock_store
@@ -340,11 +343,11 @@ class TestIndexedProjects:
         """Test getting indexed projects with error."""
         cmd = StatusCommand()
 
-        with patch('src.config.get_config') as mock_config:
+        with patch("src.config.get_config") as mock_config:
             config = MagicMock()
             mock_config.return_value = config
 
-            with patch('src.store.create_memory_store') as mock_create:
+            with patch("src.store.create_memory_store") as mock_create:
                 mock_store = AsyncMock()
                 mock_store.initialize = AsyncMock(side_effect=Exception("Store error"))
                 mock_create.return_value = mock_store
@@ -361,7 +364,7 @@ class TestPrintMethods:
     def test_print_header_with_rich(self):
         """Test print header with rich."""
         cmd = StatusCommand()
-        with patch.object(cmd.console, 'print') as mock_print:
+        with patch.object(cmd.console, "print") as mock_print:
             cmd.print_header()
             # Verify console.print was called (at least twice: blank line + panel)
             assert mock_print.call_count >= 2
@@ -370,16 +373,19 @@ class TestPrintMethods:
 
     def test_print_header_without_rich(self):
         """Test print header without rich."""
-        with patch('src.cli.status_command.RICH_AVAILABLE', False):
+        with patch("src.cli.status_command.RICH_AVAILABLE", False):
             cmd = StatusCommand()
             cmd.console = None
-            with patch('builtins.print') as mock_print:
+            with patch("builtins.print") as mock_print:
                 cmd.print_header()
                 # Verify print was called
                 assert mock_print.called
                 # Verify header contains expected text
                 call_args = str(mock_print.call_args_list)
-                assert any(keyword in call_args.lower() for keyword in ['status', 'memory', 'server'])
+                assert any(
+                    keyword in call_args.lower()
+                    for keyword in ["status", "memory", "server"]
+                )
 
     def test_print_storage_stats_sqlite(self):
         """Test printing SQLite storage stats."""
@@ -388,16 +394,16 @@ class TestPrintMethods:
             "backend": "sqlite",
             "connected": True,
             "path": "/tmp/test.db",
-            "size": 1024 * 1024
+            "size": 1024 * 1024,
         }
-        with patch.object(cmd.console, 'print') as mock_print:
+        with patch.object(cmd.console, "print") as mock_print:
             cmd.print_storage_stats(stats)
             # Verify console.print was called
             assert mock_print.called
             # Verify output contains storage info
             call_args = str(mock_print.call_args_list)
-            assert 'sqlite' in call_args.lower()
-            assert 'test.db' in call_args or 'path' in call_args.lower()
+            assert "sqlite" in call_args.lower()
+            assert "test.db" in call_args or "path" in call_args.lower()
 
     def test_print_storage_stats_qdrant(self):
         """Test printing Qdrant storage stats."""
@@ -406,32 +412,33 @@ class TestPrintMethods:
             "backend": "qdrant",
             "connected": True,
             "url": "http://localhost:6333",
-            "collection": "test"
+            "collection": "test",
         }
-        with patch.object(cmd.console, 'print') as mock_print:
+        with patch.object(cmd.console, "print") as mock_print:
             cmd.print_storage_stats(stats)
             # Verify console.print was called
             assert mock_print.called
             # Verify output contains Qdrant info
             call_args = str(mock_print.call_args_list)
-            assert 'qdrant' in call_args.lower()
-            assert any(keyword in call_args for keyword in ['localhost', 'test', '6333'])
+            assert "qdrant" in call_args.lower()
+            assert any(
+                keyword in call_args for keyword in ["localhost", "test", "6333"]
+            )
 
     def test_print_storage_stats_disconnected(self):
         """Test printing disconnected storage stats."""
         cmd = StatusCommand()
-        stats = {
-            "backend": "qdrant",
-            "connected": False,
-            "error": "Connection failed"
-        }
-        with patch.object(cmd.console, 'print') as mock_print:
+        stats = {"backend": "qdrant", "connected": False, "error": "Connection failed"}
+        with patch.object(cmd.console, "print") as mock_print:
             cmd.print_storage_stats(stats)
             # Verify console.print was called
             assert mock_print.called
             # Verify error message is shown
             call_args = str(mock_print.call_args_list)
-            assert any(keyword in call_args.lower() for keyword in ['error', 'failed', 'disconnected'])
+            assert any(
+                keyword in call_args.lower()
+                for keyword in ["error", "failed", "disconnected"]
+            )
 
     def test_print_cache_stats_exists(self):
         """Test printing cache stats when cache exists."""
@@ -441,29 +448,32 @@ class TestPrintMethods:
             "path": "/tmp/cache.db",
             "size": 2 * 1024 * 1024,
             "total_entries": 1000,
-            "hit_rate": 0.85
+            "hit_rate": 0.85,
         }
-        with patch.object(cmd.console, 'print') as mock_print:
+        with patch.object(cmd.console, "print") as mock_print:
             cmd.print_cache_stats(stats)
             # Verify console.print was called
             assert mock_print.called
             # Verify cache info is displayed
             call_args = str(mock_print.call_args_list)
-            assert any(keyword in call_args.lower() for keyword in ['cache', 'hit', 'entries'])
+            assert any(
+                keyword in call_args.lower() for keyword in ["cache", "hit", "entries"]
+            )
 
     def test_print_cache_stats_not_exists(self):
         """Test printing cache stats when cache doesn't exist."""
         cmd = StatusCommand()
-        stats = {
-            "exists": False
-        }
-        with patch.object(cmd.console, 'print') as mock_print:
+        stats = {"exists": False}
+        with patch.object(cmd.console, "print") as mock_print:
             cmd.print_cache_stats(stats)
             # Verify console.print was called
             assert mock_print.called
             # Verify message indicates cache doesn't exist
             call_args = str(mock_print.call_args_list)
-            assert any(keyword in call_args.lower() for keyword in ['not', 'no cache', 'disabled'])
+            assert any(
+                keyword in call_args.lower()
+                for keyword in ["not", "no cache", "disabled"]
+            )
 
     def test_print_parser_info_rust(self):
         """Test printing Rust parser info."""
@@ -471,16 +481,18 @@ class TestPrintMethods:
         info = {
             "mode": "rust",
             "rust_available": True,
-            "description": "Optimal performance"
+            "description": "Optimal performance",
         }
-        with patch.object(cmd.console, 'print') as mock_print:
+        with patch.object(cmd.console, "print") as mock_print:
             cmd.print_parser_info(info)
             # Verify console.print was called
             assert mock_print.called
             # Verify Rust parser info is displayed
             call_args = str(mock_print.call_args_list)
-            assert 'rust' in call_args.lower()
-            assert any(keyword in call_args.lower() for keyword in ['optimal', 'performance'])
+            assert "rust" in call_args.lower()
+            assert any(
+                keyword in call_args.lower() for keyword in ["optimal", "performance"]
+            )
 
     def test_print_parser_info_python(self):
         """Test printing Python parser info."""
@@ -488,43 +500,41 @@ class TestPrintMethods:
         info = {
             "mode": "python",
             "rust_available": False,
-            "description": "Fallback mode"
+            "description": "Fallback mode",
         }
-        with patch.object(cmd.console, 'print') as mock_print:
+        with patch.object(cmd.console, "print") as mock_print:
             cmd.print_parser_info(info)
             # Verify console.print was called
             assert mock_print.called
             # Verify Python parser info is displayed
             call_args = str(mock_print.call_args_list)
-            assert 'python' in call_args.lower()
-            assert any(keyword in call_args.lower() for keyword in ['fallback', 'mode'])
+            assert "python" in call_args.lower()
+            assert any(keyword in call_args.lower() for keyword in ["fallback", "mode"])
 
     def test_print_embedding_info(self):
         """Test printing embedding info."""
         cmd = StatusCommand()
-        info = {
-            "model": "all-MiniLM-L6-v2",
-            "dimensions": 384,
-            "batch_size": 32
-        }
-        with patch.object(cmd.console, 'print') as mock_print:
+        info = {"model": "all-MiniLM-L6-v2", "dimensions": 384, "batch_size": 32}
+        with patch.object(cmd.console, "print") as mock_print:
             cmd.print_embedding_info(info)
             # Verify console.print was called
             assert mock_print.called
             # Verify embedding model info is displayed
             call_args = str(mock_print.call_args_list)
-            assert any(keyword in call_args for keyword in ['MiniLM', '384', '32'])
+            assert any(keyword in call_args for keyword in ["MiniLM", "384", "32"])
 
     def test_print_projects_table_empty(self):
         """Test printing projects table with no projects."""
         cmd = StatusCommand()
-        with patch.object(cmd.console, 'print') as mock_print:
+        with patch.object(cmd.console, "print") as mock_print:
             cmd.print_projects_table([])
             # Verify console.print was called
             assert mock_print.called
             # Verify message indicates no projects
             call_args = str(mock_print.call_args_list)
-            assert any(keyword in call_args.lower() for keyword in ['no', 'empty', 'project'])
+            assert any(
+                keyword in call_args.lower() for keyword in ["no", "empty", "project"]
+            )
 
     def test_print_projects_table_with_projects(self):
         """Test printing projects table with projects."""
@@ -536,10 +546,10 @@ class TestPrintMethods:
                 "num_files": 100,
                 "num_functions": 500,
                 "num_classes": 50,
-                "last_indexed": datetime.now(UTC) - timedelta(hours=2)
+                "last_indexed": datetime.now(UTC) - timedelta(hours=2),
             }
         ]
-        with patch.object(cmd.console, 'print') as mock_print:
+        with patch.object(cmd.console, "print") as mock_print:
             cmd.print_projects_table(projects)
             # Verify console.print was called (header + table + blank line)
             assert mock_print.call_count >= 2
@@ -548,13 +558,16 @@ class TestPrintMethods:
     def test_print_quick_commands(self):
         """Test printing quick commands."""
         cmd = StatusCommand()
-        with patch.object(cmd.console, 'print') as mock_print:
+        with patch.object(cmd.console, "print") as mock_print:
             cmd.print_quick_commands()
             # Verify console.print was called
             assert mock_print.called
             # Verify commands are displayed
             call_args = str(mock_print.call_args_list)
-            assert any(keyword in call_args.lower() for keyword in ['command', 'index', 'search'])
+            assert any(
+                keyword in call_args.lower()
+                for keyword in ["command", "index", "search"]
+            )
 
 
 class TestRunCommand:
@@ -570,33 +583,26 @@ class TestRunCommand:
             "backend": "sqlite",
             "connected": True,
             "path": "/tmp/test.db",
-            "size": 1024 * 1024
-        }
-        cache_stats = {
-            "exists": True,
             "size": 1024 * 1024,
-            "total_entries": 100
         }
+        cache_stats = {"exists": True, "size": 1024 * 1024, "total_entries": 100}
         parser_info = {
             "mode": "rust",
             "rust_available": True,
-            "description": "Optimal performance"
+            "description": "Optimal performance",
         }
         embedding_info = {
             "model": "all-MiniLM-L6-v2",
             "dimensions": 384,
-            "batch_size": 32
+            "batch_size": 32,
         }
         file_watcher_info = {
             "enabled": True,
             "debounce_ms": 1000,
             "supported_extensions": [".py", ".js"],
-            "description": "Auto-reindex files on change"
+            "description": "Auto-reindex files on change",
         }
-        active_project = {
-            "name": "test-project",
-            "path": "/tmp/test-project"
-        }
+        active_project = {"name": "test-project", "path": "/tmp/test-project"}
         projects = []
 
         cmd.get_storage_stats = AsyncMock(return_value=storage_stats)
@@ -643,6 +649,7 @@ class TestRunCommand:
         cmd.print_projects_table.assert_called_once_with(projects)
         cmd.print_quick_commands.assert_called_once()
 
+
 class TestFileWatcherInfo:
     """Test file watcher information methods."""
 
@@ -651,7 +658,7 @@ class TestFileWatcherInfo:
         """Test getting file watcher info when enabled."""
         cmd = StatusCommand()
 
-        with patch('src.config.get_config') as mock_get_config:
+        with patch("src.config.get_config") as mock_get_config:
             mock_config = MagicMock()
             mock_config.indexing.file_watcher = True
             mock_config.indexing.watch_debounce_ms = 1000
@@ -670,7 +677,7 @@ class TestFileWatcherInfo:
         """Test getting file watcher info when disabled."""
         cmd = StatusCommand()
 
-        with patch('src.config.get_config') as mock_get_config:
+        with patch("src.config.get_config") as mock_get_config:
             mock_config = MagicMock()
             mock_config.indexing.file_watcher = False
             mock_config.indexing.watch_debounce_ms = 500
@@ -689,16 +696,19 @@ class TestFileWatcherInfo:
             "enabled": True,
             "debounce_ms": 1000,
             "supported_extensions": [".py", ".js", ".ts"],
-            "description": "Auto-reindex files on change"
+            "description": "Auto-reindex files on change",
         }
 
-        with patch.object(cmd.console, 'print') as mock_print:
+        with patch.object(cmd.console, "print") as mock_print:
             cmd.print_file_watcher_info(info)
             # Verify console.print was called
             assert mock_print.called
             # Verify file watcher info is displayed
             call_args = str(mock_print.call_args_list)
-            assert any(keyword in call_args.lower() for keyword in ['watcher', 'enabled', 'auto'])
+            assert any(
+                keyword in call_args.lower()
+                for keyword in ["watcher", "enabled", "auto"]
+            )
 
     def test_print_file_watcher_info_disabled_with_rich(self):
         """Test printing file watcher info when disabled with rich."""
@@ -708,36 +718,42 @@ class TestFileWatcherInfo:
             "enabled": False,
             "debounce_ms": 1000,
             "supported_extensions": [".py"],
-            "description": "Auto-reindex files on change"
+            "description": "Auto-reindex files on change",
         }
 
-        with patch.object(cmd.console, 'print') as mock_print:
+        with patch.object(cmd.console, "print") as mock_print:
             cmd.print_file_watcher_info(info)
             # Verify console.print was called
             assert mock_print.called
             # Verify disabled state is shown
             call_args = str(mock_print.call_args_list)
-            assert any(keyword in call_args.lower() for keyword in ['watcher', 'disabled', 'off'])
+            assert any(
+                keyword in call_args.lower()
+                for keyword in ["watcher", "disabled", "off"]
+            )
 
     def test_print_file_watcher_info_without_rich(self):
         """Test printing file watcher info without rich."""
-        with patch('src.cli.status_command.RICH_AVAILABLE', False):
+        with patch("src.cli.status_command.RICH_AVAILABLE", False):
             cmd = StatusCommand()
 
             info = {
                 "enabled": True,
                 "debounce_ms": 1000,
                 "supported_extensions": [".py", ".js"],
-                "description": "Auto-reindex files on change"
+                "description": "Auto-reindex files on change",
             }
 
-            with patch('builtins.print') as mock_print:
+            with patch("builtins.print") as mock_print:
                 cmd.print_file_watcher_info(info)
                 # Verify print was called
                 assert mock_print.called
                 # Verify file watcher info is displayed
                 call_args = str(mock_print.call_args_list)
-                assert any(keyword in call_args.lower() for keyword in ['watcher', 'enabled', 'auto'])
+                assert any(
+                    keyword in call_args.lower()
+                    for keyword in ["watcher", "enabled", "auto"]
+                )
 
     @pytest.mark.asyncio
     async def test_run_includes_file_watcher_info(self):
@@ -749,15 +765,19 @@ class TestFileWatcherInfo:
             "enabled": True,
             "debounce_ms": 1000,
             "supported_extensions": [".py", ".js"],
-            "description": "Auto-reindex files on change"
+            "description": "Auto-reindex files on change",
         }
 
         cmd.print_header = Mock()
         cmd.print_degradation_warnings = Mock()
-        cmd.get_storage_stats = AsyncMock(return_value={"backend": "sqlite", "connected": True})
+        cmd.get_storage_stats = AsyncMock(
+            return_value={"backend": "sqlite", "connected": True}
+        )
         cmd.get_cache_stats = AsyncMock(return_value={"exists": False})
         cmd.get_parser_info = AsyncMock(return_value={"mode": "rust"})
-        cmd.get_embedding_model_info = AsyncMock(return_value={"model": "all-MiniLM-L6-v2"})
+        cmd.get_embedding_model_info = AsyncMock(
+            return_value={"model": "all-MiniLM-L6-v2"}
+        )
         cmd.get_file_watcher_info = AsyncMock(return_value=file_watcher_info)
         cmd.get_active_project = AsyncMock(return_value=None)
         cmd.get_indexed_projects = AsyncMock(return_value=[])

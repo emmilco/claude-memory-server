@@ -17,10 +17,13 @@ from src.cli.analytics_command import run_analytics_command
 from src.cli.session_summary_command import run_session_summary_command
 from src.cli.health_monitor_command import HealthMonitorCommand
 from src.cli.validate_install import validate_installation
-from src.cli.validate_setup_command import ValidateSetupCommand
+from src.cli.validate_setup_command import ValidateSetupCommand as ValidateSetupCommand
 from src.cli.repository_command import add_repository_parser, RepositoryCommand
 from src.cli.workspace_command import add_workspace_parser, WorkspaceCommand
-from src.cli.perf_command import perf_report_command, perf_history_command
+from src.cli.perf_command import (
+    perf_report_command as perf_report_command,
+    perf_history_command as perf_history_command,
+)
 
 
 def setup_logging(level: str = "INFO"):
@@ -124,13 +127,13 @@ Examples:
     )
 
     # Health command
-    health_parser = subparsers.add_parser(
+    subparsers.add_parser(
         "health",
         help="Run health check diagnostics",
     )
 
     # Status command
-    status_parser = subparsers.add_parser(
+    subparsers.add_parser(
         "status",
         help="Show server and storage status",
     )
@@ -163,7 +166,7 @@ Examples:
     )
 
     # Browse command
-    browse_parser = subparsers.add_parser(
+    subparsers.add_parser(
         "browse",
         help="Interactive memory browser (TUI)",
     )
@@ -189,12 +192,14 @@ Examples:
         help="Also prune memories unused for N days",
     )
     prune_parser.add_argument(
-        "-v", "--verbose",
+        "-v",
+        "--verbose",
         action="store_true",
         help="Show detailed output",
     )
     prune_parser.add_argument(
-        "-y", "--yes",
+        "-y",
+        "--yes",
         action="store_true",
         help="Skip confirmation prompts (use with caution!)",
     )
@@ -248,7 +253,8 @@ Examples:
     )
     git_index_parser.set_defaults(diffs=None)
     git_index_parser.add_argument(
-        "-v", "--verbose",
+        "-v",
+        "--verbose",
         action="store_true",
         help="Verbose output",
     )
@@ -361,7 +367,7 @@ Examples:
     )
 
     # Health monitor status
-    status_sub = health_monitor_subparsers.add_parser(
+    health_monitor_subparsers.add_parser(
         "status",
         help="Show current health status (default)",
     )
@@ -409,9 +415,8 @@ Examples:
         help="Number of days of history (default: 30)",
     )
 
-
     # Validate-install command
-    validate_parser = subparsers.add_parser(
+    subparsers.add_parser(
         "validate-install",
         help="Validate installation and check prerequisites",
     )
@@ -441,6 +446,7 @@ async def main_async(args):
         await cmd.run(args)
     elif args.command == "browse":
         from src.cli.memory_browser import run_memory_browser
+
         await run_memory_browser()
     elif args.command == "prune":
         exit_code = await prune_command(

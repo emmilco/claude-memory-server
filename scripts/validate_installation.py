@@ -6,7 +6,7 @@ import sys
 import subprocess
 import importlib
 from pathlib import Path
-from typing import List, Tuple, Optional
+from typing import List
 import argparse
 
 # Add parent to path
@@ -16,12 +16,15 @@ try:
     from rich.console import Console
     from rich.table import Table
     from rich.panel import Panel
+
     RICH_AVAILABLE = True
 except ImportError:
     RICH_AVAILABLE = False
+
     class Console:
         def print(self, *args, **kwargs):
             print(*args)
+
 
 console = Console()
 
@@ -59,9 +62,7 @@ class InstallationValidator:
         passed = version.major == 3 and version.minor >= 13
 
         self.add_result(
-            "Python Version",
-            passed,
-            f"{version.major}.{version.minor}.{version.micro}"
+            "Python Version", passed, f"{version.major}.{version.minor}.{version.micro}"
         )
         return passed
 
@@ -86,11 +87,7 @@ class InstallationValidator:
                 missing.append(package)
 
         if missing:
-            self.add_result(
-                "Dependencies",
-                False,
-                f"Missing: {', '.join(missing)}"
-            )
+            self.add_result("Dependencies", False, f"Missing: {', '.join(missing)}")
         else:
             self.add_result("Dependencies", True, "All required packages installed")
 
@@ -107,7 +104,9 @@ class InstallationValidator:
             # Check data directory
             if not config.data_dir.exists():
                 passed = False
-                self.add_result("Data Directory", False, f"Not found: {config.data_dir}")
+                self.add_result(
+                    "Data Directory", False, f"Not found: {config.data_dir}"
+                )
             else:
                 self.add_result("Data Directory", True, str(config.data_dir))
 
@@ -129,14 +128,17 @@ class InstallationValidator:
 
             # Test it works
             test_code = "def test(): pass"
-            result = parse_source_file("test.py", test_code)
+            parse_source_file("test.py", test_code)
 
             self.add_result("Rust Parser", True, "Compiled and working")
             return True
         except ImportError as e:
-            self.add_result("Rust Parser", False,
-                           f"Not installed: {e}\n"
-                           "Install with: cd rust_core && maturin build --release && pip install target/wheels/*.whl")
+            self.add_result(
+                "Rust Parser",
+                False,
+                f"Not installed: {e}\n"
+                "Install with: cd rust_core && maturin build --release && pip install target/wheels/*.whl",
+            )
             return False
         except Exception as e:
             self.add_result("Rust Parser", False, str(e))
@@ -153,7 +155,7 @@ class InstallationValidator:
                 config = get_config()
 
                 # Try to create a store instance
-                store = SQLiteStore(config)
+                SQLiteStore(config)
                 self.add_result("SQLite Backend", True, "Available")
                 return True
             except Exception as e:
@@ -172,9 +174,7 @@ class InstallationValidator:
                     return True
                 else:
                     self.add_result(
-                        "Qdrant Backend",
-                        False,
-                        f"HTTP {response.status_code}"
+                        "Qdrant Backend", False, f"HTTP {response.status_code}"
                     )
                     return False
             except Exception as e:
@@ -221,7 +221,9 @@ class InstallationValidator:
 
             await server.close()
 
-            self.add_result("Core Functionality", True, "Store, retrieve, delete working")
+            self.add_result(
+                "Core Functionality", True, "Store, retrieve, delete working"
+            )
             return True
 
         except Exception as e:
@@ -248,11 +250,11 @@ class InstallationValidator:
                 )
 
                 if result.returncode == 0:
-                    command_name = cmd[3]  # Extract command name
+                    cmd[3]  # Extract command name
                 else:
                     all_passed = False
 
-            except Exception as e:
+            except Exception:
                 all_passed = False
 
         self.add_result("CLI Commands", all_passed, "All commands accessible")
@@ -260,7 +262,7 @@ class InstallationValidator:
 
     async def run_all_checks(self) -> bool:
         """Run all validation checks."""
-        console.print(f"\n[bold blue]Validating Installation[/bold blue]")
+        console.print("\n[bold blue]Validating Installation[/bold blue]")
         console.print(f"[cyan]Preset:[/cyan] {self.preset}\n")
 
         # Run checks
@@ -288,7 +290,7 @@ class InstallationValidator:
                 console.print("[red]✗[/red]")
 
         # Print results
-        console.print(f"\n[bold]Validation Results:[/bold]\n")
+        console.print("\n[bold]Validation Results:[/bold]\n")
 
         if RICH_AVAILABLE:
             table = Table(show_header=True)
@@ -302,7 +304,7 @@ class InstallationValidator:
                 table.add_row(
                     result.name,
                     f"[{status_color}]{status}[/{status_color}]",
-                    result.message
+                    result.message,
                 )
 
             console.print(table)
@@ -321,16 +323,20 @@ class InstallationValidator:
                 Panel.fit(
                     f"[bold green]✅ All Checks Passed ({passed_count}/{total_count})[/bold green]\n\n"
                     "Installation is valid and ready to use!",
-                    border_style="green"
-                ) if RICH_AVAILABLE else f"✅ All checks passed ({passed_count}/{total_count})"
+                    border_style="green",
+                )
+                if RICH_AVAILABLE
+                else f"✅ All checks passed ({passed_count}/{total_count})"
             )
         else:
             console.print(
                 Panel.fit(
                     f"[bold red]❌ Some Checks Failed ({passed_count}/{total_count})[/bold red]\n\n"
                     "Please review the failures above and fix any issues.",
-                    border_style="red"
-                ) if RICH_AVAILABLE else f"❌ Some checks failed ({passed_count}/{total_count})"
+                    border_style="red",
+                )
+                if RICH_AVAILABLE
+                else f"❌ Some checks failed ({passed_count}/{total_count})"
             )
 
         console.print()
@@ -339,17 +345,17 @@ class InstallationValidator:
 
 async def main():
     """Main entry point."""
-    parser = argparse.ArgumentParser(description="Validate Claude Memory RAG Server installation")
+    parser = argparse.ArgumentParser(
+        description="Validate Claude Memory RAG Server installation"
+    )
     parser.add_argument(
         "--preset",
         choices=["minimal", "standard", "full"],
         default="minimal",
-        help="Installation preset to validate"
+        help="Installation preset to validate",
     )
     parser.add_argument(
-        "--automated",
-        action="store_true",
-        help="Run in automated mode (for CI/CD)"
+        "--automated", action="store_true", help="Run in automated mode (for CI/CD)"
     )
 
     args = parser.parse_args()

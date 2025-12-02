@@ -1,9 +1,8 @@
 """Unit tests for git history indexing."""
 
 import pytest
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
+from unittest.mock import Mock, AsyncMock, patch
 from datetime import datetime, UTC
-from pathlib import Path
 
 from src.memory.git_indexer import (
     GitIndexer,
@@ -654,7 +653,9 @@ class TestStatistics:
             mock_repo.git.branch.return_value = "main"
             mock_repo.tags = []
 
-            await git_indexer.index_repository(str(tmp_path), "test", include_diffs=False)
+            await git_indexer.index_repository(
+                str(tmp_path), "test", include_diffs=False
+            )
 
             stats = git_indexer.get_stats()
             assert stats["repos_indexed"] == 1

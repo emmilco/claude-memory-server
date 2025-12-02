@@ -6,7 +6,7 @@ adapt the confidence threshold over time.
 
 import logging
 import sqlite3
-from typing import Dict, Optional, List, Tuple
+from typing import Dict, Optional, Tuple
 from datetime import datetime, UTC, timedelta
 from pathlib import Path
 from dataclasses import dataclass

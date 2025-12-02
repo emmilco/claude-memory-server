@@ -1,7 +1,6 @@
 """Time estimation for indexing operations."""
 
 from typing import Optional, Tuple, List
-from pathlib import Path
 
 from src.memory.indexing_metrics import IndexingMetricsStore
 
@@ -114,9 +113,17 @@ class TimeEstimator:
 
         # Check for common slow patterns
         node_modules_files = [p for p in file_paths if "node_modules" in p]
-        test_files = [p for p in file_paths if any(t in p for t in ["test", "tests", "spec", "__tests__"])]
+        test_files = [
+            p
+            for p in file_paths
+            if any(t in p for t in ["test", "tests", "spec", "__tests__"])
+        ]
         git_files = [p for p in file_paths if ".git" in p]
-        vendor_files = [p for p in file_paths if any(v in p for v in ["vendor", "third_party", "external"])]
+        vendor_files = [
+            p
+            for p in file_paths
+            if any(v in p for v in ["vendor", "third_party", "external"])
+        ]
 
         if node_modules_files:
             time_saved = len(node_modules_files) * self.DEFAULT_TIME_PER_FILE
@@ -131,9 +138,7 @@ class TimeEstimator:
             )
 
         if git_files:
-            suggestions.append(
-                f"💡 Exclude .git/ directory ({len(git_files)} files)"
-            )
+            suggestions.append(f"💡 Exclude .git/ directory ({len(git_files)} files)")
 
         if vendor_files:
             time_saved = len(vendor_files) * self.DEFAULT_TIME_PER_FILE

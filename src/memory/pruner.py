@@ -128,20 +128,20 @@ class MemoryPruner:
 
                     # Check if expired
                     if reference_time < cutoff_time:
-                        expired.append({
-                            "id": memory.get("id"),
-                            "created_at": created_at,
-                            "last_used": last_used,
-                        })
+                        expired.append(
+                            {
+                                "id": memory.get("id"),
+                                "created_at": created_at,
+                                "last_used": last_used,
+                            }
+                        )
 
         except Exception as e:
             logger.error(f"Error in fallback expired search: {e}")
 
         return expired
 
-    async def find_stale_memories(
-        self, days_unused: int = 30
-    ) -> List[Dict[str, Any]]:
+    async def find_stale_memories(self, days_unused: int = 30) -> List[Dict[str, Any]]:
         """
         Find memories that haven't been used in a long time.
 
@@ -203,9 +203,7 @@ class MemoryPruner:
 
                         # Skip if used in last 24h
                         if last_used >= safety_cutoff:
-                            logger.debug(
-                                f"Skipping {memory['id']} - used in last 24h"
-                            )
+                            logger.debug(f"Skipping {memory['id']} - used in last 24h")
                             continue
 
                     safe_to_delete.append(memory)

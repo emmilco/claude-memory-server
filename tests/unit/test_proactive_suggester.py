@@ -2,16 +2,14 @@
 
 import pytest
 from datetime import datetime, UTC, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 from src.memory.proactive_suggester import ProactiveSuggester
 from src.memory.intent_detector import IntentDetector, DetectedIntent
-from src.memory.conversation_tracker import ConversationTracker, QueryRecord
+from src.memory.conversation_tracker import ConversationTracker
 from src.core.models import (
     MemoryResult,
     MemoryUnit,
-    MemoryProvenance,
-    ProvenanceSource,
     MemoryCategory,
     ContextLevel,
 )
@@ -59,7 +57,9 @@ def mock_store():
 def mock_embedding_generator():
     """Create mock embedding generator."""
     generator = AsyncMock()
-    generator.generate_embedding.return_value = mock_embedding(value=0.1)  # Mock embedding
+    generator.generate_embedding.return_value = mock_embedding(
+        value=0.1
+    )  # Mock embedding
     return generator
 
 
@@ -67,6 +67,7 @@ def mock_embedding_generator():
 def conversation_tracker():
     """Create conversation tracker."""
     from src.config import ServerConfig
+
     config = ServerConfig()
     return ConversationTracker(config)
 
@@ -78,7 +79,9 @@ def intent_detector():
 
 
 @pytest.fixture
-def suggester(mock_store, mock_embedding_generator, conversation_tracker, intent_detector):
+def suggester(
+    mock_store, mock_embedding_generator, conversation_tracker, intent_detector
+):
     """Create proactive suggester."""
     return ProactiveSuggester(
         store=mock_store,
@@ -103,7 +106,9 @@ class TestProactiveSuggester:
         assert response.session_id == "nonexistent"
 
     @pytest.mark.asyncio
-    async def test_suggest_memories_empty_queries(self, suggester, conversation_tracker):
+    async def test_suggest_memories_empty_queries(
+        self, suggester, conversation_tracker
+    ):
         """Test with session but no queries."""
         session_id = conversation_tracker.create_session()
 
@@ -120,9 +125,7 @@ class TestProactiveSuggester:
         # Create session with queries
         session_id = conversation_tracker.create_session()
         conversation_tracker.track_query(
-            session_id,
-            "How do I implement authentication?",
-            []
+            session_id, "How do I implement authentication?", []
         )
 
         # Mock search results
@@ -142,8 +145,10 @@ class TestProactiveSuggester:
 
         # Should detect implementation intent
         assert response.detected_intent.intent_type == "implementation"
-        assert "authentication" in response.detected_intent.keywords or \
-               "auth" in response.detected_intent.keywords
+        assert (
+            "authentication" in response.detected_intent.keywords
+            or "auth" in response.detected_intent.keywords
+        )
 
         # Should return at least one suggestion
         assert response.total_suggestions >= 1
@@ -160,7 +165,7 @@ class TestProactiveSuggester:
         conversation_tracker.track_query(
             session_id,
             "How do I authenticate users?",
-            ["mem_1"]  # Already shown
+            ["mem_1"],  # Already shown
         )
 
         # Mock search results including the already-shown memory
@@ -192,11 +197,7 @@ class TestProactiveSuggester:
         """Test that low-confidence results are filtered."""
         # Create session with query
         session_id = conversation_tracker.create_session()
-        conversation_tracker.track_query(
-            session_id,
-            "How do I implement auth?",
-            []
-        )
+        conversation_tracker.track_query(session_id, "How do I implement auth?", [])
 
         # Mock low-confidence result
         old_date = datetime.now(UTC) - timedelta(days=200)  # Very old
@@ -225,9 +226,7 @@ class TestProactiveSuggester:
         # Create session with query
         session_id = conversation_tracker.create_session()
         conversation_tracker.track_query(
-            session_id,
-            "Show me authentication examples",
-            []
+            session_id, "Show me authentication examples", []
         )
 
         # Mock many high-confidence results
@@ -325,7 +324,7 @@ class TestProactiveSuggester:
             content="def authenticate(): ...",
             score=0.9,
             importance=0.8,
-            last_accessed=datetime.now(UTC)
+            last_accessed=datetime.now(UTC),
         )
 
         detected_intent = DetectedIntent(
@@ -358,7 +357,7 @@ class TestProactiveSuggester:
             content="Common auth errors and fixes",
             score=0.85,
             importance=0.7,
-            last_accessed=datetime.now(UTC)
+            last_accessed=datetime.now(UTC),
         )
 
         detected_intent = DetectedIntent(
@@ -419,34 +418,30 @@ class TestProactiveSuggester:
     ):
         """Test that suggestions are sorted by confidence."""
         session_id = conversation_tracker.create_session()
-        conversation_tracker.track_query(
-            session_id,
-            "authentication",
-            []
-        )
+        conversation_tracker.track_query(session_id, "authentication", [])
 
         # Mock results with varying scores
         mock_results = [
             create_memory_result(
-            id="mem_1",
-            content="low relevance",
-            score=0.6,
-            importance=0.5,
-            last_accessed=datetime.now(UTC) - timedelta(days=100),
+                id="mem_1",
+                content="low relevance",
+                score=0.6,
+                importance=0.5,
+                last_accessed=datetime.now(UTC) - timedelta(days=100),
             ),
             create_memory_result(
-            id="mem_2",
-            content="high relevance authentication",
-            score=0.95,
-            importance=0.9,
-            last_accessed=datetime.now(UTC)
+                id="mem_2",
+                content="high relevance authentication",
+                score=0.95,
+                importance=0.9,
+                last_accessed=datetime.now(UTC),
             ),
             create_memory_result(
-            id="mem_3",
-            content="medium relevance auth",
-            score=0.8,
-            importance=0.7,
-            last_accessed=datetime.now(UTC) - timedelta(days=30),
+                id="mem_3",
+                content="medium relevance auth",
+                score=0.8,
+                importance=0.7,
+                last_accessed=datetime.now(UTC) - timedelta(days=30),
             ),
         ]
         mock_store.search.return_value = mock_results
@@ -460,8 +455,8 @@ class TestProactiveSuggester:
         if len(response.suggestions) > 1:
             for i in range(len(response.suggestions) - 1):
                 assert (
-                    response.suggestions[i].confidence >=
-                    response.suggestions[i + 1].confidence
+                    response.suggestions[i].confidence
+                    >= response.suggestions[i + 1].confidence
                 )
 
     @pytest.mark.asyncio
@@ -470,11 +465,7 @@ class TestProactiveSuggester:
     ):
         """Test graceful handling of search errors."""
         session_id = conversation_tracker.create_session()
-        conversation_tracker.track_query(
-            session_id,
-            "test query",
-            []
-        )
+        conversation_tracker.track_query(session_id, "test query", [])
 
         # Mock search error
         mock_store.search.side_effect = Exception("Search failed")
@@ -489,18 +480,14 @@ class TestProactiveSuggester:
     async def test_stats_tracking(self, suggester, conversation_tracker, mock_store):
         """Test that statistics are tracked."""
         session_id = conversation_tracker.create_session()
-        conversation_tracker.track_query(
-            session_id,
-            "authentication",
-            []
-        )
+        conversation_tracker.track_query(session_id, "authentication", [])
 
         mock_result = create_memory_result(
             id="mem_1",
             content="auth code",
             score=0.9,
             importance=0.8,
-            last_accessed=datetime.now(UTC)
+            last_accessed=datetime.now(UTC),
         )
         mock_store.search.return_value = [mock_result]
 
@@ -515,16 +502,10 @@ class TestProactiveSuggester:
         assert updated_stats["total_candidates"] > initial_stats["total_candidates"]
 
     @pytest.mark.asyncio
-    async def test_project_filtering(
-        self, suggester, conversation_tracker, mock_store
-    ):
+    async def test_project_filtering(self, suggester, conversation_tracker, mock_store):
         """Test project-specific filtering."""
         session_id = conversation_tracker.create_session()
-        conversation_tracker.track_query(
-            session_id,
-            "authentication code",
-            []
-        )
+        conversation_tracker.track_query(session_id, "authentication code", [])
 
         mock_store.search.return_value = []
 

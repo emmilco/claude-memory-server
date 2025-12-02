@@ -12,6 +12,7 @@ from uuid import uuid4
 
 class JobStatus(str, Enum):
     """Job status enumeration."""
+
     QUEUED = "queued"
     RUNNING = "running"
     PAUSED = "paused"
@@ -23,6 +24,7 @@ class JobStatus(str, Enum):
 @dataclass
 class IndexingJob:
     """Indexing job state."""
+
     id: str
     project_name: str
     directory_path: str
@@ -42,7 +44,7 @@ class IndexingJob:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for API responses."""
         data = asdict(self)
-        data['status'] = self.status.value
+        data["status"] = self.status.value
         return data
 
 
@@ -365,7 +367,12 @@ class JobStateManager:
                 WHERE completed_at < ?
                 AND status IN (?, ?, ?)
                 """,
-                (cutoff, JobStatus.COMPLETED.value, JobStatus.FAILED.value, JobStatus.CANCELLED.value),
+                (
+                    cutoff,
+                    JobStatus.COMPLETED.value,
+                    JobStatus.FAILED.value,
+                    JobStatus.CANCELLED.value,
+                ),
             )
             conn.commit()
             return cursor.rowcount

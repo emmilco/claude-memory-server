@@ -44,11 +44,13 @@ class TestCodeDuplicateDetector:
         detector = CodeDuplicateDetector()
 
         # Create simple test embeddings
-        embeddings = np.array([
-            [1.0, 0.0, 0.0],  # Unit A
-            [1.0, 0.0, 0.0],  # Unit B (identical to A)
-            [0.0, 1.0, 0.0],  # Unit C (orthogonal to A and B)
-        ])
+        embeddings = np.array(
+            [
+                [1.0, 0.0, 0.0],  # Unit A
+                [1.0, 0.0, 0.0],  # Unit B (identical to A)
+                [0.0, 1.0, 0.0],  # Unit C (orthogonal to A and B)
+            ]
+        )
 
         similarity_matrix = detector.calculate_similarity_matrix(embeddings)
 
@@ -114,11 +116,13 @@ class TestCodeDuplicateDetector:
 
         # Create similarity matrix
         # A-B: 0.95 (duplicate), B-C: 0.80 (not duplicate), A-C: 0.90 (duplicate)
-        similarity_matrix = np.array([
-            [1.0, 0.95, 0.90],
-            [0.95, 1.0, 0.80],
-            [0.90, 0.80, 1.0],
-        ])
+        similarity_matrix = np.array(
+            [
+                [1.0, 0.95, 0.90],
+                [0.95, 1.0, 0.80],
+                [0.90, 0.80, 1.0],
+            ]
+        )
 
         unit_ids = ["unit_A", "unit_B", "unit_C"]
 
@@ -142,16 +146,20 @@ class TestCodeDuplicateDetector:
         """Test duplicate pair detection with threshold override."""
         detector = CodeDuplicateDetector(threshold=0.85)
 
-        similarity_matrix = np.array([
-            [1.0, 0.95, 0.90],
-            [0.95, 1.0, 0.80],
-            [0.90, 0.80, 1.0],
-        ])
+        similarity_matrix = np.array(
+            [
+                [1.0, 0.95, 0.90],
+                [0.95, 1.0, 0.80],
+                [0.90, 0.80, 1.0],
+            ]
+        )
 
         unit_ids = ["unit_A", "unit_B", "unit_C"]
 
         # Override with higher threshold
-        pairs = detector.get_duplicate_pairs(similarity_matrix, unit_ids, threshold=0.92)
+        pairs = detector.get_duplicate_pairs(
+            similarity_matrix, unit_ids, threshold=0.92
+        )
 
         # Should find only 1 pair: A-B (0.95)
         assert len(pairs) == 1
@@ -161,11 +169,13 @@ class TestCodeDuplicateDetector:
         """Test duplicate pair detection when no pairs exceed threshold."""
         detector = CodeDuplicateDetector(threshold=0.95)
 
-        similarity_matrix = np.array([
-            [1.0, 0.80, 0.75],
-            [0.80, 1.0, 0.70],
-            [0.75, 0.70, 1.0],
-        ])
+        similarity_matrix = np.array(
+            [
+                [1.0, 0.80, 0.75],
+                [0.80, 1.0, 0.70],
+                [0.75, 0.70, 1.0],
+            ]
+        )
 
         unit_ids = ["unit_A", "unit_B", "unit_C"]
 
@@ -178,10 +188,12 @@ class TestCodeDuplicateDetector:
         """Test duplicate pair detection validates matrix dimensions."""
         detector = CodeDuplicateDetector()
 
-        similarity_matrix = np.array([
-            [1.0, 0.90],
-            [0.90, 1.0],
-        ])
+        similarity_matrix = np.array(
+            [
+                [1.0, 0.90],
+                [0.90, 1.0],
+            ]
+        )
 
         unit_ids = ["unit_A", "unit_B", "unit_C"]  # Mismatch: 3 IDs, 2x2 matrix
 
@@ -195,13 +207,15 @@ class TestCodeDuplicateDetector:
         # Create similarity matrix with transitive closure:
         # A-B: 0.90, B-C: 0.88, C-D: 0.92 → All connected
         # E: isolated (no connections)
-        similarity_matrix = np.array([
-            [1.0, 0.90, 0.70, 0.65, 0.50],  # A
-            [0.90, 1.0, 0.88, 0.70, 0.55],  # B
-            [0.70, 0.88, 1.0, 0.92, 0.60],  # C
-            [0.65, 0.70, 0.92, 1.0, 0.58],  # D
-            [0.50, 0.55, 0.60, 0.58, 1.0],  # E (isolated)
-        ])
+        similarity_matrix = np.array(
+            [
+                [1.0, 0.90, 0.70, 0.65, 0.50],  # A
+                [0.90, 1.0, 0.88, 0.70, 0.55],  # B
+                [0.70, 0.88, 1.0, 0.92, 0.60],  # C
+                [0.65, 0.70, 0.92, 1.0, 0.58],  # D
+                [0.50, 0.55, 0.60, 0.58, 1.0],  # E (isolated)
+            ]
+        )
 
         unit_ids = ["unit_A", "unit_B", "unit_C", "unit_D", "unit_E"]
 
@@ -225,12 +239,14 @@ class TestCodeDuplicateDetector:
         detector = CodeDuplicateDetector(threshold=0.85)
 
         # Create two separate clusters: {A, B} and {C, D}
-        similarity_matrix = np.array([
-            [1.0, 0.90, 0.50, 0.45],  # A
-            [0.90, 1.0, 0.55, 0.50],  # B
-            [0.50, 0.55, 1.0, 0.88],  # C
-            [0.45, 0.50, 0.88, 1.0],  # D
-        ])
+        similarity_matrix = np.array(
+            [
+                [1.0, 0.90, 0.50, 0.45],  # A
+                [0.90, 1.0, 0.55, 0.50],  # B
+                [0.50, 0.55, 1.0, 0.88],  # C
+                [0.45, 0.50, 0.88, 1.0],  # D
+            ]
+        )
 
         unit_ids = ["unit_A", "unit_B", "unit_C", "unit_D"]
 
@@ -252,11 +268,13 @@ class TestCodeDuplicateDetector:
         detector = CodeDuplicateDetector(threshold=0.95)
 
         # No pairs exceed threshold
-        similarity_matrix = np.array([
-            [1.0, 0.80, 0.75],
-            [0.80, 1.0, 0.70],
-            [0.75, 0.70, 1.0],
-        ])
+        similarity_matrix = np.array(
+            [
+                [1.0, 0.80, 0.75],
+                [0.80, 1.0, 0.70],
+                [0.75, 0.70, 1.0],
+            ]
+        )
 
         unit_ids = ["unit_A", "unit_B", "unit_C"]
 
@@ -269,32 +287,40 @@ class TestCodeDuplicateDetector:
         """Test duplicate clustering with threshold override."""
         detector = CodeDuplicateDetector(threshold=0.75)
 
-        similarity_matrix = np.array([
-            [1.0, 0.90, 0.85],
-            [0.90, 1.0, 0.80],
-            [0.85, 0.80, 1.0],
-        ])
+        similarity_matrix = np.array(
+            [
+                [1.0, 0.90, 0.85],
+                [0.90, 1.0, 0.80],
+                [0.85, 0.80, 1.0],
+            ]
+        )
 
         unit_ids = ["unit_A", "unit_B", "unit_C"]
 
         # With high threshold, should find one cluster
-        clusters = detector.cluster_duplicates(similarity_matrix, unit_ids, threshold=0.78)
+        clusters = detector.cluster_duplicates(
+            similarity_matrix, unit_ids, threshold=0.78
+        )
 
         assert len(clusters) == 1
         assert set(clusters[0].unit_ids) == {"unit_A", "unit_B", "unit_C"}
 
         # With very high threshold, should find no clusters
-        clusters_high = detector.cluster_duplicates(similarity_matrix, unit_ids, threshold=0.95)
+        clusters_high = detector.cluster_duplicates(
+            similarity_matrix, unit_ids, threshold=0.95
+        )
         assert len(clusters_high) == 0
 
     def test_cluster_duplicates_validates_dimensions(self):
         """Test duplicate clustering validates matrix dimensions."""
         detector = CodeDuplicateDetector()
 
-        similarity_matrix = np.array([
-            [1.0, 0.90],
-            [0.90, 1.0],
-        ])
+        similarity_matrix = np.array(
+            [
+                [1.0, 0.90],
+                [0.90, 1.0],
+            ]
+        )
 
         unit_ids = ["unit_A", "unit_B", "unit_C"]  # Mismatch
 
@@ -307,11 +333,7 @@ class TestDuplicatePair:
 
     def test_duplicate_pair_initialization(self):
         """Test DuplicatePair initializes correctly."""
-        pair = DuplicatePair(
-            unit_id_1="unit_A",
-            unit_id_2="unit_B",
-            similarity=0.95
-        )
+        pair = DuplicatePair(unit_id_1="unit_A", unit_id_2="unit_B", similarity=0.95)
 
         assert pair.unit_id_1 == "unit_A"
         assert pair.unit_id_2 == "unit_B"
@@ -320,18 +342,10 @@ class TestDuplicatePair:
     def test_duplicate_pair_validates_similarity(self):
         """Test DuplicatePair validates similarity range."""
         with pytest.raises(ValueError, match="Similarity must be in"):
-            DuplicatePair(
-                unit_id_1="unit_A",
-                unit_id_2="unit_B",
-                similarity=1.5
-            )
+            DuplicatePair(unit_id_1="unit_A", unit_id_2="unit_B", similarity=1.5)
 
         with pytest.raises(ValueError, match="Similarity must be in"):
-            DuplicatePair(
-                unit_id_1="unit_A",
-                unit_id_2="unit_B",
-                similarity=-0.1
-            )
+            DuplicatePair(unit_id_1="unit_A", unit_id_2="unit_B", similarity=-0.1)
 
 
 class TestDuplicateCluster:
@@ -340,9 +354,7 @@ class TestDuplicateCluster:
     def test_duplicate_cluster_initialization(self):
         """Test DuplicateCluster initializes correctly."""
         cluster = DuplicateCluster(
-            unit_ids=["unit_A", "unit_B", "unit_C"],
-            avg_similarity=0.92,
-            size=3
+            unit_ids=["unit_A", "unit_B", "unit_C"], avg_similarity=0.92, size=3
         )
 
         assert cluster.unit_ids == ["unit_A", "unit_B", "unit_C"]
@@ -355,7 +367,7 @@ class TestDuplicateCluster:
             DuplicateCluster(
                 unit_ids=["unit_A", "unit_B"],
                 avg_similarity=0.90,
-                size=3  # Mismatch: 2 unit_ids, size=3
+                size=3,  # Mismatch: 2 unit_ids, size=3
             )
 
 
@@ -400,11 +412,13 @@ class TestEdgeCases:
         detector = CodeDuplicateDetector()
 
         # Include zero embedding
-        embeddings = np.array([
-            [1.0, 0.0, 0.0],
-            [0.0, 0.0, 0.0],  # Zero embedding
-            [0.0, 1.0, 0.0],
-        ])
+        embeddings = np.array(
+            [
+                [1.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0],  # Zero embedding
+                [0.0, 1.0, 0.0],
+            ]
+        )
 
         similarity_matrix = detector.calculate_similarity_matrix(embeddings)
 
@@ -417,11 +431,13 @@ class TestEdgeCases:
         detector = CodeDuplicateDetector(threshold=0.85)
 
         # Create pairs at exact threshold boundary
-        similarity_matrix = np.array([
-            [1.0, 0.85, 0.849],  # 0.85 included, 0.849 excluded
-            [0.85, 1.0, 0.851],  # 0.851 included
-            [0.849, 0.851, 1.0],
-        ])
+        similarity_matrix = np.array(
+            [
+                [1.0, 0.85, 0.849],  # 0.85 included, 0.849 excluded
+                [0.85, 1.0, 0.851],  # 0.851 included
+                [0.849, 0.851, 1.0],
+            ]
+        )
 
         unit_ids = ["unit_A", "unit_B", "unit_C"]
 

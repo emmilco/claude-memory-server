@@ -15,14 +15,13 @@ used for supported languages.
 """
 
 import pytest
-from pathlib import Path
 from mcp_performance_core import parse_source_file
 
 
 # Skip all tests in this module - Kotlin is not supported
 pytestmark = pytest.mark.skip(
     reason="Kotlin (.kt, .kts) is not supported by the Rust parser. "
-           "See rust_core/src/parsing.rs for supported languages."
+    "See rust_core/src/parsing.rs for supported languages."
 )
 
 
@@ -87,18 +86,18 @@ class TestKotlinFileRecognition:
         content = sample_kotlin_file.read_text()
 
         result = parse_source_file(str(sample_kotlin_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
         assert units is not None, "Should parse .kt files"
 
     def test_kotlin_script_extension_recognized(self, tmp_path):
         """Test that .kts extension is recognized as Kotlin."""
         # Create a .kts file
         kts_file = tmp_path / "script.kts"
-        kts_file.write_text("fun main() { println(\"Hello\") }")
+        kts_file.write_text('fun main() { println("Hello") }')
         content = kts_file.read_text()
 
         result = parse_source_file(str(kts_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
         assert units is not None, "Should parse .kts files"
 
 
@@ -110,10 +109,12 @@ class TestKotlinFunctionExtraction:
         content = sample_kotlin_file.read_text()
 
         result = parse_source_file(str(sample_kotlin_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
 
         # Find functions
-        functions = [u for u in units if u["type"] == "function" and "greet" in u["name"].lower()]
+        functions = [
+            u for u in units if u["type"] == "function" and "greet" in u["name"].lower()
+        ]
         assert len(functions) > 0, "Should extract greet function"
 
     def test_method_extraction(self, sample_kotlin_file):
@@ -121,10 +122,12 @@ class TestKotlinFunctionExtraction:
         content = sample_kotlin_file.read_text()
 
         result = parse_source_file(str(sample_kotlin_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
 
         # Find methods
-        draw_methods = [u for u in units if u["type"] == "function" and "draw" in u["name"].lower()]
+        draw_methods = [
+            u for u in units if u["type"] == "function" and "draw" in u["name"].lower()
+        ]
         assert len(draw_methods) > 0, "Should extract draw method"
 
     def test_companion_object_method_extraction(self, sample_kotlin_file):
@@ -132,10 +135,12 @@ class TestKotlinFunctionExtraction:
         content = sample_kotlin_file.read_text()
 
         result = parse_source_file(str(sample_kotlin_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
 
         # Find companion object methods
-        create_methods = [u for u in units if u["type"] == "function" and "createDefault" in u["name"]]
+        create_methods = [
+            u for u in units if u["type"] == "function" and "createDefault" in u["name"]
+        ]
         assert len(create_methods) > 0, "Should extract companion object method"
 
 
@@ -147,10 +152,12 @@ class TestKotlinDataClassExtraction:
         content = sample_kotlin_file.read_text()
 
         result = parse_source_file(str(sample_kotlin_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
 
         # Find data classes
-        data_classes = [u for u in units if u["type"] == "class" and "Point" in u["name"]]
+        data_classes = [
+            u for u in units if u["type"] == "class" and "Point" in u["name"]
+        ]
         assert len(data_classes) > 0, "Should extract Point data class"
 
 
@@ -162,7 +169,7 @@ class TestKotlinClassExtraction:
         content = sample_kotlin_file.read_text()
 
         result = parse_source_file(str(sample_kotlin_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
 
         # Find classes
         classes = [u for u in units if u["type"] == "class" and "Shape" in u["name"]]
@@ -177,10 +184,12 @@ class TestKotlinObjectExtraction:
         content = sample_kotlin_file.read_text()
 
         result = parse_source_file(str(sample_kotlin_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
 
         # Find objects
-        objects = [u for u in units if u["type"] == "class" and "MathUtils" in u["name"]]
+        objects = [
+            u for u in units if u["type"] == "class" and "MathUtils" in u["name"]
+        ]
         assert len(objects) > 0, "Should extract MathUtils object"
 
 
@@ -192,10 +201,12 @@ class TestKotlinInterfaceExtraction:
         content = sample_kotlin_file.read_text()
 
         result = parse_source_file(str(sample_kotlin_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
 
         # Find interfaces
-        interfaces = [u for u in units if u["type"] == "class" and "Drawable" in u["name"]]
+        interfaces = [
+            u for u in units if u["type"] == "class" and "Drawable" in u["name"]
+        ]
         assert len(interfaces) > 0, "Should extract Drawable interface"
 
 
@@ -207,7 +218,7 @@ class TestKotlinComplexScenarios:
         content = sample_kotlin_file.read_text()
 
         result = parse_source_file(str(sample_kotlin_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
 
         # Should extract interfaces, classes, data classes, objects, and functions
         assert len(units) > 3, "Should extract multiple semantic units"
@@ -217,7 +228,7 @@ class TestKotlinComplexScenarios:
         content = sample_kotlin_file.read_text()
 
         result = parse_source_file(str(sample_kotlin_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
 
         # Check that units have required metadata
         for unit in units:
@@ -238,9 +249,8 @@ class TestKotlinEdgeCases:
 
         content = empty_file.read_text()
 
-
         result = parse_source_file(str(empty_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
         assert units == [] or len(units) == 0, "Empty file should produce no units"
 
     def test_kotlin_file_with_only_comments(self, tmp_path):
@@ -255,7 +265,6 @@ class TestKotlinEdgeCases:
 
         content = comment_file.read_text()
 
-
         result = parse_source_file(str(comment_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
         assert len(units) == 0, "File with only comments should produce no units"

@@ -48,7 +48,9 @@ async def prune_command(
 
         # Prune expired SESSION_STATE memories
         console.print("\n[bold]Pruning Expired SESSION_STATE Memories[/bold]")
-        console.print(f"TTL: {ttl_hours or config.memory.session_state_ttl_hours} hours")
+        console.print(
+            f"TTL: {ttl_hours or config.memory.session_state_ttl_hours} hours"
+        )
         console.print(f"Mode: {'DRY RUN' if dry_run else 'EXECUTE'}\n")
 
         # First, do a dry run to see what would be deleted
@@ -59,7 +61,9 @@ async def prune_command(
         )
 
         # Show preview
-        console.print(f"[yellow]Found {preview_result.memories_deleted} expired memories to delete[/yellow]")
+        console.print(
+            f"[yellow]Found {preview_result.memories_deleted} expired memories to delete[/yellow]"
+        )
 
         # If not in dry-run mode, ask for confirmation (unless --yes flag is set)
         if not dry_run and preview_result.memories_deleted > 0 and not yes:
@@ -104,7 +108,7 @@ async def prune_command(
 
         # Prune stale memories if requested
         if stale_days:
-            console.print(f"\n[bold]Pruning Stale Memories[/bold]")
+            console.print("\n[bold]Pruning Stale Memories[/bold]")
             console.print(f"Unused for: {stale_days} days\n")
 
             # Preview stale memories
@@ -113,7 +117,9 @@ async def prune_command(
                 dry_run=True,
             )
 
-            console.print(f"[yellow]Found {stale_preview.memories_deleted} stale memories to delete[/yellow]")
+            console.print(
+                f"[yellow]Found {stale_preview.memories_deleted} stale memories to delete[/yellow]"
+            )
 
             # Confirmation for stale deletion (unless --yes flag is set)
             if not dry_run and stale_preview.memories_deleted > 0 and not yes:
@@ -203,12 +209,14 @@ def main():
         help="Also prune memories unused for N days",
     )
     parser.add_argument(
-        "-v", "--verbose",
+        "-v",
+        "--verbose",
         action="store_true",
         help="Show detailed output",
     )
     parser.add_argument(
-        "-y", "--yes",
+        "-y",
+        "--yes",
         action="store_true",
         help="Skip confirmation prompts (use with caution!)",
     )

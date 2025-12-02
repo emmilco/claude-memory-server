@@ -1,12 +1,11 @@
 """Memory lifecycle management for automatic state transitions and quality maintenance."""
 
 import logging
-from datetime import datetime, timedelta, UTC
+from datetime import datetime, UTC
 from typing import Optional, Dict, Any, List, Tuple
 from dataclasses import dataclass
 
 from src.core.models import LifecycleState, MemoryUnit, ContextLevel
-from src.core.exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +87,7 @@ class LifecycleManager:
         days_since_access = (now - last_accessed).days
 
         # Calculate days since creation (secondary factor)
-        days_since_creation = (now - created_at).days
+        (now - created_at).days
 
         # USER_PREFERENCE memories age slower (they're more stable)
         if context_level == ContextLevel.USER_PREFERENCE:

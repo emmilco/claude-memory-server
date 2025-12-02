@@ -1,7 +1,7 @@
 """Qdrant storage for call graph data."""
 
 import logging
-from typing import List, Dict, Any, Optional, Set
+from typing import List, Optional
 from uuid import uuid4
 from datetime import datetime, UTC
 
@@ -11,8 +11,6 @@ from qdrant_client.models import (
     Filter,
     FieldCondition,
     MatchValue,
-    MatchAny,
-    SearchParams,
     Distance,
     VectorParams,
     OptimizersConfigDiff,
@@ -21,7 +19,12 @@ from qdrant_client.models import (
 
 from src.config import ServerConfig
 from src.core.exceptions import StorageError, MemoryNotFoundError
-from src.graph.call_graph import CallGraph, CallSite, FunctionNode, InterfaceImplementation
+from src.graph.call_graph import (
+    CallGraph,
+    CallSite,
+    FunctionNode,
+    InterfaceImplementation,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +49,11 @@ class QdrantCallGraphStore:
         - indexed_at: Timestamp
     """
 
-    def __init__(self, config: Optional[ServerConfig] = None, collection_name: Optional[str] = None):
+    def __init__(
+        self,
+        config: Optional[ServerConfig] = None,
+        collection_name: Optional[str] = None,
+    ):
         """
         Initialize call graph store.
 
@@ -56,6 +63,7 @@ class QdrantCallGraphStore:
         """
         if config is None:
             from src.config import get_config
+
             config = get_config()
 
         self.config = config
@@ -188,7 +196,9 @@ class QdrantCallGraphStore:
                 points=[point],
             )
 
-            logger.debug(f"Stored function node: {node.qualified_name} (ID: {point_id})")
+            logger.debug(
+                f"Stored function node: {node.qualified_name} (ID: {point_id})"
+            )
             return point_id
 
         except Exception as e:
@@ -338,7 +348,9 @@ class QdrantCallGraphStore:
                         "name": interface_name,
                         "qualified_name": interface_name,
                         "file_path": "",
-                        "language": implementations[0].language if implementations else "unknown",
+                        "language": implementations[0].language
+                        if implementations
+                        else "unknown",
                         "start_line": 0,
                         "end_line": 0,
                         "is_exported": True,
@@ -375,7 +387,9 @@ class QdrantCallGraphStore:
                 points=[updated_point],
             )
 
-            logger.debug(f"Stored {len(implementations)} implementations for {interface_name}")
+            logger.debug(
+                f"Stored {len(implementations)} implementations for {interface_name}"
+            )
 
         except Exception as e:
             raise StorageError(f"Failed to store implementations: {e}") from e
@@ -467,7 +481,9 @@ class QdrantCallGraphStore:
                 if offset is None:
                     break
 
-            logger.info(f"Loaded call graph for {project_name}: {len(graph.nodes)} nodes, {len(graph.calls)} calls")
+            logger.info(
+                f"Loaded call graph for {project_name}: {len(graph.nodes)} nodes, {len(graph.calls)} calls"
+            )
             return graph
 
         except Exception as e:

@@ -1,18 +1,14 @@
 """Status command showing indexed projects and system statistics."""
 
-import asyncio
 import logging
-from pathlib import Path
 from typing import Dict, Any, List, Optional
 from datetime import datetime
-from collections import defaultdict
 
 try:
     from rich.console import Console
     from rich.table import Table
     from rich.panel import Panel
-    from rich.columns import Columns
-    from rich.text import Text
+
     RICH_AVAILABLE = True
 except ImportError:
     RICH_AVAILABLE = False
@@ -29,7 +25,7 @@ class StatusCommand:
 
     def _format_size(self, bytes_size: int) -> str:
         """Format bytes to human-readable size."""
-        for unit in ['B', 'KB', 'MB', 'GB']:
+        for unit in ["B", "KB", "MB", "GB"]:
             if bytes_size < 1024.0:
                 return f"{bytes_size:.1f} {unit}"
             bytes_size /= 1024.0
@@ -152,13 +148,15 @@ class StatusCommand:
                 except Exception as e:
                     logger.warning(f"Error getting stats for {project_name}: {e}")
                     # Add minimal info if stats fail
-                    projects.append({
-                        "project_name": project_name,
-                        "total_memories": 0,
-                        "num_files": 0,
-                        "num_functions": 0,
-                        "num_classes": 0,
-                    })
+                    projects.append(
+                        {
+                            "project_name": project_name,
+                            "total_memories": 0,
+                            "num_files": 0,
+                            "num_functions": 0,
+                            "num_classes": 0,
+                        }
+                    )
 
             return projects
 
@@ -200,7 +198,9 @@ class StatusCommand:
             try:
                 await server.close()
             except Exception as e:
-                logger.debug(f"Error closing server during file watcher status check: {e}")
+                logger.debug(
+                    f"Error closing server during file watcher status check: {e}"
+                )
 
     async def get_parser_info(self) -> Dict[str, Any]:
         """Get parser information."""
@@ -210,7 +210,9 @@ class StatusCommand:
         return {
             "mode": "rust" if RUST_AVAILABLE else "unavailable",
             "rust_available": RUST_AVAILABLE,
-            "description": "Optimal performance" if RUST_AVAILABLE else "Rust parser required but not installed",
+            "description": "Optimal performance"
+            if RUST_AVAILABLE
+            else "Rust parser required but not installed",
         }
 
     async def get_embedding_model_info(self) -> Dict[str, Any]:
@@ -279,7 +281,7 @@ class StatusCommand:
                     self.console.print(f"  URL: {url}")
                     self.console.print(f"  Collection: {collection}")
             else:
-                self.console.print(f"  Status: [red]✗ Disconnected[/red]")
+                self.console.print("  Status: [red]✗ Disconnected[/red]")
                 if "error" in stats:
                     self.console.print(f"  Error: [red]{stats['error']}[/red]")
 
@@ -287,7 +289,9 @@ class StatusCommand:
         else:
             print("Storage Backend")
             print(f"  Type: {stats.get('backend', 'unknown').upper()}")
-            print(f"  Status: {'Connected' if stats.get('connected') else 'Disconnected'}")
+            print(
+                f"  Status: {'Connected' if stats.get('connected') else 'Disconnected'}"
+            )
 
     def print_cache_stats(self, stats: Dict[str, Any]):
         """Print cache statistics."""
@@ -305,8 +309,16 @@ class StatusCommand:
                 self.console.print(f"  Entries: {entries:,}")
 
                 if hit_rate > 0:
-                    hit_rate_color = "green" if hit_rate > 80 else "yellow" if hit_rate > 50 else "red"
-                    self.console.print(f"  Hit Rate: [{hit_rate_color}]{hit_rate:.1f}%[/{hit_rate_color}]")
+                    hit_rate_color = (
+                        "green"
+                        if hit_rate > 80
+                        else "yellow"
+                        if hit_rate > 50
+                        else "red"
+                    )
+                    self.console.print(
+                        f"  Hit Rate: [{hit_rate_color}]{hit_rate:.1f}%[/{hit_rate_color}]"
+                    )
             else:
                 self.console.print("  [dim]No cache created yet[/dim]")
 
@@ -324,14 +336,16 @@ class StatusCommand:
         if self.console:
             self.console.print("[bold cyan]Code Parser[/bold cyan]")
 
-            mode = info.get("mode", "unknown")
+            info.get("mode", "unknown")
             rust_available = info.get("rust_available", False)
 
             if rust_available:
-                self.console.print(f"  Mode: [green]Rust[/green] (optimal)")
+                self.console.print("  Mode: [green]Rust[/green] (optimal)")
             else:
-                self.console.print(f"  Mode: [yellow]Python Fallback[/yellow]")
-                self.console.print("  [dim]Install Rust for 10-20x faster parsing:[/dim]")
+                self.console.print("  Mode: [yellow]Python Fallback[/yellow]")
+                self.console.print(
+                    "  [dim]Install Rust for 10-20x faster parsing:[/dim]"
+                )
                 self.console.print("  [dim]python setup.py --build-rust[/dim]")
 
             self.console.print()
@@ -369,16 +383,20 @@ class StatusCommand:
             description = info.get("description", "")
 
             if enabled:
-                self.console.print(f"  Status: [green]✓ Enabled[/green]")
+                self.console.print("  Status: [green]✓ Enabled[/green]")
                 self.console.print(f"  Description: {description}")
                 self.console.print(f"  Debounce: {debounce_ms}ms")
                 self.console.print(f"  Watches: {', '.join(extensions)}")
                 self.console.print()
                 self.console.print("  [dim]Start watching:[/dim]")
-                self.console.print("  [dim]python -m src.cli watch ./your-project[/dim]")
+                self.console.print(
+                    "  [dim]python -m src.cli watch ./your-project[/dim]"
+                )
             else:
                 self.console.print("  Status: [yellow]✗ Disabled[/yellow]")
-                self.console.print("  [dim]Enable in config: CLAUDE_RAG_ENABLE_FILE_WATCHER=true[/dim]")
+                self.console.print(
+                    "  [dim]Enable in config: CLAUDE_RAG_ENABLE_FILE_WATCHER=true[/dim]"
+                )
 
             self.console.print()
         else:
@@ -387,7 +405,9 @@ class StatusCommand:
             print(f"  Status: {'Enabled' if enabled else 'Disabled'}")
             if enabled:
                 print(f"  Debounce: {info.get('debounce_ms', 0)}ms")
-                print(f"  Extensions: {', '.join(info.get('supported_extensions', []))}")
+                print(
+                    f"  Extensions: {', '.join(info.get('supported_extensions', []))}"
+                )
                 print("  Start: python -m src.cli watch ./path")
 
     def print_active_project(self, project_info: Optional[Dict[str, Any]]):
@@ -402,22 +422,31 @@ class StatusCommand:
                     self.console.print(f"  Path: {project_info['path']}")
 
                 if project_info.get("git_branch"):
-                    self.console.print(f"  Branch: [blue]{project_info['git_branch']}[/blue]")
+                    self.console.print(
+                        f"  Branch: [blue]{project_info['git_branch']}[/blue]"
+                    )
 
                 if project_info.get("last_activity"):
                     from datetime import datetime
+
                     try:
-                        last_activity = datetime.fromisoformat(project_info["last_activity"])
+                        last_activity = datetime.fromisoformat(
+                            project_info["last_activity"]
+                        )
                         activity_str = self._format_time_ago(last_activity)
                         self.console.print(f"  Last Activity: {activity_str}")
                     except Exception as e:
-                        logger.debug(f"Failed to format last activity time for project {project_info.get('name', 'unknown')}: {e}")
+                        logger.debug(
+                            f"Failed to format last activity time for project {project_info.get('name', 'unknown')}: {e}"
+                        )
 
                 file_count = project_info.get("file_activity_count", 0)
                 self.console.print(f"  File Activity: {file_count} files accessed")
             else:
                 self.console.print("  [dim]No active project set[/dim]")
-                self.console.print("  [dim]Switch with: python -m src.cli.project switch <name>[/dim]")
+                self.console.print(
+                    "  [dim]Switch with: python -m src.cli.project switch <name>[/dim]"
+                )
 
             self.console.print()
         else:
@@ -435,7 +464,9 @@ class StatusCommand:
             if self.console:
                 self.console.print("[bold cyan]Indexed Projects[/bold cyan]")
                 self.console.print("  [dim]No projects indexed yet[/dim]")
-                self.console.print("  [dim]Run: python -m src.cli index ./your-project[/dim]")
+                self.console.print(
+                    "  [dim]Run: python -m src.cli index ./your-project[/dim]"
+                )
                 self.console.print()
             else:
                 print("\nIndexed Projects")
@@ -484,7 +515,9 @@ class StatusCommand:
         if not tracker.has_degradations():
             # No degradations - show success message
             if self.console:
-                self.console.print("✓ [green]All components running at full performance[/green]\n")
+                self.console.print(
+                    "✓ [green]All components running at full performance[/green]\n"
+                )
             return
 
         if not self.console:
@@ -493,20 +526,28 @@ class StatusCommand:
 
         # Rich formatting
         self.console.print()
-        self.console.print(Panel(
-            tracker.get_summary(),
-            title="⚠️  System Degradation Warnings",
-            border_style="yellow",
-            padding=(1, 2),
-        ))
+        self.console.print(
+            Panel(
+                tracker.get_summary(),
+                title="⚠️  System Degradation Warnings",
+                border_style="yellow",
+                padding=(1, 2),
+            )
+        )
 
     def print_quick_commands(self):
         """Print quick reference commands."""
         if self.console:
             self.console.print("[bold cyan]Quick Commands[/bold cyan]")
-            self.console.print("  [dim]Index a project:[/dim]   python -m src.cli index ./path/to/project")
-            self.console.print("  [dim]Health check:[/dim]      python -m src.cli health")
-            self.console.print("  [dim]Watch for changes:[/dim] python -m src.cli watch ./path/to/project")
+            self.console.print(
+                "  [dim]Index a project:[/dim]   python -m src.cli index ./path/to/project"
+            )
+            self.console.print(
+                "  [dim]Health check:[/dim]      python -m src.cli health"
+            )
+            self.console.print(
+                "  [dim]Watch for changes:[/dim] python -m src.cli watch ./path/to/project"
+            )
             self.console.print()
         else:
             print("\nQuick Commands")

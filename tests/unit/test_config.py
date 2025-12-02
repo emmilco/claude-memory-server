@@ -8,11 +8,12 @@ from src.config import ServerConfig, get_config, set_config
 
 def test_config_defaults():
     """Test that configuration loads with default values."""
-    import os
     config = ServerConfig()
     assert config.server_name == "claude-memory-rag"
     assert config.log_level == "INFO"
-    assert config.storage_backend == "qdrant"  # REF-010: Qdrant is now required for semantic search
+    assert (
+        config.storage_backend == "qdrant"
+    )  # REF-010: Qdrant is now required for semantic search
     # Check qdrant_url - either default or from environment (for isolated test runner)
     expected_url = os.getenv("CLAUDE_RAG_QDRANT_URL", "http://localhost:6333")
     assert config.qdrant_url == expected_url
@@ -160,7 +161,9 @@ def test_gpu_cpu_mutual_exclusion():
 def test_analytics_dependency_validation():
     """Test that pattern analytics requires usage tracking."""
     with pytest.raises(Exception):  # Pydantic validation error
-        ServerConfig(analytics={"usage_tracking": False, "usage_pattern_analytics": True})
+        ServerConfig(
+            analytics={"usage_tracking": False, "usage_pattern_analytics": True}
+        )
 
 
 def test_feature_level_presets():
@@ -182,7 +185,7 @@ def test_feature_group_customization():
     """Test that feature groups can be customized."""
     config = ServerConfig(
         performance={"parallel_embeddings": False, "gpu_enabled": False},
-        search={"cross_project_enabled": False}
+        search={"cross_project_enabled": False},
     )
     assert config.performance.parallel_embeddings is False
     assert config.performance.gpu_enabled is False
@@ -201,7 +204,7 @@ class TestRankingWeightValidation:
             ServerConfig(
                 ranking_weight_similarity=0.5,
                 ranking_weight_recency=0.5,
-                ranking_weight_usage=0.5  # Sum = 1.5, should fail
+                ranking_weight_usage=0.5,  # Sum = 1.5, should fail
             )
 
         error_msg = str(exc_info.value)
@@ -216,7 +219,7 @@ class TestRankingWeightValidation:
             ServerConfig(
                 ranking_weight_similarity=1.2,
                 ranking_weight_recency=-0.1,
-                ranking_weight_usage=-0.1
+                ranking_weight_usage=-0.1,
             )
 
         error_msg = str(exc_info.value)
@@ -230,7 +233,7 @@ class TestRankingWeightValidation:
             ServerConfig(
                 ranking_weight_similarity=0.65,
                 ranking_weight_recency=0.20,
-                ranking_weight_usage=0.20  # Sum = 1.05
+                ranking_weight_usage=0.20,  # Sum = 1.05
             )
 
         error_msg = str(exc_info.value)
@@ -244,7 +247,7 @@ class TestRankingWeightValidation:
         config = ServerConfig(
             ranking_weight_similarity=0.6,
             ranking_weight_recency=0.2,
-            ranking_weight_usage=0.2
+            ranking_weight_usage=0.2,
         )
         assert config.ranking_weight_similarity == 0.6
         assert config.ranking_weight_recency == 0.2
@@ -256,14 +259,14 @@ class TestRankingWeightValidation:
         config = ServerConfig(
             ranking_weight_similarity=0.605,
             ranking_weight_recency=0.200,
-            ranking_weight_usage=0.195  # Sum = 1.0 (within tolerance)
+            ranking_weight_usage=0.195,  # Sum = 1.0 (within tolerance)
         )
         assert config.ranking_weight_similarity == 0.605
 
         config2 = ServerConfig(
             ranking_weight_similarity=0.595,
             ranking_weight_recency=0.205,
-            ranking_weight_usage=0.200  # Sum = 1.0 (within tolerance)
+            ranking_weight_usage=0.200,  # Sum = 1.0 (within tolerance)
         )
         assert config2.ranking_weight_similarity == 0.595
 
@@ -275,7 +278,7 @@ class TestRankingWeightValidation:
             ServerConfig(
                 ranking_weight_similarity=0.62,
                 ranking_weight_recency=0.20,
-                ranking_weight_usage=0.20  # Sum = 1.02, outside tolerance
+                ranking_weight_usage=0.20,  # Sum = 1.02, outside tolerance
             )
 
 
@@ -329,7 +332,7 @@ class TestProbabilityThresholdValidation:
             hybrid_search_alpha=0.7,
             query_expansion_similarity_threshold=0.6,
             search={"retrieval_gate_threshold": 0.8},
-            memory={"proactive_suggestions_threshold": 0.9}
+            memory={"proactive_suggestions_threshold": 0.9},
         )
         assert config.hybrid_search_alpha == 0.7
         assert config.query_expansion_similarity_threshold == 0.6
@@ -339,8 +342,7 @@ class TestProbabilityThresholdValidation:
     def test_boundary_values_accepted(self):
         """Test that boundary values 0.0 and 1.0 are accepted."""
         config = ServerConfig(
-            hybrid_search_alpha=0.0,
-            query_expansion_similarity_threshold=1.0
+            hybrid_search_alpha=0.0, query_expansion_similarity_threshold=1.0
         )
         assert config.hybrid_search_alpha == 0.0
         assert config.query_expansion_similarity_threshold == 1.0
@@ -357,7 +359,7 @@ class TestInterdependencyValidation:
             ServerConfig(
                 search={"hybrid_search": False},
                 performance={"hybrid_search": False},
-                hybrid_search_alpha=0.7  # Not default (0.5)
+                hybrid_search_alpha=0.7,  # Not default (0.5)
             )
 
         error_msg = str(exc_info.value)
@@ -371,7 +373,7 @@ class TestInterdependencyValidation:
         with pytest.raises(ValidationError) as exc_info:
             ServerConfig(
                 performance={"importance_scoring": False},
-                importance_complexity_weight=2.0  # Not default (1.0)
+                importance_complexity_weight=2.0,  # Not default (1.0)
             )
 
         error_msg = str(exc_info.value)
@@ -386,7 +388,7 @@ class TestInterdependencyValidation:
             ServerConfig(
                 search={
                     "query_expansion_enabled": False,
-                    "query_expansion_max_synonyms": 5  # Not default (2)
+                    "query_expansion_max_synonyms": 5,  # Not default (2)
                 }
             )
 
@@ -402,7 +404,7 @@ class TestInterdependencyValidation:
             ServerConfig(
                 search={
                     "retrieval_gate_enabled": False,
-                    "retrieval_gate_threshold": 0.9  # Not default (0.8)
+                    "retrieval_gate_threshold": 0.9,  # Not default (0.8)
                 }
             )
 
@@ -416,7 +418,7 @@ class TestInterdependencyValidation:
             search={"hybrid_search": True, "retrieval_gate_threshold": 0.9},
             performance={"hybrid_search": True, "importance_scoring": True},
             hybrid_search_alpha=0.7,
-            importance_complexity_weight=2.0
+            importance_complexity_weight=2.0,
         )
         assert config.hybrid_search_alpha == 0.7
         assert config.importance_complexity_weight == 2.0
@@ -425,7 +427,7 @@ class TestInterdependencyValidation:
         """Test that default values are accepted even when features are disabled."""
         config = ServerConfig(
             search={"hybrid_search": False, "query_expansion_enabled": False},
-            performance={"importance_scoring": False}
+            performance={"importance_scoring": False},
         )
         # Should not raise because values are defaults
         assert config.hybrid_search_alpha == 0.5  # default
@@ -440,15 +442,18 @@ class TestInterdependencyValidation:
                 search={
                     "hybrid_search": False,
                     "retrieval_gate_enabled": False,
-                    "retrieval_gate_threshold": 0.9
+                    "retrieval_gate_threshold": 0.9,
                 },
                 performance={"hybrid_search": False},
-                hybrid_search_alpha=0.7
+                hybrid_search_alpha=0.7,
             )
 
         error_msg = str(exc_info.value)
         # Should mention both issues
-        assert "hybrid_search_alpha" in error_msg or "retrieval_gate_threshold" in error_msg
+        assert (
+            "hybrid_search_alpha" in error_msg
+            or "retrieval_gate_threshold" in error_msg
+        )
 
 
 class TestValidationErrorMessages:
@@ -462,7 +467,7 @@ class TestValidationErrorMessages:
             ServerConfig(
                 ranking_weight_similarity=1.0,
                 ranking_weight_recency=0.05,
-                ranking_weight_usage=0.0
+                ranking_weight_usage=0.0,
             )
 
         error_msg = str(exc_info.value)
@@ -489,7 +494,7 @@ class TestValidationErrorMessages:
             ServerConfig(
                 search={"hybrid_search": False},
                 performance={"hybrid_search": False},
-                hybrid_search_alpha=0.7
+                hybrid_search_alpha=0.7,
             )
 
         error_msg = str(exc_info.value)

@@ -31,7 +31,7 @@ async def test_search_scales_with_index_size(tmp_path, fresh_server):
         await server.index_codebase(
             directory_path=str(project_dir),
             project_name=f"scale_{file_count}",
-            recursive=False
+            recursive=False,
         )
 
         # Measure search latency (average of 20 searches)
@@ -39,9 +39,7 @@ async def test_search_scales_with_index_size(tmp_path, fresh_server):
         for _ in range(20):
             start = time.perf_counter()
             await server.search_code(
-                query="function test",
-                project_name=f"scale_{file_count}",
-                limit=10
+                query="function test", project_name=f"scale_{file_count}", limit=10
             )
             latency_ms = (time.perf_counter() - start) * 1000
             latencies.append(latency_ms)
@@ -50,7 +48,7 @@ async def test_search_scales_with_index_size(tmp_path, fresh_server):
         results.append((file_count, avg_latency))
 
     print(f"\n{'='*50}")
-    print(f"SEARCH SCALABILITY RESULTS")
+    print("SEARCH SCALABILITY RESULTS")
     print(f"{'='*50}")
     for files, latency in results:
         print(f"  {files} files: {latency:.2f}ms avg search latency")
@@ -62,7 +60,7 @@ async def test_search_scales_with_index_size(tmp_path, fresh_server):
     scaling_factor = latency_200 / latency_50
     file_scaling_factor = 200 / 50  # 4x
 
-    print(f"\nScaling Analysis:")
+    print("\nScaling Analysis:")
     print(f"  50 files: {latency_50:.2f}ms")
     print(f"  200 files: {latency_200:.2f}ms")
     print(f"  File count increased: {file_scaling_factor:.1f}x")
@@ -100,24 +98,21 @@ async def test_memory_count_scaling(fresh_server):
             await server.store_memory(
                 content=f"Test memory {i}: preference for setting_{i % 10}",
                 category="preference",
-                importance=0.5
+                importance=0.5,
             )
 
         # Measure retrieval latency (average of 10 queries)
         latencies = []
         for _ in range(10):
             start = time.perf_counter()
-            await server.retrieve_memories(
-                query="preference setting",
-                limit=10
-            )
+            await server.retrieve_memories(query="preference setting", limit=10)
             latency_ms = (time.perf_counter() - start) * 1000
             latencies.append(latency_ms)
 
         avg_latency = sum(latencies) / len(latencies)
         results.append((memory_count, avg_latency))
 
-    print(f"\nMemory Count Scalability:")
+    print("\nMemory Count Scalability:")
     for count, latency in results:
         print(f"  {count} memories: {latency:.2f}ms avg retrieval")
 
@@ -130,9 +125,9 @@ async def test_memory_count_scaling(fresh_server):
     print(f"  300 memories: {latency_300:.2f}ms")
     print(f"  Scaling factor: {scaling_factor:.2f}x")
 
-    assert scaling_factor < 2.0, (
-        f"Memory retrieval scaling {scaling_factor:.2f}x for 3x memories is too high"
-    )
+    assert (
+        scaling_factor < 2.0
+    ), f"Memory retrieval scaling {scaling_factor:.2f}x for 3x memories is too high"
 
 
 @pytest.mark.performance
@@ -161,7 +156,7 @@ async def test_project_count_scaling(tmp_path, fresh_server):
             await server.index_codebase(
                 directory_path=str(project_dir),
                 project_name=f"project_{p}",
-                recursive=False
+                recursive=False,
             )
 
         # Measure search latency across all projects
@@ -170,9 +165,7 @@ async def test_project_count_scaling(tmp_path, fresh_server):
             for _ in range(5):  # 5 searches per project
                 start = time.perf_counter()
                 await server.search_code(
-                    query="function test",
-                    project_name=f"project_{p}",
-                    limit=5
+                    query="function test", project_name=f"project_{p}", limit=5
                 )
                 latency_ms = (time.perf_counter() - start) * 1000
                 latencies.append(latency_ms)
@@ -180,15 +173,15 @@ async def test_project_count_scaling(tmp_path, fresh_server):
         avg_latency = sum(latencies) / len(latencies)
         results.append((project_count, avg_latency))
 
-    print(f"\nProject Count Scalability:")
+    print("\nProject Count Scalability:")
     for count, latency in results:
         print(f"  {count} projects: {latency:.2f}ms avg search latency")
 
     # Latency should remain acceptable with multiple projects
     latency_10 = results[1][1]
-    assert latency_10 < 100, (
-        f"Search latency {latency_10:.2f}ms too high with 10 projects"
-    )
+    assert (
+        latency_10 < 100
+    ), f"Search latency {latency_10:.2f}ms too high with 10 projects"
 
 
 @pytest.mark.performance
@@ -206,9 +199,7 @@ async def test_concurrent_user_simulation(indexed_test_project):
         for i in range(10):
             start = time.perf_counter()
             await server.search_code(
-                query=f"function_{i % 5}",
-                project_name="perf_test",
-                limit=5
+                query=f"function_{i % 5}", project_name="perf_test", limit=5
             )
             latency_ms = (time.perf_counter() - start) * 1000
             latencies.append(latency_ms)
@@ -232,7 +223,7 @@ async def test_concurrent_user_simulation(indexed_test_project):
     throughput = total_requests / total_elapsed
 
     print(f"\n{'='*50}")
-    print(f"CONCURRENT USER SIMULATION (10 users)")
+    print("CONCURRENT USER SIMULATION (10 users)")
     print(f"{'='*50}")
     print(f"Total requests: {total_requests}")
     print(f"Total time: {total_elapsed:.2f}s")
@@ -242,9 +233,9 @@ async def test_concurrent_user_simulation(indexed_test_project):
     print(f"{'='*50}")
 
     # P95 should remain under 100ms even with concurrent load
-    assert p95_latency < 100, (
-        f"P95 latency {p95_latency:.2f}ms too high under concurrent load"
-    )
+    assert (
+        p95_latency < 100
+    ), f"P95 latency {p95_latency:.2f}ms too high under concurrent load"
 
 
 @pytest.mark.performance
@@ -264,7 +255,9 @@ async def test_large_file_handling(tmp_path, fresh_server):
     for i in range(20):
         # Each file has 50-500 lines
         lines = 50 + (i * 25)
-        content = "\n".join([f"def function_{i}_{j}():\n    return {j}" for j in range(lines)])
+        content = "\n".join(
+            [f"def function_{i}_{j}():\n    return {j}" for j in range(lines)]
+        )
         file_path = project_dir / f"file_{i}.py"
         file_path.write_text(content)
         file_sizes.append(len(content))
@@ -274,9 +267,7 @@ async def test_large_file_handling(tmp_path, fresh_server):
     # Measure indexing time
     start = time.perf_counter()
     result = await server.index_codebase(
-        directory_path=str(project_dir),
-        project_name="large_files",
-        recursive=False
+        directory_path=str(project_dir), project_name="large_files", recursive=False
     )
     indexing_time = time.perf_counter() - start
 
@@ -284,13 +275,13 @@ async def test_large_file_handling(tmp_path, fresh_server):
     throughput = files_indexed / indexing_time
     avg_file_size = sum(file_sizes) / len(file_sizes)
 
-    print(f"\nLarge File Handling:")
+    print("\nLarge File Handling:")
     print(f"  Files indexed: {files_indexed}")
     print(f"  Avg file size: {avg_file_size / 1024:.2f} KB")
     print(f"  Total time: {indexing_time:.2f}s")
     print(f"  Throughput: {throughput:.2f} files/sec")
 
     # Should still maintain >1 file/sec even with larger files
-    assert throughput > 1.0, (
-        f"Throughput {throughput:.2f} files/sec below 1.0 with larger files"
-    )
+    assert (
+        throughput > 1.0
+    ), f"Throughput {throughput:.2f} files/sec below 1.0 with larger files"

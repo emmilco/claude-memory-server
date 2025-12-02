@@ -11,6 +11,7 @@ try:
     import git
     from git import Repo, Commit
     from git.diff import Diff
+
     GIT_AVAILABLE = True
 except ImportError:
     GIT_AVAILABLE = False
@@ -383,13 +384,13 @@ class GitIndexer:
         lines_added = 0
         lines_deleted = 0
 
-        if hasattr(diff_item, 'diff') and diff_item.diff:
+        if hasattr(diff_item, "diff") and diff_item.diff:
             try:
-                diff_text = diff_item.diff.decode('utf-8', errors='ignore')
-                for line in diff_text.split('\n'):
-                    if line.startswith('+') and not line.startswith('+++'):
+                diff_text = diff_item.diff.decode("utf-8", errors="ignore")
+                for line in diff_text.split("\n"):
+                    if line.startswith("+") and not line.startswith("+++"):
                         lines_added += 1
-                    elif line.startswith('-') and not line.startswith('---'):
+                    elif line.startswith("-") and not line.startswith("---"):
                         lines_deleted += 1
             except Exception as e:
                 logger.debug(f"Could not count lines for {file_path}: {e}")
@@ -398,9 +399,9 @@ class GitIndexer:
         diff_content = None
         diff_embedding = None
 
-        if include_diff_content and hasattr(diff_item, 'diff') and diff_item.diff:
+        if include_diff_content and hasattr(diff_item, "diff") and diff_item.diff:
             try:
-                diff_text = diff_item.diff.decode('utf-8', errors='ignore')
+                diff_text = diff_item.diff.decode("utf-8", errors="ignore")
 
                 # Check size limit
                 diff_size_kb = len(diff_text) / 1024

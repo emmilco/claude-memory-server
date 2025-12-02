@@ -1,16 +1,14 @@
 """Performance regression detection CLI commands."""
 
-import asyncio
 import logging
 from pathlib import Path
-from datetime import datetime, timedelta
 from typing import Optional
 
 try:
     from rich.console import Console
     from rich.table import Table
-    from rich.panel import Panel
     from rich.progress import Progress, SpinnerColumn, TextColumn
+
     RICH_AVAILABLE = True
 except ImportError:
     RICH_AVAILABLE = False
@@ -31,7 +29,7 @@ class PerfCommand:
     def __init__(self):
         """Initialize performance command."""
         self.console = Console() if RICH_AVAILABLE else None
-        config = get_config()
+        get_config()
 
         # Performance metrics database
         metrics_dir = Path.home() / ".cache" / "claude-memory" / "metrics"
@@ -48,11 +46,15 @@ class PerfCommand:
             print(f"\n{title}")
             print("=" * len(title))
 
-    def print_metric(self, name: str, current: float, baseline: Optional[float], unit: str):
+    def print_metric(
+        self, name: str, current: float, baseline: Optional[float], unit: str
+    ):
         """Print metric comparison."""
         if baseline is None:
             if self.console:
-                self.console.print(f"  {name:30s} [yellow]{current:.2f}{unit}[/yellow] (no baseline)")
+                self.console.print(
+                    f"  {name:30s} [yellow]{current:.2f}{unit}[/yellow] (no baseline)"
+                )
             else:
                 print(f"  {name:30s} {current:.2f}{unit} (no baseline)")
             return
@@ -108,7 +110,7 @@ class PerfCommand:
                 f"Baseline: {regression.baseline_value:.2f} | "
                 f"Degradation: {regression.degradation_percent:.1f}%"
             )
-            self.console.print(f"\n  [bold]Recommendations:[/bold]")
+            self.console.print("\n  [bold]Recommendations:[/bold]")
             for i, rec in enumerate(regression.recommendations, 1):
                 self.console.print(f"    {i}. {rec}")
         else:
@@ -120,7 +122,7 @@ class PerfCommand:
                 f"Baseline: {regression.baseline_value:.2f} | "
                 f"Degradation: {regression.degradation_percent:.1f}%"
             )
-            print(f"\n  Recommendations:")
+            print("\n  Recommendations:")
             for i, rec in enumerate(regression.recommendations, 1):
                 print(f"    {i}. {rec}")
 
@@ -143,7 +145,9 @@ class PerfCommand:
                     TextColumn("[progress.description]{task.description}"),
                     console=self.console,
                 ) as progress:
-                    task = progress.add_task("Analyzing performance metrics...", total=None)
+                    task = progress.add_task(
+                        "Analyzing performance metrics...", total=None
+                    )
                     report = self.tracker.generate_report(period_days)
                     progress.update(task, completed=True)
             else:
@@ -162,11 +166,19 @@ class PerfCommand:
                     self.console.print(
                         f"  Total Regressions: [yellow]{report.total_regressions}[/yellow]"
                     )
+                    severity_color = {
+                        RegressionSeverity.MINOR: "yellow",
+                        RegressionSeverity.MODERATE: "yellow",
+                        RegressionSeverity.SEVERE: "red",
+                        RegressionSeverity.CRITICAL: "red bold",
+                    }.get(report.worst_severity, "yellow")
                     self.console.print(
-                        f"  Worst Severity: [{severity_colors.get(report.worst_severity, 'yellow')}]{report.worst_severity.value}[/{severity_colors.get(report.worst_severity, 'yellow')}]"
+                        f"  Worst Severity: [{severity_color}]{report.worst_severity.value}[/{severity_color}]"
                     )
             else:
-                print(f"  Status: {'REGRESSIONS DETECTED' if report.has_regressions else 'HEALTHY'}")
+                print(
+                    f"  Status: {'REGRESSIONS DETECTED' if report.has_regressions else 'HEALTHY'}"
+                )
                 if report.has_regressions:
                     print(f"  Total Regressions: {report.total_regressions}")
                     print(f"  Worst Severity: {report.worst_severity.value}")
@@ -178,7 +190,10 @@ class PerfCommand:
                 PerformanceMetric.SEARCH_LATENCY_P50: ("Search Latency (P50)", "ms"),
                 PerformanceMetric.SEARCH_LATENCY_P95: ("Search Latency (P95)", "ms"),
                 PerformanceMetric.SEARCH_LATENCY_P99: ("Search Latency (P99)", "ms"),
-                PerformanceMetric.INDEXING_THROUGHPUT: ("Indexing Throughput", " files/sec"),
+                PerformanceMetric.INDEXING_THROUGHPUT: (
+                    "Indexing Throughput",
+                    " files/sec",
+                ),
                 PerformanceMetric.CACHE_HIT_RATE: ("Cache Hit Rate", "%"),
             }
 
@@ -192,7 +207,9 @@ class PerfCommand:
                     # Adjust cache hit rate display (0.0-1.0 -> 0-100%)
                     if metric == PerformanceMetric.CACHE_HIT_RATE:
                         current = current * 100
-                        baseline_value = baseline_value * 100 if baseline_value is not None else None
+                        baseline_value = (
+                            baseline_value * 100 if baseline_value is not None else None
+                        )
 
                     self.print_metric(display_name, current, baseline_value, unit)
                 else:
@@ -217,17 +234,19 @@ class PerfCommand:
                         "[dim]Run specific fixes or review recommendations above.[/dim]"
                     )
                 else:
-                    print(f"\n⚠ Found {len(report.regressions)} performance regression(s).")
+                    print(
+                        f"\n⚠ Found {len(report.regressions)} performance regression(s)."
+                    )
                     print("Run specific fixes or review recommendations above.")
 
                 return 1  # Exit code 1 indicates regressions found
             else:
                 if self.console:
                     self.console.print(
-                        f"\n[green]✓ No performance regressions detected.[/green]"
+                        "\n[green]✓ No performance regressions detected.[/green]"
                     )
                 else:
-                    print(f"\n✓ No performance regressions detected.")
+                    print("\n✓ No performance regressions detected.")
 
                 return 0
 
@@ -346,7 +365,9 @@ class PerfCommand:
 
             if not regressions:
                 if self.console:
-                    self.console.print("[green]No regressions detected in this period.[/green]")
+                    self.console.print(
+                        "[green]No regressions detected in this period.[/green]"
+                    )
                 else:
                     print("No regressions detected in this period.")
             else:

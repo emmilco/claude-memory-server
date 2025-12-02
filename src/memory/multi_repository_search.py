@@ -11,13 +11,13 @@ building on the existing search infrastructure to support:
 
 import logging
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, Optional, Set
+from typing import List, Dict, Any, Optional
 
 from src.config import ServerConfig, get_config
 from src.core.models import SearchFilters, MemoryScope, MemoryCategory, ContextLevel
 from src.store.qdrant_store import QdrantMemoryStore
 from src.embeddings.generator import EmbeddingGenerator
-from src.memory.repository_registry import RepositoryRegistry, Repository
+from src.memory.repository_registry import RepositoryRegistry
 from src.memory.workspace_manager import WorkspaceManager
 
 logger = logging.getLogger(__name__)
@@ -161,14 +161,14 @@ class MultiRepositorySearch:
         if self.embedding_generator is None:
             self.embedding_generator = EmbeddingGenerator(self.config)
 
-        if hasattr(self.embedding_generator, 'initialize'):
+        if hasattr(self.embedding_generator, "initialize"):
             await self.embedding_generator.initialize()
 
         logger.info("MultiRepositorySearch ready")
 
     async def close(self) -> None:
         """Clean up resources."""
-        if self.embedding_generator and hasattr(self.embedding_generator, 'close'):
+        if self.embedding_generator and hasattr(self.embedding_generator, "close"):
             await self.embedding_generator.close()
 
         if self.store:
@@ -440,8 +440,7 @@ class MultiRepositorySearch:
         # Add dependencies if requested
         if include_dependencies:
             dependencies = await self.repository_registry.get_dependencies(
-                repository_id,
-                max_depth=max_depth
+                repository_id, max_depth=max_depth
             )
 
             # Flatten dependency tree into list of repo IDs
@@ -510,7 +509,8 @@ class MultiRepositorySearch:
         # Filter by status
         if not include_stale:
             candidate_repos = [
-                repo for repo in candidate_repos
+                repo
+                for repo in candidate_repos
                 if repo.status == RepositoryStatus.INDEXED
             ]
 

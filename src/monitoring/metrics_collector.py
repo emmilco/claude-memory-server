@@ -12,7 +12,7 @@ from datetime import datetime, timedelta, UTC
 from typing import Optional, List, Dict, Any
 from pathlib import Path
 
-from src.core.models import ContextLevel, LifecycleState
+from src.core.models import LifecycleState
 from src.store.base import MemoryStore
 from src.memory.project_archival import ProjectArchivalManager, ProjectState
 
@@ -83,7 +83,7 @@ class MetricsCollector:
         self,
         db_path: str,
         store: Optional[MemoryStore] = None,
-        archival_manager: Optional[ProjectArchivalManager] = None
+        archival_manager: Optional[ProjectArchivalManager] = None,
     ):
         """
         Initialize metrics collector.
@@ -205,8 +205,12 @@ class MetricsCollector:
             # Collect project metrics
             if self.archival_manager:
                 # Get counts from archival manager
-                active_projects = self.archival_manager.get_projects_by_state(ProjectState.ACTIVE)
-                archived_projects = self.archival_manager.get_projects_by_state(ProjectState.ARCHIVED)
+                active_projects = self.archival_manager.get_projects_by_state(
+                    ProjectState.ACTIVE
+                )
+                archived_projects = self.archival_manager.get_projects_by_state(
+                    ProjectState.ARCHIVED
+                )
                 metrics.active_projects = len(active_projects)
                 metrics.archived_projects = len(archived_projects)
             else:
@@ -262,7 +266,10 @@ class MetricsCollector:
                 return await self.store.count_by_lifecycle(state)
             return 0
         except Exception as e:
-            logger.error(f"Failed to count memories by lifecycle state {state}: {e}", exc_info=True)
+            logger.error(
+                f"Failed to count memories by lifecycle state {state}: {e}",
+                exc_info=True,
+            )
             return 0
 
     async def _get_all_projects(self) -> List[Dict[str, Any]]:
@@ -557,9 +564,7 @@ class MetricsCollector:
 
             return self._row_to_metrics(row)
 
-    def get_metrics_history(
-        self, days: int = 7
-    ) -> List[HealthMetrics]:
+    def get_metrics_history(self, days: int = 7) -> List[HealthMetrics]:
         """
         Get historical metrics for the specified time period.
 

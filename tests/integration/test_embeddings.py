@@ -2,7 +2,6 @@
 
 import pytest
 import pytest_asyncio
-import asyncio
 
 from src.config import ServerConfig
 from src.embeddings.generator import EmbeddingGenerator
@@ -50,6 +49,7 @@ async def test_generate_single_embedding(generator):
 
     # Check normalization (L2 norm should be close to 1)
     import math
+
     norm = math.sqrt(sum(x * x for x in embedding))
     assert abs(norm - 1.0) < 0.01  # Should be normalized
 
@@ -162,7 +162,7 @@ async def test_benchmark(generator):
     assert results["batch_total_s"] > 0
     assert results["throughput_docs_per_sec"] > 0
 
-    print(f"\nBenchmark Results:")
+    print("\nBenchmark Results:")
     print(f"  Model: {results['model']}")
     print(f"  Single embedding: {results['single_embedding_ms']:.2f}ms")
     print(f"  Batch throughput: {results['throughput_docs_per_sec']:.1f} docs/sec")

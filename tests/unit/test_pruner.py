@@ -2,11 +2,9 @@
 
 import pytest
 from datetime import datetime, UTC, timedelta
-from unittest.mock import AsyncMock, Mock
 
 from src.memory.pruner import MemoryPruner, PruneResult
 from src.config import ServerConfig
-from src.core.models import ContextLevel
 
 
 class MockStore:
@@ -32,11 +30,13 @@ class MockStore:
                 if last_used >= older_than:
                     continue
 
-            results.append({
-                "id": mem_id,
-                "created_at": mem_data.get("created_at"),
-                "last_used": mem_data.get("last_used"),
-            })
+            results.append(
+                {
+                    "id": mem_id,
+                    "created_at": mem_data.get("created_at"),
+                    "last_used": mem_data.get("last_used"),
+                }
+            )
 
         return results
 
@@ -63,13 +63,15 @@ class MockStore:
             if last_used >= cutoff_time:
                 continue
 
-            results.append({
-                "id": mem_id,
-                "created_at": mem_data.get("created_at"),
-                "context_level": mem_data.get("context_level"),
-                "last_used": mem_data.get("last_used"),
-                "use_count": use_count,
-            })
+            results.append(
+                {
+                    "id": mem_id,
+                    "created_at": mem_data.get("created_at"),
+                    "context_level": mem_data.get("context_level"),
+                    "last_used": mem_data.get("last_used"),
+                    "use_count": use_count,
+                }
+            )
 
         return results
 

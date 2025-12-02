@@ -9,7 +9,6 @@ import pytest
 import tempfile
 import os
 from datetime import datetime, timedelta, UTC
-from pathlib import Path
 
 from src.monitoring.alert_engine import (
     AlertEngine,
@@ -197,7 +196,7 @@ class TestAlertEngine:
 
     def test_init_creates_database(self, temp_db):
         """Test that initialization creates database schema."""
-        engine = AlertEngine(db_path=temp_db)
+        AlertEngine(db_path=temp_db)
 
         # Verify tables exist
         import sqlite3
@@ -258,7 +257,9 @@ class TestAlertEngine:
             )
         ]
 
-        engine_with_custom = AlertEngine(db_path=engine.db_path, thresholds=custom_thresholds)
+        engine_with_custom = AlertEngine(
+            db_path=engine.db_path, thresholds=custom_thresholds
+        )
 
         # Create metrics without the nonexistent_metric attribute
         metrics = HealthMetrics(

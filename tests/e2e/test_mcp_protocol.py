@@ -5,17 +5,12 @@ tool calls according to the MCP protocol specification.
 """
 
 import pytest
-import pytest_asyncio
-from typing import Dict, Any, List
-from pathlib import Path
-
-from src.core.server import MemoryRAGServer
-from src.config import get_config
 
 
 # ============================================================================
 # MCP Tool Discovery Tests (3 tests)
 # ============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -80,17 +75,27 @@ async def test_mcp_tool_categories():
     tool_names = set(t.name for t in tools)
 
     # Memory management category
-    memory_tools = {"store_memory", "retrieve_memories", "list_memories", "delete_memory"}
-    assert memory_tools.issubset(tool_names), f"Missing memory tools: {memory_tools - tool_names}"
+    memory_tools = {
+        "store_memory",
+        "retrieve_memories",
+        "list_memories",
+        "delete_memory",
+    }
+    assert memory_tools.issubset(
+        tool_names
+    ), f"Missing memory tools: {memory_tools - tool_names}"
 
     # Code search category
     code_tools = {"search_code"}
-    assert code_tools.issubset(tool_names), f"Missing code tools: {code_tools - tool_names}"
+    assert code_tools.issubset(
+        tool_names
+    ), f"Missing code tools: {code_tools - tool_names}"
 
 
 # ============================================================================
 # MCP Tool Invocation Tests (5 tests)
 # ============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -105,12 +110,15 @@ async def test_mcp_store_memory_tool(fresh_server):
     mcp_server.memory_server = fresh_server
 
     # Call the tool
-    result = await mcp_server.call_tool("store_memory", {
-        "content": "MCP test: User prefers TypeScript over JavaScript",
-        "category": "preference",
-        "importance": 0.8,
-        "tags": ["mcp-test", "language-preference"],
-    })
+    result = await mcp_server.call_tool(
+        "store_memory",
+        {
+            "content": "MCP test: User prefers TypeScript over JavaScript",
+            "category": "preference",
+            "importance": 0.8,
+            "tags": ["mcp-test", "language-preference"],
+        },
+    )
 
     # Should return TextContent
     assert result is not None
@@ -130,18 +138,24 @@ async def test_mcp_retrieve_memories_tool(fresh_server):
     mcp_server.memory_server = fresh_server
 
     # First store a memory
-    await mcp_server.call_tool("store_memory", {
-        "content": "MCP retrieval test: The API uses OAuth 2.0 for authentication",
-        "category": "fact",
-        "importance": 0.7,
-        "tags": ["mcp-test", "auth"],
-    })
+    await mcp_server.call_tool(
+        "store_memory",
+        {
+            "content": "MCP retrieval test: The API uses OAuth 2.0 for authentication",
+            "category": "fact",
+            "importance": 0.7,
+            "tags": ["mcp-test", "auth"],
+        },
+    )
 
     # Now retrieve it
-    result = await mcp_server.call_tool("retrieve_memories", {
-        "query": "OAuth authentication API",
-        "limit": 5,
-    })
+    result = await mcp_server.call_tool(
+        "retrieve_memories",
+        {
+            "query": "OAuth authentication API",
+            "limit": 5,
+        },
+    )
 
     assert result is not None
     assert len(result) > 0
@@ -160,19 +174,28 @@ async def test_mcp_list_memories_tool(fresh_server):
     mcp_server.memory_server = fresh_server
 
     # Store some memories first
-    await mcp_server.call_tool("store_memory", {
-        "content": "MCP list test memory 1",
-        "category": "fact",
-    })
-    await mcp_server.call_tool("store_memory", {
-        "content": "MCP list test memory 2",
-        "category": "fact",
-    })
+    await mcp_server.call_tool(
+        "store_memory",
+        {
+            "content": "MCP list test memory 1",
+            "category": "fact",
+        },
+    )
+    await mcp_server.call_tool(
+        "store_memory",
+        {
+            "content": "MCP list test memory 2",
+            "category": "fact",
+        },
+    )
 
     # List memories
-    result = await mcp_server.call_tool("list_memories", {
-        "limit": 10,
-    })
+    result = await mcp_server.call_tool(
+        "list_memories",
+        {
+            "limit": 10,
+        },
+    )
 
     assert result is not None
     assert len(result) > 0
@@ -198,11 +221,14 @@ async def test_mcp_search_code_tool(fresh_server, sample_code_project):
     )
 
     # Search via MCP tool
-    result = await mcp_server.call_tool("search_code", {
-        "query": "authentication function",
-        "project_name": "mcp-search-test",
-        "limit": 5,
-    })
+    result = await mcp_server.call_tool(
+        "search_code",
+        {
+            "query": "authentication function",
+            "project_name": "mcp-search-test",
+            "limit": 5,
+        },
+    )
 
     assert result is not None
     assert len(result) > 0
@@ -223,10 +249,13 @@ async def test_mcp_delete_memory_tool(fresh_server):
     mcp_server.memory_server = fresh_server
 
     # Store a memory
-    store_result = await mcp_server.call_tool("store_memory", {
-        "content": "MCP delete test: This memory will be deleted",
-        "category": "fact",
-    })
+    store_result = await mcp_server.call_tool(
+        "store_memory",
+        {
+            "content": "MCP delete test: This memory will be deleted",
+            "category": "fact",
+        },
+    )
 
     # Extract memory_id from result (handle both JSON and formatted text)
     store_text = store_result[0].text
@@ -237,18 +266,23 @@ async def test_mcp_delete_memory_tool(fresh_server):
         memory_id = store_data.get("memory_id")
     except json.JSONDecodeError:
         # Try to extract from formatted text like "✅ Stored fact memory (ID: xxx)"
-        match = re.search(r'\(ID:\s*([a-f0-9-]+)\)', store_text, re.IGNORECASE)
+        match = re.search(r"\(ID:\s*([a-f0-9-]+)\)", store_text, re.IGNORECASE)
         if not match:
-            match = re.search(r'memory_id["\s:]+([a-f0-9-]+)', store_text, re.IGNORECASE)
+            match = re.search(
+                r'memory_id["\s:]+([a-f0-9-]+)', store_text, re.IGNORECASE
+            )
         if match:
             memory_id = match.group(1)
 
     assert memory_id, f"Should have stored memory with ID, got: {store_text[:200]}"
 
     # Delete the memory
-    delete_result = await mcp_server.call_tool("delete_memory", {
-        "memory_id": memory_id,
-    })
+    delete_result = await mcp_server.call_tool(
+        "delete_memory",
+        {
+            "memory_id": memory_id,
+        },
+    )
 
     assert delete_result is not None
     delete_text = delete_result[0].text
@@ -259,6 +293,7 @@ async def test_mcp_delete_memory_tool(fresh_server):
 # ============================================================================
 # MCP Error Handling Tests (3 tests)
 # ============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -286,15 +321,22 @@ async def test_mcp_missing_required_params(fresh_server):
     mcp_server.memory_server = fresh_server
 
     # Call store_memory without required 'content' field
-    result = await mcp_server.call_tool("store_memory", {
-        "category": "fact",
-        # Missing 'content'
-    })
+    result = await mcp_server.call_tool(
+        "store_memory",
+        {
+            "category": "fact",
+            # Missing 'content'
+        },
+    )
 
     assert result is not None
     result_text = result[0].text
     # Should indicate validation error
-    assert "error" in result_text.lower() or "required" in result_text.lower() or "content" in result_text.lower()
+    assert (
+        "error" in result_text.lower()
+        or "required" in result_text.lower()
+        or "content" in result_text.lower()
+    )
 
 
 @pytest.mark.e2e
@@ -306,10 +348,13 @@ async def test_mcp_invalid_param_values(fresh_server):
     mcp_server.memory_server = fresh_server
 
     # Call with invalid category
-    result = await mcp_server.call_tool("store_memory", {
-        "content": "Test content",
-        "category": "invalid_category_xyz",
-    })
+    result = await mcp_server.call_tool(
+        "store_memory",
+        {
+            "content": "Test content",
+            "category": "invalid_category_xyz",
+        },
+    )
 
     assert result is not None
     result_text = result[0].text
@@ -321,6 +366,7 @@ async def test_mcp_invalid_param_values(fresh_server):
 # ============================================================================
 # MCP Full Workflow Tests (2 tests)
 # ============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -336,12 +382,15 @@ async def test_mcp_memory_crud_workflow(fresh_server):
     mcp_server.memory_server = fresh_server
 
     # CREATE
-    create_result = await mcp_server.call_tool("store_memory", {
-        "content": "CRUD test: Project uses PostgreSQL database",
-        "category": "fact",
-        "importance": 0.9,
-        "tags": ["database", "infrastructure"],
-    })
+    create_result = await mcp_server.call_tool(
+        "store_memory",
+        {
+            "content": "CRUD test: Project uses PostgreSQL database",
+            "category": "fact",
+            "importance": 0.9,
+            "tags": ["database", "infrastructure"],
+        },
+    )
 
     # Extract memory_id (handle both JSON and formatted text)
     create_text = create_result[0].text
@@ -352,41 +401,62 @@ async def test_mcp_memory_crud_workflow(fresh_server):
         memory_id = create_data.get("memory_id")
     except json.JSONDecodeError:
         # Try to extract from formatted text like "✅ Stored fact memory (ID: xxx)"
-        match = re.search(r'\(ID:\s*([a-f0-9-]+)\)', create_text, re.IGNORECASE)
+        match = re.search(r"\(ID:\s*([a-f0-9-]+)\)", create_text, re.IGNORECASE)
         if not match:
-            match = re.search(r'memory_id["\s:]+([a-f0-9-]+)', create_text, re.IGNORECASE)
+            match = re.search(
+                r'memory_id["\s:]+([a-f0-9-]+)', create_text, re.IGNORECASE
+            )
         if match:
             memory_id = match.group(1)
 
     assert memory_id, f"Should have stored memory with ID, got: {create_text[:200]}"
 
     # READ (via retrieve)
-    retrieve_result = await mcp_server.call_tool("retrieve_memories", {
-        "query": "PostgreSQL database",
-        "limit": 5,
-    })
+    retrieve_result = await mcp_server.call_tool(
+        "retrieve_memories",
+        {
+            "query": "PostgreSQL database",
+            "limit": 5,
+        },
+    )
     retrieve_text = retrieve_result[0].text
     assert "PostgreSQL" in retrieve_text or "results" in retrieve_text.lower()
 
     # READ (via list)
-    list_result = await mcp_server.call_tool("list_memories", {
-        "tags": ["database"],
-        "limit": 10,
-    })
+    list_result = await mcp_server.call_tool(
+        "list_memories",
+        {
+            "tags": ["database"],
+            "limit": 10,
+        },
+    )
     list_text = list_result[0].text
-    assert "PostgreSQL" in list_text or memory_id in list_text or "memories" in list_text.lower()
+    assert (
+        "PostgreSQL" in list_text
+        or memory_id in list_text
+        or "memories" in list_text.lower()
+    )
 
     # DELETE
-    delete_result = await mcp_server.call_tool("delete_memory", {
-        "memory_id": memory_id,
-    })
-    assert "delet" in delete_result[0].text.lower() or "success" in delete_result[0].text.lower()
+    delete_result = await mcp_server.call_tool(
+        "delete_memory",
+        {
+            "memory_id": memory_id,
+        },
+    )
+    assert (
+        "delet" in delete_result[0].text.lower()
+        or "success" in delete_result[0].text.lower()
+    )
 
     # VERIFY DELETED
-    list_after = await mcp_server.call_tool("list_memories", {
-        "tags": ["database"],
-        "limit": 10,
-    })
+    await mcp_server.call_tool(
+        "list_memories",
+        {
+            "tags": ["database"],
+            "limit": 10,
+        },
+    )
     # Memory should no longer appear (or list should be empty/smaller)
 
 
@@ -410,28 +480,43 @@ async def test_mcp_code_search_workflow(fresh_server, sample_code_project):
     assert index_result["files_indexed"] > 0
 
     # Search for authentication code
-    auth_result = await mcp_server.call_tool("search_code", {
-        "query": "authentication password verification",
-        "project_name": "mcp-workflow-test",
-        "search_mode": "semantic",
-        "limit": 5,
-    })
-    assert "auth" in auth_result[0].text.lower() or "password" in auth_result[0].text.lower()
+    auth_result = await mcp_server.call_tool(
+        "search_code",
+        {
+            "query": "authentication password verification",
+            "project_name": "mcp-workflow-test",
+            "search_mode": "semantic",
+            "limit": 5,
+        },
+    )
+    assert (
+        "auth" in auth_result[0].text.lower()
+        or "password" in auth_result[0].text.lower()
+    )
 
     # Search for database code
-    db_result = await mcp_server.call_tool("search_code", {
-        "query": "database connection",
-        "project_name": "mcp-workflow-test",
-        "search_mode": "semantic",
-        "limit": 5,
-    })
-    assert "database" in db_result[0].text.lower() or "connection" in db_result[0].text.lower()
+    db_result = await mcp_server.call_tool(
+        "search_code",
+        {
+            "query": "database connection",
+            "project_name": "mcp-workflow-test",
+            "search_mode": "semantic",
+            "limit": 5,
+        },
+    )
+    assert (
+        "database" in db_result[0].text.lower()
+        or "connection" in db_result[0].text.lower()
+    )
 
     # Search with hybrid mode
-    hybrid_result = await mcp_server.call_tool("search_code", {
-        "query": "API request handler",
-        "project_name": "mcp-workflow-test",
-        "search_mode": "hybrid",
-        "limit": 5,
-    })
+    hybrid_result = await mcp_server.call_tool(
+        "search_code",
+        {
+            "query": "API request handler",
+            "project_name": "mcp-workflow-test",
+            "search_mode": "hybrid",
+            "limit": 5,
+        },
+    )
     assert hybrid_result is not None

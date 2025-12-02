@@ -10,12 +10,11 @@ This test suite verifies comprehensive C++ support including:
 - Performance requirements
 """
 
-import pytest
 from mcp_performance_core import parse_source_file
 
 
 # Sample C++ code with various constructs
-SAMPLE_CPP = '''
+SAMPLE_CPP = """
 #include <iostream>
 #include <string>
 
@@ -67,10 +66,10 @@ namespace Math {
 void printHello() {
     std::cout << "Hello" << std::endl;
 }
-'''
+"""
 
 
-TEMPLATE_CLASS_CPP = '''
+TEMPLATE_CLASS_CPP = """
 template<typename T, typename U>
 class Pair {
     T first;
@@ -80,20 +79,20 @@ public:
     T getFirst() const { return first; }
     U getSecond() const { return second; }
 };
-'''
+"""
 
 
-TEMPLATE_FUNCTION_CPP = '''
+TEMPLATE_FUNCTION_CPP = """
 template<typename T>
 T clamp(T value, T min, T max) {
     if (value < min) return min;
     if (value > max) return max;
     return value;
 }
-'''
+"""
 
 
-NAMESPACE_CPP = '''
+NAMESPACE_CPP = """
 namespace Math {
     namespace Geometry {
         class Circle {
@@ -105,10 +104,10 @@ namespace Math {
         };
     }
 }
-'''
+"""
 
 
-OPERATOR_OVERLOAD_CPP = '''
+OPERATOR_OVERLOAD_CPP = """
 class Complex {
     double real, imag;
 public:
@@ -125,7 +124,7 @@ public:
         return real == other.real && imag == other.imag;
     }
 };
-'''
+"""
 
 
 class TestCppFileParsing:
@@ -172,12 +171,12 @@ class TestCppUnitExtraction:
         result = parse_source_file("test.cpp", SAMPLE_CPP)
         if len(result.units) > 0:
             unit = result.units[0]
-            assert hasattr(unit, 'unit_type')
-            assert hasattr(unit, 'name')
-            assert hasattr(unit, 'start_line')
-            assert hasattr(unit, 'end_line')
-            assert hasattr(unit, 'content')
-            assert hasattr(unit, 'language')
+            assert hasattr(unit, "unit_type")
+            assert hasattr(unit, "name")
+            assert hasattr(unit, "start_line")
+            assert hasattr(unit, "end_line")
+            assert hasattr(unit, "content")
+            assert hasattr(unit, "language")
             assert unit.language == "Cpp"
 
 
@@ -327,7 +326,7 @@ class TestCppEdgeCases:
 
     def test_preprocessor_directives(self):
         """Test that preprocessor directives don't break parsing."""
-        cpp_code = '''
+        cpp_code = """
 #include <iostream>
 #define MAX 100
 #ifdef DEBUG
@@ -337,7 +336,7 @@ class Test {
 public:
     void method() {}
 };
-'''
+"""
         result = parse_source_file("preprocessor.cpp", cpp_code)
         assert result.language == "Cpp"
         assert len(result.units) > 0

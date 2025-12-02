@@ -93,9 +93,7 @@ class TestStartConversationSession:
     @pytest.mark.asyncio
     async def test_start_success(self, service):
         """Test successful session start."""
-        result = await service.start_conversation_session(
-            description="Testing session"
-        )
+        result = await service.start_conversation_session(description="Testing session")
 
         assert result["status"] == "created"
         assert result["session_id"] == "session_123"
@@ -115,7 +113,9 @@ class TestStartConversationSession:
         """Test start error raises StorageError."""
         from src.core.exceptions import StorageError
 
-        service.conversation_tracker.create_session.side_effect = Exception("Creation failed")
+        service.conversation_tracker.create_session.side_effect = Exception(
+            "Creation failed"
+        )
 
         with pytest.raises(StorageError):
             await service.start_conversation_session()
@@ -224,7 +224,9 @@ class TestListConversationSessions:
         """Test list error raises StorageError."""
         from src.core.exceptions import StorageError
 
-        service.conversation_tracker.list_sessions.side_effect = Exception("List failed")
+        service.conversation_tracker.list_sessions.side_effect = Exception(
+            "List failed"
+        )
 
         with pytest.raises(StorageError):
             await service.list_conversation_sessions()
@@ -282,7 +284,9 @@ class TestAnalyzeConversation:
         await service.analyze_conversation(messages=["test"])
 
         stats = service.get_stats()
-        assert stats["suggestions_generated"] == initial_stats["suggestions_generated"] + 1
+        assert (
+            stats["suggestions_generated"] == initial_stats["suggestions_generated"] + 1
+        )
 
     @pytest.mark.asyncio
     async def test_analyze_error_returns_failed(self, service):
@@ -416,7 +420,9 @@ class TestProvideSuggestionFeedback:
         """Test feedback error raises StorageError."""
         from src.core.exceptions import StorageError
 
-        service.suggestion_engine.record_feedback.side_effect = Exception("Feedback failed")
+        service.suggestion_engine.record_feedback.side_effect = Exception(
+            "Feedback failed"
+        )
 
         with pytest.raises(StorageError):
             await service.provide_suggestion_feedback(

@@ -1,6 +1,5 @@
 """Tests for dependency graph formatters."""
 
-import pytest
 import json
 from src.graph import DependencyGraph, GraphNode, GraphEdge
 from src.graph.formatters import DOTFormatter, JSONFormatter, MermaidFormatter
@@ -17,9 +16,9 @@ class TestDOTFormatter:
         output = formatter.format(graph, title="Test Graph")
 
         assert 'digraph "Test Graph"' in output
-        assert 'rankdir=LR' in output
-        assert output.count('node [') == 1  # Only graph-level node settings
-        assert output.endswith('}')
+        assert "rankdir=LR" in output
+        assert output.count("node [") == 1  # Only graph-level node settings
+        assert output.endswith("}")
 
     def test_single_node(self):
         """Test formatting graph with single node."""
@@ -147,8 +146,8 @@ class TestDOTFormatter:
         output = formatter.format(graph)
 
         # Should not break DOT syntax
-        assert 'digraph' in output
-        assert output.endswith('}')
+        assert "digraph" in output
+        assert output.endswith("}")
 
     def test_file_size_formatting(self):
         """Test file size formatting in different ranges."""

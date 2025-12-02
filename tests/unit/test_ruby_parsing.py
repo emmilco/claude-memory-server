@@ -17,7 +17,6 @@ duplication across supported languages.
 """
 
 import pytest
-from pathlib import Path
 from mcp_performance_core import parse_source_file
 
 
@@ -80,7 +79,7 @@ class TestRubyFileRecognition:
         # Test parsing works for .rb files
         content = sample_ruby_file.read_text()
         result = parse_source_file(str(sample_ruby_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
         assert units is not None, "Should parse .rb files"
 
     def test_case_sensitivity(self, tmp_path):
@@ -100,13 +99,17 @@ class TestRubyMethodExtraction:
         """Test extraction of instance methods."""
         content = sample_ruby_file.read_text()
         result = parse_source_file(str(sample_ruby_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
 
         # Find instance methods
-        instance_methods = [u for u in units if u.unit_type == "function" and "initialize" in u.name]
+        instance_methods = [
+            u for u in units if u.unit_type == "function" and "initialize" in u.name
+        ]
         assert len(instance_methods) > 0, "Should extract initialize method"
 
-        add_methods = [u for u in units if u.unit_type == "function" and "add" in u.name]
+        add_methods = [
+            u for u in units if u.unit_type == "function" and "add" in u.name
+        ]
         assert len(add_methods) > 0, "Should extract add method"
 
     # NOTE: Class methods (def self.method_name) are not currently supported
@@ -117,21 +120,27 @@ class TestRubyMethodExtraction:
         """Test extraction of methods with parameters."""
         content = sample_ruby_file.read_text()
         result = parse_source_file(str(sample_ruby_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
 
         # Find methods with parameters
-        add_methods = [u for u in units if u.unit_type == "function" and "add" in u.name]
+        add_methods = [
+            u for u in units if u.unit_type == "function" and "add" in u.name
+        ]
         assert len(add_methods) > 0, "Should extract method with parameters"
 
     def test_method_with_default_parameters(self, sample_ruby_file):
         """Test extraction of methods with default parameter values."""
         content = sample_ruby_file.read_text()
         result = parse_source_file(str(sample_ruby_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
 
         # Find methods with default parameters
-        multiply_methods = [u for u in units if u.unit_type == "function" and "multiply" in u.name]
-        assert len(multiply_methods) > 0, "Should extract method with default parameters"
+        multiply_methods = [
+            u for u in units if u.unit_type == "function" and "multiply" in u.name
+        ]
+        assert (
+            len(multiply_methods) > 0
+        ), "Should extract method with default parameters"
 
 
 class TestRubyClassExtraction:
@@ -142,7 +151,7 @@ class TestRubyClassExtraction:
         content = sample_ruby_file.read_text()
 
         result = parse_source_file(str(sample_ruby_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
 
         # Find classes
         classes = [u for u in units if u.unit_type == "class"]
@@ -160,10 +169,12 @@ class TestRubyClassExtraction:
         content = sample_ruby_file.read_text()
 
         result = parse_source_file(str(sample_ruby_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
 
         # Find top-level class
-        top_level = [u for u in units if u.unit_type == "class" and "TopLevelClass" in u.name]
+        top_level = [
+            u for u in units if u.unit_type == "class" and "TopLevelClass" in u.name
+        ]
         assert len(top_level) > 0, "Should extract TopLevelClass"
 
     def test_nested_class_extraction(self, sample_ruby_file):
@@ -171,11 +182,13 @@ class TestRubyClassExtraction:
         content = sample_ruby_file.read_text()
 
         result = parse_source_file(str(sample_ruby_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
 
         # Classes inside modules should be extracted
         classes = [u for u in units if u.unit_type == "class"]
-        assert len(classes) >= 3, "Should extract multiple classes including nested ones"
+        assert (
+            len(classes) >= 3
+        ), "Should extract multiple classes including nested ones"
 
 
 class TestRubyModuleExtraction:
@@ -186,7 +199,7 @@ class TestRubyModuleExtraction:
         content = sample_ruby_file.read_text()
 
         result = parse_source_file(str(sample_ruby_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
 
         # Find modules (they are captured as "class" type in our implementation)
         modules = [u for u in units if u.unit_type == "class" and "Namespace" in u.name]
@@ -197,10 +210,12 @@ class TestRubyModuleExtraction:
         content = sample_ruby_file.read_text()
 
         result = parse_source_file(str(sample_ruby_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
 
         # Find nested module
-        utils_modules = [u for u in units if u.unit_type == "class" and "Utils" in u.name]
+        utils_modules = [
+            u for u in units if u.unit_type == "class" and "Utils" in u.name
+        ]
         assert len(utils_modules) > 0, "Should extract Utils nested module"
 
 
@@ -212,7 +227,7 @@ class TestRubyComplexScenarios:
         content = sample_ruby_file.read_text()
 
         result = parse_source_file(str(sample_ruby_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
 
         # Should extract modules, classes, and methods
         assert len(units) > 5, "Should extract multiple semantic units"
@@ -222,7 +237,7 @@ class TestRubyComplexScenarios:
         content = sample_ruby_file.read_text()
 
         result = parse_source_file(str(sample_ruby_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
 
         # Check that units have required metadata
         for unit in units:
@@ -237,8 +252,8 @@ class TestRubyComplexScenarios:
             content = sample_ruby_file.read_text()
 
             result = parse_source_file(str(sample_ruby_file), content)
-            units = result.units if hasattr(result, 'units') else result
-            assert isinstance(units, list) or hasattr(result, 'units')
+            units = result.units if hasattr(result, "units") else result
+            assert isinstance(units, list) or hasattr(result, "units")
         except Exception as e:
             pytest.fail(f"Parsing raised unexpected exception: {e}")
 
@@ -253,9 +268,8 @@ class TestRubyEdgeCases:
 
         content = empty_file.read_text()
 
-
         result = parse_source_file(str(empty_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
         assert units == [] or len(units) == 0, "Empty file should produce no units"
 
     def test_ruby_file_with_only_comments(self, tmp_path):
@@ -269,9 +283,8 @@ class TestRubyEdgeCases:
 
         content = comment_file.read_text()
 
-
         result = parse_source_file(str(comment_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
         assert len(units) == 0, "File with only comments should produce no units"
 
     def test_ruby_file_with_syntax_error(self, tmp_path):
@@ -289,9 +302,9 @@ end
             content = syntax_error_file.read_text()
 
             result = parse_source_file(str(syntax_error_file), content)
-            units = result.units if hasattr(result, 'units') else result
+            units = result.units if hasattr(result, "units") else result
             # Parser should handle errors gracefully
-            assert isinstance(units, list) or hasattr(result, 'units')
+            assert isinstance(units, list) or hasattr(result, "units")
         except Exception as e:
             # If it raises an exception, it should be a known parsing exception
             assert "parse" in str(e).lower() or "syntax" in str(e).lower()
@@ -305,10 +318,12 @@ class TestRubyLanguageDetection:
         content = sample_ruby_file.read_text()
 
         result = parse_source_file(str(sample_ruby_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
 
         for unit in units:
-            assert unit.language == "Ruby", f"Unit should have language='ruby', got '{unit.language}'"
+            assert (
+                unit.language == "Ruby"
+            ), f"Unit should have language='ruby', got '{unit.language}'"
 
     def test_file_extension_to_language_mapping(self, tmp_path):
         """Test that .rb files map to Ruby language."""
@@ -319,5 +334,5 @@ class TestRubyLanguageDetection:
         content = rb_file.read_text()
 
         result = parse_source_file(str(rb_file), content)
-        units = result.units if hasattr(result, 'units') else result
+        units = result.units if hasattr(result, "units") else result
         assert units is not None, "Should parse .rb files"

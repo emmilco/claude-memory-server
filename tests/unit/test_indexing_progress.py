@@ -1,8 +1,7 @@
 """Tests for indexing progress indicators."""
 
 import pytest
-from pathlib import Path
-from unittest.mock import Mock, AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from src.memory.incremental_indexer import IncrementalIndexer
 from tests.conftest import mock_embedding
 
@@ -10,7 +9,9 @@ from tests.conftest import mock_embedding
 @pytest.fixture
 def mock_call_graph_store():
     """Mock QdrantCallGraphStore to avoid Qdrant connection during tests."""
-    with patch('src.memory.incremental_indexer.QdrantCallGraphStore') as MockCallGraphStore:
+    with patch(
+        "src.memory.incremental_indexer.QdrantCallGraphStore"
+    ) as MockCallGraphStore:
         mock_call_graph = AsyncMock()
         mock_call_graph.initialize = AsyncMock()
         mock_call_graph.close = AsyncMock()
@@ -25,7 +26,9 @@ class TestIndexingProgressCallback:
     """Test progress callback functionality during indexing."""
 
     @pytest.mark.asyncio
-    async def test_progress_callback_called_with_total(self, tmp_path, mock_call_graph_store):
+    async def test_progress_callback_called_with_total(
+        self, tmp_path, mock_call_graph_store
+    ):
         """Test that progress callback receives total file count."""
         # Create test files
         (tmp_path / "file1.py").write_text("def foo(): pass")
@@ -42,13 +45,15 @@ class TestIndexingProgressCallback:
 
         mock_embeddings = MagicMock()
         mock_embeddings.initialize = AsyncMock()
-        mock_embeddings.batch_generate = AsyncMock(return_value=[mock_embedding(value=0.1), mock_embedding(value=0.2)])
+        mock_embeddings.batch_generate = AsyncMock(
+            return_value=[mock_embedding(value=0.1), mock_embedding(value=0.2)]
+        )
         mock_embeddings.close = AsyncMock()
 
         indexer = IncrementalIndexer(
             store=mock_store,
             embedding_generator=mock_embeddings,
-            project_name="test-project"
+            project_name="test-project",
         )
         await indexer.initialize()
 
@@ -56,15 +61,17 @@ class TestIndexingProgressCallback:
         callback_calls = []
 
         def progress_callback(current, total, current_file, error_info):
-            callback_calls.append({
-                "current": current,
-                "total": total,
-                "current_file": current_file,
-                "error_info": error_info,
-            })
+            callback_calls.append(
+                {
+                    "current": current,
+                    "total": total,
+                    "current_file": current_file,
+                    "error_info": error_info,
+                }
+            )
 
         # Index directory with callback
-        result = await indexer.index_directory(
+        await indexer.index_directory(
             tmp_path,
             recursive=False,
             show_progress=False,
@@ -92,7 +99,9 @@ class TestIndexingProgressCallback:
         await indexer.close()
 
     @pytest.mark.asyncio
-    async def test_progress_callback_tracks_completion(self, tmp_path, mock_call_graph_store):
+    async def test_progress_callback_tracks_completion(
+        self, tmp_path, mock_call_graph_store
+    ):
         """Test that progress callback tracks completion count."""
         # Create test files
         (tmp_path / "file1.py").write_text("def foo(): pass")
@@ -110,13 +119,15 @@ class TestIndexingProgressCallback:
 
         mock_embeddings = MagicMock()
         mock_embeddings.initialize = AsyncMock()
-        mock_embeddings.batch_generate = AsyncMock(return_value=[mock_embedding(value=0.1)])
+        mock_embeddings.batch_generate = AsyncMock(
+            return_value=[mock_embedding(value=0.1)]
+        )
         mock_embeddings.close = AsyncMock()
 
         indexer = IncrementalIndexer(
             store=mock_store,
             embedding_generator=mock_embeddings,
-            project_name="test-project"
+            project_name="test-project",
         )
         await indexer.initialize()
 
@@ -147,7 +158,9 @@ class TestIndexingProgressCallback:
         await indexer.close()
 
     @pytest.mark.asyncio
-    async def test_progress_callback_reports_errors(self, tmp_path, mock_call_graph_store):
+    async def test_progress_callback_reports_errors(
+        self, tmp_path, mock_call_graph_store
+    ):
         """Test that progress callback reports errors."""
         # Create test file that will cause an error
         (tmp_path / "bad.py").write_text("def foo(): pass")
@@ -163,13 +176,15 @@ class TestIndexingProgressCallback:
 
         mock_embeddings = MagicMock()
         mock_embeddings.initialize = AsyncMock()
-        mock_embeddings.batch_generate = AsyncMock(return_value=[mock_embedding(value=0.1)])
+        mock_embeddings.batch_generate = AsyncMock(
+            return_value=[mock_embedding(value=0.1)]
+        )
         mock_embeddings.close = AsyncMock()
 
         indexer = IncrementalIndexer(
             store=mock_store,
             embedding_generator=mock_embeddings,
-            project_name="test-project"
+            project_name="test-project",
         )
         await indexer.initialize()
 
@@ -198,7 +213,9 @@ class TestIndexingProgressCallback:
         await indexer.close()
 
     @pytest.mark.asyncio
-    async def test_progress_callback_empty_directory(self, tmp_path, mock_call_graph_store):
+    async def test_progress_callback_empty_directory(
+        self, tmp_path, mock_call_graph_store
+    ):
         """Test progress callback with empty directory."""
         # Create empty directory
         empty_dir = tmp_path / "empty"
@@ -215,7 +232,7 @@ class TestIndexingProgressCallback:
         indexer = IncrementalIndexer(
             store=mock_store,
             embedding_generator=mock_embeddings,
-            project_name="test-project"
+            project_name="test-project",
         )
         await indexer.initialize()
 
@@ -255,13 +272,15 @@ class TestIndexingProgressCallback:
 
         mock_embeddings = MagicMock()
         mock_embeddings.initialize = AsyncMock()
-        mock_embeddings.batch_generate = AsyncMock(return_value=[mock_embedding(value=0.1)])
+        mock_embeddings.batch_generate = AsyncMock(
+            return_value=[mock_embedding(value=0.1)]
+        )
         mock_embeddings.close = AsyncMock()
 
         indexer = IncrementalIndexer(
             store=mock_store,
             embedding_generator=mock_embeddings,
-            project_name="test-project"
+            project_name="test-project",
         )
         await indexer.initialize()
 
@@ -277,7 +296,9 @@ class TestIndexingProgressCallback:
         await indexer.close()
 
     @pytest.mark.asyncio
-    async def test_progress_callback_concurrent_processing(self, tmp_path, mock_call_graph_store):
+    async def test_progress_callback_concurrent_processing(
+        self, tmp_path, mock_call_graph_store
+    ):
         """Test that progress callback handles concurrent file processing."""
         # Create multiple files
         for i in range(10):
@@ -293,26 +314,30 @@ class TestIndexingProgressCallback:
 
         mock_embeddings = MagicMock()
         mock_embeddings.initialize = AsyncMock()
-        mock_embeddings.batch_generate = AsyncMock(return_value=[mock_embedding(value=0.1)])
+        mock_embeddings.batch_generate = AsyncMock(
+            return_value=[mock_embedding(value=0.1)]
+        )
         mock_embeddings.close = AsyncMock()
 
         indexer = IncrementalIndexer(
             store=mock_store,
             embedding_generator=mock_embeddings,
-            project_name="test-project"
+            project_name="test-project",
         )
         await indexer.initialize()
 
         callback_calls = []
 
         def progress_callback(current, total, current_file, error_info):
-            callback_calls.append({
-                "current": current,
-                "total": total,
-                "file": current_file,
-            })
+            callback_calls.append(
+                {
+                    "current": current,
+                    "total": total,
+                    "file": current_file,
+                }
+            )
 
-        result = await indexer.index_directory(
+        await indexer.index_directory(
             tmp_path,
             recursive=False,
             show_progress=False,
@@ -348,13 +373,15 @@ class TestIndexingProgressCallback:
 
         mock_embeddings = MagicMock()
         mock_embeddings.initialize = AsyncMock()
-        mock_embeddings.batch_generate = AsyncMock(return_value=[mock_embedding(value=0.1)])
+        mock_embeddings.batch_generate = AsyncMock(
+            return_value=[mock_embedding(value=0.1)]
+        )
         mock_embeddings.close = AsyncMock()
 
         indexer = IncrementalIndexer(
             store=mock_store,
             embedding_generator=mock_embeddings,
-            project_name="test-project"
+            project_name="test-project",
         )
         await indexer.initialize()
 
@@ -388,7 +415,7 @@ class TestIndexCommandProgressDisplay:
     async def test_index_directory_without_rich(self, tmp_path):
         """Test indexing directory without rich library available."""
         from src.cli.index_command import IndexCommand
-        from unittest.mock import patch, AsyncMock, MagicMock
+        from unittest.mock import patch, AsyncMock
         from argparse import Namespace
 
         # Create test files
@@ -399,7 +426,9 @@ class TestIndexCommandProgressDisplay:
             command = IndexCommand()
 
             # Mock the indexer
-            with patch("src.cli.index_command.IncrementalIndexer") as mock_indexer_class:
+            with patch(
+                "src.cli.index_command.IncrementalIndexer"
+            ) as mock_indexer_class:
                 mock_indexer = AsyncMock()
                 mock_indexer_class.return_value = mock_indexer
                 mock_indexer.index_directory.return_value = {
@@ -407,13 +436,11 @@ class TestIndexCommandProgressDisplay:
                     "indexed_files": 1,
                     "skipped_files": 0,
                     "total_units": 2,
-                    "failed_files": []
+                    "failed_files": [],
                 }
 
                 args = Namespace(
-                    path=str(tmp_path),
-                    project_name="test-project",
-                    recursive=True
+                    path=str(tmp_path), project_name="test-project", recursive=True
                 )
 
                 # Should complete without error even without rich
@@ -430,7 +457,7 @@ class TestIndexCommandProgressDisplay:
     async def test_index_directory_with_rich(self, tmp_path):
         """Test indexing directory with rich library."""
         from src.cli.index_command import IndexCommand
-        from unittest.mock import patch, AsyncMock, MagicMock, ANY
+        from unittest.mock import patch, AsyncMock
         from argparse import Namespace
 
         # Create test files
@@ -441,7 +468,9 @@ class TestIndexCommandProgressDisplay:
             command = IndexCommand()
 
             # Mock the indexer
-            with patch("src.cli.index_command.IncrementalIndexer") as mock_indexer_class:
+            with patch(
+                "src.cli.index_command.IncrementalIndexer"
+            ) as mock_indexer_class:
                 mock_indexer = AsyncMock()
                 mock_indexer_class.return_value = mock_indexer
                 mock_indexer.index_directory.return_value = {
@@ -449,13 +478,11 @@ class TestIndexCommandProgressDisplay:
                     "indexed_files": 1,
                     "skipped_files": 0,
                     "total_units": 2,
-                    "failed_files": []
+                    "failed_files": [],
                 }
 
                 args = Namespace(
-                    path=str(tmp_path),
-                    project_name="test-project",
-                    recursive=True
+                    path=str(tmp_path), project_name="test-project", recursive=True
                 )
 
                 await command.run(args)
@@ -470,7 +497,7 @@ class TestIndexCommandProgressDisplay:
     async def test_progress_callback_integration(self, tmp_path):
         """Test progress callback integration with rich progress bar."""
         from src.cli.index_command import IndexCommand
-        from unittest.mock import patch, AsyncMock, MagicMock, call
+        from unittest.mock import patch, AsyncMock
         from argparse import Namespace
 
         # Create test files
@@ -481,7 +508,6 @@ class TestIndexCommandProgressDisplay:
             command = IndexCommand()
 
             # Track progress callback calls
-            progress_calls = []
 
             def mock_index_directory(path, recursive, show_progress, progress_callback):
                 # Simulate progress callbacks
@@ -499,18 +525,18 @@ class TestIndexCommandProgressDisplay:
                     "indexed_files": 2,
                     "skipped_files": 0,
                     "total_units": 4,
-                    "failed_files": []
+                    "failed_files": [],
                 }
 
-            with patch("src.cli.index_command.IncrementalIndexer") as mock_indexer_class:
+            with patch(
+                "src.cli.index_command.IncrementalIndexer"
+            ) as mock_indexer_class:
                 mock_indexer = AsyncMock()
                 mock_indexer_class.return_value = mock_indexer
                 mock_indexer.index_directory.side_effect = mock_index_directory
 
                 args = Namespace(
-                    path=str(tmp_path),
-                    project_name="test-project",
-                    recursive=True
+                    path=str(tmp_path), project_name="test-project", recursive=True
                 )
 
                 # Should complete and show progress
@@ -536,7 +562,9 @@ class TestIndexCommandProgressDisplay:
                 if progress_callback:
                     # Simulate error
                     progress_callback(0, 1, None, None)
-                    progress_callback(0, 1, "file1.py", {"file": "file1.py", "error": "Parse error"})
+                    progress_callback(
+                        0, 1, "file1.py", {"file": "file1.py", "error": "Parse error"}
+                    )
                     progress_callback(1, 1, "file1.py", None)
 
                 return {
@@ -544,18 +572,18 @@ class TestIndexCommandProgressDisplay:
                     "indexed_files": 0,
                     "skipped_files": 0,
                     "total_units": 0,
-                    "failed_files": ["file1.py"]
+                    "failed_files": ["file1.py"],
                 }
 
-            with patch("src.cli.index_command.IncrementalIndexer") as mock_indexer_class:
+            with patch(
+                "src.cli.index_command.IncrementalIndexer"
+            ) as mock_indexer_class:
                 mock_indexer = AsyncMock()
                 mock_indexer_class.return_value = mock_indexer
                 mock_indexer.index_directory.side_effect = mock_index_directory
 
                 args = Namespace(
-                    path=str(tmp_path),
-                    project_name="test-project",
-                    recursive=False
+                    path=str(tmp_path), project_name="test-project", recursive=False
                 )
 
                 # Should complete and show errors

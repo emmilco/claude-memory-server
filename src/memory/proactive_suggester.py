@@ -2,7 +2,7 @@
 
 import logging
 from typing import List, Optional, Dict, Any, Set
-from datetime import datetime, UTC, timedelta
+from datetime import datetime, UTC
 
 from src.core.models import (
     Suggestion,
@@ -10,12 +10,11 @@ from src.core.models import (
     DetectedIntentInfo,
     RelevanceFactors,
     MemoryResult,
-    QueryRequest,
     SearchFilters,
     ProvenanceSource,
 )
 from src.memory.intent_detector import IntentDetector, DetectedIntent
-from src.memory.conversation_tracker import ConversationTracker, QueryRecord
+from src.memory.conversation_tracker import ConversationTracker
 from src.store import MemoryStore
 from src.embeddings.generator import EmbeddingGenerator
 
@@ -62,7 +61,9 @@ class ProactiveSuggester:
         self.store = store
         self.embedding_generator = embedding_generator
         self.conversation_tracker = conversation_tracker
-        self.intent_detector = intent_detector or IntentDetector(context_window=context_window)
+        self.intent_detector = intent_detector or IntentDetector(
+            context_window=context_window
+        )
         self.confidence_threshold = confidence_threshold
         self.max_suggestions = max_suggestions
 
@@ -188,9 +189,13 @@ class ProactiveSuggester:
             return []
 
         # Build search filters
-        filters = SearchFilters(
-            project_name=project_name,
-        ) if project_name else None
+        filters = (
+            SearchFilters(
+                project_name=project_name,
+            )
+            if project_name
+            else None
+        )
 
         # Generate query embedding
         query_embedding = await self.embedding_generator.generate_embedding(
@@ -313,10 +318,10 @@ class ProactiveSuggester:
 
         # Weighted combination
         confidence = (
-            semantic_similarity * 0.5 +
-            recency * 0.2 +
-            importance * 0.2 +
-            context_match * 0.1
+            semantic_similarity * 0.5
+            + recency * 0.2
+            + importance * 0.2
+            + context_match * 0.1
         )
 
         factors = RelevanceFactors(

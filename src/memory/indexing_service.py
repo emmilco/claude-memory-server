@@ -51,7 +51,9 @@ class IndexingService:
         if indexer is not None:
             self.indexer = indexer
             self._owns_indexer = False  # Don't close it - caller owns it
-            logger.info(f"Indexing service reusing existing indexer for {self.watch_path}")
+            logger.info(
+                f"Indexing service reusing existing indexer for {self.watch_path}"
+            )
         else:
             self.indexer = IncrementalIndexer(
                 project_name=self.project_name,

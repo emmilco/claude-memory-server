@@ -16,15 +16,20 @@ MemoryRAGServer. They will be enabled once FEAT-059 is fully implemented.
 
 import pytest
 
-pytestmark = pytest.mark.skip(reason="FEAT-059 MCP tool methods not yet implemented on MemoryRAGServer")
+pytestmark = pytest.mark.skip(
+    reason="FEAT-059 MCP tool methods not yet implemented on MemoryRAGServer"
+)
 import pytest_asyncio
-import asyncio
-from pathlib import Path
 
 from src.core.server import MemoryRAGServer
 from src.config import get_config
 from src.store.call_graph_store import QdrantCallGraphStore
-from src.graph.call_graph import CallGraph, FunctionNode, CallSite, InterfaceImplementation
+from src.graph.call_graph import (
+    CallGraph,
+    FunctionNode,
+    CallSite,
+    InterfaceImplementation,
+)
 
 
 @pytest_asyncio.fixture
@@ -49,7 +54,7 @@ async def call_graph_store():
     # Cleanup: delete test project
     try:
         await store.delete_project_call_graph("test-project")
-    except:
+    except Exception:
         pass
 
 
@@ -127,7 +132,9 @@ async def sample_call_graph(call_graph_store):
     calls = [
         CallSite("main", "/test/main.py", 3, "process", "/test/main.py", "direct"),
         CallSite("main", "/test/main.py", 5, "log", "/test/logger.py", "direct"),
-        CallSite("process", "/test/main.py", 15, "validate", "/test/utils.py", "direct"),
+        CallSite(
+            "process", "/test/main.py", 15, "validate", "/test/utils.py", "direct"
+        ),
         CallSite("process", "/test/main.py", 17, "helper", "/test/utils.py", "direct"),
     ]
 
@@ -186,6 +193,7 @@ async def sample_call_graph(call_graph_store):
 # TEST: find_callers
 # =============================================================================
 
+
 @pytest.mark.asyncio
 async def test_find_callers_direct(server, sample_call_graph):
     """Test finding direct callers of a function."""
@@ -242,6 +250,7 @@ async def test_find_callers_no_results(server, sample_call_graph):
 # =============================================================================
 # TEST: find_callees
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_find_callees_direct(server, sample_call_graph):
@@ -300,6 +309,7 @@ async def test_find_callees_no_results(server, sample_call_graph):
 # TEST: get_call_chain
 # =============================================================================
 
+
 @pytest.mark.asyncio
 async def test_get_call_chain_found(server, sample_call_graph):
     """Test finding call chain between two functions."""
@@ -342,6 +352,7 @@ async def test_get_call_chain_not_found(server, sample_call_graph):
 # =============================================================================
 # TEST: find_implementations
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_find_implementations(server, sample_call_graph):
@@ -390,6 +401,7 @@ async def test_find_implementations_no_results(server, sample_call_graph):
 # TEST: find_dependencies (uses existing dependency graph infrastructure)
 # =============================================================================
 
+
 @pytest.mark.asyncio
 async def test_find_dependencies_basic(server):
     """Test finding file dependencies."""
@@ -411,6 +423,7 @@ async def test_find_dependencies_basic(server):
 # TEST: find_dependents (uses existing dependency graph infrastructure)
 # =============================================================================
 
+
 @pytest.mark.asyncio
 async def test_find_dependents_basic(server):
     """Test finding reverse file dependencies."""
@@ -431,6 +444,7 @@ async def test_find_dependents_basic(server):
 # =============================================================================
 # ERROR HANDLING TESTS
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_find_callers_missing_function_name(server):
@@ -466,6 +480,7 @@ async def test_find_implementations_missing_interface_name(server):
 # =============================================================================
 # LIMIT AND PAGINATION TESTS
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_find_callers_with_limit(server, sample_call_graph):

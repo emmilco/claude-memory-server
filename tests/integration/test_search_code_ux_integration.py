@@ -26,7 +26,9 @@ async def server(config):
     # Mock store and embedding generator
     server.store = AsyncMock()
     server.embedding_generator = AsyncMock()
-    server.embedding_generator.generate = AsyncMock(return_value=mock_embedding(value=0.1))
+    server.embedding_generator.generate = AsyncMock(
+        return_value=mock_embedding(value=0.1)
+    )
 
     await server.initialize()
     return server
@@ -48,9 +50,11 @@ async def test_search_code_with_facets(server):
         "end_line": 2,
     }
 
-    server.store.retrieve = AsyncMock(return_value=[
-        (mock_memory, 0.95),
-    ])
+    server.store.retrieve = AsyncMock(
+        return_value=[
+            (mock_memory, 0.95),
+        ]
+    )
 
     response = await server.search_code("authentication")
 
@@ -78,9 +82,11 @@ async def test_search_code_with_summary(server):
         "signature": "validate_token()",
     }
 
-    server.store.retrieve = AsyncMock(return_value=[
-        (mock_memory, 0.95),
-    ])
+    server.store.retrieve = AsyncMock(
+        return_value=[
+            (mock_memory, 0.95),
+        ]
+    )
 
     response = await server.search_code("authentication")
 
@@ -96,14 +102,16 @@ async def test_search_code_with_did_you_mean(server):
     """Test did you mean suggestions for poor results."""
     # Mock empty results (typo query)
     server.store.retrieve = AsyncMock(return_value=[])
-    server.store.list_memories = AsyncMock(return_value=[
-        {
-            "metadata": {
-                "unit_name": "authenticate",
-                "unit_type": "function",
+    server.store.list_memories = AsyncMock(
+        return_value=[
+            {
+                "metadata": {
+                    "unit_name": "authenticate",
+                    "unit_type": "function",
+                }
             }
-        }
-    ])
+        ]
+    )
 
     response = await server.search_code("athenticate")  # Typo
 
@@ -147,7 +155,9 @@ async def test_search_code_with_refinement_hints(server):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="FEAT-057 facets for empty query not implemented - planned for v4.1")
+@pytest.mark.skip(
+    reason="FEAT-057 facets for empty query not implemented - planned for v4.1"
+)
 async def test_search_code_empty_query(server):
     """Test search_code with empty query."""
     response = await server.search_code("")
@@ -161,7 +171,9 @@ async def test_search_code_empty_query(server):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="FEAT-057 multi-language facets not implemented - planned for v4.1")
+@pytest.mark.skip(
+    reason="FEAT-057 multi-language facets not implemented - planned for v4.1"
+)
 async def test_search_code_multi_language_facets(server):
     """Test facets with multiple languages."""
     # Create mock results with different languages
@@ -190,7 +202,9 @@ async def test_search_code_multi_language_facets(server):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="FEAT-057 summary formatting not implemented - planned for v4.1")
+@pytest.mark.skip(
+    reason="FEAT-057 summary formatting not implemented - planned for v4.1"
+)
 async def test_search_code_summary_formats_correctly(server):
     """Test summary formatting for different result scenarios."""
     # Test single result

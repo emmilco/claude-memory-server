@@ -11,7 +11,7 @@ Calculates complexity metrics including:
 
 import re
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
@@ -38,9 +38,9 @@ class ComplexityAnalyzer:
 
     # Thresholds for normalization
     MAX_CYCLOMATIC = 20  # Above this is very complex
-    MAX_LINES = 100      # Above this is very long
-    MAX_NESTING = 5      # Above this is deeply nested
-    MAX_PARAMS = 5       # Above this is many parameters
+    MAX_LINES = 100  # Above this is very long
+    MAX_NESTING = 5  # Above this is deeply nested
+    MAX_PARAMS = 5  # Above this is many parameters
 
     def __init__(self):
         """Initialize complexity analyzer."""
@@ -103,28 +103,69 @@ class ComplexityAnalyzer:
         # Language-specific decision point patterns
         patterns = {
             "python": [
-                r'\bif\b', r'\belif\b', r'\bfor\b', r'\bwhile\b',
-                r'\band\b', r'\bor\b', r'\bexcept\b', r'\bcase\b',
+                r"\bif\b",
+                r"\belif\b",
+                r"\bfor\b",
+                r"\bwhile\b",
+                r"\band\b",
+                r"\bor\b",
+                r"\bexcept\b",
+                r"\bcase\b",
             ],
             "javascript": [
-                r'\bif\b', r'\belse if\b', r'\bfor\b', r'\bwhile\b', r'\bdo\b',
-                r'\bcase\b', r'\bcatch\b', r'&&', r'\|\|', r'\?.*:',
+                r"\bif\b",
+                r"\belse if\b",
+                r"\bfor\b",
+                r"\bwhile\b",
+                r"\bdo\b",
+                r"\bcase\b",
+                r"\bcatch\b",
+                r"&&",
+                r"\|\|",
+                r"\?.*:",
             ],
             "typescript": [
-                r'\bif\b', r'\belse if\b', r'\bfor\b', r'\bwhile\b', r'\bdo\b',
-                r'\bcase\b', r'\bcatch\b', r'&&', r'\|\|', r'\?.*:',
+                r"\bif\b",
+                r"\belse if\b",
+                r"\bfor\b",
+                r"\bwhile\b",
+                r"\bdo\b",
+                r"\bcase\b",
+                r"\bcatch\b",
+                r"&&",
+                r"\|\|",
+                r"\?.*:",
             ],
             "java": [
-                r'\bif\b', r'\belse if\b', r'\bfor\b', r'\bwhile\b', r'\bdo\b',
-                r'\bcase\b', r'\bcatch\b', r'&&', r'\|\|', r'\?.*:',
+                r"\bif\b",
+                r"\belse if\b",
+                r"\bfor\b",
+                r"\bwhile\b",
+                r"\bdo\b",
+                r"\bcase\b",
+                r"\bcatch\b",
+                r"&&",
+                r"\|\|",
+                r"\?.*:",
             ],
             "go": [
-                r'\bif\b', r'\belse if\b', r'\bfor\b', r'\bselect\b',
-                r'\bcase\b', r'&&', r'\|\|',
+                r"\bif\b",
+                r"\belse if\b",
+                r"\bfor\b",
+                r"\bselect\b",
+                r"\bcase\b",
+                r"&&",
+                r"\|\|",
             ],
             "rust": [
-                r'\bif\b', r'\belse if\b', r'\bfor\b', r'\bwhile\b', r'\bloop\b',
-                r'\bmatch\b', r'&&', r'\|\|',
+                r"\bif\b",
+                r"\belse if\b",
+                r"\bfor\b",
+                r"\bwhile\b",
+                r"\bloop\b",
+                r"\bmatch\b",
+                r"&&",
+                r"\|\|",
             ],
         }
 
@@ -140,12 +181,14 @@ class ComplexityAnalyzer:
 
     def _count_lines(self, content: str) -> int:
         """Count non-empty, non-comment lines."""
-        lines = content.split('\n')
+        lines = content.split("\n")
 
         # Count non-empty lines (simple heuristic)
         non_empty = [
-            line for line in lines
-            if line.strip() and not line.strip().startswith(('#', '//', '/*', '*', '"""', "'''"))
+            line
+            for line in lines
+            if line.strip()
+            and not line.strip().startswith(("#", "//", "/*", "*", '"""', "'''"))
         ]
 
         return len(non_empty)
@@ -156,7 +199,7 @@ class ComplexityAnalyzer:
 
         Tracks indentation levels (simple heuristic).
         """
-        lines = content.split('\n')
+        lines = content.split("\n")
         max_depth = 0
         current_depth = 0
 
@@ -188,7 +231,7 @@ class ComplexityAnalyzer:
 
             # Track brace-based nesting for C-style languages
             if language.lower() in ["javascript", "typescript", "java", "go", "rust"]:
-                depth += line.count('{') - line.count('}')
+                depth += line.count("{") - line.count("}")
 
             current_depth = max(0, depth)
             max_depth = max(max_depth, current_depth)
@@ -202,7 +245,7 @@ class ComplexityAnalyzer:
 
         # Extract parameter list from signature
         # Look for content between parentheses
-        match = re.search(r'\((.*?)\)', signature)
+        match = re.search(r"\((.*?)\)", signature)
         if not match:
             return 0
 
@@ -211,13 +254,10 @@ class ComplexityAnalyzer:
             return 0
 
         # Split by commas (simple heuristic, doesn't handle nested parens perfectly)
-        params = [p.strip() for p in params_str.split(',')]
+        params = [p.strip() for p in params_str.split(",")]
 
         # Filter out 'self', 'cls', 'this' (not real parameters)
-        filtered = [
-            p for p in params
-            if p and p.lower() not in ['self', 'cls', 'this']
-        ]
+        filtered = [p for p in params if p and p.lower() not in ["self", "cls", "this"]]
 
         return min(len(filtered), self.MAX_PARAMS * 2)  # Cap at 2x max
 
@@ -226,11 +266,11 @@ class ComplexityAnalyzer:
         # Language-specific doc patterns
         doc_patterns = {
             "python": [r'""".*?"""', r"'''.*?'''"],  # Docstrings
-            "javascript": [r'/\*\*.*?\*/', r'//.*'],  # JSDoc or comments
-            "typescript": [r'/\*\*.*?\*/', r'//.*'],
-            "java": [r'/\*\*.*?\*/', r'//.*'],  # Javadoc
-            "go": [r'//.*'],  # Go doc comments
-            "rust": [r'///.*', r'//!.*'],  # Rust doc comments
+            "javascript": [r"/\*\*.*?\*/", r"//.*"],  # JSDoc or comments
+            "typescript": [r"/\*\*.*?\*/", r"//.*"],
+            "java": [r"/\*\*.*?\*/", r"//.*"],  # Javadoc
+            "go": [r"//.*"],  # Go doc comments
+            "rust": [r"///.*", r"//!.*"],  # Rust doc comments
         }
 
         patterns = doc_patterns.get(language.lower(), doc_patterns["python"])
@@ -272,10 +312,10 @@ class ComplexityAnalyzer:
 
         # Weighted average
         weighted_score = (
-            cyclomatic_norm * 0.40 +
-            lines_norm * 0.30 +
-            nesting_norm * 0.20 +
-            params_norm * 0.10
+            cyclomatic_norm * 0.40
+            + lines_norm * 0.30
+            + nesting_norm * 0.20
+            + params_norm * 0.10
         )
 
         # Scale to 0.3-0.7 range (base complexity score)
@@ -287,4 +327,6 @@ class ComplexityAnalyzer:
             base_score += 0.05
 
         # Ensure within range
-        return max(self.MIN_COMPLEXITY_SCORE, min(self.MAX_COMPLEXITY_SCORE, base_score))
+        return max(
+            self.MIN_COMPLEXITY_SCORE, min(self.MAX_COMPLEXITY_SCORE, base_score)
+        )

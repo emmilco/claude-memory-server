@@ -297,7 +297,9 @@ class AlertEngine:
             ):
                 # Generate alert
                 alert = Alert(
-                    id=self._generate_alert_id(threshold.metric_name, metrics.timestamp),
+                    id=self._generate_alert_id(
+                        threshold.metric_name, metrics.timestamp
+                    ),
                     severity=threshold.severity,
                     metric_name=threshold.metric_name,
                     current_value=float(metric_value),
@@ -310,9 +312,7 @@ class AlertEngine:
 
         return alerts
 
-    def _check_threshold(
-        self, value: float, operator: str, threshold: float
-    ) -> bool:
+    def _check_threshold(self, value: float, operator: str, threshold: float) -> bool:
         """Check if value violates threshold."""
         if operator == "<":
             return value < threshold
@@ -343,9 +343,7 @@ class AlertEngine:
 
             for alert in alerts:
                 # Check if alert already exists
-                cursor.execute(
-                    "SELECT id FROM alert_history WHERE id = ?", (alert.id,)
-                )
+                cursor.execute("SELECT id FROM alert_history WHERE id = ?", (alert.id,))
                 if cursor.fetchone():
                     # Update existing alert
                     cursor.execute(
@@ -377,7 +375,9 @@ class AlertEngine:
                             json.dumps(alert.recommendations),
                             alert.timestamp.isoformat(),
                             1 if alert.resolved else 0,
-                            alert.resolved_at.isoformat() if alert.resolved_at else None,
+                            alert.resolved_at.isoformat()
+                            if alert.resolved_at
+                            else None,
                             (
                                 alert.snoozed_until.isoformat()
                                 if alert.snoozed_until
@@ -388,9 +388,7 @@ class AlertEngine:
 
             conn.commit()
 
-    def get_active_alerts(
-        self, include_snoozed: bool = False
-    ) -> List[Alert]:
+    def get_active_alerts(self, include_snoozed: bool = False) -> List[Alert]:
         """
         Get currently active (unresolved) alerts.
 
@@ -420,9 +418,7 @@ class AlertEngine:
 
             return [self._row_to_alert(row) for row in cursor.fetchall()]
 
-    def get_alerts_by_severity(
-        self, severity: AlertSeverity
-    ) -> List[Alert]:
+    def get_alerts_by_severity(self, severity: AlertSeverity) -> List[Alert]:
         """
         Get alerts filtered by severity.
 

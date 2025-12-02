@@ -3,7 +3,6 @@
 import pytest
 from src.memory.import_extractor import (
     ImportExtractor,
-    ImportInfo,
     ImportType,
     build_dependency_metadata,
 )
@@ -269,13 +268,13 @@ class TestGoImports:
 
     def test_import_block(self, extractor):
         """Test import block."""
-        code = '''
+        code = """
 import (
     "fmt"
     "os"
     "path/filepath"
 )
-'''
+"""
         imports = extractor.extract_imports("test.go", code, "go")
 
         assert len(imports) == 3
@@ -286,12 +285,12 @@ import (
 
     def test_import_block_with_alias(self, extractor):
         """Test import block with aliases."""
-        code = '''
+        code = """
 import (
     f "fmt"
     "os"
 )
-'''
+"""
         imports = extractor.extract_imports("test.go", code, "go")
 
         assert len(imports) == 2

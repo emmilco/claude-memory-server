@@ -11,10 +11,10 @@ PERF-007: Connection Pooling for Qdrant
 
 import asyncio
 import pytest
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import Mock
 
 from qdrant_client import QdrantClient
-from qdrant_client.http.exceptions import UnexpectedResponse, ResponseHandlingException
+from qdrant_client.http.exceptions import ResponseHandlingException
 
 from src.store.connection_health_checker import (
     ConnectionHealthChecker,
@@ -30,9 +30,9 @@ pytestmark = pytest.mark.skip_ci(reason="Timing-sensitive under parallel executi
 def health_checker():
     """Create ConnectionHealthChecker instance."""
     return ConnectionHealthChecker(
-        fast_timeout=0.001,    # 1ms
+        fast_timeout=0.001,  # 1ms
         medium_timeout=0.010,  # 10ms
-        deep_timeout=0.050,    # 50ms
+        deep_timeout=0.050,  # 50ms
     )
 
 
@@ -84,10 +84,7 @@ class TestFastHealthCheck:
             deep_timeout=1.0,
         )
 
-        result = await checker.check_health(
-            mock_qdrant_client,
-            HealthCheckLevel.FAST
-        )
+        result = await checker.check_health(mock_qdrant_client, HealthCheckLevel.FAST)
 
         assert result.healthy
         assert result.level == HealthCheckLevel.FAST
@@ -100,12 +97,11 @@ class TestFastHealthCheck:
         checker = ConnectionHealthChecker()
 
         mock_client = Mock(spec=QdrantClient)
-        mock_client.get_collections = Mock(side_effect=ConnectionError("Connection refused"))
-
-        result = await checker.check_health(
-            mock_client,
-            HealthCheckLevel.FAST
+        mock_client.get_collections = Mock(
+            side_effect=ConnectionError("Connection refused")
         )
+
+        result = await checker.check_health(mock_client, HealthCheckLevel.FAST)
 
         assert not result.healthy
         assert result.level == HealthCheckLevel.FAST
@@ -115,6 +111,7 @@ class TestFastHealthCheck:
     async def test_fast_check_timeout(self, mock_qdrant_client):
         """Test fast check timeout."""
         import time
+
         # Create checker with very short timeout
         checker = ConnectionHealthChecker(fast_timeout=0.001)  # 1ms
 
@@ -125,10 +122,7 @@ class TestFastHealthCheck:
 
         mock_qdrant_client.get_collections.side_effect = slow_get_collections
 
-        result = await checker.check_health(
-            mock_qdrant_client,
-            HealthCheckLevel.FAST
-        )
+        result = await checker.check_health(mock_qdrant_client, HealthCheckLevel.FAST)
 
         # Should timeout and be unhealthy
         assert not result.healthy
@@ -143,8 +137,7 @@ class TestMediumHealthCheck:
     ):
         """Test medium check on healthy connection."""
         result = await health_checker.check_health(
-            mock_qdrant_client,
-            HealthCheckLevel.MEDIUM
+            mock_qdrant_client, HealthCheckLevel.MEDIUM
         )
 
         assert result.healthy
@@ -163,10 +156,7 @@ class TestMediumHealthCheck:
             side_effect=ResponseHandlingException("Response handling failed")
         )
 
-        result = await checker.check_health(
-            mock_client,
-            HealthCheckLevel.MEDIUM
-        )
+        result = await checker.check_health(mock_client, HealthCheckLevel.MEDIUM)
 
         assert not result.healthy
         assert result.level == HealthCheckLevel.MEDIUM
@@ -177,10 +167,7 @@ class TestMediumHealthCheck:
         mock_client = Mock(spec=QdrantClient)
         mock_client.get_collections = Mock(return_value=None)
 
-        result = await health_checker.check_health(
-            mock_client,
-            HealthCheckLevel.MEDIUM
-        )
+        result = await health_checker.check_health(mock_client, HealthCheckLevel.MEDIUM)
 
         assert not result.healthy
 
@@ -202,8 +189,7 @@ class TestDeepHealthCheck:
         mock_qdrant_client.count = Mock(return_value=100)
 
         result = await health_checker.check_health(
-            mock_qdrant_client,
-            HealthCheckLevel.DEEP
+            mock_qdrant_client, HealthCheckLevel.DEEP
         )
 
         assert result.healthy
@@ -213,17 +199,12 @@ class TestDeepHealthCheck:
         mock_qdrant_client.count.assert_called_once_with("test_collection")
 
     @pytest.mark.asyncio
-    async def test_deep_check_no_collections(
-        self, health_checker, mock_qdrant_client
-    ):
+    async def test_deep_check_no_collections(self, health_checker, mock_qdrant_client):
         """Test deep check when no collections exist."""
-        mock_qdrant_client.get_collections = Mock(
-            return_value=Mock(collections=[])
-        )
+        mock_qdrant_client.get_collections = Mock(return_value=Mock(collections=[]))
 
         result = await health_checker.check_health(
-            mock_qdrant_client,
-            HealthCheckLevel.DEEP
+            mock_qdrant_client, HealthCheckLevel.DEEP
         )
 
         # Should still be healthy (connection works, just no collections)
@@ -241,10 +222,7 @@ class TestDeepHealthCheck:
         )
         mock_client.count = Mock(side_effect=Exception("Query failed"))
 
-        result = await health_checker.check_health(
-            mock_client,
-            HealthCheckLevel.DEEP
-        )
+        result = await health_checker.check_health(mock_client, HealthCheckLevel.DEEP)
 
         assert not result.healthy
         assert result.level == HealthCheckLevel.DEEP
@@ -254,16 +232,11 @@ class TestHealthCheckStatistics:
     """Test health check statistics collection."""
 
     @pytest.mark.asyncio
-    async def test_stats_increment_on_check(
-        self, health_checker, mock_qdrant_client
-    ):
+    async def test_stats_increment_on_check(self, health_checker, mock_qdrant_client):
         """Test statistics increment on health check."""
         initial_checks = health_checker.total_checks
 
-        await health_checker.check_health(
-            mock_qdrant_client,
-            HealthCheckLevel.FAST
-        )
+        await health_checker.check_health(mock_qdrant_client, HealthCheckLevel.FAST)
 
         assert health_checker.total_checks == initial_checks + 1
         assert health_checker.checks_by_level[HealthCheckLevel.FAST] == 1
@@ -276,10 +249,7 @@ class TestHealthCheckStatistics:
 
         initial_failures = health_checker.total_failures
 
-        await health_checker.check_health(
-            mock_client,
-            HealthCheckLevel.FAST
-        )
+        await health_checker.check_health(mock_client, HealthCheckLevel.FAST)
 
         assert health_checker.total_failures == initial_failures + 1
         assert health_checker.failures_by_level[HealthCheckLevel.FAST] == 1
@@ -391,10 +361,7 @@ class TestHealthCheckLevels:
     async def test_all_levels_work(self, health_checker, mock_qdrant_client):
         """Test health check works for all levels."""
         for level in HealthCheckLevel:
-            result = await health_checker.check_health(
-                mock_qdrant_client,
-                level
-            )
+            result = await health_checker.check_health(mock_qdrant_client, level)
 
             assert result is not None
             assert result.level == level
@@ -407,10 +374,7 @@ class TestHealthCheckLevels:
         # This will raise KeyError since the level isn't valid
         with pytest.raises((ValueError, KeyError)):
             # Pass invalid level by bypassing enum
-            await checker.check_health(
-                mock_qdrant_client,
-                "invalid"
-            )
+            await checker.check_health(mock_qdrant_client, "invalid")
 
 
 class TestConcurrentHealthChecks:
@@ -427,10 +391,12 @@ class TestConcurrentHealthChecks:
         )
 
         # Run 10 concurrent health checks
-        results = await asyncio.gather(*[
-            checker.check_health(mock_qdrant_client, HealthCheckLevel.FAST)
-            for _ in range(10)
-        ])
+        results = await asyncio.gather(
+            *[
+                checker.check_health(mock_qdrant_client, HealthCheckLevel.FAST)
+                for _ in range(10)
+            ]
+        )
 
         assert len(results) == 10
         assert all(r.healthy for r in results)
@@ -447,10 +413,12 @@ class TestConcurrentHealthChecks:
             HealthCheckLevel.DEEP,
         ] * 3  # 9 checks total
 
-        results = await asyncio.gather(*[
-            health_checker.check_health(mock_qdrant_client, level)
-            for level in levels
-        ])
+        results = await asyncio.gather(
+            *[
+                health_checker.check_health(mock_qdrant_client, level)
+                for level in levels
+            ]
+        )
 
         assert len(results) == 9
         assert health_checker.total_checks == 9

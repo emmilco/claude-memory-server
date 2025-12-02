@@ -2,7 +2,6 @@
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock
-from datetime import datetime, timedelta, UTC
 from src.core.server import MemoryRAGServer
 from src.core.exceptions import StorageError
 
@@ -40,7 +39,7 @@ class TestSubmitSearchFeedback:
             search_id="search-1",
             query="python async functions",
             result_ids=["mem-1", "mem-2", "mem-3"],
-            rating="helpful"
+            rating="helpful",
         )
 
         # Verify
@@ -78,7 +77,7 @@ class TestSubmitSearchFeedback:
             query="database optimization",
             result_ids=[],
             rating="not_helpful",
-            comment="Results not relevant"
+            comment="Results not relevant",
         )
 
         # Verify
@@ -106,7 +105,7 @@ class TestSubmitSearchFeedback:
             result_ids=["mem-5"],
             rating="helpful",
             comment="Very useful!",
-            project_name="my-app"
+            project_name="my-app",
         )
 
         # Verify
@@ -133,10 +132,7 @@ class TestSubmitSearchFeedback:
         # Execute & Verify
         with pytest.raises(StorageError):
             await server.submit_search_feedback(
-                search_id="search-error",
-                query="test",
-                result_ids=[],
-                rating="helpful"
+                search_id="search-error", query="test", result_ids=[], rating="helpful"
             )
 
 
@@ -239,8 +235,7 @@ class TestGetQualityMetrics:
 
         # Execute
         result = await server.get_quality_metrics(
-            time_range_hours=24,
-            project_name="my-project"
+            time_range_hours=24, project_name="my-project"
         )
 
         # Verify
@@ -327,7 +322,7 @@ class TestFeedbackIntegration:
             search_id="search-1",
             query="test query",
             result_ids=["mem-1"],
-            rating="helpful"
+            rating="helpful",
         )
         assert feedback_result["status"] == "success"
 

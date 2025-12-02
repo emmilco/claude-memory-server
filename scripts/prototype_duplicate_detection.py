@@ -64,7 +64,7 @@ async def load_code_units(project_name: str = "claude-memory-server"):
     project_filter = Filter(
         must=[
             FieldCondition(key="category", match=MatchValue(value="code")),
-            FieldCondition(key="project_name", match=MatchValue(value=project_name))
+            FieldCondition(key="project_name", match=MatchValue(value=project_name)),
         ]
     )
 
@@ -79,7 +79,7 @@ async def load_code_units(project_name: str = "claude-memory-server"):
             limit=100,
             offset=offset,
             with_payload=True,
-            with_vectors=True
+            with_vectors=True,
         )
 
         all_units.extend(results)
@@ -94,8 +94,7 @@ async def load_code_units(project_name: str = "claude-memory-server"):
 
 
 def find_duplicate_pairs(
-    similarity_matrix: np.ndarray,
-    threshold: float
+    similarity_matrix: np.ndarray, threshold: float
 ) -> List[Tuple[int, int, float]]:
     """
     Find pairs of units above similarity threshold.
@@ -124,19 +123,19 @@ def find_duplicate_pairs(
 
 def format_unit_info(unit) -> str:
     """Format unit information for display."""
-    payload = unit.payload if hasattr(unit, 'payload') else {}
+    payload = unit.payload if hasattr(unit, "payload") else {}
 
     # Try both direct payload and nested metadata
-    if 'metadata' in payload:
-        metadata = payload['metadata']
+    if "metadata" in payload:
+        metadata = payload["metadata"]
     else:
         metadata = payload
 
-    unit_name = metadata.get('unit_name', 'unknown')
-    file_path = metadata.get('file_path', 'unknown')
-    file_name = file_path.split('/')[-1] if file_path != 'unknown' else 'unknown'
-    start_line = metadata.get('start_line', '?')
-    end_line = metadata.get('end_line', '?')
+    unit_name = metadata.get("unit_name", "unknown")
+    file_path = metadata.get("file_path", "unknown")
+    file_name = file_path.split("/")[-1] if file_path != "unknown" else "unknown"
+    start_line = metadata.get("start_line", "?")
+    end_line = metadata.get("end_line", "?")
 
     return f"{unit_name} ({file_name}:{start_line}-{end_line})"
 
@@ -168,9 +167,9 @@ async def prototype_duplicate_detection(args):
     # Test different thresholds
     thresholds = [0.75, 0.80, 0.85, 0.90, 0.95, 0.98]
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("DUPLICATE DETECTION THRESHOLD ANALYSIS")
-    print("="*80)
+    print("=" * 80)
 
     for threshold in thresholds:
         pairs = find_duplicate_pairs(similarity_matrix, threshold)
@@ -186,13 +185,18 @@ async def prototype_duplicate_detection(args):
         # Show distribution of similarity scores
         if len(pairs) > 0:
             similarities = [p[2] for p in pairs]
-            print(f"  Similarity range: {min(similarities):.3f} - {max(similarities):.3f}")
+            print(
+                f"  Similarity range: {min(similarities):.3f} - {max(similarities):.3f}"
+            )
             print(f"  Average similarity: {np.mean(similarities):.3f}")
 
         # Sample random pairs for manual review
         import random
+
         num_samples = min(args.samples, len(pairs))
-        samples = random.sample(pairs, num_samples) if len(pairs) > num_samples else pairs
+        samples = (
+            random.sample(pairs, num_samples) if len(pairs) > num_samples else pairs
+        )
 
         print(f"\n  Sample pairs (showing {num_samples}/{len(pairs)}):")
 
@@ -205,22 +209,26 @@ async def prototype_duplicate_detection(args):
             print(f"      B: {format_unit_info(unit_j)}")
 
             # Show complexity metrics if available
-            payload_i = unit_i.payload if hasattr(unit_i, 'payload') else {}
-            payload_j = unit_j.payload if hasattr(unit_j, 'payload') else {}
+            payload_i = unit_i.payload if hasattr(unit_i, "payload") else {}
+            payload_j = unit_j.payload if hasattr(unit_j, "payload") else {}
 
-            meta_i = payload_i.get('metadata', payload_i)
-            meta_j = payload_j.get('metadata', payload_j)
+            meta_i = payload_i.get("metadata", payload_i)
+            meta_j = payload_j.get("metadata", payload_j)
 
-            if 'cyclomatic_complexity' in meta_i:
-                print(f"      Complexity A: {meta_i.get('cyclomatic_complexity', 'N/A')}, "
-                      f"Lines: {meta_i.get('line_count', 'N/A')}")
-                print(f"      Complexity B: {meta_j.get('cyclomatic_complexity', 'N/A')}, "
-                      f"Lines: {meta_j.get('line_count', 'N/A')}")
+            if "cyclomatic_complexity" in meta_i:
+                print(
+                    f"      Complexity A: {meta_i.get('cyclomatic_complexity', 'N/A')}, "
+                    f"Lines: {meta_i.get('line_count', 'N/A')}"
+                )
+                print(
+                    f"      Complexity B: {meta_j.get('cyclomatic_complexity', 'N/A')}, "
+                    f"Lines: {meta_j.get('line_count', 'N/A')}"
+                )
 
     # Final recommendations
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("RECOMMENDATIONS")
-    print("="*80)
+    print("=" * 80)
 
     # Analyze distribution at key thresholds
     pairs_095 = find_duplicate_pairs(similarity_matrix, 0.95)
@@ -255,7 +263,9 @@ RECOMMENDED SETTINGS:
     print("\nSTATISTICS:")
     print(f"  Total code units analyzed: {len(all_units)}")
     print(f"  Total pairwise comparisons: {len(all_units) * (len(all_units) - 1) // 2}")
-    print(f"  Duplicate rate (≥0.85): {len(pairs_085) / len(all_units) * 100:.1f}% of units")
+    print(
+        f"  Duplicate rate (≥0.85): {len(pairs_085) / len(all_units) * 100:.1f}% of units"
+    )
 
 
 def main():
@@ -267,13 +277,13 @@ def main():
         "--threshold",
         type=float,
         default=None,
-        help="Test a specific threshold (overrides default range)"
+        help="Test a specific threshold (overrides default range)",
     )
     parser.add_argument(
         "--samples",
         type=int,
         default=5,
-        help="Number of sample pairs to show at each threshold (default: 5)"
+        help="Number of sample pairs to show at each threshold (default: 5)",
     )
 
     args = parser.parse_args()

@@ -178,7 +178,13 @@ class TestBatchProcessing:
     def test_calculate_batch_multiple(self, scorer):
         """Batch processing with multiple units."""
         units = [
-            {"name": f"func{i}", "content": f"def func{i}(): return {i}", "signature": f"def func{i}():", "unit_type": "function", "language": "python"}
+            {
+                "name": f"func{i}",
+                "content": f"def func{i}(): return {i}",
+                "signature": f"def func{i}():",
+                "unit_type": "function",
+                "language": "python",
+            }
             for i in range(5)
         ]
         scores = scorer.calculate_batch(units)
@@ -189,8 +195,20 @@ class TestBatchProcessing:
     def test_batch_builds_call_graph(self, scorer):
         """Batch processing builds call graph for usage analysis."""
         units = [
-            {"name": "caller", "content": "def caller():\n    return callee()", "signature": "def caller():", "unit_type": "function", "language": "python"},
-            {"name": "callee", "content": "def callee():\n    return 42", "signature": "def callee():", "unit_type": "function", "language": "python"},
+            {
+                "name": "caller",
+                "content": "def caller():\n    return callee()",
+                "signature": "def caller():",
+                "unit_type": "function",
+                "language": "python",
+            },
+            {
+                "name": "callee",
+                "content": "def callee():\n    return 42",
+                "signature": "def callee():",
+                "unit_type": "function",
+                "language": "python",
+            },
         ]
         scores = scorer.calculate_batch(units)
 
@@ -201,11 +219,29 @@ class TestBatchProcessing:
     def test_batch_resets_call_graph(self, scorer):
         """Batch processing resets call graph between calls."""
         units1 = [
-            {"name": "func1", "content": "def func1(): return func2()", "signature": "def func1():", "unit_type": "function", "language": "python"},
-            {"name": "func2", "content": "def func2(): return 1", "signature": "def func2():", "unit_type": "function", "language": "python"},
+            {
+                "name": "func1",
+                "content": "def func1(): return func2()",
+                "signature": "def func1():",
+                "unit_type": "function",
+                "language": "python",
+            },
+            {
+                "name": "func2",
+                "content": "def func2(): return 1",
+                "signature": "def func2():",
+                "unit_type": "function",
+                "language": "python",
+            },
         ]
         units2 = [
-            {"name": "func3", "content": "def func3(): return 3", "signature": "def func3():", "unit_type": "function", "language": "python"},
+            {
+                "name": "func3",
+                "content": "def func3(): return 3",
+                "signature": "def func3():",
+                "unit_type": "function",
+                "language": "python",
+            },
         ]
 
         scorer.calculate_batch(units1)
@@ -226,7 +262,13 @@ class TestSummaryStatistics:
     def test_summary_basic_stats(self, scorer):
         """Summary includes basic statistics."""
         units = [
-            {"name": f"func{i}", "content": f"def func{i}(): return {i}", "signature": f"def func{i}():", "unit_type": "function", "language": "python"}
+            {
+                "name": f"func{i}",
+                "content": f"def func{i}(): return {i}",
+                "signature": f"def func{i}():",
+                "unit_type": "function",
+                "language": "python",
+            }
             for i in range(10)
         ]
         scores = scorer.calculate_batch(units)
@@ -242,7 +284,13 @@ class TestSummaryStatistics:
     def test_summary_distribution(self, scorer):
         """Summary includes distribution."""
         units = [
-            {"name": f"func{i}", "content": f"def func{i}(): return {i}", "signature": f"def func{i}():", "unit_type": "function", "language": "python"}
+            {
+                "name": f"func{i}",
+                "content": f"def func{i}(): return {i}",
+                "signature": f"def func{i}():",
+                "unit_type": "function",
+                "language": "python",
+            }
             for i in range(10)
         ]
         scores = scorer.calculate_batch(units)
@@ -264,7 +312,9 @@ class TestSummaryStatistics:
         units = [
             {
                 "name": "complex",
-                "content": "def complex(a,b,c,d,e):\n" + "    if a:\n" * 20 + "        pass",
+                "content": "def complex(a,b,c,d,e):\n"
+                + "    if a:\n" * 20
+                + "        pass",
                 "signature": "def complex(a,b,c,d,e):",
                 "unit_type": "function",
                 "language": "python",
@@ -330,7 +380,9 @@ class TestScoreBreakdown:
         raw_score = score.complexity_score + score.usage_boost + score.criticality_boost
         expected = min(1.0, raw_score / 1.2)  # Normalize by baseline max
 
-        assert abs(score.importance - expected) < 0.01  # Allow small floating point error
+        assert (
+            abs(score.importance - expected) < 0.01
+        )  # Allow small floating point error
 
 
 class TestErrorHandling:
@@ -406,14 +458,36 @@ class TestIntegrationScenarios:
         """Typical project should have varied distribution."""
         units = [
             # Simple utilities (should score low)
-            {"name": "get_name", "content": "def get_name(): return self.name", "signature": "def get_name():", "unit_type": "function", "language": "python"},
-            {"name": "is_empty", "content": "def is_empty(x): return len(x) == 0", "signature": "def is_empty(x):", "unit_type": "function", "language": "python"},
-
+            {
+                "name": "get_name",
+                "content": "def get_name(): return self.name",
+                "signature": "def get_name():",
+                "unit_type": "function",
+                "language": "python",
+            },
+            {
+                "name": "is_empty",
+                "content": "def is_empty(x): return len(x) == 0",
+                "signature": "def is_empty(x):",
+                "unit_type": "function",
+                "language": "python",
+            },
             # Moderate complexity (should score mid)
-            {"name": "process", "content": "def process(data):\n    if data:\n        for item in data:\n            yield item", "signature": "def process(data):", "unit_type": "function", "language": "python"},
-
+            {
+                "name": "process",
+                "content": "def process(data):\n    if data:\n        for item in data:\n            yield item",
+                "signature": "def process(data):",
+                "unit_type": "function",
+                "language": "python",
+            },
             # High complexity + security (should score high)
-            {"name": "auth", "content": "def authenticate(user, password):\n    try:\n        if verify_password(password):\n            return generate_token(user)\n    except AuthError:\n        log_error()\n        raise", "signature": "def authenticate(user, password):", "unit_type": "function", "language": "python"},
+            {
+                "name": "auth",
+                "content": "def authenticate(user, password):\n    try:\n        if verify_password(password):\n            return generate_token(user)\n    except AuthError:\n        log_error()\n        raise",
+                "signature": "def authenticate(user, password):",
+                "unit_type": "function",
+                "language": "python",
+            },
         ]
 
         scores = scorer.calculate_batch(units)
@@ -473,10 +547,14 @@ class TestEntryPointDetection:
         }
 
         # Non-entry point file
-        score1 = scorer.calculate_importance(code_unit, file_path=Path("src/utils/helpers.py"))
+        score1 = scorer.calculate_importance(
+            code_unit, file_path=Path("src/utils/helpers.py")
+        )
 
         # Entry point file (api directory)
-        score2 = scorer.calculate_importance(code_unit, file_path=Path("src/api/handlers.py"))
+        score2 = scorer.calculate_importance(
+            code_unit, file_path=Path("src/api/handlers.py")
+        )
 
         # Entry point should have higher score
         assert score2.is_entry_point
@@ -535,8 +613,12 @@ class TestScoringPresets:
         balanced = ImportanceScorer.from_preset("balanced")
         security = ImportanceScorer.from_preset("security")
 
-        score_balanced = balanced.calculate_importance(security_func, file_path=Path("src/auth.py"))
-        score_security = security.calculate_importance(security_func, file_path=Path("src/auth.py"))
+        score_balanced = balanced.calculate_importance(
+            security_func, file_path=Path("src/auth.py")
+        )
+        score_security = security.calculate_importance(
+            security_func, file_path=Path("src/auth.py")
+        )
 
         # Security preset should increase score for functions with security keywords
         # (if the function has any criticality boost)

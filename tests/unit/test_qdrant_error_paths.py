@@ -1,9 +1,7 @@
 """Targeted tests for qdrant_store error handling paths."""
 
 import pytest
-import pytest_asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
-from pathlib import Path
 
 from src.config import ServerConfig
 from src.store.qdrant_store import QdrantMemoryStore
@@ -17,7 +15,7 @@ class TestQdrantStoreErrorPaths:
 
     def test_config_none_uses_get_config(self):
         """Test that config=None triggers get_config() path (lines 38-39)."""
-        with patch('src.config.get_config') as mock_get_config:
+        with patch("src.config.get_config") as mock_get_config:
             mock_config = ServerConfig(qdrant_url="http://localhost:6333")
             mock_get_config.return_value = mock_config
 
@@ -34,7 +32,9 @@ class TestQdrantStoreErrorPaths:
         config = ServerConfig(qdrant_url="http://invalid:9999")
         store = QdrantMemoryStore(config, use_pool=False)
 
-        with patch.object(store.setup, 'connect', side_effect=ConnectionError("Cannot connect")):
+        with patch.object(
+            store.setup, "connect", side_effect=ConnectionError("Cannot connect")
+        ):
             with pytest.raises(StorageError) as exc_info:
                 await store.initialize()
 
@@ -49,7 +49,7 @@ class TestQdrantStoreErrorPaths:
         # Client should be None initially
         assert store.client is None
 
-        with patch.object(store, 'initialize', new_callable=AsyncMock) as mock_init:
+        with patch.object(store, "initialize", new_callable=AsyncMock) as mock_init:
             mock_client = MagicMock()
 
             async def init_side_effect():
@@ -65,7 +65,7 @@ class TestQdrantStoreErrorPaths:
                     "category": MemoryCategory.FACT.value,
                     "context_level": ContextLevel.PROJECT_CONTEXT.value,
                     "scope": MemoryScope.GLOBAL.value,
-                }
+                },
             )
 
             # Should have called initialize
@@ -82,12 +82,12 @@ class TestQdrantStoreErrorPaths:
         store.client = MagicMock()
 
         # Mock _build_payload to raise ValueError
-        with patch.object(store, '_build_payload', side_effect=ValueError("Invalid payload")):
+        with patch.object(
+            store, "_build_payload", side_effect=ValueError("Invalid payload")
+        ):
             with pytest.raises(ValidationError) as exc_info:
                 await store.store(
-                    content="test",
-                    embedding=mock_embedding(value=0.1),
-                    metadata={}
+                    content="test", embedding=mock_embedding(value=0.1), metadata={}
                 )
 
             assert "Invalid memory payload" in str(exc_info.value)
@@ -108,7 +108,7 @@ class TestQdrantStoreErrorPaths:
                     "category": MemoryCategory.FACT.value,
                     "context_level": ContextLevel.PROJECT_CONTEXT.value,
                     "scope": MemoryScope.GLOBAL.value,
-                }
+                },
             )
 
         assert "Failed to connect to Qdrant" in str(exc_info.value)
@@ -129,7 +129,7 @@ class TestQdrantStoreErrorPaths:
                     "category": MemoryCategory.FACT.value,
                     "context_level": ContextLevel.PROJECT_CONTEXT.value,
                     "scope": MemoryScope.GLOBAL.value,
-                }
+                },
             )
 
         assert "Failed to store memory" in str(exc_info.value)
@@ -163,7 +163,9 @@ class TestQdrantStoreErrorPaths:
         config = ServerConfig(qdrant_url="http://localhost:6333")
         store = QdrantMemoryStore(config, use_pool=False)
         store.client = MagicMock()
-        store.client.query_points = MagicMock(side_effect=ConnectionError("Connection lost"))
+        store.client.query_points = MagicMock(
+            side_effect=ConnectionError("Connection lost")
+        )
 
         with pytest.raises(RetrievalError) as exc_info:
             await store.retrieve(mock_embedding(value=0.1))
@@ -180,7 +182,9 @@ class TestQdrantStoreErrorPaths:
         store.client = MagicMock()
 
         # Mock _build_filter to raise ValueError
-        with patch.object(store, '_build_filter', side_effect=ValueError("Invalid filter")):
+        with patch.object(
+            store, "_build_filter", side_effect=ValueError("Invalid filter")
+        ):
             with pytest.raises(RetrievalError) as exc_info:
                 # Pass filters to trigger _build_filter call
                 filters = SearchFilters(category=MemoryCategory.FACT)
@@ -209,7 +213,7 @@ class TestQdrantStoreErrorPaths:
 
         assert store.client is None
 
-        with patch.object(store, 'initialize', new_callable=AsyncMock) as mock_init:
+        with patch.object(store, "initialize", new_callable=AsyncMock) as mock_init:
             mock_client = MagicMock()
 
             async def init_side_effect():
@@ -256,7 +260,7 @@ class TestQdrantStoreEdgeCases:
 
         assert store.client is None
 
-        with patch.object(store, 'initialize', new_callable=AsyncMock) as mock_init:
+        with patch.object(store, "initialize", new_callable=AsyncMock) as mock_init:
             mock_client = MagicMock()
 
             async def init_side_effect():
@@ -273,7 +277,7 @@ class TestQdrantStoreEdgeCases:
                         "category": MemoryCategory.FACT.value,
                         "context_level": ContextLevel.PROJECT_CONTEXT.value,
                         "scope": MemoryScope.GLOBAL.value,
-                    }
+                    },
                 )
             ]
 
@@ -294,7 +298,7 @@ class TestQdrantStoreEdgeCases:
 
         assert store.client is None
 
-        with patch.object(store, 'initialize', new_callable=AsyncMock) as mock_init:
+        with patch.object(store, "initialize", new_callable=AsyncMock) as mock_init:
             mock_client = MagicMock()
 
             async def init_side_effect():
@@ -322,7 +326,7 @@ class TestQdrantStoreEdgeCases:
 
         assert store.client is None
 
-        with patch.object(store, 'initialize', new_callable=AsyncMock) as mock_init:
+        with patch.object(store, "initialize", new_callable=AsyncMock) as mock_init:
             mock_client = MagicMock()
 
             async def init_side_effect():
@@ -331,7 +335,9 @@ class TestQdrantStoreEdgeCases:
             mock_init.side_effect = init_side_effect
 
             # Mock get_by_id to return None (not found)
-            with patch.object(store, 'get_by_id', new_callable=AsyncMock, return_value=None):
+            with patch.object(
+                store, "get_by_id", new_callable=AsyncMock, return_value=None
+            ):
                 result = await store.update("test-id", {"importance": 0.9})
 
             mock_init.assert_called_once()

@@ -8,13 +8,10 @@ for maximum coverage while maintaining test speed and reliability.
 """
 
 import pytest
-import asyncio
 import json
 import tempfile
 from pathlib import Path
-from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, patch, call
-from dataclasses import dataclass
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from src.memory.health_scheduler import (
     HealthScheduleConfig,
@@ -27,15 +24,17 @@ from src.memory.health_jobs import JobResult
 # FIXTURES
 # ============================================================================
 
+
 @pytest.fixture
 def mock_scheduler_dependencies():
     """Mock all external dependencies for HealthJobScheduler with proper async support."""
-    with patch("src.memory.health_scheduler.create_store") as mock_create_store, \
-         patch("src.memory.health_scheduler.LifecycleManager") as mock_lifecycle, \
-         patch("src.memory.health_scheduler.HealthScorer") as mock_scorer, \
-         patch("src.memory.health_scheduler.HealthMaintenanceJobs") as mock_health_jobs, \
-         patch("src.memory.health_scheduler.get_config") as mock_get_config:
-
+    with (
+        patch("src.memory.health_scheduler.create_store") as mock_create_store,
+        patch("src.memory.health_scheduler.LifecycleManager") as mock_lifecycle,
+        patch("src.memory.health_scheduler.HealthScorer") as mock_scorer,
+        patch("src.memory.health_scheduler.HealthMaintenanceJobs") as mock_health_jobs,
+        patch("src.memory.health_scheduler.get_config") as mock_get_config,
+    ):
         mock_store = MagicMock()
         mock_store.initialize = AsyncMock()
         mock_store.close = AsyncMock()
@@ -72,6 +71,7 @@ def mock_scheduler_dependencies():
 # ============================================================================
 # TEST: HealthScheduleConfig Dataclass
 # ============================================================================
+
 
 class TestHealthScheduleConfig:
     """Tests for HealthScheduleConfig dataclass."""
@@ -115,6 +115,7 @@ class TestHealthScheduleConfig:
 
     def test_config_with_callback(self):
         """Test HealthScheduleConfig accepts notification callback."""
+
         async def my_callback(event, data):
             pass
 
@@ -125,6 +126,7 @@ class TestHealthScheduleConfig:
 # ============================================================================
 # TEST: HealthJobScheduler Initialization
 # ============================================================================
+
 
 class TestHealthJobSchedulerInitialization:
     """Tests for HealthJobScheduler initialization."""
@@ -152,12 +154,14 @@ class TestHealthJobSchedulerInitialization:
         """Test AsyncIOScheduler is created on init."""
         scheduler = HealthJobScheduler()
         from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
         assert isinstance(scheduler.scheduler, AsyncIOScheduler)
 
 
 # ============================================================================
 # TEST: Starting and Stopping the Scheduler
 # ============================================================================
+
 
 class TestHealthJobSchedulerStartStop:
     """Tests for starting and stopping the scheduler."""
@@ -272,6 +276,7 @@ class TestHealthJobSchedulerStartStop:
 # TEST: Job Scheduling
 # ============================================================================
 
+
 class TestJobScheduling:
     """Tests for job scheduling configuration."""
 
@@ -282,7 +287,7 @@ class TestJobScheduling:
             enabled=True,
             weekly_archival_enabled=True,
             weekly_archival_day=6,
-            weekly_archival_time="01:30"
+            weekly_archival_time="01:30",
         )
         scheduler = HealthJobScheduler(config=config)
 
@@ -303,7 +308,7 @@ class TestJobScheduling:
             enabled=True,
             monthly_cleanup_enabled=True,
             monthly_cleanup_day=15,
-            monthly_cleanup_time="04:00"
+            monthly_cleanup_time="04:00",
         )
         scheduler = HealthJobScheduler(config=config)
 
@@ -323,7 +328,7 @@ class TestJobScheduling:
             enabled=True,
             weekly_report_enabled=True,
             weekly_report_day=0,
-            weekly_report_time="09:00"
+            weekly_report_time="09:00",
         )
         scheduler = HealthJobScheduler(config=config)
 
@@ -343,7 +348,7 @@ class TestJobScheduling:
             enabled=True,
             weekly_archival_enabled=False,
             monthly_cleanup_enabled=False,
-            weekly_report_enabled=False
+            weekly_report_enabled=False,
         )
         scheduler = HealthJobScheduler(config=config)
 
@@ -362,7 +367,7 @@ class TestJobScheduling:
             enabled=True,
             weekly_archival_enabled=True,
             monthly_cleanup_enabled=True,
-            weekly_report_enabled=True
+            weekly_report_enabled=True,
         )
         scheduler = HealthJobScheduler(config=config)
 
@@ -378,6 +383,7 @@ class TestJobScheduling:
 # ============================================================================
 # TEST: Job Execution
 # ============================================================================
+
 
 class TestJobExecution:
     """Tests for job execution logic."""
@@ -438,7 +444,9 @@ class TestJobExecution:
             job_name="weekly_health_report",
             success=True,
         )
-        scheduler.health_jobs.weekly_health_report_job = AsyncMock(return_value=mock_result)
+        scheduler.health_jobs.weekly_health_report_job = AsyncMock(
+            return_value=mock_result
+        )
 
         await scheduler._run_weekly_report()
 
@@ -453,7 +461,9 @@ class TestJobExecution:
         scheduler.health_jobs = MagicMock()
         scheduler.config = HealthScheduleConfig()
 
-        scheduler.health_jobs.weekly_archival_job = AsyncMock(side_effect=Exception("Test error"))
+        scheduler.health_jobs.weekly_archival_job = AsyncMock(
+            side_effect=Exception("Test error")
+        )
 
         await scheduler._run_weekly_archival()
 
@@ -469,7 +479,9 @@ class TestJobExecution:
         scheduler.health_jobs = MagicMock()
         scheduler.config = HealthScheduleConfig()
 
-        scheduler.health_jobs.monthly_cleanup_job = AsyncMock(side_effect=Exception("Cleanup failed"))
+        scheduler.health_jobs.monthly_cleanup_job = AsyncMock(
+            side_effect=Exception("Cleanup failed")
+        )
 
         await scheduler._run_monthly_cleanup()
 
@@ -484,7 +496,9 @@ class TestJobExecution:
         scheduler.health_jobs = MagicMock()
         scheduler.config = HealthScheduleConfig()
 
-        scheduler.health_jobs.weekly_health_report_job = AsyncMock(side_effect=Exception("Report failed"))
+        scheduler.health_jobs.weekly_health_report_job = AsyncMock(
+            side_effect=Exception("Report failed")
+        )
 
         await scheduler._run_weekly_report()
 
@@ -506,7 +520,9 @@ class TestJobExecution:
                 success=True,
                 memories_archived=i,
             )
-            scheduler.health_jobs.weekly_archival_job = AsyncMock(return_value=mock_result)
+            scheduler.health_jobs.weekly_archival_job = AsyncMock(
+                return_value=mock_result
+            )
             await scheduler._run_weekly_archival()
 
         assert len(scheduler._job_history) == 100
@@ -530,7 +546,9 @@ class TestJobExecution:
 
         await scheduler._run_weekly_archival()
 
-        notification_callback.assert_called_once_with("archival_completed", mock_result.to_dict())
+        notification_callback.assert_called_once_with(
+            "archival_completed", mock_result.to_dict()
+        )
 
     @pytest.mark.asyncio
     async def test_notification_callback_on_archival_failure(self):
@@ -540,7 +558,9 @@ class TestJobExecution:
         scheduler = HealthJobScheduler(config=config)
         scheduler.health_jobs = MagicMock()
 
-        scheduler.health_jobs.weekly_archival_job = AsyncMock(side_effect=Exception("Test error"))
+        scheduler.health_jobs.weekly_archival_job = AsyncMock(
+            side_effect=Exception("Test error")
+        )
 
         await scheduler._run_weekly_archival()
 
@@ -562,7 +582,9 @@ class TestJobExecution:
 
         await scheduler._run_monthly_cleanup()
 
-        notification_callback.assert_called_once_with("cleanup_completed", mock_result.to_dict())
+        notification_callback.assert_called_once_with(
+            "cleanup_completed", mock_result.to_dict()
+        )
 
     @pytest.mark.asyncio
     async def test_notification_callback_on_cleanup_failure(self):
@@ -572,7 +594,9 @@ class TestJobExecution:
         scheduler = HealthJobScheduler(config=config)
         scheduler.health_jobs = MagicMock()
 
-        scheduler.health_jobs.monthly_cleanup_job = AsyncMock(side_effect=Exception("Error"))
+        scheduler.health_jobs.monthly_cleanup_job = AsyncMock(
+            side_effect=Exception("Error")
+        )
 
         await scheduler._run_monthly_cleanup()
 
@@ -588,11 +612,15 @@ class TestJobExecution:
         scheduler.health_jobs = MagicMock()
 
         mock_result = JobResult(job_name="weekly_health_report", success=True)
-        scheduler.health_jobs.weekly_health_report_job = AsyncMock(return_value=mock_result)
+        scheduler.health_jobs.weekly_health_report_job = AsyncMock(
+            return_value=mock_result
+        )
 
         await scheduler._run_weekly_report()
 
-        notification_callback.assert_called_once_with("report_completed", mock_result.to_dict())
+        notification_callback.assert_called_once_with(
+            "report_completed", mock_result.to_dict()
+        )
 
     @pytest.mark.asyncio
     async def test_notification_callback_on_report_failure(self):
@@ -602,7 +630,9 @@ class TestJobExecution:
         scheduler = HealthJobScheduler(config=config)
         scheduler.health_jobs = MagicMock()
 
-        scheduler.health_jobs.weekly_health_report_job = AsyncMock(side_effect=Exception("Error"))
+        scheduler.health_jobs.weekly_health_report_job = AsyncMock(
+            side_effect=Exception("Error")
+        )
 
         await scheduler._run_weekly_report()
 
@@ -613,6 +643,7 @@ class TestJobExecution:
 # ============================================================================
 # TEST: Manual Triggers
 # ============================================================================
+
 
 class TestManualTriggers:
     """Tests for manually triggering jobs."""
@@ -652,7 +683,9 @@ class TestManualTriggers:
         scheduler.health_jobs = MagicMock()
 
         mock_result = JobResult(job_name="weekly_health_report", success=True)
-        scheduler.health_jobs.weekly_health_report_job = AsyncMock(return_value=mock_result)
+        scheduler.health_jobs.weekly_health_report_job = AsyncMock(
+            return_value=mock_result
+        )
 
         result = await scheduler.trigger_report_now()
 
@@ -688,6 +721,7 @@ class TestManualTriggers:
 # ============================================================================
 # TEST: Scheduler Status
 # ============================================================================
+
 
 class TestSchedulerStatus:
     """Tests for get_status method."""
@@ -731,7 +765,9 @@ class TestSchedulerStatus:
         # Execute 15 jobs
         for i in range(15):
             mock_result = JobResult(job_name="test", success=True, memories_archived=i)
-            scheduler.health_jobs.weekly_archival_job = AsyncMock(return_value=mock_result)
+            scheduler.health_jobs.weekly_archival_job = AsyncMock(
+                return_value=mock_result
+            )
             await scheduler._run_weekly_archival()
 
         status = scheduler.get_status()
@@ -744,6 +780,7 @@ class TestSchedulerStatus:
 # ============================================================================
 # TEST: Configuration Management
 # ============================================================================
+
 
 class TestConfigurationManagement:
     """Tests for configuration loading/saving and updating."""
@@ -849,7 +886,9 @@ class TestConfigurationManagement:
         assert scheduler.is_running is False
 
     @pytest.mark.asyncio
-    async def test_update_config_disabled_doesnt_restart(self, mock_scheduler_dependencies):
+    async def test_update_config_disabled_doesnt_restart(
+        self, mock_scheduler_dependencies
+    ):
         """Test update_config doesn't restart if new config is disabled."""
         config = HealthScheduleConfig(enabled=True)
         scheduler = HealthJobScheduler(config=config)
@@ -868,6 +907,7 @@ class TestConfigurationManagement:
 # ============================================================================
 # TEST: Job History
 # ============================================================================
+
 
 class TestJobHistory:
     """Tests for job history tracking."""
@@ -894,7 +934,9 @@ class TestJobHistory:
                 success=True,
                 memories_archived=i,
             )
-            scheduler.health_jobs.weekly_archival_job = AsyncMock(return_value=mock_result)
+            scheduler.health_jobs.weekly_archival_job = AsyncMock(
+                return_value=mock_result
+            )
             await scheduler._run_weekly_archival()
 
         history = scheduler.get_job_history(limit=5)
@@ -914,7 +956,9 @@ class TestJobHistory:
         # Execute 60 jobs
         for i in range(60):
             mock_result = JobResult(job_name="test", success=True)
-            scheduler.health_jobs.weekly_archival_job = AsyncMock(return_value=mock_result)
+            scheduler.health_jobs.weekly_archival_job = AsyncMock(
+                return_value=mock_result
+            )
             await scheduler._run_weekly_archival()
 
         history = scheduler.get_job_history()

@@ -8,8 +8,7 @@ import pytest
 import tempfile
 from pathlib import Path
 from datetime import datetime, UTC, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
-import asyncio
+from unittest.mock import AsyncMock
 
 from src.memory.archival_scheduler import (
     ArchivalScheduler,
@@ -188,7 +187,9 @@ class TestArchivalScheduler:
             archival_manager.project_states[project_name] = {
                 "state": ProjectState.ACTIVE.value,
                 "created_at": (datetime.now(UTC) - timedelta(days=100)).isoformat(),
-                "last_activity": (datetime.now(UTC) - timedelta(days=60 + i)).isoformat(),
+                "last_activity": (
+                    datetime.now(UTC) - timedelta(days=60 + i)
+                ).isoformat(),
                 "files_indexed": 100,
                 "searches_count": 50,
             }
@@ -211,7 +212,9 @@ class TestArchivalScheduler:
             archival_manager.project_states[project_name] = {
                 "state": ProjectState.ACTIVE.value,
                 "created_at": (datetime.now(UTC) - timedelta(days=100)).isoformat(),
-                "last_activity": (datetime.now(UTC) - timedelta(days=50 + i)).isoformat(),
+                "last_activity": (
+                    datetime.now(UTC) - timedelta(days=50 + i)
+                ).isoformat(),
                 "files_indexed": 100,
                 "searches_count": 50,
             }
@@ -382,6 +385,7 @@ class TestArchivalScheduler:
         self, bulk_manager, schedule_config
     ):
         """Test that callback errors don't break archival."""
+
         def bad_callback(result):
             raise Exception("Callback error")
 

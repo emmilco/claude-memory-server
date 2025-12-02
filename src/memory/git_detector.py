@@ -186,7 +186,9 @@ def get_git_metadata(path: Path) -> Optional[Dict[str, Any]]:
             logger.debug(f"Could not check git status: {e}")
             metadata["is_dirty"] = None
 
-        logger.info(f"Extracted git metadata for {path}: {metadata.get('remote_url', 'local')}")
+        logger.info(
+            f"Extracted git metadata for {path}: {metadata.get('remote_url', 'local')}"
+        )
         return metadata
 
     except Exception as e:

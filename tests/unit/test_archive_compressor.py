@@ -6,9 +6,7 @@ Tests compression, decompression, manifest generation, and storage savings.
 
 import pytest
 import json
-import tarfile
 from pathlib import Path
-from datetime import datetime
 import tempfile
 import shutil
 
@@ -104,7 +102,9 @@ class TestArchiveCompressor:
         )
 
         assert result["success"] is True
-        assert result["compression_info"]["original_size_mb"] >= 0  # Small files may round to 0
+        assert (
+            result["compression_info"]["original_size_mb"] >= 0
+        )  # Small files may round to 0
 
     @pytest.mark.asyncio
     async def test_decompress_project_index(self, compressor, temp_dirs):
@@ -152,6 +152,7 @@ class TestArchiveCompressor:
         """Test retrieving archive information."""
         # Create an archive first (synchronous wrapper for test)
         import asyncio
+
         asyncio.run(
             compressor.compress_project_index(
                 project_name="test-project-4",
@@ -181,6 +182,7 @@ class TestArchiveCompressor:
         """Test listing all archives."""
         # Create multiple archives
         import asyncio
+
         for i in range(3):
             asyncio.run(
                 compressor.compress_project_index(
@@ -199,6 +201,7 @@ class TestArchiveCompressor:
         """Test deleting an archive."""
         # Create an archive
         import asyncio
+
         asyncio.run(
             compressor.compress_project_index(
                 project_name="test-project-delete",
@@ -225,6 +228,7 @@ class TestArchiveCompressor:
         """Test calculating total storage savings."""
         # Create multiple archives
         import asyncio
+
         for i in range(3):
             asyncio.run(
                 compressor.compress_project_index(

@@ -3,15 +3,7 @@
 import pytest
 import pytest_asyncio
 import asyncio
-import uuid
-from datetime import datetime, UTC
-from pathlib import Path
 from src.core.server import MemoryRAGServer
-from src.core.models import (
-    MemoryCategory,
-    MemoryScope,
-    ContextLevel,
-)
 from src.config import ServerConfig
 from src.core.exceptions import ReadOnlyError
 
@@ -55,6 +47,7 @@ async def test_server(tmp_path, unique_qdrant_collection, monkeypatch):
     # BUG-066: Monkeypatch QdrantMemoryStore to disable connection pooling
     # Pooling causes event loop hangs in pytest-asyncio due to blocking Qdrant client calls
     from src.store import qdrant_store
+
     original_init = qdrant_store.QdrantMemoryStore.__init__
 
     def patched_init(self, config=None, use_pool=True):
@@ -221,7 +214,9 @@ class TestMemoryUpdateIntegration:
         assert "nonexistent-id" in result["message"]
 
     @pytest.mark.asyncio
-    async def test_update_preserves_timestamps_by_default(self, test_server, test_memory_id):
+    async def test_update_preserves_timestamps_by_default(
+        self, test_server, test_memory_id
+    ):
         """Test that update preserves created_at by default."""
         # Get original memory
         original = await test_server.get_memory_by_id(test_memory_id)
@@ -243,7 +238,9 @@ class TestMemoryUpdateIntegration:
         assert updated["memory"]["created_at"] == original_created_at
 
     @pytest.mark.asyncio
-    async def test_update_without_embedding_regeneration(self, test_server, test_memory_id):
+    async def test_update_without_embedding_regeneration(
+        self, test_server, test_memory_id
+    ):
         """Test updating content without regenerating embedding."""
         result = await test_server.update_memory(
             memory_id=test_memory_id,
@@ -331,4 +328,3 @@ class TestMemoryUpdateIntegration:
         assert memory["importance"] == 0.85
         assert set(memory["tags"]) == {"workflow", "test"}
         assert memory["metadata"]["workflow"] == "integration"
-

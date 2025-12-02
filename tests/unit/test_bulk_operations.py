@@ -11,8 +11,7 @@ Tests the BulkDeleteManager including:
 
 import pytest
 from datetime import datetime, timedelta
-from typing import List
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock
 
 from src.memory.bulk_operations import (
     BulkDeleteManager,
@@ -258,6 +257,7 @@ class TestBulkDeleteManager:
     @pytest.mark.asyncio
     async def test_execute_deletion_with_failures(self, bulk_manager, sample_memories):
         """Test deletion with some failures."""
+
         # Make delete fail for specific IDs
         async def mock_delete(memory_id: str) -> bool:
             return memory_id != "mem_5"
@@ -276,7 +276,9 @@ class TestBulkDeleteManager:
         assert len(result.errors) == 1
 
     @pytest.mark.asyncio
-    async def test_execute_deletion_batch_processing(self, bulk_manager, sample_memories):
+    async def test_execute_deletion_batch_processing(
+        self, bulk_manager, sample_memories
+    ):
         """Test batch processing for large deletions."""
         # Use 150 memories with batch size of 100
         filters = BulkDeleteFilters()
@@ -379,9 +381,7 @@ class TestBulkOperationsEdgeCases:
     async def test_execute_deletion_empty_list(self, bulk_manager):
         """Test bulk delete with empty list doesn't crash."""
         filters = BulkDeleteFilters()
-        result = await bulk_manager.execute_deletion(
-            [], filters, dry_run=False
-        )
+        result = await bulk_manager.execute_deletion([], filters, dry_run=False)
 
         assert result.total_deleted == 0
         assert result.success is True  # Empty deletion is successful
@@ -400,7 +400,9 @@ class TestBulkOperationsEdgeCases:
         assert preview.requires_confirmation is False
 
     @pytest.mark.asyncio
-    async def test_execute_deletion_with_none_progress_callback(self, bulk_manager, sample_memories):
+    async def test_execute_deletion_with_none_progress_callback(
+        self, bulk_manager, sample_memories
+    ):
         """Test deletion with None progress callback doesn't crash."""
         filters = BulkDeleteFilters()
         result = await bulk_manager.execute_deletion(

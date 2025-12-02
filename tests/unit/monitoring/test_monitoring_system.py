@@ -9,20 +9,18 @@ import sqlite3
 import tempfile
 from datetime import datetime, timedelta, UTC
 from pathlib import Path
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import AsyncMock
 
 from src.monitoring.metrics_collector import HealthMetrics, MetricsCollector
 from src.monitoring.alert_engine import (
     Alert,
     AlertEngine,
     AlertSeverity,
-    AlertThreshold,
 )
 from src.monitoring.health_reporter import (
     HealthReporter,
     HealthStatus,
     HealthScore,
-    TrendAnalysis,
 )
 from src.monitoring.remediation import (
     RemediationEngine,
@@ -30,7 +28,6 @@ from src.monitoring.remediation import (
     RemediationResult,
     RemediationTrigger,
 )
-from src.core.models import LifecycleState
 
 
 # ============================================================================
@@ -65,7 +62,7 @@ class TestMetricsCollector:
 
     def test_init_creates_tables(self, temp_db):
         """Test initialization creates database tables."""
-        collector = MetricsCollector(temp_db)
+        MetricsCollector(temp_db)
 
         with sqlite3.connect(temp_db) as conn:
             cursor = conn.cursor()
@@ -211,7 +208,7 @@ class TestAlertEngine:
 
     def test_init_creates_tables(self, temp_db):
         """Test initialization creates database tables."""
-        engine = AlertEngine(temp_db)
+        AlertEngine(temp_db)
 
         with sqlite3.connect(temp_db) as conn:
             cursor = conn.cursor()
@@ -521,7 +518,7 @@ class TestRemediationEngine:
 
     def test_init_creates_tables(self, temp_db):
         """Test initialization creates database tables."""
-        engine = RemediationEngine(temp_db)
+        RemediationEngine(temp_db)
 
         with sqlite3.connect(temp_db) as conn:
             cursor = conn.cursor()

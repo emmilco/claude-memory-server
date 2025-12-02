@@ -1,7 +1,6 @@
 """Unit tests for hybrid search combining BM25 and vector search."""
 
 import pytest
-from unittest.mock import Mock
 from src.search.hybrid_search import HybridSearcher, FusionMethod, HybridSearchResult
 from src.core.models import MemoryUnit, MemoryScope, MemoryCategory, ContextLevel
 
@@ -127,7 +126,9 @@ class TestDocumentIndexing:
         searcher = HybridSearcher()
         documents = [m.content for m in sample_memories[:2]]  # Only 2 docs
 
-        with pytest.raises(ValueError, match="Documents and memory units must have same length"):
+        with pytest.raises(
+            ValueError, match="Documents and memory units must have same length"
+        ):
             searcher.index_documents(documents, sample_memories)
 
     def test_index_empty_documents(self):
@@ -169,7 +170,9 @@ class TestWeightedFusion:
             assert result.bm25_score >= 0
             assert result.fusion_method == "weighted"
 
-    def test_weighted_fusion_semantic_only(self, sample_memories, sample_vector_results):
+    def test_weighted_fusion_semantic_only(
+        self, sample_memories, sample_vector_results
+    ):
         """Test weighted fusion with alpha=1.0 (semantic only)."""
         searcher = HybridSearcher(alpha=1.0, fusion_method=FusionMethod.WEIGHTED)
 
@@ -203,10 +206,12 @@ class TestWeightedFusion:
         # With alpha=0.0, results should be based on BM25 scores only
         assert len(results) <= 3
         # Results should be ordered by BM25 score
-        bm25_scores = [r.bm25_score for r in results]
+        [r.bm25_score for r in results]
         # Can't directly compare due to normalization, but should be consistent
 
-    def test_weighted_fusion_score_normalization(self, sample_memories, sample_vector_results):
+    def test_weighted_fusion_score_normalization(
+        self, sample_memories, sample_vector_results
+    ):
         """Test that scores are normalized in weighted fusion."""
         searcher = HybridSearcher(alpha=0.5, fusion_method=FusionMethod.WEIGHTED)
 
@@ -229,10 +234,7 @@ class TestRRFFusion:
 
     def test_rrf_fusion(self, sample_memories, sample_vector_results):
         """Test RRF fusion strategy."""
-        searcher = HybridSearcher(
-            fusion_method=FusionMethod.RRF,
-            rrf_k=60
-        )
+        searcher = HybridSearcher(fusion_method=FusionMethod.RRF, rrf_k=60)
 
         documents = [m.content for m in sample_memories]
         searcher.index_documents(documents, sample_memories)
@@ -255,10 +257,7 @@ class TestRRFFusion:
 
     def test_rrf_formula(self, sample_memories):
         """Test that RRF formula is correctly applied."""
-        searcher = HybridSearcher(
-            fusion_method=FusionMethod.RRF,
-            rrf_k=60
-        )
+        searcher = HybridSearcher(fusion_method=FusionMethod.RRF, rrf_k=60)
 
         # Create simple vector results
         vector_results = [
@@ -282,16 +281,10 @@ class TestRRFFusion:
     def test_rrf_with_different_k(self, sample_memories, sample_vector_results):
         """Test RRF with different k values."""
         # Smaller k gives more weight to top-ranked items
-        searcher_small_k = HybridSearcher(
-            fusion_method=FusionMethod.RRF,
-            rrf_k=10
-        )
+        searcher_small_k = HybridSearcher(fusion_method=FusionMethod.RRF, rrf_k=10)
 
         # Larger k gives more uniform weighting
-        searcher_large_k = HybridSearcher(
-            fusion_method=FusionMethod.RRF,
-            rrf_k=100
-        )
+        searcher_large_k = HybridSearcher(fusion_method=FusionMethod.RRF, rrf_k=100)
 
         documents = [m.content for m in sample_memories]
 
@@ -591,7 +584,9 @@ class TestIntegrationScenarios:
         # Should prioritize authentication-related code
         assert results[0].memory.id in ["1", "2"]
 
-    def test_multiple_fusion_methods_same_query(self, sample_memories, sample_vector_results):
+    def test_multiple_fusion_methods_same_query(
+        self, sample_memories, sample_vector_results
+    ):
         """Test that different fusion methods produce different results."""
         documents = [m.content for m in sample_memories]
 
@@ -606,9 +601,13 @@ class TestIntegrationScenarios:
 
         query = "authentication user"
 
-        results_weighted = searcher_weighted.hybrid_search(query, sample_vector_results, limit=3)
+        results_weighted = searcher_weighted.hybrid_search(
+            query, sample_vector_results, limit=3
+        )
         results_rrf = searcher_rrf.hybrid_search(query, sample_vector_results, limit=3)
-        results_cascade = searcher_cascade.hybrid_search(query, sample_vector_results, limit=3)
+        results_cascade = searcher_cascade.hybrid_search(
+            query, sample_vector_results, limit=3
+        )
 
         # All should return results
         assert len(results_weighted) > 0

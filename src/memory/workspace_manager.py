@@ -57,13 +57,13 @@ class Workspace:
         data = asdict(self)
         # Convert datetime objects to ISO format strings
         if isinstance(self.created_at, datetime):
-            data['created_at'] = self.created_at.isoformat()
+            data["created_at"] = self.created_at.isoformat()
         if isinstance(self.updated_at, datetime):
-            data['updated_at'] = self.updated_at.isoformat()
+            data["updated_at"] = self.updated_at.isoformat()
         return data
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'Workspace':
+    def from_dict(cls, data: Dict[str, Any]) -> "Workspace":
         """Create Workspace from dictionary.
 
         Args:
@@ -73,10 +73,10 @@ class Workspace:
             Workspace instance
         """
         # Convert ISO format strings back to datetime objects
-        if isinstance(data.get('created_at'), str):
-            data['created_at'] = datetime.fromisoformat(data['created_at'])
-        if isinstance(data.get('updated_at'), str):
-            data['updated_at'] = datetime.fromisoformat(data['updated_at'])
+        if isinstance(data.get("created_at"), str):
+            data["created_at"] = datetime.fromisoformat(data["created_at"])
+        if isinstance(data.get("updated_at"), str):
+            data["updated_at"] = datetime.fromisoformat(data["updated_at"])
 
         return cls(**data)
 
@@ -101,7 +101,7 @@ class WorkspaceManager:
     def __init__(
         self,
         storage_path: str,
-        repository_registry: Optional[RepositoryRegistry] = None
+        repository_registry: Optional[RepositoryRegistry] = None,
     ):
         """Initialize workspace manager.
 
@@ -119,7 +119,9 @@ class WorkspaceManager:
         # Load existing workspaces
         self._load()
 
-        logger.info(f"WorkspaceManager initialized with {len(self.workspaces)} workspaces")
+        logger.info(
+            f"WorkspaceManager initialized with {len(self.workspaces)} workspaces"
+        )
 
     # ============================================================================
     # CRUD Operations
@@ -187,7 +189,9 @@ class WorkspaceManager:
             for repo_id in repo_ids:
                 await self.repository_registry.add_to_workspace(repo_id, workspace_id)
 
-        logger.info(f"Created workspace '{name}' ({workspace_id}) with {len(repo_ids)} repositories")
+        logger.info(
+            f"Created workspace '{name}' ({workspace_id}) with {len(repo_ids)} repositories"
+        )
 
         return workspace
 
@@ -209,10 +213,14 @@ class WorkspaceManager:
         if self.repository_registry:
             for repo_id in list(workspace.repository_ids):
                 try:
-                    await self.repository_registry.remove_from_workspace(repo_id, workspace_id)
+                    await self.repository_registry.remove_from_workspace(
+                        repo_id, workspace_id
+                    )
                 except ValueError:
                     # Repository might have been deleted
-                    logger.warning(f"Repository '{repo_id}' not found when removing workspace")
+                    logger.warning(
+                        f"Repository '{repo_id}' not found when removing workspace"
+                    )
 
         del self.workspaces[workspace_id]
         self._save()
@@ -263,16 +271,12 @@ class WorkspaceManager:
         # Filter by tags
         if tags:
             workspaces = [
-                ws for ws in workspaces
-                if all(tag in ws.tags for tag in tags)
+                ws for ws in workspaces if all(tag in ws.tags for tag in tags)
             ]
 
         # Filter by repository membership
         if has_repo:
-            workspaces = [
-                ws for ws in workspaces
-                if has_repo in ws.repository_ids
-            ]
+            workspaces = [ws for ws in workspaces if has_repo in ws.repository_ids]
 
         return workspaces
 
@@ -297,8 +301,11 @@ class WorkspaceManager:
 
         # Only allow updating certain fields
         allowed_fields = {
-            'name', 'description', 'auto_index',
-            'cross_repo_search_enabled', 'settings'
+            "name",
+            "description",
+            "auto_index",
+            "cross_repo_search_enabled",
+            "settings",
         }
 
         for key, value in updates.items():
@@ -356,7 +363,9 @@ class WorkspaceManager:
 
             logger.info(f"Added repository '{repo_id}' to workspace '{workspace.name}'")
         else:
-            logger.debug(f"Repository '{repo_id}' already in workspace '{workspace.name}'")
+            logger.debug(
+                f"Repository '{repo_id}' already in workspace '{workspace.name}'"
+            )
 
     async def remove_repository(
         self,
@@ -385,12 +394,16 @@ class WorkspaceManager:
             # Update repository registry
             if self.repository_registry:
                 try:
-                    await self.repository_registry.remove_from_workspace(repo_id, workspace_id)
+                    await self.repository_registry.remove_from_workspace(
+                        repo_id, workspace_id
+                    )
                 except ValueError:
                     # Repository might have been deleted
                     logger.warning(f"Repository '{repo_id}' not found in registry")
 
-            logger.info(f"Removed repository '{repo_id}' from workspace '{workspace.name}'")
+            logger.info(
+                f"Removed repository '{repo_id}' from workspace '{workspace.name}'"
+            )
         else:
             logger.debug(f"Repository '{repo_id}' not in workspace '{workspace.name}'")
 
@@ -467,17 +480,21 @@ class WorkspaceManager:
     def _load(self) -> None:
         """Load workspaces from JSON file."""
         if not self.storage_path.exists():
-            logger.debug(f"No workspace file found at {self.storage_path}, starting fresh")
+            logger.debug(
+                f"No workspace file found at {self.storage_path}, starting fresh"
+            )
             return
 
         try:
-            with open(self.storage_path, 'r') as f:
+            with open(self.storage_path, "r") as f:
                 data = json.load(f)
                 self.workspaces = {
                     ws_id: Workspace.from_dict(ws_data)
                     for ws_id, ws_data in data.items()
                 }
-            logger.info(f"Loaded {len(self.workspaces)} workspaces from {self.storage_path}")
+            logger.info(
+                f"Loaded {len(self.workspaces)} workspaces from {self.storage_path}"
+            )
         except json.JSONDecodeError as e:
             logger.error(f"Failed to load workspaces from {self.storage_path}: {e}")
             logger.warning("Starting with empty workspace registry")
@@ -495,12 +512,14 @@ class WorkspaceManager:
             }
 
             # Write atomically via temp file
-            temp_path = self.storage_path.with_suffix('.tmp')
-            with open(temp_path, 'w') as f:
+            temp_path = self.storage_path.with_suffix(".tmp")
+            with open(temp_path, "w") as f:
                 json.dump(data, f, indent=2)
             temp_path.replace(self.storage_path)
 
-            logger.debug(f"Saved {len(self.workspaces)} workspaces to {self.storage_path}")
+            logger.debug(
+                f"Saved {len(self.workspaces)} workspaces to {self.storage_path}"
+            )
         except Exception as e:
             logger.error(f"Failed to save workspaces to {self.storage_path}: {e}")
             raise
@@ -523,9 +542,7 @@ class WorkspaceManager:
             all_repo_ids.update(workspace.repository_ids)
 
         # Count workspaces by settings
-        auto_index_count = sum(
-            1 for ws in self.workspaces.values() if ws.auto_index
-        )
+        auto_index_count = sum(1 for ws in self.workspaces.values() if ws.auto_index)
         cross_repo_enabled_count = sum(
             1 for ws in self.workspaces.values() if ws.cross_repo_search_enabled
         )
@@ -544,11 +561,11 @@ class WorkspaceManager:
         )
 
         return {
-            'total_workspaces': total_workspaces,
-            'total_unique_repositories': len(all_repo_ids),
-            'auto_index_enabled': auto_index_count,
-            'cross_repo_search_enabled': cross_repo_enabled_count,
-            'total_tags': len(all_tags),
-            'average_repositories_per_workspace': round(avg_repos_per_workspace, 2),
-            'total_repository_memberships': total_repo_memberships,
+            "total_workspaces": total_workspaces,
+            "total_unique_repositories": len(all_repo_ids),
+            "auto_index_enabled": auto_index_count,
+            "cross_repo_search_enabled": cross_repo_enabled_count,
+            "total_tags": len(all_tags),
+            "average_repositories_per_workspace": round(avg_repos_per_workspace, 2),
+            "total_repository_memberships": total_repo_memberships,
         }

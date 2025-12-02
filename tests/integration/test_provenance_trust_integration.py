@@ -2,8 +2,6 @@
 
 import pytest
 import pytest_asyncio
-import asyncio
-import uuid
 from datetime import datetime, UTC, timedelta
 
 from src.config import ServerConfig
@@ -12,7 +10,6 @@ from src.embeddings.generator import EmbeddingGenerator
 from src.memory.provenance_tracker import ProvenanceTracker
 from src.memory.trust_signals import TrustSignalGenerator
 from src.core.models import (
-    MemoryUnit,
     MemoryCategory,
     ContextLevel,
     MemoryScope,

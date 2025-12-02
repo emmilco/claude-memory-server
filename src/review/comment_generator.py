@@ -140,15 +140,21 @@ class ReviewCommentGenerator:
         for comment in comments:
             # Count by severity
             severity = comment.severity
-            summary["by_severity"][severity] = summary["by_severity"].get(severity, 0) + 1
+            summary["by_severity"][severity] = (
+                summary["by_severity"].get(severity, 0) + 1
+            )
 
             # Count by category
             category = comment.category
-            summary["by_category"][category] = summary["by_category"].get(category, 0) + 1
+            summary["by_category"][category] = (
+                summary["by_category"].get(category, 0) + 1
+            )
 
             # Count by confidence
             confidence = comment.confidence
-            summary["by_confidence"][confidence] = summary["by_confidence"].get(confidence, 0) + 1
+            summary["by_confidence"][confidence] = (
+                summary["by_confidence"].get(confidence, 0) + 1
+            )
 
             # Track critical and high
             if severity == "critical":

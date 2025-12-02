@@ -97,9 +97,7 @@ class DashboardServer:
 
         # Start event loop in a separate thread
         self.loop_thread = threading.Thread(
-            target=_run_event_loop,
-            args=(self.event_loop,),
-            daemon=True
+            target=_run_event_loop, args=(self.event_loop,), daemon=True
         )
         self.loop_thread.start()
 
@@ -108,8 +106,7 @@ class DashboardServer:
 
         # Initialize server in the event loop
         future = asyncio.run_coroutine_threadsafe(
-            self.rag_server.initialize(),
-            self.event_loop
+            self.rag_server.initialize(), self.event_loop
         )
         future.result()
 
@@ -144,8 +141,7 @@ class DashboardServer:
         # Close RAG server
         if self.rag_server and self.event_loop:
             future = asyncio.run_coroutine_threadsafe(
-                self.rag_server.close(),
-                self.event_loop
+                self.rag_server.close(), self.event_loop
             )
             try:
                 future.result(timeout=5)
@@ -217,7 +213,9 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
 
-    def _map_exception_to_response(self, exception: Exception, context: str) -> tuple[int, str]:
+    def _map_exception_to_response(
+        self, exception: Exception, context: str
+    ) -> tuple[int, str]:
         """
         Map exception types to HTTP status codes and sanitize error messages.
 
@@ -236,7 +234,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             # Client error - invalid input
             status_code = 400
             # Validation errors can safely expose the message as they contain user input feedback
-            sanitized_message = str(exception).split('\n')[0].replace('[E002] ', '')
+            sanitized_message = str(exception).split("\n")[0].replace("[E002] ", "")
         elif isinstance(exception, (MemoryNotFoundError, CollectionNotFoundError)):
             # Client error - resource not found
             status_code = 404
@@ -274,19 +272,23 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             # Parse query parameters for time filtering (UX-037)
             parsed_path = urlparse(self.path)
             params = parse_qs(parsed_path.query)
-            start_date = params.get('start_date', [None])[0]
-            end_date = params.get('end_date', [None])[0]
+            start_date = params.get("start_date", [None])[0]
+            end_date = params.get("end_date", [None])[0]
 
             # Run async method in the dedicated event loop
             future = asyncio.run_coroutine_threadsafe(
-                self.rag_server.get_dashboard_stats(start_date=start_date, end_date=end_date),
-                self.event_loop
+                self.rag_server.get_dashboard_stats(
+                    start_date=start_date, end_date=end_date
+                ),
+                self.event_loop,
             )
             result = future.result(timeout=10)  # 10 second timeout
 
             self._send_json_response(result)
         except Exception as e:
-            status_code, message = self._map_exception_to_response(e, "handling /api/stats")
+            status_code, message = self._map_exception_to_response(
+                e, "handling /api/stats"
+            )
             self._send_error_response(status_code, message)
 
     def _handle_api_activity(self, query_string: str):
@@ -298,10 +300,10 @@ class DashboardHandler(SimpleHTTPRequestHandler):
 
             # Parse query parameters
             params = parse_qs(query_string)
-            limit = int(params.get('limit', ['20'])[0])
-            project_name = params.get('project', [None])[0]
-            start_date = params.get('start_date', [None])[0]  # UX-037
-            end_date = params.get('end_date', [None])[0]  # UX-037
+            limit = int(params.get("limit", ["20"])[0])
+            project_name = params.get("project", [None])[0]
+            start_date = params.get("start_date", [None])[0]  # UX-037
+            end_date = params.get("end_date", [None])[0]  # UX-037
 
             # Run async method in the dedicated event loop
             future = asyncio.run_coroutine_threadsafe(
@@ -309,15 +311,17 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                     limit=limit,
                     project_name=project_name,
                     start_date=start_date,
-                    end_date=end_date
+                    end_date=end_date,
                 ),
-                self.event_loop
+                self.event_loop,
             )
             result = future.result(timeout=10)  # 10 second timeout
 
             self._send_json_response(result)
         except Exception as e:
-            status_code, message = self._map_exception_to_response(e, "handling /api/activity")
+            status_code, message = self._map_exception_to_response(
+                e, "handling /api/activity"
+            )
             self._send_error_response(status_code, message)
 
     def _handle_api_health(self):
@@ -329,12 +333,10 @@ class DashboardHandler(SimpleHTTPRequestHandler):
 
             # Get health score and alerts in parallel
             health_future = asyncio.run_coroutine_threadsafe(
-                self.rag_server.get_health_score(),
-                self.event_loop
+                self.rag_server.get_health_score(), self.event_loop
             )
             alerts_future = asyncio.run_coroutine_threadsafe(
-                self.rag_server.get_active_alerts(),
-                self.event_loop
+                self.rag_server.get_active_alerts(), self.event_loop
             )
 
             health_data = health_future.result(timeout=10)
@@ -346,15 +348,23 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 "component_scores": health_data.get("component_scores", {}),
                 "alerts": alerts_data.get("alerts", []),
                 "performance_metrics": {
-                    "search_latency_p50": health_data.get("metrics", {}).get("search_latency_p50_ms", 0),
-                    "search_latency_p95": health_data.get("metrics", {}).get("search_latency_p95_ms", 0),
-                    "cache_hit_rate": health_data.get("metrics", {}).get("cache_hit_rate", 0)
-                }
+                    "search_latency_p50": health_data.get("metrics", {}).get(
+                        "search_latency_p50_ms", 0
+                    ),
+                    "search_latency_p95": health_data.get("metrics", {}).get(
+                        "search_latency_p95_ms", 0
+                    ),
+                    "cache_hit_rate": health_data.get("metrics", {}).get(
+                        "cache_hit_rate", 0
+                    ),
+                },
             }
 
             self._send_json_response(response)
         except Exception as e:
-            status_code, message = self._map_exception_to_response(e, "handling /api/health")
+            status_code, message = self._map_exception_to_response(
+                e, "handling /api/health"
+            )
             self._send_error_response(status_code, message)
 
     def _handle_api_insights(self):
@@ -366,12 +376,10 @@ class DashboardHandler(SimpleHTTPRequestHandler):
 
             # Get stats and health data for insight generation
             stats_future = asyncio.run_coroutine_threadsafe(
-                self.rag_server.get_dashboard_stats(),
-                self.event_loop
+                self.rag_server.get_dashboard_stats(), self.event_loop
             )
             health_future = asyncio.run_coroutine_threadsafe(
-                self.rag_server.get_health_score(),
-                self.event_loop
+                self.rag_server.get_health_score(), self.event_loop
             )
 
             stats_data = stats_future.result(timeout=10)
@@ -382,7 +390,9 @@ class DashboardHandler(SimpleHTTPRequestHandler):
 
             self._send_json_response({"insights": insights})
         except Exception as e:
-            status_code, message = self._map_exception_to_response(e, "handling /api/insights")
+            status_code, message = self._map_exception_to_response(
+                e, "handling /api/insights"
+            )
             self._send_error_response(status_code, message)
 
     def _generate_insights(self, stats: dict, health: dict) -> list:
@@ -396,47 +406,55 @@ class DashboardHandler(SimpleHTTPRequestHandler):
 
         # Insight 1: Cache performance
         if cache_hit_rate < 0.7:
-            insights.append({
-                "type": "performance",
-                "severity": "WARNING",
-                "title": "Low Cache Hit Rate",
-                "message": f"Cache hit rate at {cache_hit_rate * 100:.1f}% (target: 80%)",
-                "action": "Consider increasing cache size or reviewing indexing patterns",
-                "priority": 2
-            })
+            insights.append(
+                {
+                    "type": "performance",
+                    "severity": "WARNING",
+                    "title": "Low Cache Hit Rate",
+                    "message": f"Cache hit rate at {cache_hit_rate * 100:.1f}% (target: 80%)",
+                    "action": "Consider increasing cache size or reviewing indexing patterns",
+                    "priority": 2,
+                }
+            )
         elif cache_hit_rate >= 0.9:
-            insights.append({
-                "type": "performance",
-                "severity": "INFO",
-                "title": "Excellent Cache Performance",
-                "message": f"Cache hit rate at {cache_hit_rate * 100:.1f}% - optimal performance",
-                "action": None,
-                "priority": 5
-            })
+            insights.append(
+                {
+                    "type": "performance",
+                    "severity": "INFO",
+                    "title": "Excellent Cache Performance",
+                    "message": f"Cache hit rate at {cache_hit_rate * 100:.1f}% - optimal performance",
+                    "action": None,
+                    "priority": 5,
+                }
+            )
 
         # Insight 2: Search latency
         if search_latency_p95 > 50:
-            insights.append({
-                "type": "performance",
-                "severity": "WARNING",
-                "title": "High Search Latency",
-                "message": f"P95 search latency at {search_latency_p95:.2f}ms (target: <50ms)",
-                "action": "Review index size, consider optimization",
-                "priority": 2
-            })
+            insights.append(
+                {
+                    "type": "performance",
+                    "severity": "WARNING",
+                    "title": "High Search Latency",
+                    "message": f"P95 search latency at {search_latency_p95:.2f}ms (target: <50ms)",
+                    "action": "Review index size, consider optimization",
+                    "priority": 2,
+                }
+            )
 
         # Insight 3: Stale projects
         projects = stats.get("projects", [])
         stale_projects = [p for p in projects if p.get("needs_reindex", False)]
         if stale_projects:
-            insights.append({
-                "type": "maintenance",
-                "severity": "WARNING",
-                "title": "Stale Projects Detected",
-                "message": f"{len(stale_projects)} project(s) need reindexing",
-                "action": f"Reindex: {', '.join([p['name'] for p in stale_projects[:3]])}",
-                "priority": 3
-            })
+            insights.append(
+                {
+                    "type": "maintenance",
+                    "severity": "WARNING",
+                    "title": "Stale Projects Detected",
+                    "message": f"{len(stale_projects)} project(s) need reindexing",
+                    "action": f"Reindex: {', '.join([p['name'] for p in stale_projects[:3]])}",
+                    "priority": 3,
+                }
+            )
 
         # Insight 4: Project distribution
         total_memories = stats.get("total_memories", 0)
@@ -444,35 +462,41 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         if num_projects > 0:
             avg_memories_per_project = total_memories / num_projects
             if avg_memories_per_project < 10:
-                insights.append({
-                    "type": "usage",
-                    "severity": "INFO",
-                    "title": "Low Memory Density",
-                    "message": f"Average {avg_memories_per_project:.1f} memories per project",
-                    "action": "Consider consolidating small projects or adding more memories",
-                    "priority": 4
-                })
+                insights.append(
+                    {
+                        "type": "usage",
+                        "severity": "INFO",
+                        "title": "Low Memory Density",
+                        "message": f"Average {avg_memories_per_project:.1f} memories per project",
+                        "action": "Consider consolidating small projects or adding more memories",
+                        "priority": 4,
+                    }
+                )
 
         # Insight 5: Overall health
         health_score = health.get("overall_score", 0)
         if health_score >= 95:
-            insights.append({
-                "type": "health",
-                "severity": "INFO",
-                "title": "System Running Optimally",
-                "message": f"Health score: {health_score}/100 - all systems nominal",
-                "action": None,
-                "priority": 6
-            })
+            insights.append(
+                {
+                    "type": "health",
+                    "severity": "INFO",
+                    "title": "System Running Optimally",
+                    "message": f"Health score: {health_score}/100 - all systems nominal",
+                    "action": None,
+                    "priority": 6,
+                }
+            )
         elif health_score < 70:
-            insights.append({
-                "type": "health",
-                "severity": "CRITICAL",
-                "title": "System Health Critical",
-                "message": f"Health score: {health_score}/100 - immediate attention required",
-                "action": "Check alerts and run diagnostics",
-                "priority": 1
-            })
+            insights.append(
+                {
+                    "type": "health",
+                    "severity": "CRITICAL",
+                    "title": "System Health Critical",
+                    "message": f"Health score: {health_score}/100 - immediate attention required",
+                    "action": "Check alerts and run diagnostics",
+                    "priority": 1,
+                }
+            )
 
         # Sort by priority (lower number = higher priority)
         insights.sort(key=lambda x: x["priority"])
@@ -488,13 +512,12 @@ class DashboardHandler(SimpleHTTPRequestHandler):
 
             # Parse query parameters
             params = parse_qs(query_string)
-            period = params.get('period', ['30d'])[0]
-            metric = params.get('metric', ['memories'])[0]
+            period = params.get("period", ["30d"])[0]
+            metric = params.get("metric", ["memories"])[0]
 
             # Get current stats for trend generation
             stats_future = asyncio.run_coroutine_threadsafe(
-                self.rag_server.get_dashboard_stats(),
-                self.event_loop
+                self.rag_server.get_dashboard_stats(), self.event_loop
             )
             stats_data = stats_future.result(timeout=10)
 
@@ -503,19 +526,20 @@ class DashboardHandler(SimpleHTTPRequestHandler):
 
             self._send_json_response(trends)
         except Exception as e:
-            status_code, message = self._map_exception_to_response(e, "handling /api/trends")
+            status_code, message = self._map_exception_to_response(
+                e, "handling /api/trends"
+            )
             self._send_error_response(status_code, message)
 
     def _generate_trends(self, stats: dict, period: str, metric: str) -> dict:
         """Generate time-series trend data from actual historical metrics."""
-        from datetime import datetime, timedelta
 
         # Parse period
-        if period == '7d':
+        if period == "7d":
             days = 7
-        elif period == '30d':
+        elif period == "30d":
             days = 30
-        elif period == '90d':
+        elif period == "90d":
             days = 90
         else:
             days = 30
@@ -527,8 +551,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         try:
             # Get daily aggregated metrics
             future = asyncio.run_coroutine_threadsafe(
-                self._get_daily_metrics(days),
-                self.event_loop
+                self._get_daily_metrics(days), self.event_loop
             )
             daily_metrics = future.result(timeout=10)
 
@@ -542,7 +565,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             avg_latencies = []
 
             for metrics in daily_metrics:
-                dates.append(metrics.timestamp.strftime('%Y-%m-%d'))
+                dates.append(metrics.timestamp.strftime("%Y-%m-%d"))
                 memory_counts.append(int(metrics.total_memories))
                 # Use queries_per_day as search volume
                 search_volumes.append(int(metrics.queries_per_day))
@@ -554,8 +577,8 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 "metrics": {
                     "memory_count": memory_counts,
                     "search_volume": search_volumes,
-                    "avg_latency": avg_latencies
-                }
+                    "avg_latency": avg_latencies,
+                },
             }
         except Exception as e:
             logger.error(f"Error fetching historical metrics: {e}")
@@ -566,7 +589,10 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         from datetime import datetime, timedelta
 
         end_date = datetime.now()
-        dates = [(end_date - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(days-1, -1, -1)]
+        dates = [
+            (end_date - timedelta(days=i)).strftime("%Y-%m-%d")
+            for i in range(days - 1, -1, -1)
+        ]
 
         return {
             "period": f"{days}d",
@@ -574,8 +600,8 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             "metrics": {
                 "memory_count": [0] * days,
                 "search_volume": [0] * days,
-                "avg_latency": [0.0] * days
-            }
+                "avg_latency": [0.0] * days,
+            },
         }
 
     async def _get_daily_metrics(self, days: int):
@@ -592,37 +618,41 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 return
 
             # Read request body
-            content_length = int(self.headers.get('Content-Length', 0))
-            body = self.rfile.read(content_length).decode('utf-8')
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(content_length).decode("utf-8")
             data = json.loads(body)
 
             # Validate required fields
-            if 'content' not in data:
+            if "content" not in data:
                 self._send_error_response(400, "Missing required field: content")
                 return
 
             # Create memory via RAG server
             future = asyncio.run_coroutine_threadsafe(
                 self.rag_server.store_memory(
-                    content=data['content'],
-                    category=data.get('category', 'fact'),
-                    importance=data.get('importance', 5),
-                    project_name=data.get('project_name'),
-                    tags=data.get('tags', [])
+                    content=data["content"],
+                    category=data.get("category", "fact"),
+                    importance=data.get("importance", 5),
+                    project_name=data.get("project_name"),
+                    tags=data.get("tags", []),
                 ),
-                self.event_loop
+                self.event_loop,
             )
             result = future.result(timeout=10)
 
-            self._send_json_response({
-                "status": "success",
-                "message": "Memory created successfully",
-                "memory_id": result.get("memory_id")
-            })
+            self._send_json_response(
+                {
+                    "status": "success",
+                    "message": "Memory created successfully",
+                    "memory_id": result.get("memory_id"),
+                }
+            )
         except json.JSONDecodeError:
             self._send_error_response(400, "Invalid JSON in request body")
         except Exception as e:
-            status_code, message = self._map_exception_to_response(e, "handling /api/memories")
+            status_code, message = self._map_exception_to_response(
+                e, "handling /api/memories"
+            )
             self._send_error_response(status_code, message)
 
     def _handle_trigger_index(self):
@@ -633,34 +663,40 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 return
 
             # Read request body
-            content_length = int(self.headers.get('Content-Length', 0))
-            body = self.rfile.read(content_length).decode('utf-8')
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(content_length).decode("utf-8")
             data = json.loads(body)
 
             # Validate required fields
-            if 'directory_path' not in data or 'project_name' not in data:
-                self._send_error_response(400, "Missing required fields: directory_path, project_name")
+            if "directory_path" not in data or "project_name" not in data:
+                self._send_error_response(
+                    400, "Missing required fields: directory_path, project_name"
+                )
                 return
 
             # Trigger indexing (note: this is async, returns immediately)
             future = asyncio.run_coroutine_threadsafe(
                 self.rag_server.index_codebase(
-                    directory_path=data['directory_path'],
-                    project_name=data['project_name']
+                    directory_path=data["directory_path"],
+                    project_name=data["project_name"],
                 ),
-                self.event_loop
+                self.event_loop,
             )
             result = future.result(timeout=30)  # Longer timeout for indexing
 
-            self._send_json_response({
-                "status": "success",
-                "message": f"Indexing started for project: {data['project_name']}",
-                "stats": result
-            })
+            self._send_json_response(
+                {
+                    "status": "success",
+                    "message": f"Indexing started for project: {data['project_name']}",
+                    "stats": result,
+                }
+            )
         except json.JSONDecodeError:
             self._send_error_response(400, "Invalid JSON in request body")
         except Exception as e:
-            status_code, message = self._map_exception_to_response(e, "handling /api/index")
+            status_code, message = self._map_exception_to_response(
+                e, "handling /api/index"
+            )
             self._send_error_response(status_code, message)
 
     def _handle_export(self):
@@ -671,43 +707,47 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 return
 
             # Read request body
-            content_length = int(self.headers.get('Content-Length', 0))
-            body = self.rfile.read(content_length).decode('utf-8')
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(content_length).decode("utf-8")
             data = json.loads(body)
 
             # Get export format (default to JSON)
-            export_format = data.get('format', 'json').lower()
-            project_name = data.get('project_name')
+            export_format = data.get("format", "json").lower()
+            project_name = data.get("project_name")
 
             # Export memories
             future = asyncio.run_coroutine_threadsafe(
                 self.rag_server.export_memories(
-                    project_name=project_name,
-                    format=export_format
+                    project_name=project_name, format=export_format
                 ),
-                self.event_loop
+                self.event_loop,
             )
             result = future.result(timeout=30)
 
             # Send file as response
-            if export_format == 'json':
-                content_type = 'application/json'
-            elif export_format == 'csv':
-                content_type = 'text/csv'
+            if export_format == "json":
+                content_type = "application/json"
+            elif export_format == "csv":
+                content_type = "text/csv"
             else:
-                content_type = 'text/plain'
+                content_type = "text/plain"
 
             self.send_response(200)
             self.send_header("Content-Type", content_type)
-            self.send_header("Content-Disposition", f'attachment; filename="memories_export.{export_format}"')
+            self.send_header(
+                "Content-Disposition",
+                f'attachment; filename="memories_export.{export_format}"',
+            )
             self.send_header("Access-Control-Allow-Origin", "*")
             self.end_headers()
-            self.wfile.write(result.encode('utf-8'))
+            self.wfile.write(result.encode("utf-8"))
 
         except json.JSONDecodeError:
             self._send_error_response(400, "Invalid JSON in request body")
         except Exception as e:
-            status_code, message = self._map_exception_to_response(e, "handling /api/export")
+            status_code, message = self._map_exception_to_response(
+                e, "handling /api/export"
+            )
             self._send_error_response(status_code, message)
 
     def _send_json_response(self, data: dict):
@@ -737,10 +777,7 @@ def _run_event_loop(loop: asyncio.AbstractEventLoop):
     loop.run_forever()
 
 
-async def start_dashboard_server(
-    port: int = 8080,
-    host: str = "localhost"
-) -> None:
+async def start_dashboard_server(port: int = 8080, host: str = "localhost") -> None:
     """
     Start the dashboard web server.
 
@@ -754,7 +791,9 @@ async def start_dashboard_server(
     event_loop = asyncio.new_event_loop()
 
     # Start event loop in a separate thread
-    loop_thread = threading.Thread(target=_run_event_loop, args=(event_loop,), daemon=True)
+    loop_thread = threading.Thread(
+        target=_run_event_loop, args=(event_loop,), daemon=True
+    )
     loop_thread.start()
 
     # Initialize RAG server in the dedicated event loop
@@ -796,22 +835,17 @@ def main():
 
     parser = argparse.ArgumentParser(description="Claude Memory Dashboard Server")
     parser.add_argument(
-        "--port",
-        type=int,
-        default=8080,
-        help="Port to listen on (default: 8080)"
+        "--port", type=int, default=8080, help="Port to listen on (default: 8080)"
     )
     parser.add_argument(
-        "--host",
-        default="localhost",
-        help="Host to bind to (default: localhost)"
+        "--host", default="localhost", help="Host to bind to (default: localhost)"
     )
     args = parser.parse_args()
 
     # Setup logging
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
     # Run server

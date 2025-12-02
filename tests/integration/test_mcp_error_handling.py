@@ -8,7 +8,6 @@ Covers SPEC requirement F010-R004.
 import pytest
 import pytest_asyncio
 import json
-from typing import Dict, Any
 
 from src.config import ServerConfig
 from src.core.server import MemoryRAGServer
@@ -76,6 +75,7 @@ class TestErrorResponseFormat:
         # Trigger validation error with invalid data
         try:
             from src.core.models import StoreMemoryRequest
+
             StoreMemoryRequest(content="", category=MemoryCategory.FACT)
             assert False, "Should have raised validation error"
         except (ValidationError, PydanticValidationError) as e:
@@ -83,7 +83,7 @@ class TestErrorResponseFormat:
             error_dict = {
                 "error_type": type(e).__name__,
                 "message": str(e),
-                "error_code": getattr(e, 'error_code', 'VALIDATION_ERROR'),
+                "error_code": getattr(e, "error_code", "VALIDATION_ERROR"),
             }
 
             # Should be JSON serializable
@@ -106,7 +106,7 @@ class TestErrorResponseFormat:
         error = StorageError(
             "Test storage error",
             solution="Restart Qdrant",
-            docs_url="https://docs.example.com"
+            docs_url="https://docs.example.com",
         )
 
         # Convert to error response
@@ -194,6 +194,7 @@ class TestErrorResponseFormat:
         # Trigger validation error
         try:
             from src.core.models import QueryRequest
+
             QueryRequest(query="")  # Empty query
         except (ValidationError, PydanticValidationError) as e:
             error_msg = str(e)
@@ -218,6 +219,7 @@ class TestErrorRecovery:
         # Make an invalid request
         try:
             from src.core.models import StoreMemoryRequest
+
             StoreMemoryRequest(content="", category=MemoryCategory.FACT)
         except Exception:
             pass  # Expected to fail
@@ -234,7 +236,9 @@ class TestErrorRecovery:
         assert isinstance(results, dict)
 
     @pytest.mark.asyncio
-    @pytest.mark.skip_ci(reason="Flaky under parallel execution - Qdrant timing sensitive")
+    @pytest.mark.skip_ci(
+        reason="Flaky under parallel execution - Qdrant timing sensitive"
+    )
     async def test_partial_batch_failure_reported(self, server):
         """
         F010-R004: Batch operations with some failures report clearly.
@@ -258,7 +262,9 @@ class TestErrorRecovery:
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # Should have mix of successes and failures
-        successes = [r for r in results if isinstance(r, dict) and r.get("status") == "success"]
+        successes = [
+            r for r in results if isinstance(r, dict) and r.get("status") == "success"
+        ]
         failures = [r for r in results if isinstance(r, Exception)]
 
         assert len(successes) >= 3, "Valid operations should succeed"
@@ -288,8 +294,7 @@ class TestErrorRecovery:
             # Python < 3.11 doesn't have asyncio.timeout
             try:
                 await asyncio.wait_for(
-                    server.retrieve_memories(query="timeout test"),
-                    timeout=0.001
+                    server.retrieve_memories(query="timeout test"), timeout=0.001
                 )
             except asyncio.TimeoutError:
                 pass  # Expected
@@ -311,8 +316,7 @@ class TestErrorRecovery:
         """
         # Test QdrantConnectionError structure
         error = QdrantConnectionError(
-            url="http://localhost:6333",
-            reason="Connection refused"
+            url="http://localhost:6333", reason="Connection refused"
         )
 
         # Verify error has proper structure
@@ -351,6 +355,7 @@ class TestErrorRecovery:
         # Trigger an error that would be logged
         try:
             from src.core.models import StoreMemoryRequest
+
             StoreMemoryRequest(content="", category=MemoryCategory.FACT)
         except Exception:
             pass  # Error would be logged in real scenario
@@ -373,10 +378,11 @@ class TestActionableErrorMessages:
         """
         try:
             from src.core.models import StoreMemoryRequest
+
             StoreMemoryRequest(
                 content="test",
                 category=MemoryCategory.FACT,
-                importance=2.0  # Invalid: > 1.0
+                importance=2.0,  # Invalid: > 1.0
             )
         except (ValidationError, PydanticValidationError) as e:
             error_msg = str(e)
@@ -395,7 +401,7 @@ class TestActionableErrorMessages:
         error = StorageError(
             "Failed to connect to Qdrant",
             solution="Start Qdrant with: docker-compose up -d",
-            docs_url="docs/SETUP.md"
+            docs_url="docs/SETUP.md",
         )
 
         # Solution should be present and actionable
@@ -409,7 +415,6 @@ class TestActionableErrorMessages:
         Test that error codes follow consistent naming.
         """
         from src.core.exceptions import (
-            MemoryRAGError,
             StorageError,
             ValidationError,
             ReadOnlyError,
@@ -435,11 +440,11 @@ class TestErrorPropagation:
         """
         Test that errors from nested async calls propagate correctly.
         """
-        import asyncio
 
         async def nested_operation():
             # This will raise validation error
             from src.core.models import QueryRequest
+
             QueryRequest(query="")
 
         # Error should propagate up
@@ -455,6 +460,7 @@ class TestErrorPropagation:
 
         async def failing_task():
             from src.core.models import StoreMemoryRequest
+
             StoreMemoryRequest(content="", category=MemoryCategory.FACT)
 
         async def successful_task():
@@ -462,9 +468,7 @@ class TestErrorPropagation:
 
         # Execute with return_exceptions
         results = await asyncio.gather(
-            successful_task(),
-            failing_task(),
-            return_exceptions=True
+            successful_task(), failing_task(), return_exceptions=True
         )
 
         # First should succeed
@@ -489,10 +493,7 @@ class TestErrorPropagation:
 
         # Create and cancel a task
         task = asyncio.create_task(
-            server.update_memory(
-                memory_id=memory_id,
-                content="Cancelled update"
-            )
+            server.update_memory(memory_id=memory_id, content="Cancelled update")
         )
         task.cancel()
 

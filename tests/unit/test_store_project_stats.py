@@ -1,8 +1,7 @@
 """Tests for project statistics methods in stores."""
 
 import pytest
-from datetime import datetime, UTC
-from unittest.mock import Mock, AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 from src.store.qdrant_store import QdrantMemoryStore
 from src.core.exceptions import StorageError
 
@@ -107,26 +106,32 @@ class TestQdrantProjectStats:
 
         # Mock project memories
         mock_points = [
-            MagicMock(payload={
-                "project_name": "test-project",
-                "category": "code",
-                "context_level": "FILE",
-                "updated_at": "2025-01-01T12:00:00+00:00",
-                "file_path": "/path/to/file1.py"
-            }),
-            MagicMock(payload={
-                "project_name": "test-project",
-                "category": "code",
-                "context_level": "FUNCTION",
-                "updated_at": "2025-01-02T12:00:00+00:00",
-                "file_path": "/path/to/file2.py"
-            }),
-            MagicMock(payload={
-                "project_name": "test-project",
-                "category": "context",
-                "context_level": "PROJECT_CONTEXT",
-                "updated_at": "2025-01-01T10:00:00+00:00",
-            }),
+            MagicMock(
+                payload={
+                    "project_name": "test-project",
+                    "category": "code",
+                    "context_level": "FILE",
+                    "updated_at": "2025-01-01T12:00:00+00:00",
+                    "file_path": "/path/to/file1.py",
+                }
+            ),
+            MagicMock(
+                payload={
+                    "project_name": "test-project",
+                    "category": "code",
+                    "context_level": "FUNCTION",
+                    "updated_at": "2025-01-02T12:00:00+00:00",
+                    "file_path": "/path/to/file2.py",
+                }
+            ),
+            MagicMock(
+                payload={
+                    "project_name": "test-project",
+                    "category": "context",
+                    "context_level": "PROJECT_CONTEXT",
+                    "updated_at": "2025-01-01T10:00:00+00:00",
+                }
+            ),
         ]
 
         store.client.scroll.return_value = (mock_points, None)

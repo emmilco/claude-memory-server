@@ -4,9 +4,11 @@ import pytest
 
 # FEAT-057 suggest_queries method not implemented - tests written ahead of implementation
 # TODO: Remove skip marker when suggest_queries is implemented (planned for v4.1)
-pytestmark = pytest.mark.skip(reason="FEAT-057 suggest_queries() not implemented - planned for v4.1")
+pytestmark = pytest.mark.skip(
+    reason="FEAT-057 suggest_queries() not implemented - planned for v4.1"
+)
 import pytest_asyncio
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 from src.core.server import MemoryRAGServer
 from src.config import ServerConfig
 
@@ -67,16 +69,18 @@ async def test_suggest_queries_with_intent(server):
 async def test_suggest_queries_with_project(server):
     """Test query suggestions scoped to project."""
     # Mock project-specific memories
-    server.store.list_memories = AsyncMock(return_value=[
-        {
-            "metadata": {
-                "unit_type": "class",
-                "unit_name": "PaymentProcessor",
-                "language": "python",
-                "file_path": "/app/payment.py",
-            }
-        },
-    ])
+    server.store.list_memories = AsyncMock(
+        return_value=[
+            {
+                "metadata": {
+                    "unit_type": "class",
+                    "unit_name": "PaymentProcessor",
+                    "language": "python",
+                    "file_path": "/app/payment.py",
+                }
+            },
+        ]
+    )
 
     response = await server.suggest_queries(project_name="payment-service")
 
@@ -94,7 +98,7 @@ async def test_suggest_queries_with_context(server):
     assert response["total_suggestions"] > 0
 
     # Should detect auth domain
-    queries = [s["query"].lower() for s in response["suggestions"]]
+    [s["query"].lower() for s in response["suggestions"]]
     # May have auth-related suggestions
     assert response["suggestions"]  # At least some suggestions
 
@@ -127,7 +131,7 @@ async def test_suggest_queries_caches_suggester(server):
     """Test that query suggester is cached."""
     # First call
     await server.suggest_queries()
-    assert hasattr(server, '_query_suggester')
+    assert hasattr(server, "_query_suggester")
     suggester1 = server._query_suggester
 
     # Second call should reuse same suggester

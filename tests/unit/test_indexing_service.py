@@ -2,7 +2,6 @@
 
 import pytest
 import pytest_asyncio
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 from src.memory.indexing_service import IndexingService
 from src.config import ServerConfig

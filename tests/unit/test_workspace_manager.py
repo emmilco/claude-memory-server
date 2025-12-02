@@ -1,19 +1,23 @@
 """Tests for workspace manager."""
 
-import json
 import pytest
 import pytest_asyncio
 from datetime import datetime, UTC
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 from src.memory.workspace_manager import Workspace, WorkspaceManager
-from src.memory.repository_registry import Repository, RepositoryRegistry, RepositoryType, RepositoryStatus
+from src.memory.repository_registry import (
+    Repository,
+    RepositoryRegistry,
+    RepositoryType,
+    RepositoryStatus,
+)
 
 
 # ============================================================================
 # Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def temp_workspace_file(tmp_path):
@@ -76,6 +80,7 @@ async def workspace_manager_no_registry(temp_workspace_file):
 # ============================================================================
 # Workspace Model Tests
 # ============================================================================
+
 
 class TestWorkspaceModel:
     """Test Workspace dataclass."""
@@ -164,6 +169,7 @@ class TestWorkspaceModel:
 # Manager Basics Tests
 # ============================================================================
 
+
 class TestWorkspaceManagerBasics:
     """Test basic workspace manager operations."""
 
@@ -197,8 +203,12 @@ class TestWorkspaceManagerBasics:
         assert "ws-1" in workspace_manager.workspaces
 
         # Should update registry
-        workspace_manager.repository_registry.add_to_workspace.assert_any_call("repo-1", "ws-1")
-        workspace_manager.repository_registry.add_to_workspace.assert_any_call("repo-2", "ws-1")
+        workspace_manager.repository_registry.add_to_workspace.assert_any_call(
+            "repo-1", "ws-1"
+        )
+        workspace_manager.repository_registry.add_to_workspace.assert_any_call(
+            "repo-2", "ws-1"
+        )
 
     @pytest.mark.asyncio
     async def test_create_workspace_duplicate_id_fails(self, workspace_manager):
@@ -265,7 +275,9 @@ class TestWorkspaceManagerBasics:
         assert "ws-1" not in workspace_manager.workspaces
 
         # Should update registry
-        workspace_manager.repository_registry.remove_from_workspace.assert_called_once_with("repo-1", "ws-1")
+        workspace_manager.repository_registry.remove_from_workspace.assert_called_once_with(
+            "repo-1", "ws-1"
+        )
 
     @pytest.mark.asyncio
     async def test_delete_nonexistent_workspace_fails(self, workspace_manager):
@@ -277,6 +289,7 @@ class TestWorkspaceManagerBasics:
 # ============================================================================
 # Retrieval Tests
 # ============================================================================
+
 
 class TestWorkspaceRetrieval:
     """Test workspace retrieval operations."""
@@ -337,9 +350,15 @@ class TestWorkspaceRetrieval:
     @pytest.mark.asyncio
     async def test_list_workspaces_filter_by_tags(self, workspace_manager):
         """Test listing workspaces filtered by tags."""
-        await workspace_manager.create_workspace("ws-1", "Workspace 1", tags=["backend", "api"])
-        await workspace_manager.create_workspace("ws-2", "Workspace 2", tags=["frontend"])
-        await workspace_manager.create_workspace("ws-3", "Workspace 3", tags=["backend"])
+        await workspace_manager.create_workspace(
+            "ws-1", "Workspace 1", tags=["backend", "api"]
+        )
+        await workspace_manager.create_workspace(
+            "ws-2", "Workspace 2", tags=["frontend"]
+        )
+        await workspace_manager.create_workspace(
+            "ws-3", "Workspace 3", tags=["backend"]
+        )
 
         # Filter by single tag
         workspaces = await workspace_manager.list_workspaces(tags=["backend"])
@@ -355,9 +374,15 @@ class TestWorkspaceRetrieval:
     @pytest.mark.asyncio
     async def test_list_workspaces_filter_by_repository(self, workspace_manager):
         """Test listing workspaces filtered by repository membership."""
-        await workspace_manager.create_workspace("ws-1", "Workspace 1", repository_ids=["repo-1", "repo-2"])
-        await workspace_manager.create_workspace("ws-2", "Workspace 2", repository_ids=["repo-2", "repo-3"])
-        await workspace_manager.create_workspace("ws-3", "Workspace 3", repository_ids=["repo-3"])
+        await workspace_manager.create_workspace(
+            "ws-1", "Workspace 1", repository_ids=["repo-1", "repo-2"]
+        )
+        await workspace_manager.create_workspace(
+            "ws-2", "Workspace 2", repository_ids=["repo-2", "repo-3"]
+        )
+        await workspace_manager.create_workspace(
+            "ws-3", "Workspace 3", repository_ids=["repo-3"]
+        )
 
         workspaces = await workspace_manager.list_workspaces(has_repo="repo-2")
 
@@ -369,24 +394,17 @@ class TestWorkspaceRetrieval:
     async def test_list_workspaces_combined_filters(self, workspace_manager):
         """Test listing workspaces with combined filters."""
         await workspace_manager.create_workspace(
-            "ws-1", "Workspace 1",
-            repository_ids=["repo-1"],
-            tags=["backend"]
+            "ws-1", "Workspace 1", repository_ids=["repo-1"], tags=["backend"]
         )
         await workspace_manager.create_workspace(
-            "ws-2", "Workspace 2",
-            repository_ids=["repo-1"],
-            tags=["frontend"]
+            "ws-2", "Workspace 2", repository_ids=["repo-1"], tags=["frontend"]
         )
         await workspace_manager.create_workspace(
-            "ws-3", "Workspace 3",
-            repository_ids=["repo-2"],
-            tags=["backend"]
+            "ws-3", "Workspace 3", repository_ids=["repo-2"], tags=["backend"]
         )
 
         workspaces = await workspace_manager.list_workspaces(
-            tags=["backend"],
-            has_repo="repo-1"
+            tags=["backend"], has_repo="repo-1"
         )
 
         assert len(workspaces) == 1
@@ -396,6 +414,7 @@ class TestWorkspaceRetrieval:
 # ============================================================================
 # Update Tests
 # ============================================================================
+
 
 class TestWorkspaceUpdates:
     """Test workspace update operations."""
@@ -415,7 +434,9 @@ class TestWorkspaceUpdates:
         """Test updating workspace description."""
         await workspace_manager.create_workspace("ws-1", "Test Workspace")
 
-        await workspace_manager.update_workspace("ws-1", {"description": "New description"})
+        await workspace_manager.update_workspace(
+            "ws-1", {"description": "New description"}
+        )
 
         workspace = await workspace_manager.get_workspace("ws-1")
         assert workspace.description == "New description"
@@ -425,11 +446,14 @@ class TestWorkspaceUpdates:
         """Test updating workspace settings."""
         await workspace_manager.create_workspace("ws-1", "Test Workspace")
 
-        await workspace_manager.update_workspace("ws-1", {
-            "auto_index": False,
-            "cross_repo_search_enabled": False,
-            "settings": {"key": "value"},
-        })
+        await workspace_manager.update_workspace(
+            "ws-1",
+            {
+                "auto_index": False,
+                "cross_repo_search_enabled": False,
+                "settings": {"key": "value"},
+            },
+        )
 
         workspace = await workspace_manager.get_workspace("ws-1")
         assert workspace.auto_index is False
@@ -440,7 +464,9 @@ class TestWorkspaceUpdates:
     async def test_update_nonexistent_workspace_fails(self, workspace_manager):
         """Test updating nonexistent workspace fails."""
         with pytest.raises(ValueError, match="not found"):
-            await workspace_manager.update_workspace("nonexistent", {"name": "New Name"})
+            await workspace_manager.update_workspace(
+                "nonexistent", {"name": "New Name"}
+            )
 
     @pytest.mark.asyncio
     async def test_update_workspace_invalid_field_fails(self, workspace_manager):
@@ -448,7 +474,9 @@ class TestWorkspaceUpdates:
         await workspace_manager.create_workspace("ws-1", "Test Workspace")
 
         with pytest.raises(ValueError, match="Cannot update field"):
-            await workspace_manager.update_workspace("ws-1", {"repository_ids": ["repo-1"]})
+            await workspace_manager.update_workspace(
+                "ws-1", {"repository_ids": ["repo-1"]}
+            )
 
         with pytest.raises(ValueError, match="Cannot update field"):
             await workspace_manager.update_workspace("ws-1", {"id": "new-id"})
@@ -463,6 +491,7 @@ class TestWorkspaceUpdates:
 
         # Wait a bit to ensure timestamp changes
         import asyncio
+
         await asyncio.sleep(0.01)
 
         await workspace_manager.update_workspace("ws-1", {"name": "New Name"})
@@ -474,6 +503,7 @@ class TestWorkspaceUpdates:
 # ============================================================================
 # Repository Management Tests
 # ============================================================================
+
 
 class TestWorkspaceRepositoryManagement:
     """Test workspace repository management."""
@@ -489,7 +519,9 @@ class TestWorkspaceRepositoryManagement:
         assert "repo-1" in workspace.repository_ids
 
         # Should update registry
-        workspace_manager.repository_registry.add_to_workspace.assert_called_with("repo-1", "ws-1")
+        workspace_manager.repository_registry.add_to_workspace.assert_called_with(
+            "repo-1", "ws-1"
+        )
 
     @pytest.mark.asyncio
     async def test_add_repository_idempotent(self, workspace_manager):
@@ -520,8 +552,7 @@ class TestWorkspaceRepositoryManagement:
     async def test_remove_repository(self, workspace_manager):
         """Test removing repository from workspace."""
         await workspace_manager.create_workspace(
-            "ws-1", "Test Workspace",
-            repository_ids=["repo-1", "repo-2"]
+            "ws-1", "Test Workspace", repository_ids=["repo-1", "repo-2"]
         )
 
         await workspace_manager.remove_repository("ws-1", "repo-1")
@@ -531,7 +562,9 @@ class TestWorkspaceRepositoryManagement:
         assert "repo-2" in workspace.repository_ids
 
         # Should update registry
-        workspace_manager.repository_registry.remove_from_workspace.assert_called_with("repo-1", "ws-1")
+        workspace_manager.repository_registry.remove_from_workspace.assert_called_with(
+            "repo-1", "ws-1"
+        )
 
     @pytest.mark.asyncio
     async def test_remove_repository_not_in_workspace(self, workspace_manager):
@@ -542,7 +575,9 @@ class TestWorkspaceRepositoryManagement:
         await workspace_manager.remove_repository("ws-1", "repo-1")
 
     @pytest.mark.asyncio
-    async def test_remove_repository_nonexistent_workspace_fails(self, workspace_manager):
+    async def test_remove_repository_nonexistent_workspace_fails(
+        self, workspace_manager
+    ):
         """Test removing repository from nonexistent workspace fails."""
         with pytest.raises(ValueError, match="not found"):
             await workspace_manager.remove_repository("nonexistent", "repo-1")
@@ -551,8 +586,7 @@ class TestWorkspaceRepositoryManagement:
     async def test_get_workspace_repositories(self, workspace_manager):
         """Test getting list of workspace repositories."""
         await workspace_manager.create_workspace(
-            "ws-1", "Test Workspace",
-            repository_ids=["repo-1", "repo-2"]
+            "ws-1", "Test Workspace", repository_ids=["repo-1", "repo-2"]
         )
 
         repos = await workspace_manager.get_workspace_repositories("ws-1")
@@ -560,7 +594,9 @@ class TestWorkspaceRepositoryManagement:
         assert repos == ["repo-1", "repo-2"]
 
     @pytest.mark.asyncio
-    async def test_get_workspace_repositories_nonexistent_fails(self, workspace_manager):
+    async def test_get_workspace_repositories_nonexistent_fails(
+        self, workspace_manager
+    ):
         """Test getting repositories of nonexistent workspace fails."""
         with pytest.raises(ValueError, match="not found"):
             await workspace_manager.get_workspace_repositories("nonexistent")
@@ -569,6 +605,7 @@ class TestWorkspaceRepositoryManagement:
 # ============================================================================
 # Tag Management Tests
 # ============================================================================
+
 
 class TestWorkspaceTagManagement:
     """Test workspace tag management."""
@@ -604,8 +641,7 @@ class TestWorkspaceTagManagement:
     async def test_remove_tag(self, workspace_manager):
         """Test removing tag from workspace."""
         await workspace_manager.create_workspace(
-            "ws-1", "Test Workspace",
-            tags=["backend", "api"]
+            "ws-1", "Test Workspace", tags=["backend", "api"]
         )
 
         await workspace_manager.remove_tag("ws-1", "backend")
@@ -633,6 +669,7 @@ class TestWorkspaceTagManagement:
 # Persistence Tests
 # ============================================================================
 
+
 class TestWorkspacePersistence:
     """Test workspace persistence."""
 
@@ -642,10 +679,11 @@ class TestWorkspacePersistence:
         # Create manager and add workspaces
         manager1 = WorkspaceManager(str(temp_workspace_file), mock_registry)
         await manager1.create_workspace(
-            "ws-1", "Workspace 1",
+            "ws-1",
+            "Workspace 1",
             description="First workspace",
             repository_ids=["repo-1"],
-            tags=["backend"]
+            tags=["backend"],
         )
         await manager1.create_workspace("ws-2", "Workspace 2")
 
@@ -686,6 +724,7 @@ class TestWorkspacePersistence:
 # Statistics Tests
 # ============================================================================
 
+
 class TestWorkspaceStatistics:
     """Test workspace statistics."""
 
@@ -693,25 +732,28 @@ class TestWorkspaceStatistics:
     async def test_get_statistics(self, workspace_manager):
         """Test getting workspace statistics."""
         await workspace_manager.create_workspace(
-            "ws-1", "Workspace 1",
+            "ws-1",
+            "Workspace 1",
             repository_ids=["repo-1", "repo-2"],
             auto_index=True,
             cross_repo_search_enabled=True,
-            tags=["backend"]
+            tags=["backend"],
         )
         await workspace_manager.create_workspace(
-            "ws-2", "Workspace 2",
+            "ws-2",
+            "Workspace 2",
             repository_ids=["repo-2", "repo-3"],
             auto_index=False,
             cross_repo_search_enabled=True,
-            tags=["frontend"]
+            tags=["frontend"],
         )
         await workspace_manager.create_workspace(
-            "ws-3", "Workspace 3",
+            "ws-3",
+            "Workspace 3",
             repository_ids=["repo-3"],
             auto_index=True,
             cross_repo_search_enabled=False,
-            tags=["backend", "api"]
+            tags=["backend", "api"],
         )
 
         stats = await workspace_manager.get_statistics()

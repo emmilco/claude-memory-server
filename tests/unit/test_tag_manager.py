@@ -23,12 +23,16 @@ def tag_manager(db_path):
     return TagManager(db_path)
 
 
-@pytest.mark.parametrize("hierarchy_path,expected_level", [
-    (["python"], 0),
-    (["language", "python"], 1),
-    (["language", "python", "async"], 2),
-    (["language", "python", "async", "patterns"], 3),
-], ids=["root", "nested", "deep_3", "deep_4"])
+@pytest.mark.parametrize(
+    "hierarchy_path,expected_level",
+    [
+        (["python"], 0),
+        (["language", "python"], 1),
+        (["language", "python", "async"], 2),
+        (["language", "python", "async", "patterns"], 3),
+    ],
+    ids=["root", "nested", "deep_3", "deep_4"],
+)
 def test_create_tag_hierarchy(tag_manager, hierarchy_path, expected_level):
     """Test creating tag hierarchies at different levels."""
     parent_id = None
@@ -69,10 +73,14 @@ def test_duplicate_tag_path(tag_manager):
         tag_manager.create_tag(TagCreate(name="python"))
 
 
-@pytest.mark.parametrize("tag_path,retrieval_method", [
-    ("python", "by_id"),
-    ("language/python", "by_path"),
-], ids=["get_by_id", "get_by_path"])
+@pytest.mark.parametrize(
+    "tag_path,retrieval_method",
+    [
+        ("python", "by_id"),
+        ("language/python", "by_path"),
+    ],
+    ids=["get_by_id", "get_by_path"],
+)
 def test_get_tag(tag_manager, tag_path, retrieval_method):
     """Test retrieving tags by ID or path."""
     # Create hierarchy if needed
@@ -140,8 +148,8 @@ def test_get_descendants(tag_manager):
     """Test getting descendant tags."""
     parent = tag_manager.create_tag(TagCreate(name="language"))
     child1 = tag_manager.create_tag(TagCreate(name="python", parent_id=parent.id))
-    child2 = tag_manager.create_tag(TagCreate(name="javascript", parent_id=parent.id))
-    grandchild = tag_manager.create_tag(TagCreate(name="async", parent_id=child1.id))
+    tag_manager.create_tag(TagCreate(name="javascript", parent_id=parent.id))
+    tag_manager.create_tag(TagCreate(name="async", parent_id=child1.id))
 
     descendants = tag_manager.get_descendants(parent.id)
 
@@ -150,11 +158,15 @@ def test_get_descendants(tag_manager):
     assert desc_names == {"python", "javascript", "async"}
 
 
-@pytest.mark.parametrize("has_children,cascade,should_succeed", [
-    (False, False, True),
-    (True, False, False),
-    (True, True, True),
-], ids=["no_children", "with_children_no_cascade", "with_children_cascade"])
+@pytest.mark.parametrize(
+    "has_children,cascade,should_succeed",
+    [
+        (False, False, True),
+        (True, False, False),
+        (True, True, True),
+    ],
+    ids=["no_children", "with_children_no_cascade", "with_children_cascade"],
+)
 def test_delete_tag(tag_manager, has_children, cascade, should_succeed):
     """Test deleting tags with various scenarios."""
     parent = tag_manager.create_tag(TagCreate(name="language"))
@@ -193,16 +205,22 @@ def test_merge_tags(tag_manager):
     assert memory_tags[0].id == target.id
 
 
-@pytest.mark.parametrize("operation,expected_count", [
-    ("tag", 1),
-    ("tag_then_untag", 0),
-], ids=["tag_memory", "untag_memory"])
+@pytest.mark.parametrize(
+    "operation,expected_count",
+    [
+        ("tag", 1),
+        ("tag_then_untag", 0),
+    ],
+    ids=["tag_memory", "untag_memory"],
+)
 def test_memory_tagging(tag_manager, operation, expected_count):
     """Test tagging and untagging memories."""
     tag = tag_manager.create_tag(TagCreate(name="python"))
 
     if operation == "tag":
-        tag_manager.tag_memory("memory-123", tag.id, confidence=0.95, auto_generated=True)
+        tag_manager.tag_memory(
+            "memory-123", tag.id, confidence=0.95, auto_generated=True
+        )
     elif operation == "tag_then_untag":
         tag_manager.tag_memory("memory-123", tag.id)
         tag_manager.untag_memory("memory-123", tag.id)

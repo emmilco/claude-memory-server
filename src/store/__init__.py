@@ -31,6 +31,7 @@ def create_memory_store(
     """
     if config is None:
         from src.config import get_config
+
         config = get_config()
 
     if backend is None:

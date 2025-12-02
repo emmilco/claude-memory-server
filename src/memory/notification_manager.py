@@ -3,11 +3,12 @@
 import asyncio
 import logging
 from abc import ABC, abstractmethod
-from typing import Optional, List, Callable, Dict, Any
+from typing import Optional, List, Callable, Dict
 from datetime import datetime, UTC
 
 try:
     from rich.console import Console
+
     RICH_AVAILABLE = True
 except ImportError:
     RICH_AVAILABLE = False
@@ -330,7 +331,9 @@ class NotificationManager:
 
         if total_files:
             percent = (indexed_files / total_files * 100) if total_files > 0 else 0
-            message = f"Progress: {indexed_files:,}/{total_files:,} files ({percent:.1f}%)"
+            message = (
+                f"Progress: {indexed_files:,}/{total_files:,} files ({percent:.1f}%)"
+            )
         else:
             message = f"Files indexed: {indexed_files:,}"
 
@@ -361,10 +364,7 @@ class NotificationManager:
         """Send notification to all backends."""
         import asyncio
 
-        tasks = [
-            backend.notify(title, message, level)
-            for backend in self.backends
-        ]
+        tasks = [backend.notify(title, message, level) for backend in self.backends]
 
         # Send to all backends concurrently
         await asyncio.gather(*tasks, return_exceptions=True)

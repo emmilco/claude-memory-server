@@ -1,7 +1,7 @@
 """Tests for query suggester."""
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 from src.memory.query_suggester import QuerySuggester, QuerySuggestion
 from src.config import ServerConfig
 
@@ -69,32 +69,34 @@ async def test_suggest_queries_debugging_intent(suggester):
 async def test_suggest_queries_with_project_specific(suggester, mock_store):
     """Test project-specific suggestions."""
     # Mock indexed memories with classes
-    mock_store.list_memories = AsyncMock(return_value=[
-        {
-            "metadata": {
-                "unit_type": "class",
-                "unit_name": "UserRepository",
-                "language": "python",
-                "file_path": "/app/user.py",
-            }
-        },
-        {
-            "metadata": {
-                "unit_type": "class",
-                "unit_name": "UserRepository",  # Duplicate
-                "language": "python",
-                "file_path": "/app/user2.py",
-            }
-        },
-        {
-            "metadata": {
-                "unit_type": "function",
-                "unit_name": "process_payment",
-                "language": "python",
-                "file_path": "/app/payment.py",
-            }
-        },
-    ])
+    mock_store.list_memories = AsyncMock(
+        return_value=[
+            {
+                "metadata": {
+                    "unit_type": "class",
+                    "unit_name": "UserRepository",
+                    "language": "python",
+                    "file_path": "/app/user.py",
+                }
+            },
+            {
+                "metadata": {
+                    "unit_type": "class",
+                    "unit_name": "UserRepository",  # Duplicate
+                    "language": "python",
+                    "file_path": "/app/user2.py",
+                }
+            },
+            {
+                "metadata": {
+                    "unit_type": "function",
+                    "unit_name": "process_payment",
+                    "language": "python",
+                    "file_path": "/app/payment.py",
+                }
+            },
+        ]
+    )
 
     response = await suggester.suggest_queries(
         project_name="test-project",
@@ -125,32 +127,34 @@ async def test_suggest_queries_domain_detection(suggester):
 async def test_get_indexed_stats(suggester, mock_store):
     """Test indexed stats extraction."""
     # Mock indexed memories
-    mock_store.list_memories = AsyncMock(return_value=[
-        {
-            "metadata": {
-                "language": "python",
-                "file_path": "/app/auth.py",
-                "unit_type": "function",
-                "unit_name": "validate_token",
-            }
-        },
-        {
-            "metadata": {
-                "language": "python",
-                "file_path": "/app/user.py",
-                "unit_type": "class",
-                "unit_name": "User",
-            }
-        },
-        {
-            "metadata": {
-                "language": "typescript",
-                "file_path": "/client/api.ts",
-                "unit_type": "function",
-                "unit_name": "fetchUser",
-            }
-        },
-    ])
+    mock_store.list_memories = AsyncMock(
+        return_value=[
+            {
+                "metadata": {
+                    "language": "python",
+                    "file_path": "/app/auth.py",
+                    "unit_type": "function",
+                    "unit_name": "validate_token",
+                }
+            },
+            {
+                "metadata": {
+                    "language": "python",
+                    "file_path": "/app/user.py",
+                    "unit_type": "class",
+                    "unit_name": "User",
+                }
+            },
+            {
+                "metadata": {
+                    "language": "typescript",
+                    "file_path": "/client/api.ts",
+                    "unit_type": "function",
+                    "unit_name": "fetchUser",
+                }
+            },
+        ]
+    )
 
     stats = await suggester._get_indexed_stats("test-project")
 
@@ -194,9 +198,7 @@ async def test_detect_domain_from_classes(suggester):
     assert domain == "database"  # Repository pattern suggests database
 
     # Test auth domain
-    stats = {
-        "top_classes": ["AuthService", "SessionManager", "TokenValidator"]
-    }
+    stats = {"top_classes": ["AuthService", "SessionManager", "TokenValidator"]}
 
     domain = suggester._detect_domain(None, stats)
     assert domain == "auth"  # Auth-related classes

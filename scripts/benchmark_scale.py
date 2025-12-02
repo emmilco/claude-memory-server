@@ -36,10 +36,7 @@ class PerformanceBenchmark:
             await self.server.close()
 
     async def benchmark_search_latency(
-        self,
-        queries: List[str],
-        iterations: int = 10,
-        limit: int = 5
+        self, queries: List[str], iterations: int = 10, limit: int = 5
     ) -> Dict[str, Any]:
         """
         Benchmark search latency with various query types.
@@ -77,7 +74,11 @@ class PerformanceBenchmark:
             # Query-specific stats
             avg = statistics.mean(query_latencies)
             p50 = statistics.median(query_latencies)
-            p95 = statistics.quantiles(query_latencies, n=20)[18] if len(query_latencies) >= 20 else max(query_latencies)
+            p95 = (
+                statistics.quantiles(query_latencies, n=20)[18]
+                if len(query_latencies) >= 20
+                else max(query_latencies)
+            )
 
             print(f"  Avg: {avg:.2f}ms | P50: {p50:.2f}ms | P95: {p95:.2f}ms")
 
@@ -90,8 +91,16 @@ class PerformanceBenchmark:
         median_latency = statistics.median(all_latencies)
         min_latency = min(all_latencies)
         max_latency = max(all_latencies)
-        p95_latency = statistics.quantiles(all_latencies, n=20)[18] if len(all_latencies) >= 20 else max(all_latencies)
-        p99_latency = statistics.quantiles(all_latencies, n=100)[98] if len(all_latencies) >= 100 else max(all_latencies)
+        p95_latency = (
+            statistics.quantiles(all_latencies, n=20)[18]
+            if len(all_latencies) >= 20
+            else max(all_latencies)
+        )
+        p99_latency = (
+            statistics.quantiles(all_latencies, n=100)[98]
+            if len(all_latencies) >= 100
+            else max(all_latencies)
+        )
 
         print(f"Total Queries: {len(all_latencies)}")
         print(f"Average:  {avg_latency:.2f}ms")
@@ -136,13 +145,27 @@ class PerformanceBenchmark:
 
         # Test different retrieval patterns
         tests = [
-            ("retrieve_preferences", lambda: self.server.retrieve_preferences("code style")),
-            ("retrieve_project_context", lambda: self.server.retrieve_project_context("api-server")),
-            ("retrieve_session_state", lambda: self.server.retrieve_session_state("current task")),
+            (
+                "retrieve_preferences",
+                lambda: self.server.retrieve_preferences("code style"),
+            ),
+            (
+                "retrieve_project_context",
+                lambda: self.server.retrieve_project_context("api-server"),
+            ),
+            (
+                "retrieve_session_state",
+                lambda: self.server.retrieve_session_state("current task"),
+            ),
             ("list_memories", lambda: self.server.list_memories(limit=20)),
-            ("list_memories_filtered", lambda: self.server.list_memories(
-                category=MemoryCategory.PREFERENCE.value, min_importance=0.7, limit=20
-            )),
+            (
+                "list_memories_filtered",
+                lambda: self.server.list_memories(
+                    category=MemoryCategory.PREFERENCE.value,
+                    min_importance=0.7,
+                    limit=20,
+                ),
+            ),
         ]
 
         for test_name, test_func in tests:
@@ -157,7 +180,11 @@ class PerformanceBenchmark:
                 latencies.append(latency)
 
             avg = statistics.mean(latencies)
-            p95 = statistics.quantiles(latencies, n=20)[18] if len(latencies) >= 20 else max(latencies)
+            p95 = (
+                statistics.quantiles(latencies, n=20)[18]
+                if len(latencies) >= 20
+                else max(latencies)
+            )
 
             print(f"  Avg: {avg:.2f}ms | P95: {p95:.2f}ms")
 
@@ -170,9 +197,7 @@ class PerformanceBenchmark:
         return results
 
     async def benchmark_concurrent_load(
-        self,
-        num_concurrent: int = 10,
-        operations_per_client: int = 5
+        self, num_concurrent: int = 10, operations_per_client: int = 5
     ) -> Dict[str, Any]:
         """
         Benchmark performance under concurrent load.
@@ -213,17 +238,23 @@ class PerformanceBenchmark:
 
         # Run concurrent clients
         start = time.time()
-        results = await asyncio.gather(*[client_workload() for _ in range(num_concurrent)])
+        results = await asyncio.gather(
+            *[client_workload() for _ in range(num_concurrent)]
+        )
         total_time = time.time() - start
 
         # Flatten results
         all_latencies = [lat for client_lats in results for lat in client_lats]
 
         avg_latency = statistics.mean(all_latencies)
-        p95_latency = statistics.quantiles(all_latencies, n=20)[18] if len(all_latencies) >= 20 else max(all_latencies)
+        p95_latency = (
+            statistics.quantiles(all_latencies, n=20)[18]
+            if len(all_latencies) >= 20
+            else max(all_latencies)
+        )
         throughput = len(all_latencies) / total_time
 
-        print(f"Results:")
+        print("Results:")
         print(f"  Total Time: {total_time:.2f}s")
         print(f"  Total Operations: {len(all_latencies)}")
         print(f"  Average Latency: {avg_latency:.2f}ms")
@@ -249,15 +280,15 @@ class PerformanceBenchmark:
         server_stats = self.server.stats
 
         stats = {
-            'total_memories': total,
-            'operations': server_stats,
+            "total_memories": total,
+            "operations": server_stats,
         }
 
         print(f"\n{'='*70}")
         print("Database Statistics")
         print(f"{'='*70}")
         print(f"Total Memories: {total:,}")
-        print(f"\nOperation Stats:")
+        print("\nOperation Stats:")
         print(f"  Stored: {server_stats.get('memories_stored', 0):,}")
         print(f"  Retrieved: {server_stats.get('memories_retrieved', 0):,}")
         print(f"  Deleted: {server_stats.get('memories_deleted', 0):,}")
@@ -269,9 +300,9 @@ class PerformanceBenchmark:
 
 async def run_all_benchmarks():
     """Run comprehensive performance benchmark suite."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("PERFORMANCE BENCHMARK SUITE - SCALE TESTING")
-    print("="*70)
+    print("=" * 70)
 
     benchmark = PerformanceBenchmark()
 
@@ -280,7 +311,7 @@ async def run_all_benchmarks():
 
         # Get database stats first
         db_stats = await benchmark.get_database_stats()
-        total_memories = db_stats.get('total_memories', 0)
+        total_memories = db_stats.get("total_memories", 0)
 
         if total_memories < 1000:
             print("\n⚠️  WARNING: Database has fewer than 1,000 memories.")
@@ -306,13 +337,15 @@ async def run_all_benchmarks():
         # Run benchmarks
         results = {}
 
-        results['search_latency'] = await benchmark.benchmark_search_latency(
+        results["search_latency"] = await benchmark.benchmark_search_latency(
             test_queries, iterations=5
         )
 
-        results['retrieval_operations'] = await benchmark.benchmark_memory_retrieval_types()
+        results[
+            "retrieval_operations"
+        ] = await benchmark.benchmark_memory_retrieval_types()
 
-        results['concurrent_load'] = await benchmark.benchmark_concurrent_load(
+        results["concurrent_load"] = await benchmark.benchmark_concurrent_load(
             num_concurrent=10, operations_per_client=5
         )
 
@@ -321,12 +354,16 @@ async def run_all_benchmarks():
         print("BENCHMARK SUMMARY")
         print(f"{'='*70}")
         print(f"Database Size: {total_memories:,} memories")
-        print(f"\nSearch Performance:")
+        print("\nSearch Performance:")
         print(f"  Average Latency: {results['search_latency']['avg_ms']:.2f}ms")
         print(f"  P95 Latency: {results['search_latency']['p95_ms']:.2f}ms")
-        print(f"  Target: <50ms P95 ({'✅ PASS' if results['search_latency']['passes_target'] else '❌ FAIL'})")
-        print(f"\nConcurrent Performance:")
-        print(f"  Throughput: {results['concurrent_load']['throughput_ops_per_sec']:.1f} ops/sec")
+        print(
+            f"  Target: <50ms P95 ({'✅ PASS' if results['search_latency']['passes_target'] else '❌ FAIL'})"
+        )
+        print("\nConcurrent Performance:")
+        print(
+            f"  Throughput: {results['concurrent_load']['throughput_ops_per_sec']:.1f} ops/sec"
+        )
         print(f"  P95 under load: {results['concurrent_load']['p95_latency_ms']:.2f}ms")
         print(f"{'='*70}\n")
 

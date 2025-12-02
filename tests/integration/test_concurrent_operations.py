@@ -11,15 +11,14 @@ Qdrant resource contention. They pass reliably when run in isolation:
 import pytest
 import pytest_asyncio
 import asyncio
-import uuid
-from unittest.mock import AsyncMock, Mock
 
 from src.config import ServerConfig
 from src.core.server import MemoryRAGServer
-from src.core.models import MemoryCategory, MemoryScope
 
 # Skip in parallel test runs - flaky due to Qdrant resource contention
-pytestmark = pytest.mark.skip(reason="Flaky in parallel execution - pass when run in isolation")
+pytestmark = pytest.mark.skip(
+    reason="Flaky in parallel execution - pass when run in isolation"
+)
 
 
 @pytest.fixture
@@ -94,7 +93,9 @@ class TestConcurrentWrites:
 
         # Verify all have unique IDs (no ID collision under concurrent load)
         ids = [r["memory_id"] for r in results]
-        assert len(set(ids)) == 10, f"Got duplicate IDs: {len(set(ids))} unique out of {len(ids)} total"
+        assert (
+            len(set(ids)) == 10
+        ), f"Got duplicate IDs: {len(set(ids))} unique out of {len(ids)} total"
 
     @pytest.mark.asyncio
     async def test_concurrent_multiple_stores(self, server):
@@ -104,26 +105,34 @@ class TestConcurrentWrites:
         """
         # First batch
         batch1_tasks = [
-            server.store_memory(content=f"Batch 1 item {i}", category="fact", scope="global")
+            server.store_memory(
+                content=f"Batch 1 item {i}", category="fact", scope="global"
+            )
             for i in range(5)
         ]
         batch1_results = await asyncio.gather(*batch1_tasks, return_exceptions=True)
 
         # Check for exceptions in first batch
         batch1_exceptions = [r for r in batch1_results if isinstance(r, Exception)]
-        assert len(batch1_exceptions) == 0, f"Batch 1 had {len(batch1_exceptions)} exceptions: {batch1_exceptions}"
+        assert (
+            len(batch1_exceptions) == 0
+        ), f"Batch 1 had {len(batch1_exceptions)} exceptions: {batch1_exceptions}"
         assert len(batch1_results) == 5
 
         # Second batch
         batch2_tasks = [
-            server.store_memory(content=f"Batch 2 item {i}", category="preference", scope="global")
+            server.store_memory(
+                content=f"Batch 2 item {i}", category="preference", scope="global"
+            )
             for i in range(5)
         ]
         batch2_results = await asyncio.gather(*batch2_tasks, return_exceptions=True)
 
         # Check for exceptions in second batch
         batch2_exceptions = [r for r in batch2_results if isinstance(r, Exception)]
-        assert len(batch2_exceptions) == 0, f"Batch 2 had {len(batch2_exceptions)} exceptions: {batch2_exceptions}"
+        assert (
+            len(batch2_exceptions) == 0
+        ), f"Batch 2 had {len(batch2_exceptions)} exceptions: {batch2_exceptions}"
         assert len(batch2_results) == 5
 
         # Verify all succeeded
@@ -150,15 +159,16 @@ class TestConcurrentReads:
 
         # Execute concurrent retrievals
         tasks = [
-            server.retrieve_memories(query=f"retrieval {i}", limit=5)
-            for i in range(10)
+            server.retrieve_memories(query=f"retrieval {i}", limit=5) for i in range(10)
         ]
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # Check for exceptions
         exceptions = [r for r in results if isinstance(r, Exception)]
-        assert len(exceptions) == 0, f"Got {len(exceptions)} exceptions during concurrent retrieval: {exceptions}"
+        assert (
+            len(exceptions) == 0
+        ), f"Got {len(exceptions)} exceptions during concurrent retrieval: {exceptions}"
 
         # Verify all succeeded
         assert len(results) == 10
@@ -177,10 +187,7 @@ class TestConcurrentReads:
         )
 
         # Mix reads and writes concurrently
-        read_tasks = [
-            server.retrieve_memories(query="data", limit=5)
-            for _ in range(5)
-        ]
+        read_tasks = [server.retrieve_memories(query="data", limit=5) for _ in range(5)]
         write_tasks = [
             server.store_memory(
                 content=f"Concurrent write {i}",
@@ -226,7 +233,9 @@ class TestConcurrentEmbeddingGeneration:
 
         # Check for exceptions
         exceptions = [r for r in results if isinstance(r, Exception)]
-        assert len(exceptions) == 0, f"Got {len(exceptions)} exceptions during concurrent embedding: {exceptions}"
+        assert (
+            len(exceptions) == 0
+        ), f"Got {len(exceptions)} exceptions during concurrent embedding: {exceptions}"
 
         # Verify all succeeded
         assert len(results) == 20
@@ -252,15 +261,16 @@ class TestConcurrentCacheAccess:
 
         # Perform many concurrent retrievals (should hit cache)
         tasks = [
-            server.retrieve_memories(query="Cached content", limit=5)
-            for _ in range(20)
+            server.retrieve_memories(query="Cached content", limit=5) for _ in range(20)
         ]
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # Check for exceptions
         exceptions = [r for r in results if isinstance(r, Exception)]
-        assert len(exceptions) == 0, f"Got {len(exceptions)} exceptions during concurrent cache reads: {exceptions}"
+        assert (
+            len(exceptions) == 0
+        ), f"Got {len(exceptions)} exceptions during concurrent cache reads: {exceptions}"
 
         # Verify all succeeded
         assert len(results) == 20
@@ -287,7 +297,9 @@ class TestConcurrentCacheAccess:
 
         # Check for exceptions
         exceptions = [r for r in results if isinstance(r, Exception)]
-        assert len(exceptions) == 0, f"Got {len(exceptions)} exceptions during concurrent cache writes: {exceptions}"
+        assert (
+            len(exceptions) == 0
+        ), f"Got {len(exceptions)} exceptions during concurrent cache writes: {exceptions}"
 
         # Verify all succeeded (no cache corruption)
         assert len(results) == 15
@@ -318,21 +330,22 @@ class TestConcurrentDeletes:
 
         # Check for store exceptions
         store_exceptions = [r for r in store_results if isinstance(r, Exception)]
-        assert len(store_exceptions) == 0, f"Got {len(store_exceptions)} exceptions during store: {store_exceptions}"
+        assert (
+            len(store_exceptions) == 0
+        ), f"Got {len(store_exceptions)} exceptions during store: {store_exceptions}"
 
         memory_ids = [r["memory_id"] for r in store_results]
 
         # Delete concurrently
-        delete_tasks = [
-            server.delete_memory(memory_id)
-            for memory_id in memory_ids
-        ]
+        delete_tasks = [server.delete_memory(memory_id) for memory_id in memory_ids]
 
         delete_results = await asyncio.gather(*delete_tasks, return_exceptions=True)
 
         # Check for delete exceptions
         delete_exceptions = [r for r in delete_results if isinstance(r, Exception)]
-        assert len(delete_exceptions) == 0, f"Got {len(delete_exceptions)} exceptions during delete: {delete_exceptions}"
+        assert (
+            len(delete_exceptions) == 0
+        ), f"Got {len(delete_exceptions)} exceptions during delete: {delete_exceptions}"
 
         # Verify all deletes succeeded
         for result in delete_results:
@@ -368,9 +381,7 @@ class TestConcurrentMixedOperations:
 
         # Add some retrievals
         for i in range(5):
-            tasks.append(
-                server.retrieve_memories(query=f"memory {i}", limit=5)
-            )
+            tasks.append(server.retrieve_memories(query=f"memory {i}", limit=5))
 
         # Add some status checks
         for i in range(3):
@@ -419,7 +430,9 @@ class TestRaceConditions:
 
         # All should have different IDs (no ID collision)
         ids = [r["memory_id"] for r in results]
-        assert len(set(ids)) == 10, f"Got duplicate IDs: {len(set(ids))} unique out of 10 total"
+        assert (
+            len(set(ids)) == 10
+        ), f"Got duplicate IDs: {len(set(ids))} unique out of 10 total"
 
     @pytest.mark.asyncio
     async def test_read_while_updating(self, server):
@@ -443,14 +456,16 @@ class TestRaceConditions:
 
         # Execute concurrently
         update_result, retrieve_result = await asyncio.gather(
-            update_task,
-            retrieve_task,
-            return_exceptions=True
+            update_task, retrieve_task, return_exceptions=True
         )
 
         # Neither should fail - concurrent reads and updates should be safe
-        assert not isinstance(update_result, Exception), f"Update failed: {update_result}"
-        assert not isinstance(retrieve_result, Exception), f"Retrieve failed: {retrieve_result}"
+        assert not isinstance(
+            update_result, Exception
+        ), f"Update failed: {update_result}"
+        assert not isinstance(
+            retrieve_result, Exception
+        ), f"Retrieve failed: {retrieve_result}"
 
 
 class TestConcurrentStressTest:
@@ -478,9 +493,17 @@ class TestConcurrentStressTest:
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # Count successes and failures
-        successes = [r for r in results if not isinstance(r, Exception) and r.get("status") == "success"]
+        successes = [
+            r
+            for r in results
+            if not isinstance(r, Exception) and r.get("status") == "success"
+        ]
         exceptions = [r for r in results if isinstance(r, Exception)]
-        failures = [r for r in results if not isinstance(r, Exception) and r.get("status") != "success"]
+        failures = [
+            r
+            for r in results
+            if not isinstance(r, Exception) and r.get("status") != "success"
+        ]
 
         # At least 90% should succeed (allow for some resource contention under high load)
         success_rate = len(successes) / len(results) * 100
@@ -506,8 +529,7 @@ class TestConcurrentStressTest:
 
         # Execute 100 concurrent retrievals
         tasks = [
-            server.retrieve_memories(query="stress test", limit=5)
-            for _ in range(100)
+            server.retrieve_memories(query="stress test", limit=5) for _ in range(100)
         ]
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -518,5 +540,3 @@ class TestConcurrentStressTest:
             f"Rapid retrieve test failed: {len(exceptions)}/100 operations threw exceptions\n"
             f"First exception: {exceptions[0] if exceptions else 'N/A'}"
         )
-
-

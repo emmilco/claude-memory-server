@@ -13,7 +13,6 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, UTC
 from typing import Optional, List, Dict, Any, Tuple
 from enum import Enum
-from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -353,7 +352,9 @@ class PerformanceTracker:
                 last_updated=datetime.fromisoformat(row[7]),
             )
 
-    def get_current_value(self, metric: PerformanceMetric, days: int = 1) -> Optional[float]:
+    def get_current_value(
+        self, metric: PerformanceMetric, days: int = 1
+    ) -> Optional[float]:
         """
         Get current (recent) value for a metric.
 
@@ -429,7 +430,9 @@ class PerformanceTracker:
             return None
 
         # Generate recommendations
-        recommendations = self._generate_recommendations(metric, degradation, current_value, baseline)
+        recommendations = self._generate_recommendations(
+            metric, degradation, current_value, baseline
+        )
 
         regression = PerformanceRegression(
             metric=metric,
@@ -482,34 +485,58 @@ class PerformanceTracker:
             PerformanceMetric.SEARCH_LATENCY_P99,
         ):
             # Search latency recommendations
-            recommendations.append("Check Qdrant collection size - large collections slow down search")
-            recommendations.append("Consider enabling quantization to reduce memory and improve speed")
-            recommendations.append("Review query complexity - simplify filters if possible")
+            recommendations.append(
+                "Check Qdrant collection size - large collections slow down search"
+            )
+            recommendations.append(
+                "Consider enabling quantization to reduce memory and improve speed"
+            )
+            recommendations.append(
+                "Review query complexity - simplify filters if possible"
+            )
 
             if current_value > 50:  # >50ms is slow
-                recommendations.append("Search latency >50ms - consider optimizing vector index")
-                recommendations.append("Check if Qdrant has sufficient memory allocated")
+                recommendations.append(
+                    "Search latency >50ms - consider optimizing vector index"
+                )
+                recommendations.append(
+                    "Check if Qdrant has sufficient memory allocated"
+                )
 
             if degradation > 0.5:  # >50% degradation
-                recommendations.append("CRITICAL: Review recent code changes that may impact search")
+                recommendations.append(
+                    "CRITICAL: Review recent code changes that may impact search"
+                )
 
         elif metric == PerformanceMetric.INDEXING_THROUGHPUT:
             # Indexing throughput recommendations
-            recommendations.append("Check if parallel indexing is enabled (4-8x faster)")
+            recommendations.append(
+                "Check if parallel indexing is enabled (4-8x faster)"
+            )
             recommendations.append("Verify embedding model is loaded correctly")
-            recommendations.append("Review file sizes - very large files slow down parsing")
+            recommendations.append(
+                "Review file sizes - very large files slow down parsing"
+            )
 
             if current_value < 5:  # <5 files/sec is slow
-                recommendations.append("Indexing <5 files/sec - consider enabling Rust parser (6x faster)")
+                recommendations.append(
+                    "Indexing <5 files/sec - consider enabling Rust parser (6x faster)"
+                )
                 recommendations.append("Check CPU utilization - may need more workers")
 
         elif metric == PerformanceMetric.CACHE_HIT_RATE:
             # Cache hit rate recommendations
-            recommendations.append("Low cache hit rate - consider increasing embedding cache size")
-            recommendations.append("Review cache eviction policy - may be evicting too aggressively")
+            recommendations.append(
+                "Low cache hit rate - consider increasing embedding cache size"
+            )
+            recommendations.append(
+                "Review cache eviction policy - may be evicting too aggressively"
+            )
 
             if current_value < 0.5:  # <50% hit rate
-                recommendations.append("Cache hit rate <50% - verify cache is functioning correctly")
+                recommendations.append(
+                    "Cache hit rate <50% - verify cache is functioning correctly"
+                )
                 recommendations.append("Check if cache file permissions are correct")
 
         # Add link to performance tuning docs
@@ -627,7 +654,9 @@ class PerformanceTracker:
                 (metric.value, cutoff),
             )
 
-            return [(datetime.fromisoformat(row[0]), row[1]) for row in cursor.fetchall()]
+            return [
+                (datetime.fromisoformat(row[0]), row[1]) for row in cursor.fetchall()
+            ]
 
     def get_regression_history(self, days: int = 30) -> List[PerformanceRegression]:
         """

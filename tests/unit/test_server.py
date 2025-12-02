@@ -19,8 +19,13 @@ def config(unique_qdrant_collection):
         qdrant_url="http://localhost:6333",
         qdrant_collection_name=unique_qdrant_collection,
         advanced={"read_only_mode": False},
-        search={"retrieval_gate_enabled": False},  # Disable gate for predictable test results
-        indexing={"auto_index_enabled": False, "auto_index_on_startup": False},  # Disable auto-indexing
+        search={
+            "retrieval_gate_enabled": False
+        },  # Disable gate for predictable test results
+        indexing={
+            "auto_index_enabled": False,
+            "auto_index_on_startup": False,
+        },  # Disable auto-indexing
     )
 
 
@@ -35,8 +40,13 @@ def readonly_config(unique_qdrant_collection):
         qdrant_url="http://localhost:6333",
         qdrant_collection_name=unique_qdrant_collection,
         advanced={"read_only_mode": True},
-        search={"retrieval_gate_enabled": False},  # Disable gate for predictable test results
-        indexing={"auto_index_enabled": False, "auto_index_on_startup": False},  # Disable auto-indexing
+        search={
+            "retrieval_gate_enabled": False
+        },  # Disable gate for predictable test results
+        indexing={
+            "auto_index_enabled": False,
+            "auto_index_on_startup": False,
+        },  # Disable auto-indexing
     )
 
 
@@ -74,16 +84,19 @@ async def test_server_initialization(server):
 
     # Verify store is initialized with correct type
     from src.store.qdrant_store import QdrantMemoryStore
+
     assert isinstance(server.store, QdrantMemoryStore)
     assert server.store.collection_name is not None
     assert isinstance(server.store.collection_name, str)
 
     # Verify embedding generator is initialized
     from src.embeddings.generator import EmbeddingGenerator
+
     assert isinstance(server.embedding_generator, EmbeddingGenerator)
 
     # Verify embedding cache is initialized
     from src.embeddings.cache import EmbeddingCache
+
     assert isinstance(server.embedding_cache, EmbeddingCache)
 
 
@@ -100,7 +113,7 @@ async def test_store_and_retrieve_memory(server):
 
     assert result["status"] == "success"
     assert "memory_id" in result
-    memory_id = result["memory_id"]
+    result["memory_id"]
 
     # Retrieve it
     retrieval = await server.retrieve_memories(

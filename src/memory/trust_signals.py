@@ -1,7 +1,7 @@
 """Trust signal generation for search results (FEAT-034 Phase 4)."""
 
 import logging
-from typing import Dict, Any, List, Optional
+from typing import List
 from datetime import datetime, UTC
 
 from src.core.models import MemoryUnit, TrustSignals, MemoryCategory
@@ -37,7 +37,7 @@ class TrustSignalGenerator:
         query: str,
         score: float,
         rank: int,
-        include_relationships: bool = True
+        include_relationships: bool = True,
     ) -> TrustSignals:
         """
         Generate 'Why this result?' explanation.
@@ -85,7 +85,9 @@ class TrustSignalGenerator:
             # 3. Access frequency
             access_count = memory.metadata.get("access_count", 0)
             if access_count > 20:
-                why_shown.append(f"Frequently accessed ({access_count} times) HIGH CONFIDENCE")
+                why_shown.append(
+                    f"Frequently accessed ({access_count} times) HIGH CONFIDENCE"
+                )
             elif access_count > 10:
                 why_shown.append(f"Well-used memory ({access_count} accesses)")
             elif access_count > 5:
@@ -95,14 +97,20 @@ class TrustSignalGenerator:
             if memory.provenance.verified:
                 days_since_verified = 0
                 if memory.provenance.last_confirmed:
-                    days_since_verified = (datetime.now(UTC) - memory.provenance.last_confirmed).days
+                    days_since_verified = (
+                        datetime.now(UTC) - memory.provenance.last_confirmed
+                    ).days
 
                 if days_since_verified == 0:
                     why_shown.append("You verified this today")
                 elif days_since_verified < 7:
-                    why_shown.append(f"You verified this {days_since_verified} days ago")
+                    why_shown.append(
+                        f"You verified this {days_since_verified} days ago"
+                    )
                 elif days_since_verified < 30:
-                    why_shown.append(f"You verified this {days_since_verified} days ago")
+                    why_shown.append(
+                        f"You verified this {days_since_verified} days ago"
+                    )
                 else:
                     why_shown.append("You verified this (some time ago)")
 
@@ -113,7 +121,9 @@ class TrustSignalGenerator:
                 why_shown.append("Factual information")
 
             # 6. Provenance source
-            source_quality = self._get_source_quality_label(memory.provenance.source.value)
+            source_quality = self._get_source_quality_label(
+                memory.provenance.source.value
+            )
             why_shown.append(f"Source: {source_quality}")
 
             # Generate provenance summary
@@ -122,7 +132,7 @@ class TrustSignalGenerator:
                 "created_by": memory.provenance.created_by,
                 "confidence": memory.provenance.confidence,
                 "verified": memory.provenance.verified,
-                "age_days": (datetime.now(UTC) - memory.created_at).days
+                "age_days": (datetime.now(UTC) - memory.created_at).days,
             }
 
             # Check for contradictions (no longer supported)
@@ -158,7 +168,7 @@ class TrustSignalGenerator:
                 last_verified=last_verified,
                 provenance_summary=provenance_summary,
                 related_count=related_count,
-                contradiction_detected=contradiction_detected
+                contradiction_detected=contradiction_detected,
             )
 
         except Exception as e:
@@ -168,13 +178,10 @@ class TrustSignalGenerator:
                 why_shown=[f"Matched with score {score:.2f}"],
                 trust_score=0.5,
                 confidence_level="fair",
-                provenance_summary={}
+                provenance_summary={},
             )
 
-    async def calculate_trust_score(
-        self,
-        memory: MemoryUnit
-    ) -> float:
+    async def calculate_trust_score(self, memory: MemoryUnit) -> float:
         """
         Calculate overall trust score (0-1).
 
@@ -222,16 +229,23 @@ class TrustSignalGenerator:
 
             # Last confirmed bonus
             if memory.provenance.last_confirmed:
-                days_since_confirmed = (datetime.now(UTC) - memory.provenance.last_confirmed).days
+                days_since_confirmed = (
+                    datetime.now(UTC) - memory.provenance.last_confirmed
+                ).days
                 if days_since_confirmed < 30:
                     age_score = min(0.15, age_score + 0.05)
 
             # 5. Contradiction status (10%) - no longer supported, assume no contradictions
-            contradiction_penalty = 0.0
             contradiction_score = 0.1  # Assume no contradictions
 
             # Calculate total
-            trust_score = source_score + verification_score + access_score + age_score + contradiction_score
+            trust_score = (
+                source_score
+                + verification_score
+                + access_score
+                + age_score
+                + contradiction_score
+            )
 
             # Ensure bounds
             trust_score = max(0.0, min(1.0, trust_score))
@@ -242,10 +256,7 @@ class TrustSignalGenerator:
             logger.error(f"Error calculating trust score: {e}")
             return 0.5  # Default to medium trust
 
-    def generate_confidence_explanation(
-        self,
-        confidence: float
-    ) -> str:
+    def generate_confidence_explanation(self, confidence: float) -> str:
         """
         Convert confidence score to human-readable explanation.
 
@@ -281,14 +292,12 @@ class TrustSignalGenerator:
             "code_indexed": "from code analysis",
             "auto_classified": "automatically classified",
             "imported": "imported data",
-            "legacy": "legacy data"
+            "legacy": "legacy data",
         }
         return labels.get(source, source)
 
     async def generate_batch_trust_signals(
-        self,
-        results: List[tuple[MemoryUnit, float]],
-        query: str
+        self, results: List[tuple[MemoryUnit, float]], query: str
     ) -> List[tuple[MemoryUnit, float, TrustSignals]]:
         """
         Generate trust signals for a batch of search results.
@@ -309,11 +318,13 @@ class TrustSignalGenerator:
                     query=query,
                     score=score,
                     rank=rank,
-                    include_relationships=True
+                    include_relationships=True,
                 )
                 enhanced_results.append((memory, score, trust_signals))
             except Exception as e:
-                logger.error(f"Error generating trust signals for memory {memory.id}: {e}")
+                logger.error(
+                    f"Error generating trust signals for memory {memory.id}: {e}"
+                )
                 # Include without trust signals on error
                 enhanced_results.append((memory, score, None))
 

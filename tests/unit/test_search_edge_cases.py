@@ -93,7 +93,9 @@ class TestSearchQueryEdgeCases:
         with pytest.raises(ValidationError) as exc:
             validate_query_request(payload)
         error_msg = str(exc.value).lower()
-        assert "length" in error_msg or "maximum" in error_msg or "validation" in error_msg
+        assert (
+            "length" in error_msg or "maximum" in error_msg or "validation" in error_msg
+        )
 
     def test_query_at_max_length(self):
         """Test query at exactly max length (1000 chars)."""
@@ -109,7 +111,9 @@ class TestSearchQueryEdgeCases:
         with pytest.raises(ValidationError) as exc:
             validate_query_request(payload)
         error_msg = str(exc.value).lower()
-        assert "length" in error_msg or "maximum" in error_msg or "validation" in error_msg
+        assert (
+            "length" in error_msg or "maximum" in error_msg or "validation" in error_msg
+        )
 
     def test_single_character_query(self):
         """Test single character query (should be valid)."""
@@ -122,27 +126,33 @@ class TestSearchQueryEdgeCases:
 class TestSQLInjectionPatterns:
     """Test SQL injection pattern detection in search queries."""
 
-    @pytest.mark.parametrize("injection_pattern", [
-        "'; DROP TABLE memories--",
-        "' OR '1'='1",
-        "' OR 1=1--",
-        "'; DELETE FROM users--",
-        "UNION SELECT * FROM",
-        "1' UNION SELECT NULL--",
-        "admin'--",
-        "' OR 'a'='a",
-    ])
+    @pytest.mark.parametrize(
+        "injection_pattern",
+        [
+            "'; DROP TABLE memories--",
+            "' OR '1'='1",
+            "' OR 1=1--",
+            "'; DELETE FROM users--",
+            "UNION SELECT * FROM",
+            "1' UNION SELECT NULL--",
+            "admin'--",
+            "' OR 'a'='a",
+        ],
+    )
     def test_sql_injection_detection(self, injection_pattern):
         """Test that SQL injection patterns are detected."""
         # The validation should detect these patterns
         detected = detect_injection_patterns(injection_pattern)
         assert detected is not None, f"Should detect SQL injection: {injection_pattern}"
 
-    @pytest.mark.parametrize("injection_pattern", [
-        "'; DROP TABLE memories--",
-        "' OR '1'='1",
-        "SELECT * FROM users",
-    ])
+    @pytest.mark.parametrize(
+        "injection_pattern",
+        [
+            "'; DROP TABLE memories--",
+            "' OR '1'='1",
+            "SELECT * FROM users",
+        ],
+    )
     def test_sql_injection_in_query_rejected(self, injection_pattern):
         """Test that queries with SQL injection patterns are rejected."""
         payload = {"query": injection_pattern}
@@ -150,7 +160,11 @@ class TestSQLInjectionPatterns:
         with pytest.raises(ValidationError) as exc:
             validate_query_request(payload)
         error_msg = str(exc.value).lower()
-        assert "security" in error_msg or "threat" in error_msg or "suspicious" in error_msg
+        assert (
+            "security" in error_msg
+            or "threat" in error_msg
+            or "suspicious" in error_msg
+        )
 
     def test_normal_query_with_sql_like_terms(self):
         """Test that normal queries with SQL-like terms (in context) don't get blocked."""
@@ -177,19 +191,24 @@ class TestSQLInjectionPatterns:
 class TestCommandInjectionPatterns:
     """Test command injection pattern detection."""
 
-    @pytest.mark.parametrize("command_pattern,should_detect", [
-        ("; rm -rf /", True),
-        ("$(whoami)", True),
-        ("`cat /etc/passwd`", True),
-        ("; ls -la", True),
-        ("&& curl malicious.com", True),
-        ("| grep password", False),  # Pipe alone is not necessarily malicious
-    ])
+    @pytest.mark.parametrize(
+        "command_pattern,should_detect",
+        [
+            ("; rm -rf /", True),
+            ("$(whoami)", True),
+            ("`cat /etc/passwd`", True),
+            ("; ls -la", True),
+            ("&& curl malicious.com", True),
+            ("| grep password", False),  # Pipe alone is not necessarily malicious
+        ],
+    )
     def test_command_injection_detection(self, command_pattern, should_detect):
         """Test that command injection patterns are detected."""
         detected = detect_injection_patterns(command_pattern)
         if should_detect:
-            assert detected is not None, f"Should detect command injection: {command_pattern}"
+            assert (
+                detected is not None
+            ), f"Should detect command injection: {command_pattern}"
         else:
             # Some patterns like single pipe might not be detected as they're context-dependent
             pass
@@ -198,13 +217,16 @@ class TestCommandInjectionPatterns:
 class TestPathTraversalPatterns:
     """Test path traversal pattern detection."""
 
-    @pytest.mark.parametrize("path_pattern", [
-        "../../etc/passwd",
-        "../../../secret",
-        "file:///etc/shadow",
-        "%2e%2e/config",
-        "..\\..\\windows\\system32",
-    ])
+    @pytest.mark.parametrize(
+        "path_pattern",
+        [
+            "../../etc/passwd",
+            "../../../secret",
+            "file:///etc/shadow",
+            "%2e%2e/config",
+            "..\\..\\windows\\system32",
+        ],
+    )
     def test_path_traversal_detection(self, path_pattern):
         """Test that path traversal patterns are detected."""
         detected = detect_injection_patterns(path_pattern)
@@ -340,7 +362,7 @@ class TestQueryWithCombinedParameters:
         """Test query with all parameters at minimum boundary values."""
         payload = {
             "query": "a",  # Minimum length
-            "limit": 1,    # Minimum
+            "limit": 1,  # Minimum
             "min_importance": 0.0,  # Minimum
         }
 
@@ -353,7 +375,7 @@ class TestQueryWithCombinedParameters:
         """Test query with all parameters at maximum boundary values."""
         payload = {
             "query": "a" * 1000,  # Maximum length
-            "limit": 100,         # Maximum
+            "limit": 100,  # Maximum
             "min_importance": 1.0,  # Maximum
         }
 

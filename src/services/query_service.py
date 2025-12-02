@@ -9,7 +9,6 @@ Responsibilities:
 - Collect search quality feedback
 """
 
-import logging
 import threading
 from typing import Optional, Dict, Any, List
 
@@ -68,8 +67,7 @@ class QueryService:
             return self.stats.copy()
 
     async def start_conversation_session(
-        self,
-        description: Optional[str] = None
+        self, description: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Start a new conversation session for context tracking.
@@ -103,10 +101,7 @@ class QueryService:
             logger.error(f"Failed to start conversation session: {e}", exc_info=True)
             raise StorageError(f"Failed to start conversation session: {e}") from e
 
-    async def end_conversation_session(
-        self,
-        session_id: str
-    ) -> Dict[str, Any]:
+    async def end_conversation_session(self, session_id: str) -> Dict[str, Any]:
         """
         End and cleanup a conversation session.
 
@@ -166,9 +161,7 @@ class QueryService:
             raise StorageError(f"Failed to list conversation sessions: {e}") from e
 
     async def analyze_conversation(
-        self,
-        messages: List[str],
-        session_id: Optional[str] = None
+        self, messages: List[str], session_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Analyze conversation for suggestions.
@@ -188,8 +181,7 @@ class QueryService:
 
         try:
             analysis = self.suggestion_engine.analyze(
-                messages=messages,
-                session_id=session_id
+                messages=messages, session_id=session_id
             )
 
             with self._stats_lock:
@@ -232,10 +224,7 @@ class QueryService:
             raise StorageError(f"Failed to get suggestion stats: {e}") from e
 
     async def provide_suggestion_feedback(
-        self,
-        suggestion_id: str,
-        accepted: bool,
-        feedback: Optional[str] = None
+        self, suggestion_id: str, accepted: bool, feedback: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Record feedback on a suggestion.
@@ -256,9 +245,7 @@ class QueryService:
 
         try:
             self.suggestion_engine.record_feedback(
-                suggestion_id=suggestion_id,
-                accepted=accepted,
-                feedback=feedback
+                suggestion_id=suggestion_id, accepted=accepted, feedback=feedback
             )
 
             with self._stats_lock:
@@ -275,9 +262,7 @@ class QueryService:
             raise StorageError(f"Failed to record suggestion feedback: {e}") from e
 
     async def set_suggestion_mode(
-        self,
-        mode: str,
-        confidence_threshold: Optional[float] = None
+        self, mode: str, confidence_threshold: Optional[float] = None
     ) -> Dict[str, Any]:
         """
         Configure suggestion behavior.
@@ -300,8 +285,7 @@ class QueryService:
 
         try:
             self.suggestion_engine.set_mode(
-                mode=mode,
-                confidence_threshold=confidence_threshold
+                mode=mode, confidence_threshold=confidence_threshold
             )
 
             return {
@@ -315,9 +299,7 @@ class QueryService:
             raise StorageError(f"Failed to set suggestion mode: {e}") from e
 
     async def expand_query(
-        self,
-        query: str,
-        context: Optional[List[str]] = None
+        self, query: str, context: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """
         Expand a query using context.
@@ -347,7 +329,7 @@ class QueryService:
                 "original_query": query,
                 "expanded_query": expanded,
                 "expansion_applied": expansion_applied,
-                "status": "success"
+                "status": "success",
             }
 
         except Exception as e:

@@ -3,7 +3,7 @@
 import logging
 import re
 from pathlib import Path
-from typing import List, Set, Optional
+from typing import List, Set
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +91,9 @@ class RagignoreManager:
         try:
             # Backup existing file
             if backup and self.ragignore_path.exists():
-                backup_path = self.ragignore_path.parent / (self.ragignore_path.name + ".bak")
+                backup_path = self.ragignore_path.parent / (
+                    self.ragignore_path.name + ".bak"
+                )
                 self.ragignore_path.rename(backup_path)
                 logger.info(f"Created backup: {backup_path}")
 
@@ -127,7 +129,9 @@ class RagignoreManager:
             return [p.strip() for p in new]
 
         # Use set for deduplication - normalize existing patterns
-        pattern_set: Set[str] = {p.strip() for p in existing} if preserve_existing else set()
+        pattern_set: Set[str] = (
+            {p.strip() for p in existing} if preserve_existing else set()
+        )
 
         for pattern in new:
             # Normalize pattern
@@ -146,7 +150,9 @@ class RagignoreManager:
 
         # Convert back to list and sort
         merged = sorted(pattern_set)
-        logger.info(f"Merged patterns: {len(existing)} existing + {len(new)} new = {len(merged)} total")
+        logger.info(
+            f"Merged patterns: {len(existing)} existing + {len(new)} new = {len(merged)} total"
+        )
         return merged
 
     def _has_general_pattern(self, existing: Set[str], pattern: str) -> bool:
@@ -360,7 +366,9 @@ Thumbs.db
                 # File not relative to directory, include it
                 filtered.append(file_path)
 
-        logger.info(f"Filtered {len(file_paths)} files -> {len(filtered)} (excluded {len(file_paths) - len(filtered)})")
+        logger.info(
+            f"Filtered {len(file_paths)} files -> {len(filtered)} (excluded {len(file_paths) - len(filtered)})"
+        )
         return filtered
 
     def create_from_suggestions(
@@ -398,7 +406,9 @@ Thumbs.db
         for suggestion in suggestions:
             if suggestion.pattern in merged_patterns:
                 lines.append(f"# {suggestion.description}")
-                lines.append(f"# Saves: {suggestion.affected_files} files, {suggestion.size_savings_mb:.1f}MB, {suggestion.time_savings_seconds:.1f}s")
+                lines.append(
+                    f"# Saves: {suggestion.affected_files} files, {suggestion.size_savings_mb:.1f}MB, {suggestion.time_savings_seconds:.1f}s"
+                )
                 lines.append(suggestion.pattern)
                 lines.append("")
 

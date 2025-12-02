@@ -26,16 +26,15 @@ Exit codes:
 
 import subprocess
 import sys
-import os
 from pathlib import Path
 from typing import Tuple, List
 
 # ANSI color codes
-GREEN = '\033[92m'
-RED = '\033[91m'
-YELLOW = '\033[93m'
-BLUE = '\033[94m'
-RESET = '\033[0m'
+GREEN = "\033[92m"
+RED = "\033[91m"
+YELLOW = "\033[93m"
+BLUE = "\033[94m"
+RESET = "\033[0m"
 
 
 class VerificationGate:
@@ -54,10 +53,7 @@ class TestsGate(VerificationGate):
     """Verify all tests pass."""
 
     def __init__(self, fast_mode: bool = False):
-        super().__init__(
-            "Tests",
-            "All tests must pass (100% pass rate)"
-        )
+        super().__init__("Tests", "All tests must pass (100% pass rate)")
         self.fast_mode = fast_mode
 
     def run(self) -> Tuple[bool, str]:
@@ -75,24 +71,23 @@ class TestsGate(VerificationGate):
                 args,
                 capture_output=True,
                 text=True,
-                timeout=600  # 10 minute timeout
+                timeout=600,  # 10 minute timeout
             )
 
             if result.returncode == 0:
                 # Extract pass count from output
-                output_lines = result.stdout.split('\n')
+                output_lines = result.stdout.split("\n")
                 for line in output_lines:
                     if "passed" in line:
                         return True, f"Tests passed: {line.strip()}"
                 return True, "All tests passed"
             else:
                 # Extract failure summary
-                stderr = result.stderr
                 stdout = result.stdout
                 summary = ""
 
                 # Find failed tests
-                for line in stdout.split('\n'):
+                for line in stdout.split("\n"):
                     if "FAILED" in line:
                         summary += line.strip() + "\n"
 
@@ -110,43 +105,47 @@ class CoverageGate(VerificationGate):
     """Verify coverage targets met."""
 
     def __init__(self, threshold: int = 80):
-        super().__init__(
-            "Coverage",
-            f"Core modules must have ≥{threshold}% coverage"
-        )
+        super().__init__("Coverage", f"Core modules must have ≥{threshold}% coverage")
         self.threshold = threshold
 
     def run(self) -> Tuple[bool, str]:
         try:
             result = subprocess.run(
                 [
-                    "pytest", "tests/",
+                    "pytest",
+                    "tests/",
                     "--cov=src.core",
                     "--cov=src.store",
                     "--cov=src.memory",
                     "--cov=src.embeddings",
                     "--cov-report=term-missing",
-                    "--quiet"
+                    "--quiet",
                 ],
                 capture_output=True,
                 text=True,
-                timeout=600
+                timeout=600,
             )
 
             # Parse coverage percentage from output
             # Look for line like: "TOTAL    1234   567   46%"
             output = result.stdout
-            for line in output.split('\n'):
+            for line in output.split("\n"):
                 if "TOTAL" in line:
                     parts = line.split()
                     if len(parts) >= 4:
-                        coverage_str = parts[-1].replace('%', '')
+                        coverage_str = parts[-1].replace("%", "")
                         try:
                             coverage = int(coverage_str)
                             if coverage >= self.threshold:
-                                return True, f"Coverage: {coverage}% (target: {self.threshold}%)"
+                                return (
+                                    True,
+                                    f"Coverage: {coverage}% (target: {self.threshold}%)",
+                                )
                             else:
-                                return False, f"Coverage too low: {coverage}% (need {self.threshold}%)"
+                                return (
+                                    False,
+                                    f"Coverage too low: {coverage}% (need {self.threshold}%)",
+                                )
                         except ValueError:
                             pass
 
@@ -163,10 +162,7 @@ class SyntaxGate(VerificationGate):
     """Verify no syntax errors in Python files."""
 
     def __init__(self):
-        super().__init__(
-            "Syntax",
-            "All Python files must have valid syntax"
-        )
+        super().__init__("Syntax", "All Python files must have valid syntax")
 
     def run(self) -> Tuple[bool, str]:
         errors = []
@@ -181,24 +177,21 @@ class SyntaxGate(VerificationGate):
                 subprocess.run(
                     ["python", "-m", "py_compile", str(py_file)],
                     capture_output=True,
-                    check=True
+                    check=True,
                 )
             except subprocess.CalledProcessError as e:
                 errors.append(f"{py_file}: {e.stderr.decode()}")
 
         if errors:
-            return False, f"Syntax errors:\n" + "\n".join(errors[:5])
-        return True, f"All Python files have valid syntax"
+            return False, "Syntax errors:\n" + "\n".join(errors[:5])
+        return True, "All Python files have valid syntax"
 
 
 class DocumentationGate(VerificationGate):
     """Verify documentation updated."""
 
     def __init__(self):
-        super().__init__(
-            "Documentation",
-            "CHANGELOG.md must be updated"
-        )
+        super().__init__("Documentation", "CHANGELOG.md must be updated")
 
     def run(self) -> Tuple[bool, str]:
         changelog_path = Path("CHANGELOG.md")
@@ -211,7 +204,7 @@ class DocumentationGate(VerificationGate):
             result = subprocess.run(
                 ["git", "diff", "HEAD~3..HEAD", "--name-only"],
                 capture_output=True,
-                text=True
+                text=True,
             )
 
             if "CHANGELOG.md" in result.stdout:
@@ -221,7 +214,7 @@ class DocumentationGate(VerificationGate):
             result = subprocess.run(
                 ["git", "diff", "--cached", "--name-only"],
                 capture_output=True,
-                text=True
+                text=True,
             )
 
             if "CHANGELOG.md" in result.stdout:
@@ -245,10 +238,7 @@ class SpecValidationGate(VerificationGate):
     """Verify SPEC.md is valid."""
 
     def __init__(self):
-        super().__init__(
-            "Specification",
-            "SPEC.md must be valid and compliant"
-        )
+        super().__init__("Specification", "SPEC.md must be valid and compliant")
 
     def run(self) -> Tuple[bool, str]:
         try:
@@ -257,14 +247,14 @@ class SpecValidationGate(VerificationGate):
                 ["python", "scripts/validate-spec.py"],
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=30,
             )
 
             if result.returncode == 0:
                 # Extract compliance percentage from output
                 output = result.stdout
                 if "Compliance:" in output:
-                    for line in output.split('\n'):
+                    for line in output.split("\n"):
                         if "Compliance:" in line:
                             return True, f"SPEC.md valid ({line.strip()})"
                 return True, "SPEC.md is valid"
@@ -272,14 +262,14 @@ class SpecValidationGate(VerificationGate):
                 # Extract first few issues
                 output = result.stdout
                 issues = []
-                for line in output.split('\n'):
-                    if line.strip().startswith('-'):
+                for line in output.split("\n"):
+                    if line.strip().startswith("-"):
                         issues.append(line.strip())
                         if len(issues) >= 3:
                             break
 
                 if issues:
-                    return False, f"SPEC.md has issues:\n  " + "\n  ".join(issues)
+                    return False, "SPEC.md has issues:\n  " + "\n  ".join(issues)
                 return False, "SPEC.md validation failed (see output above)"
 
         except subprocess.TimeoutExpired:
@@ -292,36 +282,43 @@ class CIStatusGate(VerificationGate):
     """Verify CI is passing on main branch - prevents local/CI divergence."""
 
     def __init__(self):
-        super().__init__(
-            "CI Status",
-            "GitHub Actions CI must be passing on main"
-        )
+        super().__init__("CI Status", "GitHub Actions CI must be passing on main")
 
     def run(self) -> Tuple[bool, str]:
         try:
             # Check if gh CLI is available
             result = subprocess.run(
-                ["gh", "--version"],
-                capture_output=True,
-                text=True,
-                timeout=5
+                ["gh", "--version"], capture_output=True, text=True, timeout=5
             )
             if result.returncode != 0:
-                return False, "GitHub CLI (gh) not installed - install with 'brew install gh'"
+                return (
+                    False,
+                    "GitHub CLI (gh) not installed - install with 'brew install gh'",
+                )
 
             # Get latest CI run status on main
             result = subprocess.run(
-                ["gh", "run", "list", "--branch", "main", "--limit", "1",
-                 "--json", "status,conclusion,headBranch,createdAt"],
+                [
+                    "gh",
+                    "run",
+                    "list",
+                    "--branch",
+                    "main",
+                    "--limit",
+                    "1",
+                    "--json",
+                    "status,conclusion,headBranch,createdAt",
+                ],
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=30,
             )
 
             if result.returncode != 0:
                 return False, f"Failed to check CI status: {result.stderr}"
 
             import json
+
             runs = json.loads(result.stdout)
             if not runs:
                 return False, "No CI runs found on main branch"
@@ -332,11 +329,17 @@ class CIStatusGate(VerificationGate):
             created = run.get("createdAt", "unknown")[:10]  # Just the date
 
             if status == "in_progress":
-                return False, f"CI is still running (started {created}) - wait for completion"
+                return (
+                    False,
+                    f"CI is still running (started {created}) - wait for completion",
+                )
             elif conclusion == "success":
                 return True, f"CI is green on main (as of {created})"
             elif conclusion == "failure":
-                return False, f"CI is FAILING on main ({created}) - FIX CI BEFORE MERGING"
+                return (
+                    False,
+                    f"CI is FAILING on main ({created}) - FIX CI BEFORE MERGING",
+                )
             else:
                 return False, f"CI status unclear: {conclusion}/{status}"
 
@@ -353,8 +356,7 @@ class SkippedTestsGate(VerificationGate):
 
     def __init__(self, max_skipped: int = 150):
         super().__init__(
-            "Skipped Tests",
-            f"No more than {max_skipped} skipped tests allowed"
+            "Skipped Tests", f"No more than {max_skipped} skipped tests allowed"
         )
         self.max_skipped = max_skipped
 
@@ -364,21 +366,22 @@ class SkippedTestsGate(VerificationGate):
                 ["pytest", "tests/", "--collect-only", "-q"],
                 capture_output=True,
                 text=True,
-                timeout=120
+                timeout=120,
             )
 
             # Parse the summary line for skipped/deselected count
             import re
+
             skipped = 0
 
-            for line in result.stdout.split('\n'):
+            for line in result.stdout.split("\n"):
                 # Look for "X skipped" pattern
-                match = re.search(r'(\d+)\s+skipped', line)
+                match = re.search(r"(\d+)\s+skipped", line)
                 if match:
                     skipped = int(match.group(1))
                     break
                 # Also check deselected (tests with skip markers at collection time)
-                match = re.search(r'(\d+)\s+deselected', line)
+                match = re.search(r"(\d+)\s+deselected", line)
                 if match:
                     skipped = int(match.group(1))
                     break
@@ -388,19 +391,22 @@ class SkippedTestsGate(VerificationGate):
                 result2 = subprocess.run(
                     ["grep", "-r", "-c", "@pytest.mark.skip", "tests/"],
                     capture_output=True,
-                    text=True
+                    text=True,
                 )
                 # Sum up counts from each file
-                for line in result2.stdout.strip().split('\n'):
-                    if ':' in line:
+                for line in result2.stdout.strip().split("\n"):
+                    if ":" in line:
                         try:
-                            count = int(line.split(':')[-1])
+                            count = int(line.split(":")[-1])
                             skipped += count
                         except ValueError:
                             pass
 
             if skipped > self.max_skipped:
-                return False, f"{skipped} tests skipped (max: {self.max_skipped}). Clean up or implement features."
+                return (
+                    False,
+                    f"{skipped} tests skipped (max: {self.max_skipped}). Clean up or implement features.",
+                )
             return True, f"{skipped} tests skipped (within limit of {self.max_skipped})"
 
         except subprocess.TimeoutExpired:
@@ -414,15 +420,14 @@ class DependencyLockGate(VerificationGate):
 
     def __init__(self):
         super().__init__(
-            "Dependencies",
-            "Critical dependencies must have version bounds"
+            "Dependencies", "Critical dependencies must have version bounds"
         )
         # Dependencies that MUST have upper bounds to prevent breaking changes
         self.critical_deps = [
-            'pytest-asyncio',
-            'pytest',
-            'qdrant-client',
-            'sentence-transformers',
+            "pytest-asyncio",
+            "pytest",
+            "qdrant-client",
+            "sentence-transformers",
         ]
 
     def run(self) -> Tuple[bool, str]:
@@ -436,19 +441,26 @@ class DependencyLockGate(VerificationGate):
         for dep in self.critical_deps:
             dep_lower = dep.lower()
             found = False
-            for line in content.split('\n'):
+            for line in content.split("\n"):
                 line_stripped = line.strip().lower()
-                if not line_stripped or line_stripped.startswith('#'):
+                if not line_stripped or line_stripped.startswith("#"):
                     continue
                 # Check if this line is for our dependency
-                if line_stripped.startswith(dep_lower) or f'{dep_lower}>' in line_stripped or f'{dep_lower}=' in line_stripped or f'{dep_lower}<' in line_stripped:
+                if (
+                    line_stripped.startswith(dep_lower)
+                    or f"{dep_lower}>" in line_stripped
+                    or f"{dep_lower}=" in line_stripped
+                    or f"{dep_lower}<" in line_stripped
+                ):
                     found = True
                     # Check if it has an upper bound
-                    has_upper = '<' in line
-                    has_exact = '==' in line
+                    has_upper = "<" in line
+                    has_exact = "==" in line
 
                     if not has_upper and not has_exact:
-                        issues.append(f"{dep}: needs upper bound (found: {line.strip()})")
+                        issues.append(
+                            f"{dep}: needs upper bound (found: {line.strip()})"
+                        )
                     break
 
             if not found:
@@ -456,22 +468,26 @@ class DependencyLockGate(VerificationGate):
                 pass
 
         if issues:
-            return False, "Unbounded deps risk CI/local mismatch:\n  - " + "\n  - ".join(issues)
-        return True, f"Critical dependencies have version bounds ({len(self.critical_deps)} checked)"
+            return (
+                False,
+                "Unbounded deps risk CI/local mismatch:\n  - " + "\n  - ".join(issues),
+            )
+        return (
+            True,
+            f"Critical dependencies have version bounds ({len(self.critical_deps)} checked)",
+        )
 
 
 class QdrantHealthGate(VerificationGate):
     """Verify Qdrant is running."""
 
     def __init__(self):
-        super().__init__(
-            "Qdrant",
-            "Qdrant must be accessible at localhost:6333"
-        )
+        super().__init__("Qdrant", "Qdrant must be accessible at localhost:6333")
 
     def run(self) -> Tuple[bool, str]:
         try:
             import requests
+
             response = requests.get("http://localhost:6333/", timeout=5)
 
             if response.status_code == 200:
@@ -488,7 +504,7 @@ class QdrantHealthGate(VerificationGate):
                     ["curl", "-s", "http://localhost:6333/"],
                     capture_output=True,
                     text=True,
-                    timeout=5
+                    timeout=5,
                 )
                 if result.returncode == 0 and "version" in result.stdout:
                     return True, "Qdrant running"
@@ -530,12 +546,12 @@ def main():
 
     # Define gates - order matters: fast checks first, then slow ones
     gates: List[VerificationGate] = [
-        CIStatusGate(),          # NEW: Check CI is green before anything else
+        CIStatusGate(),  # NEW: Check CI is green before anything else
         QdrantHealthGate(),
         SyntaxGate(),
-        DependencyLockGate(),    # NEW: Check deps have version bounds
+        DependencyLockGate(),  # NEW: Check deps have version bounds
         SpecValidationGate(),
-        SkippedTestsGate(),      # NEW: Check skipped test count
+        SkippedTestsGate(),  # NEW: Check skipped test count
         TestsGate(fast_mode=fast_mode),
         CoverageGate(threshold=80),
         DocumentationGate(),
@@ -558,20 +574,20 @@ def main():
     if passed_count == total_count:
         print(f"{GREEN}✓ All {total_count} verification gates passed!{RESET}")
         print(f"\n{GREEN}Task is ready to be marked complete.{RESET}")
-        print(f"\nNext steps:")
-        print(f"  1. Update IN_PROGRESS.md → REVIEW.md")
-        print(f"  2. Request peer review (if team)")
-        print(f"  3. Merge to main after approval")
+        print("\nNext steps:")
+        print("  1. Update IN_PROGRESS.md → REVIEW.md")
+        print("  2. Request peer review (if team)")
+        print("  3. Merge to main after approval")
         return 0
     else:
         failed_count = total_count - passed_count
         print(f"{RED}✗ {failed_count}/{total_count} verification gates failed{RESET}")
         print(f"\n{RED}Task is NOT ready for completion.{RESET}")
-        print(f"\nFailed gates:")
+        print("\nFailed gates:")
         for name, passed, message in results:
             if not passed:
                 print(f"  - {name}: {message}")
-        print(f"\nFix these issues before marking task complete.")
+        print("\nFix these issues before marking task complete.")
         return 1
 
 

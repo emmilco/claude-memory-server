@@ -1,7 +1,6 @@
 """Automatic archival scheduler for periodic project archival."""
 
 import logging
-import asyncio
 from datetime import datetime, UTC
 from typing import Optional, Dict, Callable
 from dataclasses import dataclass
@@ -234,7 +233,9 @@ class ArchivalScheduler:
                 "failed": self.last_result.failed,
                 "skipped": self.last_result.skipped,
                 "dry_run": self.last_result.dry_run,
-            } if self.last_result else None,
+            }
+            if self.last_result
+            else None,
         }
 
     def update_config(

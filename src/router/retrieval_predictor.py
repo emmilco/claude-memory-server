@@ -7,7 +7,7 @@ unnecessary vector searches.
 
 import re
 import logging
-from typing import Dict, Optional, List, Tuple
+from typing import Dict
 
 logger = logging.getLogger(__name__)
 
@@ -24,29 +24,57 @@ class RetrievalPredictor:
 
     # Query patterns that typically don't need retrieval
     SMALL_TALK_PATTERNS = [
-        r'\b(hi|hello|hey|thanks|thank you|ok|okay|sure|yes|no|got it)\b',
-        r'^(great|cool|nice|awesome|perfect)[\s!.]*$',
-        r'\b(bye|goodbye|see you|ttyl)\b',
+        r"\b(hi|hello|hey|thanks|thank you|ok|okay|sure|yes|no|got it)\b",
+        r"^(great|cool|nice|awesome|perfect)[\s!.]*$",
+        r"\b(bye|goodbye|see you|ttyl)\b",
     ]
 
     # Query patterns that typically DO need retrieval
     NEEDS_RETRIEVAL_PATTERNS = [
-        r'\b(how|what|where|when|why|who|which)\b',
-        r'\b(find|search|show|get|retrieve|look up)\b',
-        r'\b(code|function|class|method|file|implementation)\b',
-        r'\b(error|bug|issue|problem|fix)\b',
-        r'\b(remember|recall|stored|saved|previous)\b',
-        r'\b(example|pattern|similar|like)\b',
+        r"\b(how|what|where|when|why|who|which)\b",
+        r"\b(find|search|show|get|retrieve|look up)\b",
+        r"\b(code|function|class|method|file|implementation)\b",
+        r"\b(error|bug|issue|problem|fix)\b",
+        r"\b(remember|recall|stored|saved|previous)\b",
+        r"\b(example|pattern|similar|like)\b",
     ]
 
     # Technical/code-related keywords
     TECHNICAL_KEYWORDS = [
-        'api', 'endpoint', 'database', 'query', 'authentication', 'auth',
-        'test', 'config', 'deployment', 'server', 'client', 'request',
-        'response', 'handler', 'middleware', 'model', 'controller',
-        'service', 'repository', 'component', 'module', 'package',
-        'import', 'export', 'interface', 'type', 'variable', 'constant',
-        'async', 'await', 'promise', 'callback', 'event', 'listener',
+        "api",
+        "endpoint",
+        "database",
+        "query",
+        "authentication",
+        "auth",
+        "test",
+        "config",
+        "deployment",
+        "server",
+        "client",
+        "request",
+        "response",
+        "handler",
+        "middleware",
+        "model",
+        "controller",
+        "service",
+        "repository",
+        "component",
+        "module",
+        "package",
+        "import",
+        "export",
+        "interface",
+        "type",
+        "variable",
+        "constant",
+        "async",
+        "await",
+        "promise",
+        "callback",
+        "event",
+        "listener",
     ]
 
     def __init__(
@@ -66,12 +94,10 @@ class RetrievalPredictor:
 
         # Compile regex patterns for efficiency
         self._small_talk_regex = re.compile(
-            '|'.join(self.SMALL_TALK_PATTERNS),
-            re.IGNORECASE
+            "|".join(self.SMALL_TALK_PATTERNS), re.IGNORECASE
         )
         self._needs_retrieval_regex = re.compile(
-            '|'.join(self.NEEDS_RETRIEVAL_PATTERNS),
-            re.IGNORECASE
+            "|".join(self.NEEDS_RETRIEVAL_PATTERNS), re.IGNORECASE
         )
 
         logger.info("Initialized RetrievalPredictor")
@@ -113,30 +139,38 @@ class RetrievalPredictor:
 
         # Length-based signals
         query_length = len(query)
-        signals['length'] = query_length
-        signals['is_very_short'] = 1.0 if query_length < self.min_query_length else 0.0
-        signals['is_small_talk_length'] = 1.0 if query_length <= self.max_small_talk_length else 0.0
+        signals["length"] = query_length
+        signals["is_very_short"] = 1.0 if query_length < self.min_query_length else 0.0
+        signals["is_small_talk_length"] = (
+            1.0 if query_length <= self.max_small_talk_length else 0.0
+        )
 
         # Pattern matching signals
-        signals['has_small_talk'] = 1.0 if self._small_talk_regex.search(query_lower) else 0.0
-        signals['has_retrieval_keywords'] = 1.0 if self._needs_retrieval_regex.search(query_lower) else 0.0
+        signals["has_small_talk"] = (
+            1.0 if self._small_talk_regex.search(query_lower) else 0.0
+        )
+        signals["has_retrieval_keywords"] = (
+            1.0 if self._needs_retrieval_regex.search(query_lower) else 0.0
+        )
 
         # Technical content signals
         technical_count = sum(1 for kw in self.TECHNICAL_KEYWORDS if kw in query_lower)
-        signals['technical_keyword_count'] = technical_count
-        signals['has_technical_content'] = 1.0 if technical_count > 0 else 0.0
+        signals["technical_keyword_count"] = technical_count
+        signals["has_technical_content"] = 1.0 if technical_count > 0 else 0.0
 
         # Question detection
-        signals['is_question'] = 1.0 if '?' in query else 0.0
+        signals["is_question"] = 1.0 if "?" in query else 0.0
 
         # Code-like patterns
-        signals['has_code_markers'] = 1.0 if any(
-            marker in query for marker in ['()', '{}', '[]', '->', '=>', '::']
-        ) else 0.0
+        signals["has_code_markers"] = (
+            1.0
+            if any(marker in query for marker in ["()", "{}", "[]", "->", "=>", "::"])
+            else 0.0
+        )
 
         # Specificity indicators
-        signals['word_count'] = len(query.split())
-        signals['is_specific'] = 1.0 if signals['word_count'] >= 4 else 0.0
+        signals["word_count"] = len(query.split())
+        signals["is_specific"] = 1.0 if signals["word_count"] >= 4 else 0.0
 
         return signals
 
@@ -150,40 +184,44 @@ class RetrievalPredictor:
         utility = 0.5
 
         # Strong negative indicators (reduce utility)
-        if signals['is_very_short'] and signals['has_small_talk']:
+        if signals["is_very_short"] and signals["has_small_talk"]:
             return 0.0  # Definitely skip: "ok", "thanks", etc.
 
-        if signals['is_small_talk_length'] and signals['has_small_talk'] and not signals['has_retrieval_keywords']:
+        if (
+            signals["is_small_talk_length"]
+            and signals["has_small_talk"]
+            and not signals["has_retrieval_keywords"]
+        ):
             return 0.1  # Very likely skip: "cool, got it"
 
         # Strong positive indicators (increase utility)
-        if signals['has_retrieval_keywords']:
+        if signals["has_retrieval_keywords"]:
             utility += 0.3
 
-        if signals['has_technical_content']:
+        if signals["has_technical_content"]:
             utility += 0.2
 
-        if signals['is_question']:
+        if signals["is_question"]:
             utility += 0.15
 
-        if signals['has_code_markers']:
+        if signals["has_code_markers"]:
             utility += 0.15
 
-        if signals['is_specific']:
+        if signals["is_specific"]:
             utility += 0.1
 
         # Length-based adjustments
-        if signals['length'] > 50:
+        if signals["length"] > 50:
             utility += 0.1  # Longer queries more likely to need context
 
-        if signals['technical_keyword_count'] >= 3:
+        if signals["technical_keyword_count"] >= 3:
             utility += 0.1  # Multiple technical terms = likely needs retrieval
 
         # Negative adjustments
-        if signals['has_small_talk'] and not signals['has_retrieval_keywords']:
+        if signals["has_small_talk"] and not signals["has_retrieval_keywords"]:
             utility -= 0.3
 
-        if signals['word_count'] <= 2 and not signals['has_code_markers']:
+        if signals["word_count"] <= 2 and not signals["has_code_markers"]:
             utility -= 0.2  # Very short, non-code queries less likely to need retrieval
 
         # Clamp to [0, 1]
@@ -205,15 +243,15 @@ class RetrievalPredictor:
 
         if utility < 0.3:
             reason = "Query appears to be small talk or very generic"
-            if signals['has_small_talk']:
+            if signals["has_small_talk"]:
                 reason += " (matches small talk patterns)"
         elif utility > 0.7:
             reasons = []
-            if signals['has_retrieval_keywords']:
+            if signals["has_retrieval_keywords"]:
                 reasons.append("contains retrieval keywords")
-            if signals['has_technical_content']:
+            if signals["has_technical_content"]:
                 reasons.append("has technical content")
-            if signals['is_question']:
+            if signals["is_question"]:
                 reasons.append("is a question")
             reason = f"Query likely needs context: {', '.join(reasons)}"
         else:

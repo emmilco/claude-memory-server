@@ -17,7 +17,7 @@ import shutil
 import platform
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Dict, List, Tuple
+from typing import Optional, Dict, Tuple
 
 # Try to import rich for nice terminal output, fallback to basic
 try:
@@ -26,6 +26,7 @@ try:
     from rich.panel import Panel
     from rich.table import Table
     from rich.prompt import Prompt, Confirm
+
     RICH_AVAILABLE = True
 except ImportError:
     RICH_AVAILABLE = False
@@ -176,7 +177,9 @@ class SetupWizard:
         ]
 
         for key, name, check_func in steps:
-            self.print_step(steps.index((key, name, check_func)) + 1, len(steps), f"Checking {name}")
+            self.print_step(
+                steps.index((key, name, check_func)) + 1, len(steps), f"Checking {name}"
+            )
             success, message = await check_func()
             self.checks[key] = {"success": success, "message": message}
             self.print_result(success, message)
@@ -207,7 +210,9 @@ class SetupWizard:
         else:
             recommended = "minimal"
 
-        console.print(f"[dim]Recommended mode based on your system: [bold]{recommended}[/bold][/dim]\n")
+        console.print(
+            f"[dim]Recommended mode based on your system: [bold]{recommended}[/bold][/dim]\n"
+        )
 
         # Ask user for mode
         mode_choice = Prompt.ask(
@@ -277,7 +282,14 @@ class SetupWizard:
                 task = progress.add_task("Installing Python packages...", total=None)
 
                 result = subprocess.run(
-                    [sys.executable, "-m", "pip", "install", "-r", str(requirements_file)],
+                    [
+                        sys.executable,
+                        "-m",
+                        "pip",
+                        "install",
+                        "-r",
+                        str(requirements_file),
+                    ],
                     capture_output=True,
                     text=True,
                 )
@@ -288,7 +300,7 @@ class SetupWizard:
                 console.print("[green]✓ Dependencies installed successfully[/green]\n")
                 return True
             else:
-                console.print(f"[red]✗ Failed to install dependencies:[/red]")
+                console.print("[red]✗ Failed to install dependencies:[/red]")
                 console.print(result.stderr)
                 return False
 
@@ -306,7 +318,9 @@ class SetupWizard:
         rust_dir = self.project_root / "rust_core"
 
         if not rust_dir.exists():
-            console.print("[yellow]⚠ rust_core directory not found, skipping[/yellow]\n")
+            console.print(
+                "[yellow]⚠ rust_core directory not found, skipping[/yellow]\n"
+            )
             return True
 
         # Check if maturin is installed
@@ -319,7 +333,9 @@ class SetupWizard:
             )
         except FileNotFoundError:
             # maturin not found, ask user if they want to install it
-            console.print("[yellow]maturin not found (required to build Rust parser)[/yellow]\n")
+            console.print(
+                "[yellow]maturin not found (required to build Rust parser)[/yellow]\n"
+            )
 
             if Confirm.ask("Install maturin now?", default=True):
                 try:
@@ -333,7 +349,9 @@ class SetupWizard:
                         console.print("[green]✓[/green]\n")
                     else:
                         console.print("[red]✗[/red]")
-                        console.print(f"[yellow]Could not install maturin, falling back to Python parser[/yellow]\n")
+                        console.print(
+                            "[yellow]Could not install maturin, falling back to Python parser[/yellow]\n"
+                        )
                         self.config["parser"] = "python"
                         return True
                 except Exception as e:
@@ -342,7 +360,9 @@ class SetupWizard:
                     self.config["parser"] = "python"
                     return True
             else:
-                console.print("[yellow]Skipping Rust parser build, will use Python parser fallback[/yellow]\n")
+                console.print(
+                    "[yellow]Skipping Rust parser build, will use Python parser fallback[/yellow]\n"
+                )
                 self.config["parser"] = "python"
                 return True
 
@@ -352,7 +372,9 @@ class SetupWizard:
                 TextColumn("[progress.description]{task.description}"),
                 console=console,
             ) as progress:
-                task = progress.add_task("Building Rust module (this may take a few minutes)...", total=None)
+                task = progress.add_task(
+                    "Building Rust module (this may take a few minutes)...", total=None
+                )
 
                 # Use 'maturin build' instead of 'develop' to avoid virtualenv requirement
                 result = subprocess.run(
@@ -375,7 +397,14 @@ class SetupWizard:
                         console.print("Installing Rust module...", end=" ")
 
                         install_result = subprocess.run(
-                            [sys.executable, "-m", "pip", "install", "--force-reinstall", str(wheels[0])],
+                            [
+                                sys.executable,
+                                "-m",
+                                "pip",
+                                "install",
+                                "--force-reinstall",
+                                str(wheels[0]),
+                            ],
                             capture_output=True,
                             text=True,
                         )
@@ -385,15 +414,21 @@ class SetupWizard:
                             return True
                         else:
                             console.print("[red]✗[/red]")
-                            console.print(f"[yellow]Failed to install wheel: {install_result.stderr[:200]}[/yellow]\n")
+                            console.print(
+                                f"[yellow]Failed to install wheel: {install_result.stderr[:200]}[/yellow]\n"
+                            )
                             self.config["parser"] = "python"
                             return True
 
-                console.print("[yellow]⚠ Could not find built wheel, falling back to Python parser[/yellow]\n")
+                console.print(
+                    "[yellow]⚠ Could not find built wheel, falling back to Python parser[/yellow]\n"
+                )
                 self.config["parser"] = "python"
                 return True
             else:
-                console.print("[yellow]⚠ Rust build failed, will use Python parser fallback[/yellow]")
+                console.print(
+                    "[yellow]⚠ Rust build failed, will use Python parser fallback[/yellow]"
+                )
                 console.print(f"[dim]{result.stderr[:200]}...[/dim]\n")
                 self.config["parser"] = "python"
                 return True  # Not fatal
@@ -429,7 +464,9 @@ class SetupWizard:
                 # Check if Docker is available
                 docker_available, _ = await self.check_docker()
                 if not docker_available:
-                    console.print("[yellow]⚠ Docker not available, falling back to SQLite[/yellow]\n")
+                    console.print(
+                        "[yellow]⚠ Docker not available, falling back to SQLite[/yellow]\n"
+                    )
                     self.config["storage"] = "sqlite"
                     return await self.setup_storage()
 
@@ -445,17 +482,24 @@ class SetupWizard:
                     if result.returncode == 0:
                         # Wait a moment for Qdrant to start
                         import asyncio
+
                         await asyncio.sleep(2)
 
                         # Verify Qdrant is responsive
                         if await self._check_qdrant_health():
-                            console.print("[green]✓ Qdrant started successfully[/green]\n")
+                            console.print(
+                                "[green]✓ Qdrant started successfully[/green]\n"
+                            )
                         else:
-                            console.print("[yellow]⚠ Qdrant started but not responding, falling back to SQLite[/yellow]\n")
+                            console.print(
+                                "[yellow]⚠ Qdrant started but not responding, falling back to SQLite[/yellow]\n"
+                            )
                             self.config["storage"] = "sqlite"
                             return await self.setup_storage()
                     else:
-                        console.print("[yellow]⚠ Could not start Qdrant, falling back to SQLite[/yellow]\n")
+                        console.print(
+                            "[yellow]⚠ Could not start Qdrant, falling back to SQLite[/yellow]\n"
+                        )
                         self.config["storage"] = "sqlite"
                         return await self.setup_storage()
 
@@ -479,13 +523,14 @@ class SetupWizard:
         try:
             import urllib.request
             import json
+
             # Qdrant doesn't have /health, use root endpoint instead
             req = urllib.request.Request("http://localhost:6333/", method="GET")
             with urllib.request.urlopen(req, timeout=2) as response:
                 if response.status == 200:
                     data = json.loads(response.read().decode())
                     # Verify it's actually Qdrant by checking for version
-                    return 'version' in data and 'title' in data
+                    return "version" in data and "title" in data
             return False
         except Exception:
             return False
@@ -510,7 +555,9 @@ class SetupWizard:
         # Write back to .env
         with open(env_path, "w") as f:
             f.write("# Claude Memory RAG Server Configuration\n")
-            f.write(f"# Generated by setup.py on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+            f.write(
+                f"# Generated by setup.py on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+            )
             for key, value in existing_config.items():
                 f.write(f"{key}={value}\n")
 
@@ -542,9 +589,6 @@ class SetupWizard:
 
     async def test_imports(self):
         """Test that core modules can be imported."""
-        from src.core.server import MemoryRAGServer
-        from src.core.models import MemoryUnit
-        from src.embeddings.generator import EmbeddingGenerator
 
     async def test_storage(self):
         """Test storage connection."""
@@ -574,22 +618,23 @@ class SetupWizard:
         expected_backend = self.config["storage"]
 
         if expected_backend == "qdrant":
-            assert config.storage_backend == "qdrant", f"Expected qdrant backend, got {config.storage_backend}"
+            assert (
+                config.storage_backend == "qdrant"
+            ), f"Expected qdrant backend, got {config.storage_backend}"
         else:
-            assert config.storage_backend == "sqlite", f"Expected sqlite backend, got {config.storage_backend}"
+            assert (
+                config.storage_backend == "sqlite"
+            ), f"Expected sqlite backend, got {config.storage_backend}"
 
     async def test_code_parsing(self):
         """Test code parsing and SemanticUnit structure."""
         import tempfile
-        import os
 
         # Test if Rust parser is available, otherwise use Python
         try:
             from mcp_performance_core import parse_source_file, SemanticUnit
-            parser_mode = "rust"
         except ImportError:
-            from src.memory.incremental_indexer import parse_source_file, SemanticUnit
-            parser_mode = "python"
+            from src.memory.incremental_indexer import parse_source_file
 
         # Create a simple test file
         test_code = '''
@@ -604,7 +649,7 @@ class TestClass:
 '''
 
         # Write to temp file
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write(test_code)
             temp_path = f.name
 
@@ -617,13 +662,13 @@ class TestClass:
 
             # Verify SemanticUnit has required fields
             unit = result.units[0]
-            assert hasattr(unit, 'unit_type'), "SemanticUnit missing unit_type"
-            assert hasattr(unit, 'name'), "SemanticUnit missing name"
-            assert hasattr(unit, 'start_line'), "SemanticUnit missing start_line"
-            assert hasattr(unit, 'end_line'), "SemanticUnit missing end_line"
-            assert hasattr(unit, 'start_byte'), "SemanticUnit missing start_byte"
-            assert hasattr(unit, 'end_byte'), "SemanticUnit missing end_byte"
-            assert hasattr(unit, 'signature'), "SemanticUnit missing signature"
+            assert hasattr(unit, "unit_type"), "SemanticUnit missing unit_type"
+            assert hasattr(unit, "name"), "SemanticUnit missing name"
+            assert hasattr(unit, "start_line"), "SemanticUnit missing start_line"
+            assert hasattr(unit, "end_line"), "SemanticUnit missing end_line"
+            assert hasattr(unit, "start_byte"), "SemanticUnit missing start_byte"
+            assert hasattr(unit, "end_byte"), "SemanticUnit missing end_byte"
+            assert hasattr(unit, "signature"), "SemanticUnit missing signature"
 
         finally:
             # Clean up
@@ -635,11 +680,15 @@ class TestClass:
 
         # Only suggest Rust parser if currently using Python
         if self.config["parser"] == "python":
-            upgrade_options.append("  • Build Rust parser (10-20x faster): [dim]python setup.py --build-rust[/dim]")
+            upgrade_options.append(
+                "  • Build Rust parser (10-20x faster): [dim]python setup.py --build-rust[/dim]"
+            )
 
         # Only suggest Qdrant if currently using SQLite
         if self.config["storage"] == "sqlite":
-            upgrade_options.append("  • Upgrade to Qdrant (better scalability): [dim]python setup.py --upgrade-to-qdrant[/dim]")
+            upgrade_options.append(
+                "  • Upgrade to Qdrant (better scalability): [dim]python setup.py --upgrade-to-qdrant[/dim]"
+            )
 
         # Only show section if there are upgrade options
         if upgrade_options:
@@ -656,7 +705,7 @@ class TestClass:
         python_path = sys.executable
 
         # Check if Python is running from pyenv
-        is_pyenv = '.pyenv' in python_path
+        is_pyenv = ".pyenv" in python_path
 
         return is_pyenv, python_path
 
@@ -708,7 +757,8 @@ class TestClass:
                 "  3. Index your first project:\n"
                 "     [dim]python -m src.cli index ./your-project[/dim]\n\n"
                 "  4. Add to Claude Code (optional):\n"
-                + mcp_command + "\n\n"
+                + mcp_command
+                + "\n\n"
                 + self._format_upgrade_options()
                 + pyenv_warning,
                 border_style="green",
@@ -778,7 +828,9 @@ class TestClass:
             self.print_success()
             return True
         else:
-            console.print("[yellow]⚠ Some verification tests failed, but basic installation is complete[/yellow]")
+            console.print(
+                "[yellow]⚠ Some verification tests failed, but basic installation is complete[/yellow]"
+            )
             self.print_success()
             return True
 
@@ -831,7 +883,9 @@ async def main():
         wizard.print_header()
         console.print("[bold]Upgrading to Qdrant...[/bold]\n")
         console.print("[yellow]Migration tool not yet implemented[/yellow]")
-        console.print("[dim]For now, manually start Qdrant and update CLAUDE_RAG_STORAGE_BACKEND=qdrant[/dim]\n")
+        console.print(
+            "[dim]For now, manually start Qdrant and update CLAUDE_RAG_STORAGE_BACKEND=qdrant[/dim]\n"
+        )
         return
 
     # Run full setup

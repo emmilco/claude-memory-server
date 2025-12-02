@@ -31,20 +31,21 @@ async def tutorial_command():
         "[dim]Estimated time: 5-10 minutes[/dim]",
         title="🎓 Tutorial",
         border_style="cyan",
-        box=box.DOUBLE
+        box=box.DOUBLE,
     )
     console.print(welcome)
 
     if not Confirm.ask("\n[bold]Ready to start?[/bold]", default=True):
-        console.print("[yellow]Tutorial cancelled. Run 'claude-rag tutorial' anytime![/yellow]")
+        console.print(
+            "[yellow]Tutorial cancelled. Run 'claude-rag tutorial' anytime![/yellow]"
+        )
         return
 
     # Step 1: What is Claude Memory RAG?
     console.clear()
-    console.print(Panel(
-        "[bold]Step 1/6: What is Claude Memory RAG?[/bold]",
-        border_style="cyan"
-    ))
+    console.print(
+        Panel("[bold]Step 1/6: What is Claude Memory RAG?[/bold]", border_style="cyan")
+    )
     console.print()
 
     explanation = """
@@ -77,10 +78,9 @@ Claude Memory RAG Server gives Claude **persistent memory** and **semantic code 
 
     # Step 2: Check System Status
     console.clear()
-    console.print(Panel(
-        "[bold]Step 2/6: Check Your System Status[/bold]",
-        border_style="cyan"
-    ))
+    console.print(
+        Panel("[bold]Step 2/6: Check Your System Status[/bold]", border_style="cyan")
+    )
     console.print()
 
     console.print("Let's verify your installation is working correctly...\n")
@@ -90,26 +90,31 @@ Claude Memory RAG Server gives Claude **persistent memory** and **semantic code 
     # Show configuration
     console.print(f"✓ Storage backend: [green]{config.storage_backend}[/green]")
     console.print(f"✓ Embedding model: [green]{config.embedding_model}[/green]")
-    console.print(f"✓ Parallel embeddings: [green]{'enabled' if config.performance.parallel_embeddings else 'disabled'}[/green]")
+    console.print(
+        f"✓ Parallel embeddings: [green]{'enabled' if config.performance.parallel_embeddings else 'disabled'}[/green]"
+    )
 
     if config.storage_backend == "qdrant":
         console.print(f"✓ Qdrant URL: [green]{config.qdrant_url}[/green]")
     else:
         console.print(f"✓ SQLite path: [green]{config.sqlite_path}[/green]")
 
-    console.print("\n[dim]You can run 'claude-rag health' anytime for detailed diagnostics[/dim]")
+    console.print(
+        "\n[dim]You can run 'claude-rag health' anytime for detailed diagnostics[/dim]"
+    )
     Prompt.ask("\n[dim]Press Enter to continue[/dim]", default="")
 
     # Step 3: Index Your First Codebase
     console.clear()
-    console.print(Panel(
-        "[bold]Step 3/6: Index Your First Codebase[/bold]",
-        border_style="cyan"
-    ))
+    console.print(
+        Panel("[bold]Step 3/6: Index Your First Codebase[/bold]", border_style="cyan")
+    )
     console.print()
 
     console.print("To enable semantic code search, you need to index a codebase.\n")
-    console.print("[bold]Command:[/bold] claude-rag index <path> --project-name <name>\n")
+    console.print(
+        "[bold]Command:[/bold] claude-rag index <path> --project-name <name>\n"
+    )
     console.print("[bold]Example:[/bold]")
     console.print("  claude-rag index ~/my-project --project-name myapp\n")
     console.print("This will:")
@@ -118,13 +123,19 @@ Claude Memory RAG Server gives Claude **persistent memory** and **semantic code 
     console.print("  3. Generate embeddings for semantic search")
     console.print("  4. Store in vector database\n")
 
-    if Confirm.ask("[bold]Would you like to try indexing a directory now?[/bold]", default=False):
+    if Confirm.ask(
+        "[bold]Would you like to try indexing a directory now?[/bold]", default=False
+    ):
         path = Prompt.ask("Enter directory path", default=".")
         project_name = Prompt.ask("Enter project name", default=Path(path).name)
 
-        console.print(f"\n[green]Great! Run this command:[/green]")
-        console.print(f"[bold cyan]  claude-rag index {path} --project-name {project_name}[/bold cyan]\n")
-        console.print("[dim]After this tutorial, you can run the command to index.[/dim]")
+        console.print("\n[green]Great! Run this command:[/green]")
+        console.print(
+            f"[bold cyan]  claude-rag index {path} --project-name {project_name}[/bold cyan]\n"
+        )
+        console.print(
+            "[dim]After this tutorial, you can run the command to index.[/dim]"
+        )
     else:
         console.print("[yellow]No problem! You can index later with:[/yellow]")
         console.print("[bold]  claude-rag index <path> --project-name <name>[/bold]")
@@ -133,10 +144,9 @@ Claude Memory RAG Server gives Claude **persistent memory** and **semantic code 
 
     # Step 4: Search Code
     console.clear()
-    console.print(Panel(
-        "[bold]Step 4/6: Search Code Semantically[/bold]",
-        border_style="cyan"
-    ))
+    console.print(
+        Panel("[bold]Step 4/6: Search Code Semantically[/bold]", border_style="cyan")
+    )
     console.print()
 
     console.print("Once indexed, Claude can search your code by meaning!\n")
@@ -156,10 +166,7 @@ Claude Memory RAG Server gives Claude **persistent memory** and **semantic code 
 
     # Step 5: Manage Memories
     console.clear()
-    console.print(Panel(
-        "[bold]Step 5/6: Manage Memories[/bold]",
-        border_style="cyan"
-    ))
+    console.print(Panel("[bold]Step 5/6: Manage Memories[/bold]", border_style="cyan"))
     console.print()
 
     console.print("Claude can store and retrieve memories across sessions!\n")
@@ -176,17 +183,20 @@ Claude Memory RAG Server gives Claude **persistent memory** and **semantic code 
     console.print("  • claude-rag consolidate - Merge duplicate memories\n")
 
     if Confirm.ask("[bold]Want to try the memory browser?[/bold]", default=False):
-        console.print("\n[green]Great! Run:[/green] [bold cyan]claude-rag browse[/bold cyan]")
-        console.print("[dim]You can explore, search, and filter memories interactively.[/dim]\n")
+        console.print(
+            "\n[green]Great! Run:[/green] [bold cyan]claude-rag browse[/bold cyan]"
+        )
+        console.print(
+            "[dim]You can explore, search, and filter memories interactively.[/dim]\n"
+        )
 
     Prompt.ask("\n[dim]Press Enter to continue[/dim]", default="")
 
     # Step 6: Next Steps
     console.clear()
-    console.print(Panel(
-        "[bold]Step 6/6: Next Steps & Resources[/bold]",
-        border_style="cyan"
-    ))
+    console.print(
+        Panel("[bold]Step 6/6: Next Steps & Resources[/bold]", border_style="cyan")
+    )
     console.print()
 
     console.print("[bold green]🎉 Tutorial Complete![/bold green]\n")
@@ -215,15 +225,19 @@ Claude Memory RAG Server gives Claude **persistent memory** and **semantic code 
     console.print("  💡 Most commands have --help for detailed options")
     console.print("  💡 Use --dry-run to preview before destructive operations\n")
 
-    if Confirm.ask("[bold]Would you like to see your current system status?[/bold]", default=True):
+    if Confirm.ask(
+        "[bold]Would you like to see your current system status?[/bold]", default=True
+    ):
         console.print("\n[dim]Run: claude-rag status[/dim]")
         console.print("[dim]Or: claude-rag health (for detailed diagnostics)[/dim]\n")
 
-    console.print(Panel(
-        "[bold green]Thank you for using Claude Memory RAG Server![/bold green]\n\n"
-        "Happy coding! 🚀",
-        border_style="green"
-    ))
+    console.print(
+        Panel(
+            "[bold green]Thank you for using Claude Memory RAG Server![/bold green]\n\n"
+            "Happy coding! 🚀",
+            border_style="green",
+        )
+    )
 
 
 def main():

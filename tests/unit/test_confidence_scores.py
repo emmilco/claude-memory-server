@@ -2,8 +2,7 @@
 
 import pytest
 import pytest_asyncio
-import uuid
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
 from src.core.server import MemoryRAGServer
 from src.core.models import MemoryUnit, ContextLevel, MemoryCategory, MemoryScope
 from src.config import ServerConfig
@@ -76,16 +75,18 @@ async def mock_server(unique_qdrant_collection):
 
     # Create a mock quality_analyzer that returns realistic quality metrics
     server.quality_analyzer = Mock()
-    server.quality_analyzer.calculate_quality_metrics = Mock(return_value=CodeQualityMetrics(
-        cyclomatic_complexity=5,
-        line_count=10,
-        nesting_depth=2,
-        parameter_count=2,
-        has_documentation=True,
-        duplication_score=0.0,
-        maintainability_index=85,
-        quality_flags=[]
-    ))
+    server.quality_analyzer.calculate_quality_metrics = Mock(
+        return_value=CodeQualityMetrics(
+            cyclomatic_complexity=5,
+            line_count=10,
+            nesting_depth=2,
+            parameter_count=2,
+            has_documentation=True,
+            duplication_score=0.0,
+            maintainability_index=85,
+            quality_flags=[],
+        )
+    )
 
     server.complexity_analyzer = Mock()
 
@@ -124,11 +125,15 @@ class TestSearchCodeConfidenceDisplay:
             },
         )
 
-        mock_server.store.retrieve = AsyncMock(return_value=[
-            (mock_memory, 0.92),  # Excellent score
-        ])
+        mock_server.store.retrieve = AsyncMock(
+            return_value=[
+                (mock_memory, 0.92),  # Excellent score
+            ]
+        )
 
-        mock_server.embedding_generator.generate = AsyncMock(return_value=mock_embedding(value=0.1))
+        mock_server.embedding_generator.generate = AsyncMock(
+            return_value=mock_embedding(value=0.1)
+        )
 
         # Execute search
         result = await mock_server.search_code(query="authentication logic", limit=5)
@@ -167,11 +172,15 @@ class TestSearchCodeConfidenceDisplay:
             },
         )
 
-        mock_server.store.retrieve = AsyncMock(return_value=[
-            (mock_memory, 0.72),  # Good score
-        ])
+        mock_server.store.retrieve = AsyncMock(
+            return_value=[
+                (mock_memory, 0.72),  # Good score
+            ]
+        )
 
-        mock_server.embedding_generator.generate = AsyncMock(return_value=mock_embedding(value=0.1))
+        mock_server.embedding_generator.generate = AsyncMock(
+            return_value=mock_embedding(value=0.1)
+        )
 
         result = await mock_server.search_code(query="login function", limit=5)
 
@@ -200,11 +209,15 @@ class TestSearchCodeConfidenceDisplay:
             },
         )
 
-        mock_server.store.retrieve = AsyncMock(return_value=[
-            (mock_memory, 0.45),  # Weak score
-        ])
+        mock_server.store.retrieve = AsyncMock(
+            return_value=[
+                (mock_memory, 0.45),  # Weak score
+            ]
+        )
 
-        mock_server.embedding_generator.generate = AsyncMock(return_value=mock_embedding(value=0.1))
+        mock_server.embedding_generator.generate = AsyncMock(
+            return_value=mock_embedding(value=0.1)
+        )
 
         result = await mock_server.search_code(query="authentication", limit=5)
 
@@ -213,7 +226,9 @@ class TestSearchCodeConfidenceDisplay:
         assert code_result["confidence_label"] == "weak"
         assert code_result["confidence_display"] == "45% (weak)"
 
-    async def test_search_code_multiple_results_different_confidences(self, mock_server):
+    async def test_search_code_multiple_results_different_confidences(
+        self, mock_server
+    ):
         """Test multiple results with different confidence levels."""
         mock_memories = [
             MemoryUnit(
@@ -238,11 +253,13 @@ class TestSearchCodeConfidenceDisplay:
 
         scores = [0.95, 0.70, 0.50]  # excellent, good, weak
 
-        mock_server.store.retrieve = AsyncMock(return_value=[
-            (mock_memories[i], scores[i]) for i in range(3)
-        ])
+        mock_server.store.retrieve = AsyncMock(
+            return_value=[(mock_memories[i], scores[i]) for i in range(3)]
+        )
 
-        mock_server.embedding_generator.generate = AsyncMock(return_value=mock_embedding(value=0.1))
+        mock_server.embedding_generator.generate = AsyncMock(
+            return_value=mock_embedding(value=0.1)
+        )
 
         result = await mock_server.search_code(query="test query", limit=5)
 
@@ -285,14 +302,20 @@ class TestFindSimilarCodeConfidenceDisplay:
             },
         )
 
-        mock_server.store.retrieve = AsyncMock(return_value=[
-            (mock_memory, 0.88),  # Excellent similarity
-        ])
+        mock_server.store.retrieve = AsyncMock(
+            return_value=[
+                (mock_memory, 0.88),  # Excellent similarity
+            ]
+        )
 
-        mock_server.embedding_generator.generate = AsyncMock(return_value=mock_embedding(value=0.1))
+        mock_server.embedding_generator.generate = AsyncMock(
+            return_value=mock_embedding(value=0.1)
+        )
 
         code_snippet = "def auth(u, p):\n    return verify(u, p)"
-        result = await mock_server.find_similar_code(code_snippet=code_snippet, limit=10)
+        result = await mock_server.find_similar_code(
+            code_snippet=code_snippet, limit=10
+        )
 
         assert "results" in result
         assert len(result["results"]) == 1
@@ -333,14 +356,18 @@ class TestFindSimilarCodeConfidenceDisplay:
         # Test boundary scores: 0.81 (excellent), 0.8 (good), 0.6 (good)
         scores = [0.81, 0.8, 0.6]
 
-        mock_server.store.retrieve = AsyncMock(return_value=[
-            (mock_memories[i], scores[i]) for i in range(3)
-        ])
+        mock_server.store.retrieve = AsyncMock(
+            return_value=[(mock_memories[i], scores[i]) for i in range(3)]
+        )
 
-        mock_server.embedding_generator.generate = AsyncMock(return_value=mock_embedding(value=0.1))
+        mock_server.embedding_generator.generate = AsyncMock(
+            return_value=mock_embedding(value=0.1)
+        )
 
         code_snippet = "def test():\n    pass"
-        result = await mock_server.find_similar_code(code_snippet=code_snippet, limit=10)
+        result = await mock_server.find_similar_code(
+            code_snippet=code_snippet, limit=10
+        )
 
         assert len(result["results"]) == 3
 

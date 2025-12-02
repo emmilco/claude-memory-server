@@ -73,13 +73,16 @@ class ContextLevelClassifier:
         """Initialize the classifier."""
         # Compile regex patterns for efficiency
         self.user_patterns = [
-            re.compile(pattern, re.IGNORECASE) for pattern in self.USER_PREFERENCE_KEYWORDS
+            re.compile(pattern, re.IGNORECASE)
+            for pattern in self.USER_PREFERENCE_KEYWORDS
         ]
         self.project_patterns = [
-            re.compile(pattern, re.IGNORECASE) for pattern in self.PROJECT_CONTEXT_KEYWORDS
+            re.compile(pattern, re.IGNORECASE)
+            for pattern in self.PROJECT_CONTEXT_KEYWORDS
         ]
         self.session_patterns = [
-            re.compile(pattern, re.IGNORECASE) for pattern in self.SESSION_STATE_KEYWORDS
+            re.compile(pattern, re.IGNORECASE)
+            for pattern in self.SESSION_STATE_KEYWORDS
         ]
 
     def _score_patterns(self, content: str, patterns: List[re.Pattern]) -> float:
@@ -131,19 +134,31 @@ class ContextLevelClassifier:
         content_lower = content.lower()
 
         # User preference indicators
-        if any(word in content_lower for word in ["prefer", "always", "never", "like", "dislike"]):
+        if any(
+            word in content_lower
+            for word in ["prefer", "always", "never", "like", "dislike"]
+        ):
             user_score += 0.2
 
         # Project context indicators
-        if any(word in content_lower for word in ["project", "codebase", "architecture", "framework"]):
+        if any(
+            word in content_lower
+            for word in ["project", "codebase", "architecture", "framework"]
+        ):
             project_score += 0.2
 
         # Session state indicators
-        if any(word in content_lower for word in ["currently", "working on", "today", "right now"]):
+        if any(
+            word in content_lower
+            for word in ["currently", "working on", "today", "right now"]
+        ):
             session_score += 0.2
 
         # Code-related content often belongs to project context
-        if re.search(r"(class|function|method|variable|import|package|module)\s+\w+", content_lower):
+        if re.search(
+            r"(class|function|method|variable|import|package|module)\s+\w+",
+            content_lower,
+        ):
             project_score += 0.3
 
         # Commands or immediate actions suggest session state

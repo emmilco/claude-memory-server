@@ -3,7 +3,6 @@
 import pytest
 import pytest_asyncio
 import tempfile
-import json
 from pathlib import Path
 from datetime import datetime, UTC
 from src.memory.repository_registry import (
@@ -36,9 +35,9 @@ async def sample_repo_paths():
         repo3.mkdir()
 
         yield {
-            'repo1': str(repo1),
-            'repo2': str(repo2),
-            'repo3': str(repo3),
+            "repo1": str(repo1),
+            "repo2": str(repo2),
+            "repo3": str(repo3),
         }
 
 
@@ -80,36 +79,36 @@ class TestRepositoryModel:
 
         data = repo.to_dict()
 
-        assert data['id'] == "test-id"
-        assert data['name'] == "test-repo"
-        assert data['repo_type'] == "monorepo"
-        assert data['status'] == "indexed"
-        assert data['tags'] == ["tag1", "tag2"]
+        assert data["id"] == "test-id"
+        assert data["name"] == "test-repo"
+        assert data["repo_type"] == "monorepo"
+        assert data["status"] == "indexed"
+        assert data["tags"] == ["tag1", "tag2"]
 
     def test_repository_from_dict(self):
         """Test creating repository from dictionary."""
         data = {
-            'id': 'test-id',
-            'name': 'test-repo',
-            'path': '/path/to/repo',
-            'repo_type': 'multi_repo',
-            'status': 'stale',
-            'file_count': 100,
-            'unit_count': 500,
-            'tags': ['backend', 'python'],
-            'workspace_ids': ['ws-1'],
-            'depends_on': ['repo-2'],
-            'depended_by': [],
+            "id": "test-id",
+            "name": "test-repo",
+            "path": "/path/to/repo",
+            "repo_type": "multi_repo",
+            "status": "stale",
+            "file_count": 100,
+            "unit_count": 500,
+            "tags": ["backend", "python"],
+            "workspace_ids": ["ws-1"],
+            "depends_on": ["repo-2"],
+            "depended_by": [],
         }
 
         repo = Repository.from_dict(data)
 
-        assert repo.id == 'test-id'
+        assert repo.id == "test-id"
         assert repo.repo_type == RepositoryType.MULTI_REPO
         assert repo.status == RepositoryStatus.STALE
         assert repo.file_count == 100
         assert repo.unit_count == 500
-        assert repo.tags == ['backend', 'python']
+        assert repo.tags == ["backend", "python"]
 
     def test_repository_roundtrip(self):
         """Test converting to dict and back preserves data."""
@@ -161,7 +160,7 @@ class TestRegistryBasics:
     async def test_register_repository(self, registry, sample_repo_paths):
         """Test registering a repository."""
         repo_id = await registry.register_repository(
-            path=sample_repo_paths['repo1'],
+            path=sample_repo_paths["repo1"],
             name="Test Repo",
             repo_type=RepositoryType.STANDALONE,
         )
@@ -178,9 +177,7 @@ class TestRegistryBasics:
     @pytest.mark.asyncio
     async def test_register_repository_default_name(self, registry, sample_repo_paths):
         """Test registering repository uses directory name as default."""
-        repo_id = await registry.register_repository(
-            path=sample_repo_paths['repo1']
-        )
+        repo_id = await registry.register_repository(path=sample_repo_paths["repo1"])
 
         repo = await registry.get_repository(repo_id)
         assert repo.name == "repo1"  # Directory name
@@ -188,15 +185,15 @@ class TestRegistryBasics:
     @pytest.mark.asyncio
     async def test_register_duplicate_path_fails(self, registry, sample_repo_paths):
         """Test registering same path twice raises error."""
-        await registry.register_repository(path=sample_repo_paths['repo1'])
+        await registry.register_repository(path=sample_repo_paths["repo1"])
 
         with pytest.raises(ValueError, match="already registered"):
-            await registry.register_repository(path=sample_repo_paths['repo1'])
+            await registry.register_repository(path=sample_repo_paths["repo1"])
 
     @pytest.mark.asyncio
     async def test_unregister_repository(self, registry, sample_repo_paths):
         """Test unregistering a repository."""
-        repo_id = await registry.register_repository(path=sample_repo_paths['repo1'])
+        repo_id = await registry.register_repository(path=sample_repo_paths["repo1"])
         assert len(registry.repositories) == 1
 
         await registry.unregister_repository(repo_id)
@@ -216,8 +213,7 @@ class TestRegistryRetrieval:
     async def test_get_repository_by_id(self, registry, sample_repo_paths):
         """Test getting repository by ID."""
         repo_id = await registry.register_repository(
-            path=sample_repo_paths['repo1'],
-            name="Test Repo"
+            path=sample_repo_paths["repo1"], name="Test Repo"
         )
 
         repo = await registry.get_repository(repo_id)
@@ -235,21 +231,20 @@ class TestRegistryRetrieval:
     async def test_get_repository_by_path(self, registry, sample_repo_paths):
         """Test getting repository by path."""
         await registry.register_repository(
-            path=sample_repo_paths['repo1'],
-            name="Test Repo"
+            path=sample_repo_paths["repo1"], name="Test Repo"
         )
 
-        repo = await registry.get_repository_by_path(sample_repo_paths['repo1'])
+        repo = await registry.get_repository_by_path(sample_repo_paths["repo1"])
         assert repo is not None
         assert repo.name == "Test Repo"
 
     @pytest.mark.asyncio
     async def test_get_repository_by_path_normalizes(self, registry, sample_repo_paths):
         """Test path lookup normalizes paths."""
-        await registry.register_repository(path=sample_repo_paths['repo1'])
+        await registry.register_repository(path=sample_repo_paths["repo1"])
 
         # Try with trailing slash
-        path_with_slash = sample_repo_paths['repo1'] + "/"
+        path_with_slash = sample_repo_paths["repo1"] + "/"
         repo = await registry.get_repository_by_path(path_with_slash)
         assert repo is not None
 
@@ -257,8 +252,7 @@ class TestRegistryRetrieval:
     async def test_get_repository_by_name(self, registry, sample_repo_paths):
         """Test getting repository by name."""
         await registry.register_repository(
-            path=sample_repo_paths['repo1'],
-            name="My Special Repo"
+            path=sample_repo_paths["repo1"], name="My Special Repo"
         )
 
         repo = await registry.get_repository_by_name("My Special Repo")
@@ -279,29 +273,29 @@ class TestRegistryFiltering:
     async def populated_registry(self, registry, sample_repo_paths):
         """Create registry with multiple repositories."""
         await registry.register_repository(
-            path=sample_repo_paths['repo1'],
+            path=sample_repo_paths["repo1"],
             name="Backend API",
             repo_type=RepositoryType.MULTI_REPO,
-            tags=["backend", "python"]
+            tags=["backend", "python"],
         )
 
         repo2_id = await registry.register_repository(
-            path=sample_repo_paths['repo2'],
+            path=sample_repo_paths["repo2"],
             name="Frontend App",
             repo_type=RepositoryType.STANDALONE,
-            tags=["frontend", "javascript"]
+            tags=["frontend", "javascript"],
         )
 
         repo3_id = await registry.register_repository(
-            path=sample_repo_paths['repo3'],
+            path=sample_repo_paths["repo3"],
             name="Monorepo",
             repo_type=RepositoryType.MONOREPO,
-            tags=["backend", "frontend"]
+            tags=["backend", "frontend"],
         )
 
         # Update some statuses
-        await registry.update_repository(repo2_id, {'status': RepositoryStatus.INDEXED})
-        await registry.update_repository(repo3_id, {'status': RepositoryStatus.STALE})
+        await registry.update_repository(repo2_id, {"status": RepositoryStatus.INDEXED})
+        await registry.update_repository(repo3_id, {"status": RepositoryStatus.STALE})
 
         return registry
 
@@ -357,7 +351,9 @@ class TestRegistryFiltering:
     @pytest.mark.asyncio
     async def test_filter_by_multiple_tags(self, populated_registry):
         """Test filtering by multiple tags (OR condition)."""
-        repos = await populated_registry.list_repositories(tags=["python", "javascript"])
+        repos = await populated_registry.list_repositories(
+            tags=["python", "javascript"]
+        )
         assert len(repos) == 2  # Repos with either tag
 
     @pytest.mark.asyncio
@@ -378,8 +374,7 @@ class TestRegistryFiltering:
     async def test_filter_combined(self, populated_registry):
         """Test combining multiple filters."""
         repos = await populated_registry.list_repositories(
-            status=RepositoryStatus.NOT_INDEXED,
-            tags=["backend"]
+            status=RepositoryStatus.NOT_INDEXED, tags=["backend"]
         )
         assert len(repos) == 1
         assert repos[0].name == "Backend API"
@@ -391,13 +386,16 @@ class TestRegistryUpdates:
     @pytest.mark.asyncio
     async def test_update_repository_status(self, registry, sample_repo_paths):
         """Test updating repository status."""
-        repo_id = await registry.register_repository(path=sample_repo_paths['repo1'])
+        repo_id = await registry.register_repository(path=sample_repo_paths["repo1"])
 
-        await registry.update_repository(repo_id, {
-            'status': RepositoryStatus.INDEXED,
-            'file_count': 100,
-            'unit_count': 500,
-        })
+        await registry.update_repository(
+            repo_id,
+            {
+                "status": RepositoryStatus.INDEXED,
+                "file_count": 100,
+                "unit_count": 500,
+            },
+        )
 
         repo = await registry.get_repository(repo_id)
         assert repo.status == RepositoryStatus.INDEXED
@@ -409,11 +407,10 @@ class TestRegistryUpdates:
     async def test_update_repository_name(self, registry, sample_repo_paths):
         """Test updating repository name."""
         repo_id = await registry.register_repository(
-            path=sample_repo_paths['repo1'],
-            name="Old Name"
+            path=sample_repo_paths["repo1"], name="Old Name"
         )
 
-        await registry.update_repository(repo_id, {'name': 'New Name'})
+        await registry.update_repository(repo_id, {"name": "New Name"})
 
         repo = await registry.get_repository(repo_id)
         assert repo.name == "New Name"
@@ -422,25 +419,28 @@ class TestRegistryUpdates:
     async def test_update_nonexistent_fails(self, registry):
         """Test updating non-existent repository raises error."""
         with pytest.raises(KeyError, match="not found"):
-            await registry.update_repository("nonexistent", {'name': 'Test'})
+            await registry.update_repository("nonexistent", {"name": "Test"})
 
     @pytest.mark.asyncio
     async def test_update_invalid_field_fails(self, registry, sample_repo_paths):
         """Test updating invalid field raises error."""
-        repo_id = await registry.register_repository(path=sample_repo_paths['repo1'])
+        repo_id = await registry.register_repository(path=sample_repo_paths["repo1"])
 
         with pytest.raises(ValueError, match="Invalid field"):
-            await registry.update_repository(repo_id, {'invalid_field': 'value'})
+            await registry.update_repository(repo_id, {"invalid_field": "value"})
 
     @pytest.mark.asyncio
     async def test_update_with_string_enums(self, registry, sample_repo_paths):
         """Test updating with string enum values."""
-        repo_id = await registry.register_repository(path=sample_repo_paths['repo1'])
+        repo_id = await registry.register_repository(path=sample_repo_paths["repo1"])
 
-        await registry.update_repository(repo_id, {
-            'status': 'indexed',  # String instead of enum
-            'repo_type': 'monorepo',
-        })
+        await registry.update_repository(
+            repo_id,
+            {
+                "status": "indexed",  # String instead of enum
+                "repo_type": "monorepo",
+            },
+        )
 
         repo = await registry.get_repository(repo_id)
         assert repo.status == RepositoryStatus.INDEXED
@@ -454,16 +454,13 @@ class TestDependencyTracking:
     async def multi_repo_registry(self, registry, sample_repo_paths):
         """Create registry with multiple repositories."""
         repo1_id = await registry.register_repository(
-            path=sample_repo_paths['repo1'],
-            name="API Gateway"
+            path=sample_repo_paths["repo1"], name="API Gateway"
         )
         repo2_id = await registry.register_repository(
-            path=sample_repo_paths['repo2'],
-            name="Auth Service"
+            path=sample_repo_paths["repo2"], name="Auth Service"
         )
         repo3_id = await registry.register_repository(
-            path=sample_repo_paths['repo3'],
-            name="User Service"
+            path=sample_repo_paths["repo3"], name="User Service"
         )
 
         return registry, repo1_id, repo2_id, repo3_id
@@ -585,7 +582,7 @@ class TestTagManagement:
     @pytest.mark.asyncio
     async def test_add_tag(self, registry, sample_repo_paths):
         """Test adding a tag to repository."""
-        repo_id = await registry.register_repository(path=sample_repo_paths['repo1'])
+        repo_id = await registry.register_repository(path=sample_repo_paths["repo1"])
 
         await registry.add_tag(repo_id, "python")
         await registry.add_tag(repo_id, "backend")
@@ -597,7 +594,7 @@ class TestTagManagement:
     @pytest.mark.asyncio
     async def test_add_duplicate_tag_idempotent(self, registry, sample_repo_paths):
         """Test adding same tag twice is idempotent."""
-        repo_id = await registry.register_repository(path=sample_repo_paths['repo1'])
+        repo_id = await registry.register_repository(path=sample_repo_paths["repo1"])
 
         await registry.add_tag(repo_id, "python")
         await registry.add_tag(repo_id, "python")
@@ -609,8 +606,7 @@ class TestTagManagement:
     async def test_remove_tag(self, registry, sample_repo_paths):
         """Test removing a tag from repository."""
         repo_id = await registry.register_repository(
-            path=sample_repo_paths['repo1'],
-            tags=["python", "backend"]
+            path=sample_repo_paths["repo1"], tags=["python", "backend"]
         )
 
         await registry.remove_tag(repo_id, "python")
@@ -622,7 +618,7 @@ class TestTagManagement:
     @pytest.mark.asyncio
     async def test_remove_nonexistent_tag(self, registry, sample_repo_paths):
         """Test removing non-existent tag does nothing."""
-        repo_id = await registry.register_repository(path=sample_repo_paths['repo1'])
+        repo_id = await registry.register_repository(path=sample_repo_paths["repo1"])
 
         # Should not raise error
         await registry.remove_tag(repo_id, "nonexistent")
@@ -634,7 +630,7 @@ class TestWorkspaceManagement:
     @pytest.mark.asyncio
     async def test_add_to_workspace(self, registry, sample_repo_paths):
         """Test adding repository to workspace."""
-        repo_id = await registry.register_repository(path=sample_repo_paths['repo1'])
+        repo_id = await registry.register_repository(path=sample_repo_paths["repo1"])
 
         await registry.add_to_workspace(repo_id, "ws-1")
 
@@ -644,7 +640,7 @@ class TestWorkspaceManagement:
     @pytest.mark.asyncio
     async def test_add_to_multiple_workspaces(self, registry, sample_repo_paths):
         """Test repository can belong to multiple workspaces."""
-        repo_id = await registry.register_repository(path=sample_repo_paths['repo1'])
+        repo_id = await registry.register_repository(path=sample_repo_paths["repo1"])
 
         await registry.add_to_workspace(repo_id, "ws-1")
         await registry.add_to_workspace(repo_id, "ws-2")
@@ -656,7 +652,7 @@ class TestWorkspaceManagement:
     @pytest.mark.asyncio
     async def test_add_to_workspace_idempotent(self, registry, sample_repo_paths):
         """Test adding to same workspace twice is idempotent."""
-        repo_id = await registry.register_repository(path=sample_repo_paths['repo1'])
+        repo_id = await registry.register_repository(path=sample_repo_paths["repo1"])
 
         await registry.add_to_workspace(repo_id, "ws-1")
         await registry.add_to_workspace(repo_id, "ws-1")
@@ -667,7 +663,7 @@ class TestWorkspaceManagement:
     @pytest.mark.asyncio
     async def test_remove_from_workspace(self, registry, sample_repo_paths):
         """Test removing repository from workspace."""
-        repo_id = await registry.register_repository(path=sample_repo_paths['repo1'])
+        repo_id = await registry.register_repository(path=sample_repo_paths["repo1"])
 
         await registry.add_to_workspace(repo_id, "ws-1")
         await registry.add_to_workspace(repo_id, "ws-2")
@@ -690,10 +686,10 @@ class TestPersistence:
             # Create registry and add repos
             reg1 = RepositoryRegistry(str(storage_path))
             repo_id = await reg1.register_repository(
-                path=sample_repo_paths['repo1'],
+                path=sample_repo_paths["repo1"],
                 name="Test Repo",
                 repo_type=RepositoryType.MONOREPO,
-                tags=["test"]
+                tags=["test"],
             )
 
             # Create new registry instance with same storage
@@ -736,28 +732,23 @@ class TestStatistics:
     async def stats_registry(self, registry, sample_repo_paths):
         """Create registry with repos in various states."""
         repo1_id = await registry.register_repository(
-            path=sample_repo_paths['repo1'],
-            repo_type=RepositoryType.STANDALONE
+            path=sample_repo_paths["repo1"], repo_type=RepositoryType.STANDALONE
         )
-        await registry.update_repository(repo1_id, {
-            'status': RepositoryStatus.INDEXED,
-            'file_count': 100,
-            'unit_count': 500
-        })
+        await registry.update_repository(
+            repo1_id,
+            {"status": RepositoryStatus.INDEXED, "file_count": 100, "unit_count": 500},
+        )
 
         repo2_id = await registry.register_repository(
-            path=sample_repo_paths['repo2'],
-            repo_type=RepositoryType.MONOREPO
+            path=sample_repo_paths["repo2"], repo_type=RepositoryType.MONOREPO
         )
-        await registry.update_repository(repo2_id, {
-            'status': RepositoryStatus.INDEXED,
-            'file_count': 200,
-            'unit_count': 1000
-        })
+        await registry.update_repository(
+            repo2_id,
+            {"status": RepositoryStatus.INDEXED, "file_count": 200, "unit_count": 1000},
+        )
 
         await registry.register_repository(
-            path=sample_repo_paths['repo3'],
-            repo_type=RepositoryType.MULTI_REPO
+            path=sample_repo_paths["repo3"], repo_type=RepositoryType.MULTI_REPO
         )  # NOT_INDEXED
 
         return registry
@@ -767,13 +758,13 @@ class TestStatistics:
         """Test getting registry statistics."""
         stats = await stats_registry.get_statistics()
 
-        assert stats['total_repositories'] == 3
-        assert stats['total_files_indexed'] == 300
-        assert stats['total_units_indexed'] == 1500
+        assert stats["total_repositories"] == 3
+        assert stats["total_files_indexed"] == 300
+        assert stats["total_units_indexed"] == 1500
 
-        assert stats['by_status']['indexed'] == 2
-        assert stats['by_status']['not_indexed'] == 1
+        assert stats["by_status"]["indexed"] == 2
+        assert stats["by_status"]["not_indexed"] == 1
 
-        assert stats['by_type']['standalone'] == 1
-        assert stats['by_type']['monorepo'] == 1
-        assert stats['by_type']['multi_repo'] == 1
+        assert stats["by_type"]["standalone"] == 1
+        assert stats["by_type"]["monorepo"] == 1
+        assert stats["by_type"]["multi_repo"] == 1

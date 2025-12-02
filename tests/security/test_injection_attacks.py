@@ -5,7 +5,6 @@ from src.core.validation import (
     detect_injection_patterns,
     validate_store_request,
     validate_query_request,
-    validate_filter_params,
     validate_project_name,
 )
 from src.core.models import MemoryCategory, MemoryScope
@@ -215,7 +214,10 @@ class TestSQLInjection:
 
         # Check that validation error mentions security/injection/suspicious/pattern
         error_msg = str(exc_info.value).lower()
-        assert any(word in error_msg for word in ["security", "injection", "suspicious", "pattern", "threat"])
+        assert any(
+            word in error_msg
+            for word in ["security", "injection", "suspicious", "pattern", "threat"]
+        )
 
     @pytest.mark.parametrize("attack", SQL_INJECTION_ATTACKS)
     def test_query_request_blocks_sql_injection(self, attack):
@@ -230,7 +232,10 @@ class TestSQLInjection:
 
         # Check that validation error mentions security/injection/suspicious/pattern
         error_msg = str(exc_info.value).lower()
-        assert any(word in error_msg for word in ["security", "injection", "suspicious", "pattern", "threat"])
+        assert any(
+            word in error_msg
+            for word in ["security", "injection", "suspicious", "pattern", "threat"]
+        )
 
 
 class TestPromptInjection:
@@ -257,7 +262,10 @@ class TestPromptInjection:
 
         # Check that validation error mentions security/injection/suspicious/pattern
         error_msg = str(exc_info.value).lower()
-        assert any(word in error_msg for word in ["security", "injection", "suspicious", "pattern", "threat"])
+        assert any(
+            word in error_msg
+            for word in ["security", "injection", "suspicious", "pattern", "threat"]
+        )
 
 
 class TestCommandInjection:
@@ -284,7 +292,10 @@ class TestCommandInjection:
 
         # Check that validation error mentions security/injection/suspicious/pattern
         error_msg = str(exc_info.value).lower()
-        assert any(word in error_msg for word in ["security", "injection", "suspicious", "pattern", "threat"])
+        assert any(
+            word in error_msg
+            for word in ["security", "injection", "suspicious", "pattern", "threat"]
+        )
 
 
 class TestPathTraversal:
@@ -319,7 +330,10 @@ class TestBoundaryConditions:
 
         # Check that validation error is raised (any message is fine)
         error_msg = str(exc_info.value).lower()
-        assert any(word in error_msg for word in ["empty", "required", "character", "validation"])
+        assert any(
+            word in error_msg
+            for word in ["empty", "required", "character", "validation"]
+        )
 
     def test_null_bytes(self):
         """Test that null bytes are removed."""
@@ -346,7 +360,10 @@ class TestBoundaryConditions:
 
         # Check that validation error is raised (any message about size is fine)
         error_msg = str(exc_info.value).lower()
-        assert any(word in error_msg for word in ["size", "exceeds", "maximum", "too", "validation"])
+        assert any(
+            word in error_msg
+            for word in ["size", "exceeds", "maximum", "too", "validation"]
+        )
 
     def test_legitimate_content_passes(self):
         """Test that legitimate content passes validation."""

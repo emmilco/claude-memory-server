@@ -5,14 +5,12 @@ Provides commands for viewing health status, generating reports,
 and applying automated fixes.
 """
 
-import asyncio
+import os
 from pathlib import Path
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
-from rich.layout import Layout
 from rich.progress import Progress, SpinnerColumn, TextColumn
-from datetime import datetime, timedelta
 
 from src.config import get_config
 from src.store.factory import create_store
@@ -75,7 +73,7 @@ class HealthMonitorCommand:
             archival_file = os.path.join(config_dir, "project_states.json")
             archival_manager = ProjectArchivalManager(
                 state_file_path=archival_file,
-                inactivity_threshold_days=self.config.memory.archival_threshold_days
+                inactivity_threshold_days=self.config.memory.archival_threshold_days,
             )
 
             collector = MetricsCollector(self.db_path, store, archival_manager)
@@ -111,9 +109,7 @@ class HealthMonitorCommand:
             if active_alerts:
                 self._display_alerts(active_alerts)
             else:
-                console.print(
-                    "\n[green]✓ No active alerts - System is healthy[/green]"
-                )
+                console.print("\n[green]✓ No active alerts - System is healthy[/green]")
 
             # Display key metrics
             self._display_key_metrics(metrics)
@@ -140,7 +136,7 @@ class HealthMonitorCommand:
             archival_file = os.path.join(config_dir, "project_states.json")
             archival_manager = ProjectArchivalManager(
                 state_file_path=archival_file,
-                inactivity_threshold_days=self.config.memory.archival_threshold_days
+                inactivity_threshold_days=self.config.memory.archival_threshold_days,
             )
 
             collector = MetricsCollector(self.db_path, store, archival_manager)
@@ -155,7 +151,7 @@ class HealthMonitorCommand:
                 TextColumn("[progress.description]{task.description}"),
                 console=console,
             ) as progress:
-                task = progress.add_task("Generating report...", total=None)
+                progress.add_task("Generating report...", total=None)
 
                 # Get current and historical metrics
                 current_metrics = await collector.collect_metrics()
@@ -194,7 +190,9 @@ class HealthMonitorCommand:
             auto = getattr(args, "auto", False)
 
             if dry_run:
-                console.print("[yellow]DRY RUN MODE - No changes will be made[/yellow]\n")
+                console.print(
+                    "[yellow]DRY RUN MODE - No changes will be made[/yellow]\n"
+                )
 
             # Get available actions
             actions = remediation.get_available_actions()
@@ -274,7 +272,7 @@ class HealthMonitorCommand:
             archival_file = os.path.join(config_dir, "project_states.json")
             archival_manager = ProjectArchivalManager(
                 state_file_path=archival_file,
-                inactivity_threshold_days=self.config.memory.archival_threshold_days
+                inactivity_threshold_days=self.config.memory.archival_threshold_days,
             )
 
             collector = MetricsCollector(self.db_path, store, archival_manager)
@@ -345,7 +343,9 @@ class HealthMonitorCommand:
                 color = "cyan"
                 icon = "ℹ"
 
-            console.print(f"[{color}]{icon} {alert.severity.value}:[/{color}] {alert.message}")
+            console.print(
+                f"[{color}]{icon} {alert.severity.value}:[/{color}] {alert.message}"
+            )
             console.print(f"   Metric: {alert.metric_name}")
             console.print(
                 f"   Current: {alert.current_value:.2f}, "
@@ -403,7 +403,9 @@ class HealthMonitorCommand:
 
         # Usage summary
         console.print("\n[bold]📊 Usage Summary:[/bold]")
-        console.print(f"  • Queries per day: {report.usage_summary['queries_per_day']:.1f}")
+        console.print(
+            f"  • Queries per day: {report.usage_summary['queries_per_day']:.1f}"
+        )
         console.print(
             f"  • Memories created per day: {report.usage_summary['memories_created_per_day']:.1f}"
         )

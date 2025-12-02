@@ -3,8 +3,7 @@
 import asyncio
 import logging
 from pathlib import Path
-from typing import Optional, List, Dict, Any, Callable
-from datetime import datetime, UTC
+from typing import Optional, List, Dict
 import time
 
 from src.memory.incremental_indexer import IncrementalIndexer
@@ -49,6 +48,7 @@ class BackgroundIndexer:
         # Job state manager
         if job_db_path is None:
             from pathlib import Path
+
             cache_dir = Path.home() / ".claude-rag"
             cache_dir.mkdir(parents=True, exist_ok=True)
             job_db_path = str(cache_dir / "indexing_jobs.db")
@@ -313,7 +313,11 @@ class BackgroundIndexer:
         if not job:
             return False
 
-        if job.status not in (JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED):
+        if job.status not in (
+            JobStatus.COMPLETED,
+            JobStatus.FAILED,
+            JobStatus.CANCELLED,
+        ):
             logger.warning(f"Cannot delete active job {job_id} (status: {job.status})")
             return False
 
@@ -350,7 +354,9 @@ class BackgroundIndexer:
 
         try:
             # Create indexer
-            indexer = IncrementalIndexer(project_name=job.project_name, config=self.config)
+            indexer = IncrementalIndexer(
+                project_name=job.project_name, config=self.config
+            )
             await indexer.initialize()
 
             # Get list of files to index
@@ -363,7 +369,8 @@ class BackgroundIndexer:
 
             # Filter out hidden files and already-indexed files
             files_to_index = [
-                f for f in all_files
+                f
+                for f in all_files
                 if not any(part.startswith(".") for part in f.parts)
                 and str(f.resolve()) not in indexed_files_set
             ]
@@ -395,7 +402,10 @@ class BackgroundIndexer:
             # Index files
             for i, file_path in enumerate(files_to_index):
                 # Check for cancellation
-                if job_id in self._cancel_events and self._cancel_events[job_id].is_set():
+                if (
+                    job_id in self._cancel_events
+                    and self._cancel_events[job_id].is_set()
+                ):
                     logger.info(f"Job {job_id} cancelled/paused")
                     break
 
@@ -408,7 +418,9 @@ class BackgroundIndexer:
                         indexed_count += 1
 
                         # Track indexed file
-                        self.job_manager.add_indexed_file(job_id, str(file_path.resolve()))
+                        self.job_manager.add_indexed_file(
+                            job_id, str(file_path.resolve())
+                        )
 
                     # Update progress
                     self.job_manager.update_job_progress(
@@ -447,7 +459,9 @@ class BackgroundIndexer:
             if job_id in self._cancel_events and self._cancel_events[job_id].is_set():
                 job = self.job_manager.get_job(job_id)
                 # Status already updated by pause/cancel handlers
-                logger.info(f"Job {job_id} stopped (status: {job.status if job else 'unknown'})")
+                logger.info(
+                    f"Job {job_id} stopped (status: {job.status if job else 'unknown'})"
+                )
                 return
 
             # Mark as completed
@@ -474,7 +488,9 @@ class BackgroundIndexer:
 
             # Mark as failed
             error_msg = str(e)
-            self.job_manager.update_job_status(job_id, JobStatus.FAILED, error_message=error_msg)
+            self.job_manager.update_job_status(
+                job_id, JobStatus.FAILED, error_message=error_msg
+            )
 
             # Notify failure
             await self.notification_manager.notify_failed(
@@ -482,7 +498,7 @@ class BackgroundIndexer:
                 project_name=job.project_name,
                 error_message=error_msg,
                 indexed_files=indexed_count,
-                total_files=total_files if 'total_files' in locals() else None,
+                total_files=total_files if "total_files" in locals() else None,
             )
 
         finally:

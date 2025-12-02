@@ -25,7 +25,7 @@ Part of FEAT-060: Code Quality Metrics & Hotspots
 
 import logging
 import numpy as np
-from typing import List, Tuple, Dict, Set, Optional
+from typing import List, Dict, Optional
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
@@ -160,7 +160,9 @@ class CodeDuplicateDetector:
             raise ValueError("Embeddings array is empty")
 
         if embeddings.ndim != 2:
-            raise ValueError(f"Embeddings must be 2D array, got shape {embeddings.shape}")
+            raise ValueError(
+                f"Embeddings must be 2D array, got shape {embeddings.shape}"
+            )
 
         n_units = embeddings.shape[0]
 
@@ -208,7 +210,7 @@ class CodeDuplicateDetector:
         self,
         similarity_matrix: np.ndarray,
         unit_ids: List[str],
-        threshold: Optional[float] = None
+        threshold: Optional[float] = None,
     ) -> List[DuplicatePair]:
         """
         Find pairs of units above similarity threshold.
@@ -252,11 +254,13 @@ class CodeDuplicateDetector:
             for j in range(i + 1, n):
                 sim = similarity_matrix[i][j]
                 if sim >= threshold:
-                    pairs.append(DuplicatePair(
-                        unit_id_1=unit_ids[i],
-                        unit_id_2=unit_ids[j],
-                        similarity=float(sim)
-                    ))
+                    pairs.append(
+                        DuplicatePair(
+                            unit_id_1=unit_ids[i],
+                            unit_id_2=unit_ids[j],
+                            similarity=float(sim),
+                        )
+                    )
 
         # Sort by similarity descending
         pairs.sort(key=lambda p: p.similarity, reverse=True)
@@ -268,7 +272,7 @@ class CodeDuplicateDetector:
         self,
         similarity_matrix: np.ndarray,
         unit_ids: List[str],
-        threshold: Optional[float] = None
+        threshold: Optional[float] = None,
     ) -> List[DuplicateCluster]:
         """
         Group duplicate units into clusters using transitive closure.
@@ -368,7 +372,9 @@ class CodeDuplicateDetector:
             cluster_map[root].append(i)
 
         # Filter out singleton clusters (only one unit)
-        cluster_map = {root: indices for root, indices in cluster_map.items() if len(indices) > 1}
+        cluster_map = {
+            root: indices for root, indices in cluster_map.items() if len(indices) > 1
+        }
 
         # Build DuplicateCluster objects
         clusters = []
@@ -386,7 +392,7 @@ class CodeDuplicateDetector:
             cluster = DuplicateCluster(
                 unit_ids=[unit_ids[i] for i in indices],
                 avg_similarity=avg_similarity,
-                size=len(indices)
+                size=len(indices),
             )
             clusters.append(cluster)
 

@@ -1,7 +1,7 @@
 """Tests for pattern detector."""
 
 import pytest
-from src.memory.pattern_detector import PatternDetector, PatternType, DetectedPattern
+from src.memory.pattern_detector import PatternDetector, PatternType
 
 
 class TestPatternDetector:
@@ -31,7 +31,10 @@ class TestPatternDetector:
 
         assert len(patterns) > 0
         assert patterns[0].pattern_type == PatternType.IMPLEMENTATION_REQUEST
-        assert "cache" in patterns[0].search_query.lower() or "caching" in patterns[0].search_query.lower()
+        assert (
+            "cache" in patterns[0].search_query.lower()
+            or "caching" in patterns[0].search_query.lower()
+        )
 
     def test_detect_implementation_request_create(self, detector):
         """Test detection of 'create' pattern."""
@@ -49,7 +52,9 @@ class TestPatternDetector:
 
         assert len(patterns) > 0
         base_confidence = 0.85
-        assert patterns[0].confidence > base_confidence  # Should have boost for "function"
+        assert (
+            patterns[0].confidence > base_confidence
+        )  # Should have boost for "function"
 
     # Error Debugging Pattern Tests
 
@@ -86,7 +91,9 @@ class TestPatternDetector:
         patterns = detector.detect_patterns(message)
 
         assert len(patterns) > 0
-        assert patterns[0].confidence > 0.90  # Should have boosts for "exception" and "error"
+        assert (
+            patterns[0].confidence > 0.90
+        )  # Should have boosts for "exception" and "error"
 
     # Code Question Pattern Tests
 
@@ -125,7 +132,9 @@ class TestPatternDetector:
         patterns = detector.detect_patterns(message)
 
         assert len(patterns) > 0
-        assert patterns[0].confidence > 0.75  # Should have boosts for "method" and "class"
+        assert (
+            patterns[0].confidence > 0.75
+        )  # Should have boosts for "method" and "class"
 
     # Refactoring/Change Pattern Tests
 
@@ -147,7 +156,10 @@ class TestPatternDetector:
         assert patterns[0].pattern_type == PatternType.REFACTORING_CHANGE
         # Search query should contain relevant terms (order may vary)
         query_lower = patterns[0].search_query.lower()
-        assert any(term in query_lower for term in ["database", "connection", "logic", "refactor"])
+        assert any(
+            term in query_lower
+            for term in ["database", "connection", "logic", "refactor"]
+        )
 
     def test_detect_refactoring_replace(self, detector):
         """Test detection of 'replace' pattern."""
@@ -163,7 +175,9 @@ class TestPatternDetector:
         patterns = detector.detect_patterns(message)
 
         assert len(patterns) > 0
-        assert patterns[0].confidence > 0.80  # Should have boosts for "all" and "function"
+        assert (
+            patterns[0].confidence > 0.80
+        )  # Should have boosts for "all" and "function"
 
     # Edge Cases and General Tests
 
@@ -259,7 +273,10 @@ class TestPatternDetector:
         explanation = detector.get_explanation(message)
 
         assert len(explanation) > 0
-        assert "Implementation Request" in explanation or "implementation_request" in explanation.lower()
+        assert (
+            "Implementation Request" in explanation
+            or "implementation_request" in explanation.lower()
+        )
         assert "Confidence" in explanation
         assert "Search query" in explanation
 

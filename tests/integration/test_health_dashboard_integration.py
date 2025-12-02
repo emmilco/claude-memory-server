@@ -3,7 +3,6 @@
 import pytest
 import pytest_asyncio
 import asyncio
-import uuid
 from datetime import datetime, UTC, timedelta
 
 from src.config import ServerConfig
@@ -15,7 +14,9 @@ from src.memory.lifecycle_manager import LifecycleManager
 from tests.conftest import mock_embedding
 
 # Skip entire module in CI - Qdrant timing sensitive under parallel execution
-pytestmark = pytest.mark.skip_ci(reason="Flaky under parallel execution - Qdrant timing sensitive")
+pytestmark = pytest.mark.skip_ci(
+    reason="Flaky under parallel execution - Qdrant timing sensitive"
+)
 
 
 @pytest_asyncio.fixture
@@ -106,7 +107,7 @@ class TestHealthDashboardIntegration:
                     "context_level": mem.context_level.value,
                     "created_at": mem.created_at.isoformat(),
                     "lifecycle_state": mem.lifecycle_state.value,
-                }
+                },
             )
 
         # Calculate health
@@ -143,7 +144,7 @@ class TestHealthDashboardIntegration:
                     "context_level": mem.context_level.value,
                     "created_at": mem.created_at.isoformat(),
                     "lifecycle_state": mem.lifecycle_state.value,
-                }
+                },
             )
 
         # Run archival job
@@ -185,7 +186,7 @@ class TestHealthDashboardIntegration:
                     "context_level": mem.context_level.value,
                     "created_at": mem.created_at.isoformat(),
                     "lifecycle_state": mem.lifecycle_state.value,
-                }
+                },
             )
 
         # Get initial count
@@ -238,7 +239,7 @@ class TestHealthDashboardIntegration:
                     "context_level": mem.context_level.value,
                     "created_at": mem.created_at.isoformat(),
                     "lifecycle_state": mem.lifecycle_state.value,
-                }
+                },
             )
 
         # Run health report
@@ -299,7 +300,7 @@ class TestHealthDashboardIntegration:
                     "context_level": mem.context_level.value,
                     "created_at": mem.created_at.isoformat(),
                     "lifecycle_state": mem.lifecycle_state.value,
-                }
+                },
             )
 
         # Calculate health
@@ -334,14 +335,14 @@ class TestHealthDashboardIntegration:
                 "context_level": mem.context_level.value,
                 "created_at": mem.created_at.isoformat(),
                 "lifecycle_state": mem.lifecycle_state.value,
-            }
+            },
         )
 
         # Try to clean up
         lifecycle_manager = LifecycleManager()
         jobs = HealthMaintenanceJobs(temp_db, lifecycle_manager)
 
-        result = await jobs.monthly_cleanup_job(dry_run=False, min_age_days=180)
+        await jobs.monthly_cleanup_job(dry_run=False, min_age_days=180)
 
         # Should not delete USER_PREFERENCE
         memories = await temp_db.get_all_memories()
@@ -372,7 +373,7 @@ class TestHealthDashboardIntegration:
                     "context_level": mem.context_level.value,
                     "created_at": mem.created_at.isoformat(),
                     "lifecycle_state": mem.lifecycle_state.value,
-                }
+                },
             )
 
         # Get quick stats
@@ -385,13 +386,9 @@ class TestHealthDashboardIntegration:
         # Compare
         assert quick_stats["total_memories"] == full_score.total_count
         assert (
-            quick_stats["lifecycle_distribution"]["active"]
-            == full_score.active_count
+            quick_stats["lifecycle_distribution"]["active"] == full_score.active_count
         )
-        assert (
-            quick_stats["lifecycle_distribution"]["stale"]
-            == full_score.stale_count
-        )
+        assert quick_stats["lifecycle_distribution"]["stale"] == full_score.stale_count
 
     @pytest.mark.asyncio
     async def test_concurrent_job_execution(self, temp_db):
@@ -416,7 +413,7 @@ class TestHealthDashboardIntegration:
                     "context_level": mem.context_level.value,
                     "created_at": mem.created_at.isoformat(),
                     "lifecycle_state": mem.lifecycle_state.value,
-                }
+                },
             )
 
         # Run multiple jobs concurrently (all dry-run to avoid conflicts)

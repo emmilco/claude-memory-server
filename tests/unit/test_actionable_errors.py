@@ -1,6 +1,5 @@
 """Tests for actionable error messages."""
 
-import pytest
 from src.core.exceptions import (
     MemoryRAGError,
     QdrantConnectionError,
@@ -17,7 +16,7 @@ class TestActionableErrors:
         error = MemoryRAGError(
             "Something went wrong",
             solution="Try restarting the service",
-            docs_url="https://docs.example.com/troubleshooting"
+            docs_url="https://docs.example.com/troubleshooting",
         )
 
         error_str = str(error)
@@ -60,9 +59,7 @@ class TestActionableErrors:
     def test_error_attributes_accessible(self):
         """Test that solution and docs_url are accessible as attributes."""
         error = MemoryRAGError(
-            "Test error",
-            solution="Test solution",
-            docs_url="https://test.com"
+            "Test error", solution="Test solution", docs_url="https://test.com"
         )
 
         assert error.solution == "Test solution"

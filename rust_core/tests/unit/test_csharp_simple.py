@@ -5,7 +5,7 @@ Simple tests for C# parsing to verify basic functionality works.
 import pytest
 from mcp_performance_core import parse_source_file
 
-SAMPLE_CSHARP = '''
+SAMPLE_CSHARP = """
 using System;
 
 namespace MyApp
@@ -23,7 +23,7 @@ namespace MyApp
         }
     }
 }
-'''
+"""
 
 
 def test_csharp_file_parsing():

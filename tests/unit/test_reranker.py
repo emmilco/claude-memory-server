@@ -326,6 +326,7 @@ class TestCustomReranking:
 
     def test_custom_function(self, sample_results):
         """Test reranking with custom scoring function."""
+
         # Custom function that boosts scores by 0.1
         def custom_scorer(memory, score):
             return score + 0.1
@@ -340,6 +341,7 @@ class TestCustomReranking:
 
     def test_custom_function_content_based(self, sample_results):
         """Test custom function based on content."""
+
         # Boost results containing "authentication"
         def auth_boost(memory, score):
             if "authentication" in memory.content.lower():

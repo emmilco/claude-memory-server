@@ -10,10 +10,8 @@ import pytest
 import pytest_asyncio
 import asyncio
 import tempfile
-import uuid
 from pathlib import Path
-from datetime import datetime, timedelta, UTC
-from typing import List, Dict, Any
+from datetime import datetime, UTC
 
 from src.core.server import MemoryRAGServer
 from src.config import ServerConfig
@@ -30,6 +28,7 @@ from src.store.qdrant_store import QdrantMemoryStore
 # ============================================================================
 # Test Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def config(unique_qdrant_collection):
@@ -60,6 +59,7 @@ def temp_code_dir():
 # ============================================================================
 # Memory Workflows (5 tests)
 # ============================================================================
+
 
 @pytest.mark.integration
 @pytest.mark.asyncio
@@ -136,7 +136,9 @@ async def test_memory_with_tags_and_metadata(server):
     assert memory.metadata["framework"] == "FastAPI"
 
     # Update tags
-    await server.store.update(memory_id, {"tags": ["python", "backend", "api", "async"]})
+    await server.store.update(
+        memory_id, {"tags": ["python", "backend", "api", "async"]}
+    )
 
     # Verify update
     updated_memory = await server.store.get_by_id(memory_id)
@@ -173,7 +175,9 @@ async def test_memory_importance_filtering(server):
             assert memory.importance >= 0.6
 
     # Verify we got the high-importance memories
-    found_importances = [m.importance for m, _ in results if m.id in [mem[0] for mem in memories]]
+    found_importances = [
+        m.importance for m, _ in results if m.id in [mem[0] for mem in memories]
+    ]
     assert 0.9 in found_importances or 0.7 in found_importances
 
 
@@ -231,7 +235,9 @@ async def test_memory_pagination_workflow(server):
     # Paginate through results with limit
     page_size = 10
     all_retrieved_ids = set()
-    query_embedding = await server.embedding_generator.generate("pagination test memory")
+    query_embedding = await server.embedding_generator.generate(
+        "pagination test memory"
+    )
 
     # Retrieve first page
     results = await server.store.retrieve(
@@ -253,6 +259,7 @@ async def test_memory_pagination_workflow(server):
 # ============================================================================
 # Code Indexing Workflows (5 tests)
 # ============================================================================
+
 
 @pytest.mark.integration
 @pytest.mark.asyncio
@@ -299,7 +306,9 @@ class DatabaseConnection:
 
         # Verify indexing succeeded
         assert result["indexed_files"] >= 2
-        assert result["total_units"] >= 3  # authenticate, validate_credentials, DatabaseConnection
+        assert (
+            result["total_units"] >= 3
+        )  # authenticate, validate_credentials, DatabaseConnection
 
         # Search for authentication code
         query_embedding = await embedding_gen.generate("authenticate user login")
@@ -311,7 +320,8 @@ class DatabaseConnection:
         # Should find authentication-related code
         assert len(search_results) > 0
         found_auth = any(
-            "authenticate" in memory.content.lower() or "credentials" in memory.content.lower()
+            "authenticate" in memory.content.lower()
+            or "credentials" in memory.content.lower()
             for memory, _ in search_results
         )
         assert found_auth
@@ -370,7 +380,9 @@ class NewClass:
         query_embedding = await embedding_gen.generate("new implementation")
         results = await store.retrieve(
             query_embedding=query_embedding,
-            filters=SearchFilters(project_name=test_project_name, scope=MemoryScope.PROJECT),
+            filters=SearchFilters(
+                project_name=test_project_name, scope=MemoryScope.PROJECT
+            ),
             limit=5,
         )
 
@@ -432,7 +444,9 @@ function tsHelper(): string {
         query_embedding = await embedding_gen.generate("utility helper function")
         results = await store.retrieve(
             query_embedding=query_embedding,
-            filters=SearchFilters(project_name=test_project_name, scope=MemoryScope.PROJECT),
+            filters=SearchFilters(
+                project_name=test_project_name, scope=MemoryScope.PROJECT
+            ),
             limit=10,
         )
 
@@ -541,7 +555,9 @@ def complex_function(x):
         query_embedding = await embedding_gen.generate("function")
         all_results = await store.retrieve(
             query_embedding=query_embedding,
-            filters=SearchFilters(project_name=test_project_name, scope=MemoryScope.PROJECT),
+            filters=SearchFilters(
+                project_name=test_project_name, scope=MemoryScope.PROJECT
+            ),
             limit=10,
         )
 
@@ -555,6 +571,7 @@ def complex_function(x):
 # ============================================================================
 # Project Workflows (5 tests)
 # ============================================================================
+
 
 @pytest.mark.integration
 @pytest.mark.asyncio
@@ -651,7 +668,9 @@ async def test_project_archive_restore(temp_code_dir, config, test_project_name)
         query_embedding = await embedding_gen.generate("test function")
         results_before = await store.retrieve(
             query_embedding=query_embedding,
-            filters=SearchFilters(project_name=test_project_name, scope=MemoryScope.PROJECT),
+            filters=SearchFilters(
+                project_name=test_project_name, scope=MemoryScope.PROJECT
+            ),
             limit=5,
         )
         assert len(results_before) > 0
@@ -662,7 +681,7 @@ async def test_project_archive_restore(temp_code_dir, config, test_project_name)
         assert stats_before["total_memories"] >= 1
 
         # Simulate archive by deleting file index
-        deleted_count = await indexer.delete_file_index(temp_code_dir / "code.py")
+        await indexer.delete_file_index(temp_code_dir / "code.py")
 
         # Note: delete_file_index may return 0 if store isn't properly initialized
         # The important part is testing the workflow, not the exact count
@@ -675,7 +694,9 @@ async def test_project_archive_restore(temp_code_dir, config, test_project_name)
         # Verify data restored - should be able to find the code again (with project filter)
         results_restored = await store.retrieve(
             query_embedding=query_embedding,
-            filters=SearchFilters(project_name=test_project_name, scope=MemoryScope.PROJECT),
+            filters=SearchFilters(
+                project_name=test_project_name, scope=MemoryScope.PROJECT
+            ),
             limit=5,
         )
         assert len(results_restored) > 0
@@ -845,13 +866,14 @@ async def test_project_staleness_detection(temp_code_dir, config, test_project_n
         query_embedding = await embedding_gen.generate("modified function")
         results = await store.retrieve(
             query_embedding=query_embedding,
-            filters=SearchFilters(project_name=test_project_name, scope=MemoryScope.PROJECT),
+            filters=SearchFilters(
+                project_name=test_project_name, scope=MemoryScope.PROJECT
+            ),
             limit=5,
         )
 
         found_modified = any(
-            "modified" in memory.content.lower()
-            for memory, _ in results
+            "modified" in memory.content.lower() for memory, _ in results
         )
         assert found_modified
 
@@ -862,6 +884,7 @@ async def test_project_staleness_detection(temp_code_dir, config, test_project_n
 # ============================================================================
 # Health & Monitoring Workflows (5 tests)
 # ============================================================================
+
 
 @pytest.mark.integration
 @pytest.mark.asyncio
@@ -950,14 +973,16 @@ async def test_memory_lifecycle_transitions(server):
     assert memory is not None
 
     # Verify lifecycle metadata exists
-    assert hasattr(memory, 'created_at')
+    assert hasattr(memory, "created_at")
     assert memory.created_at is not None
 
     # Memory should be active (recently created)
     # In a real scenario, we'd wait and verify state changes
-    assert memory.context_level in [ContextLevel.USER_PREFERENCE,
-                                     ContextLevel.PROJECT_CONTEXT,
-                                     ContextLevel.SESSION_STATE]
+    assert memory.context_level in [
+        ContextLevel.USER_PREFERENCE,
+        ContextLevel.PROJECT_CONTEXT,
+        ContextLevel.SESSION_STATE,
+    ]
 
 
 @pytest.mark.integration
@@ -971,7 +996,7 @@ async def test_duplicate_detection_workflow(server):
 
     result1 = await server.store_memory(content=content1, category="fact")
     result2 = await server.store_memory(content=content2, category="fact")
-    result3 = await server.store_memory(content=content3, category="fact")
+    await server.store_memory(content=content3, category="fact")
 
     # Search for this content
     results = await server.retrieve_memories(
@@ -991,6 +1016,7 @@ async def test_duplicate_detection_workflow(server):
 # ============================================================================
 # Search Workflows (5 tests)
 # ============================================================================
+
 
 @pytest.mark.integration
 @pytest.mark.asyncio
@@ -1024,8 +1050,7 @@ async def test_semantic_search_workflow(server, test_project_name):
 
     # Check that Python-related content appears in results
     found_python = any(
-        "python" in r["memory"]["content"].lower()
-        for r in results["results"]
+        "python" in r["memory"]["content"].lower() for r in results["results"]
     )
     assert found_python
 
@@ -1075,7 +1100,8 @@ def binary_search(arr, target):
         # Should find the binary_search function
         assert len(results) > 0
         found_binary_search = any(
-            "binary_search" in memory.content or "binary search" in memory.content.lower()
+            "binary_search" in memory.content
+            or "binary search" in memory.content.lower()
             for memory, _ in results
         )
         assert found_binary_search
@@ -1178,6 +1204,7 @@ async def test_concurrent_search_workflow(server):
 # Additional Complex Workflows
 # ============================================================================
 
+
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_full_memory_management_cycle(server):
@@ -1220,7 +1247,9 @@ async def test_full_memory_management_cycle(server):
 @pytest.mark.integration
 @pytest.mark.asyncio
 @pytest.mark.skip_ci(reason="Flaky under parallel execution - Qdrant timing sensitive")
-async def test_multi_project_indexing_and_search(temp_code_dir, config, test_project_name):
+async def test_multi_project_indexing_and_search(
+    temp_code_dir, config, test_project_name
+):
     """Index multiple projects → Search across all → Verify results"""
     from src.memory.incremental_indexer import IncrementalIndexer
 
@@ -1256,7 +1285,9 @@ async def test_multi_project_indexing_and_search(temp_code_dir, config, test_pro
             query_embedding = await embedding_gen.generate("function")
             results = await store.retrieve(
                 query_embedding=query_embedding,
-                filters=SearchFilters(project_name=proj_name, scope=MemoryScope.PROJECT),
+                filters=SearchFilters(
+                    project_name=proj_name, scope=MemoryScope.PROJECT
+                ),
                 limit=10,
             )
             all_results.extend(results)
@@ -1267,7 +1298,7 @@ async def test_multi_project_indexing_and_search(temp_code_dir, config, test_pro
         # Count unique projects found
         project_names = set()
         for memory, _ in all_results:
-            if hasattr(memory, 'project_name') and memory.project_name:
+            if hasattr(memory, "project_name") and memory.project_name:
                 project_names.add(memory.project_name)
 
         # Should find at least 2 different projects
@@ -1326,6 +1357,7 @@ async def test_stress_workflow_many_operations(server, test_project_name):
 # ============================================================================
 # Summary Statistics
 # ============================================================================
+
 
 def test_workflow_coverage():
     """Document workflow test coverage for reporting."""

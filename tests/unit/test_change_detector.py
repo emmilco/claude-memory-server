@@ -2,13 +2,14 @@
 
 import pytest
 from dataclasses import dataclass
-from src.memory.change_detector import ChangeDetector, FileChange, quick_file_hash
+from src.memory.change_detector import ChangeDetector, FileChange
 
 
 # Mock SemanticUnit for testing (matches the structure used by ChangeDetector)
 @dataclass
 class MockSemanticUnit:
     """Mock semantic unit for testing."""
+
     name: str
     unit_type: str
     content: str
@@ -211,14 +212,20 @@ class TestUnitChanges:
     def test_unit_hash_different_for_changes(self, detector):
         """Test that unit hash changes when content changes."""
         unit1 = MockSemanticUnit(
-            name="func", unit_type="function",
+            name="func",
+            unit_type="function",
             content="def func(): return 1",
-            signature="", start_line=1, end_line=1
+            signature="",
+            start_line=1,
+            end_line=1,
         )
         unit2 = MockSemanticUnit(
-            name="func", unit_type="function",
+            name="func",
+            unit_type="function",
             content="def func(): return 2",  # Different
-            signature="", start_line=1, end_line=1
+            signature="",
+            start_line=1,
+            end_line=1,
         )
 
         hash1 = detector._unit_hash(unit1)
@@ -266,9 +273,12 @@ class TestIncrementalIndexing:
         # Create many units
         old_units = [
             MockSemanticUnit(
-                name=f"func{i}", unit_type="function",
+                name=f"func{i}",
+                unit_type="function",
                 content=f"def func{i}(): pass",
-                signature="", start_line=i, end_line=i
+                signature="",
+                start_line=i,
+                end_line=i,
             )
             for i in range(10)
         ]
@@ -276,9 +286,12 @@ class TestIncrementalIndexing:
         # Change most of them
         new_units = [
             MockSemanticUnit(
-                name=f"func{i}", unit_type="function",
+                name=f"func{i}",
+                unit_type="function",
                 content=f"def func{i}(): return {i}",  # Changed
-                signature="", start_line=i, end_line=i
+                signature="",
+                start_line=i,
+                end_line=i,
             )
             for i in range(10)
         ]

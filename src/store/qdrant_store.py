@@ -3,7 +3,6 @@
 import copy
 import logging
 import fnmatch
-import hashlib
 import uuid
 from enum import Enum
 from typing import List, Tuple, Optional, Dict, Any, Union
@@ -23,8 +22,14 @@ from qdrant_client.models import (
 
 from src.store.base import MemoryStore
 from src.store.qdrant_setup import QdrantSetup
-from src.core.models import MemoryUnit, SearchFilters, MemoryCategory, ContextLevel, MemoryScope
-from src.core.exceptions import StorageError, RetrievalError, MemoryNotFoundError, ValidationError
+from src.core.models import (
+    MemoryUnit,
+    SearchFilters,
+    MemoryCategory,
+    ContextLevel,
+    MemoryScope,
+)
+from src.core.exceptions import StorageError, RetrievalError, ValidationError
 from src.config import ServerConfig, DEFAULT_EMBEDDING_DIM
 
 logger = logging.getLogger(__name__)
@@ -71,6 +76,7 @@ def _validate_timestamp(timestamp: float, field_name: str = "timestamp") -> None
             f"(~2038-01-19). Please use an earlier date."
         )
 
+
 class QdrantMemoryStore(MemoryStore):
     """Qdrant implementation of the MemoryStore interface."""
 
@@ -84,6 +90,7 @@ class QdrantMemoryStore(MemoryStore):
         """
         if config is None:
             from src.config import get_config
+
             config = get_config()
 
         self.config = config
@@ -116,12 +123,15 @@ class QdrantMemoryStore(MemoryStore):
                 # Now enable health checks since collection exists
                 if self.setup.pool:
                     self.setup.pool.enable_health_checks = True
-                    from src.store.connection_health_checker import ConnectionHealthChecker
+                    from src.store.connection_health_checker import (
+                        ConnectionHealthChecker,
+                    )
+
                     # Use more lenient timeouts for parallel test execution
                     self.setup.pool._health_checker = ConnectionHealthChecker(
-                        fast_timeout=0.5,    # 500ms (was 50ms)
+                        fast_timeout=0.5,  # 500ms (was 50ms)
                         medium_timeout=1.0,  # 1s (was 100ms)
-                        deep_timeout=2.0,    # 2s (was 200ms)
+                        deep_timeout=2.0,  # 2s (was 200ms)
                     )
 
                 logger.info("Qdrant store initialized with connection pool")
@@ -218,7 +228,9 @@ class QdrantMemoryStore(MemoryStore):
             # Cap limit to prevent memory/performance issues from unbounded queries
             safe_limit = min(limit, 100)
             if limit != safe_limit:
-                logger.debug(f"Limiting search result count from {limit} to {safe_limit}")
+                logger.debug(
+                    f"Limiting search result count from {limit} to {safe_limit}"
+                )
 
             # Build filter conditions
             filter_conditions = self._build_filter(filters) if filters else None
@@ -247,7 +259,7 @@ class QdrantMemoryStore(MemoryStore):
                 except KeyError as e:
                     logger.error(
                         f"Missing required field {e} in payload with keys: {list(hit.payload.keys())}",
-                        exc_info=True
+                        exc_info=True,
                     )
                     continue
                 except ValueError as e:
@@ -270,8 +282,19 @@ class QdrantMemoryStore(MemoryStore):
         except Exception as e:
             # Check if it's a connection-related error by string matching
             error_str = str(e).lower()
-            if any(keyword in error_str for keyword in ['connection', 'refused', 'timeout', 'unreachable', 'qdrant']):
-                logger.error(f"Connection-related error during retrieval: {e}", exc_info=True)
+            if any(
+                keyword in error_str
+                for keyword in [
+                    "connection",
+                    "refused",
+                    "timeout",
+                    "unreachable",
+                    "qdrant",
+                ]
+            ):
+                logger.error(
+                    f"Connection-related error during retrieval: {e}", exc_info=True
+                )
                 raise RetrievalError(f"Failed to connect to Qdrant: {e}") from e
             logger.error(f"Unexpected error during retrieval: {e}", exc_info=True)
             raise RetrievalError(f"Failed to retrieve memories from Qdrant: {e}") from e
@@ -319,17 +342,10 @@ class QdrantMemoryStore(MemoryStore):
             # First, count how many units will be deleted by scrolling
             filter_conditions = Filter(
                 must=[
+                    FieldCondition(key="category", match=MatchValue(value="code")),
+                    FieldCondition(key="scope", match=MatchValue(value="project")),
                     FieldCondition(
-                        key="category",
-                        match=MatchValue(value="code")
-                    ),
-                    FieldCondition(
-                        key="scope",
-                        match=MatchValue(value="project")
-                    ),
-                    FieldCondition(
-                        key="project_name",
-                        match=MatchValue(value=project_name)
+                        key="project_name", match=MatchValue(value=project_name)
                     ),
                 ]
             )
@@ -342,7 +358,9 @@ class QdrantMemoryStore(MemoryStore):
             while True:
                 iteration_count += 1
                 if iteration_count > MAX_SCROLL_ITERATIONS:
-                    logger.warning(f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in delete_code_units, breaking")
+                    logger.warning(
+                        f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in delete_code_units, breaking"
+                    )
                     break
 
                 results, offset = client.scroll(
@@ -370,16 +388,17 @@ class QdrantMemoryStore(MemoryStore):
             return count
 
         except Exception as e:
-            logger.error(f"Failed to delete code units for project {project_name}: {e}", exc_info=True)
+            logger.error(
+                f"Failed to delete code units for project {project_name}: {e}",
+                exc_info=True,
+            )
             raise StorageError(f"Failed to delete code units: {e}") from e
         finally:
             if client is not None:
                 await self._release_client(client)
 
     async def delete_by_filter(
-        self,
-        filters: SearchFilters,
-        max_count: int = 1000
+        self, filters: SearchFilters, max_count: int = 1000
     ) -> Dict[str, Any]:
         """
         Delete memories matching filter criteria.
@@ -412,24 +431,21 @@ class QdrantMemoryStore(MemoryStore):
             if filters.category:
                 must_conditions.append(
                     FieldCondition(
-                        key="category",
-                        match=MatchValue(value=filters.category.value)
+                        key="category", match=MatchValue(value=filters.category.value)
                     )
                 )
 
             if filters.project_name:
                 must_conditions.append(
                     FieldCondition(
-                        key="project_name",
-                        match=MatchValue(value=filters.project_name)
+                        key="project_name", match=MatchValue(value=filters.project_name)
                     )
                 )
 
             if filters.scope:
                 must_conditions.append(
                     FieldCondition(
-                        key="scope",
-                        match=MatchValue(value=filters.scope.value)
+                        key="scope", match=MatchValue(value=filters.scope.value)
                     )
                 )
 
@@ -437,7 +453,7 @@ class QdrantMemoryStore(MemoryStore):
                 must_conditions.append(
                     FieldCondition(
                         key="context_level",
-                        match=MatchValue(value=filters.context_level.value)
+                        match=MatchValue(value=filters.context_level.value),
                     )
                 )
 
@@ -445,53 +461,45 @@ class QdrantMemoryStore(MemoryStore):
                 must_conditions.append(
                     FieldCondition(
                         key="lifecycle_state",
-                        match=MatchValue(value=filters.lifecycle_state.value)
+                        match=MatchValue(value=filters.lifecycle_state.value),
                     )
                 )
 
             if filters.tags:
                 from qdrant_client.models import MatchAny
+
                 must_conditions.append(
-                    FieldCondition(
-                        key="tags",
-                        match=MatchAny(any=filters.tags)
-                    )
+                    FieldCondition(key="tags", match=MatchAny(any=filters.tags))
                 )
 
             if filters.min_importance > 0.0:
                 must_conditions.append(
                     FieldCondition(
-                        key="importance",
-                        range=Range(gte=filters.min_importance)
+                        key="importance", range=Range(gte=filters.min_importance)
                     )
                 )
 
             if filters.max_importance < 1.0:
                 must_conditions.append(
                     FieldCondition(
-                        key="importance",
-                        range=Range(lte=filters.max_importance)
+                        key="importance", range=Range(lte=filters.max_importance)
                     )
                 )
 
             if filters.date_from:
                 must_conditions.append(
-                    FieldCondition(
-                        key="created_at",
-                        range=Range(gte=filters.date_from)
-                    )
+                    FieldCondition(key="created_at", range=Range(gte=filters.date_from))
                 )
 
             if filters.date_to:
                 must_conditions.append(
-                    FieldCondition(
-                        key="created_at",
-                        range=Range(lte=filters.date_to)
-                    )
+                    FieldCondition(key="created_at", range=Range(lte=filters.date_to))
                 )
 
             # Create filter (empty filter matches all if no conditions)
-            filter_conditions = Filter(must=must_conditions) if must_conditions else None
+            filter_conditions = (
+                Filter(must=must_conditions) if must_conditions else None
+            )
 
             # Scroll to collect matching memory IDs and gather statistics
             offset = None
@@ -504,7 +512,9 @@ class QdrantMemoryStore(MemoryStore):
             while len(memories_to_delete) < max_count:
                 iteration_count += 1
                 if iteration_count > MAX_SCROLL_ITERATIONS:
-                    logger.warning(f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in delete_old_memories, breaking")
+                    logger.warning(
+                        f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in delete_old_memories, breaking"
+                    )
                     break
 
                 results, offset = client.scroll(
@@ -525,9 +535,13 @@ class QdrantMemoryStore(MemoryStore):
                     project = payload.get("project_name", "unassigned")
                     lifecycle = payload.get("lifecycle_state", "active")
 
-                    category_breakdown[category] = category_breakdown.get(category, 0) + 1
+                    category_breakdown[category] = (
+                        category_breakdown.get(category, 0) + 1
+                    )
                     project_breakdown[project] = project_breakdown.get(project, 0) + 1
-                    lifecycle_breakdown[lifecycle] = lifecycle_breakdown.get(lifecycle, 0) + 1
+                    lifecycle_breakdown[lifecycle] = (
+                        lifecycle_breakdown.get(lifecycle, 0) + 1
+                    )
 
                 if offset is None:
                     break
@@ -540,7 +554,9 @@ class QdrantMemoryStore(MemoryStore):
                     points_selector=memories_to_delete,
                 )
                 deleted_count = len(memories_to_delete)
-                logger.info(f"Deleted {deleted_count} memories using filter-based deletion")
+                logger.info(
+                    f"Deleted {deleted_count} memories using filter-based deletion"
+                )
 
             return {
                 "deleted_count": deleted_count,
@@ -574,11 +590,13 @@ class QdrantMemoryStore(MemoryStore):
                 memory_id, payload = self._build_payload(content, embedding, metadata)
                 memory_ids.append(memory_id)
 
-                points.append(PointStruct(
-                    id=memory_id,
-                    vector=embedding,
-                    payload=payload,
-                ))
+                points.append(
+                    PointStruct(
+                        id=memory_id,
+                        vector=embedding,
+                        payload=payload,
+                    )
+                )
 
             # Get client from pool
             client = await self._get_client()
@@ -659,7 +677,9 @@ class QdrantMemoryStore(MemoryStore):
             while True:
                 iteration_count += 1
                 if iteration_count > MAX_SCROLL_ITERATIONS:
-                    logger.warning(f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in count_memories, breaking")
+                    logger.warning(
+                        f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in count_memories, breaking"
+                    )
                     break
 
                 points, offset = client.scroll(
@@ -690,7 +710,7 @@ class QdrantMemoryStore(MemoryStore):
         self,
         memory_id: str,
         updates: Dict[str, Any],
-        new_embedding: Optional[List[float]] = None
+        new_embedding: Optional[List[float]] = None,
     ) -> bool:
         """
         Update a memory's metadata and optionally its embedding.
@@ -720,11 +740,13 @@ class QdrantMemoryStore(MemoryStore):
                 from qdrant_client.models import PointStruct
 
                 # Merge existing payload with updates
-                existing_dict = existing.model_dump()
+                existing.model_dump()
 
                 # IMPORTANT: Merge metadata dicts to preserve existing keys
                 # Use deepcopy to prevent shared references between memories
-                merged_metadata = copy.deepcopy(existing.metadata) if existing.metadata else {}
+                merged_metadata = (
+                    copy.deepcopy(existing.metadata) if existing.metadata else {}
+                )
                 if "metadata" in updates:
                     new_metadata = updates["metadata"] or {}
                     merged_metadata.update(copy.deepcopy(new_metadata))
@@ -740,34 +762,58 @@ class QdrantMemoryStore(MemoryStore):
 
                 # Reserved fields that cannot be overridden by user metadata
                 RESERVED_FIELDS = {
-                    "id", "content", "category", "context_level", "scope", "project_name",
-                    "importance", "embedding_model", "created_at", "updated_at",
-                    "last_accessed", "lifecycle_state", "tags",
-                    "provenance_source", "provenance_created_by", "provenance_last_confirmed",
-                    "provenance_confidence", "provenance_verified", "provenance_conversation_id",
-                    "provenance_file_context", "provenance_notes",
+                    "id",
+                    "content",
+                    "category",
+                    "context_level",
+                    "scope",
+                    "project_name",
+                    "importance",
+                    "embedding_model",
+                    "created_at",
+                    "updated_at",
+                    "last_accessed",
+                    "lifecycle_state",
+                    "tags",
+                    "provenance_source",
+                    "provenance_created_by",
+                    "provenance_last_confirmed",
+                    "provenance_confidence",
+                    "provenance_verified",
+                    "provenance_conversation_id",
+                    "provenance_file_context",
+                    "provenance_notes",
                 }
 
                 # Filter user metadata to exclude reserved fields
                 allowed_metadata = {
-                    k: v for k, v in merged_metadata.items()
-                    if k not in RESERVED_FIELDS
+                    k: v for k, v in merged_metadata.items() if k not in RESERVED_FIELDS
                 }
 
                 # Build base payload without metadata (we'll flatten it separately)
                 base_payload = {
                     "id": memory_id,
                     "content": updates.get("content", existing.content),
-                    "category": _normalize_enum(updates.get("category"), existing.category.value),
-                    "context_level": _normalize_enum(updates.get("context_level"), existing.context_level.value),
-                    "scope": _normalize_enum(updates.get("scope"), existing.scope.value),
+                    "category": _normalize_enum(
+                        updates.get("category"), existing.category.value
+                    ),
+                    "context_level": _normalize_enum(
+                        updates.get("context_level"), existing.context_level.value
+                    ),
+                    "scope": _normalize_enum(
+                        updates.get("scope"), existing.scope.value
+                    ),
                     "project_name": updates.get("project_name", existing.project_name),
                     "importance": updates.get("importance", existing.importance),
                     "tags": updates.get("tags", existing.tags),
                     "created_at": existing.created_at.isoformat(),
                     "updated_at": updates["updated_at"],
-                    "last_accessed": existing.last_accessed.isoformat() if existing.last_accessed else None,
-                    "lifecycle_state": _normalize_enum(updates.get("lifecycle_state"), existing.lifecycle_state.value),
+                    "last_accessed": existing.last_accessed.isoformat()
+                    if existing.last_accessed
+                    else None,
+                    "lifecycle_state": _normalize_enum(
+                        updates.get("lifecycle_state"), existing.lifecycle_state.value
+                    ),
                 }
 
                 # Flatten metadata into payload (matches _build_payload behavior)
@@ -785,11 +831,11 @@ class QdrantMemoryStore(MemoryStore):
 
                 client.upsert(
                     collection_name=self.collection_name,
-                    points=[PointStruct(
-                        id=memory_id,
-                        vector=new_embedding,
-                        payload=merged_payload
-                    )]
+                    points=[
+                        PointStruct(
+                            id=memory_id, vector=new_embedding, payload=merged_payload
+                        )
+                    ],
                 )
             else:
                 # Only update payload (no vector change)
@@ -798,7 +844,9 @@ class QdrantMemoryStore(MemoryStore):
                 payload_updates = updates.copy()
                 if "metadata" in updates:
                     # Merge new metadata with existing metadata
-                    existing_metadata = copy.deepcopy(existing.metadata) if existing.metadata else {}
+                    existing_metadata = (
+                        copy.deepcopy(existing.metadata) if existing.metadata else {}
+                    )
                     new_metadata = updates["metadata"] or {}
                     existing_metadata.update(copy.deepcopy(new_metadata))
                     merged_metadata = existing_metadata
@@ -833,7 +881,7 @@ class QdrantMemoryStore(MemoryStore):
         sort_by: str = "created_at",
         sort_order: str = "desc",
         limit: int = 20,
-        offset: int = 0
+        offset: int = 0,
     ) -> Tuple[List[MemoryUnit], int]:
         """
         List memories with filtering, sorting, and pagination.
@@ -869,8 +917,7 @@ class QdrantMemoryStore(MemoryStore):
             if "category" in filters:
                 must_conditions.append(
                     FieldCondition(
-                        key="category",
-                        match=MatchValue(value=filters["category"])
+                        key="category", match=MatchValue(value=filters["category"])
                     )
                 )
 
@@ -878,15 +925,14 @@ class QdrantMemoryStore(MemoryStore):
                 must_conditions.append(
                     FieldCondition(
                         key="context_level",
-                        match=MatchValue(value=filters["context_level"])
+                        match=MatchValue(value=filters["context_level"]),
                     )
                 )
 
             if "scope" in filters:
                 must_conditions.append(
                     FieldCondition(
-                        key="scope",
-                        match=MatchValue(value=filters["scope"])
+                        key="scope", match=MatchValue(value=filters["scope"])
                     )
                 )
 
@@ -894,18 +940,16 @@ class QdrantMemoryStore(MemoryStore):
                 must_conditions.append(
                     FieldCondition(
                         key="project_name",
-                        match=MatchValue(value=filters["project_name"])
+                        match=MatchValue(value=filters["project_name"]),
                     )
                 )
 
             if "tags" in filters:
                 # Match ANY of the provided tags
                 from qdrant_client.models import MatchAny
+
                 must_conditions.append(
-                    FieldCondition(
-                        key="tags",
-                        match=MatchAny(any=filters["tags"])
-                    )
+                    FieldCondition(key="tags", match=MatchAny(any=filters["tags"]))
                 )
 
             # Importance range filter
@@ -915,10 +959,7 @@ class QdrantMemoryStore(MemoryStore):
                 must_conditions.append(
                     FieldCondition(
                         key="importance",
-                        range=Range(
-                            gte=min_importance,
-                            lte=max_importance
-                        )
+                        range=Range(gte=min_importance, lte=max_importance),
                     )
                 )
 
@@ -933,7 +974,9 @@ class QdrantMemoryStore(MemoryStore):
             while True:
                 iteration_count += 1
                 if iteration_count > MAX_SCROLL_ITERATIONS:
-                    logger.warning(f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in list_memories, breaking")
+                    logger.warning(
+                        f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in list_memories, breaking"
+                    )
                     break
 
                 result = client.scroll(
@@ -942,7 +985,7 @@ class QdrantMemoryStore(MemoryStore):
                     limit=100,  # Fetch in batches
                     offset=scroll_offset,
                     with_payload=True,
-                    with_vectors=False
+                    with_vectors=False,
                 )
 
                 points, next_offset = result
@@ -964,28 +1007,23 @@ class QdrantMemoryStore(MemoryStore):
             # Apply date filtering (Qdrant doesn't handle datetime ranges well)
             if "date_from" in filters:
                 all_memories = [
-                    m for m in all_memories
-                    if m.created_at >= filters["date_from"]
+                    m for m in all_memories if m.created_at >= filters["date_from"]
                 ]
 
             if "date_to" in filters:
                 all_memories = [
-                    m for m in all_memories
-                    if m.created_at <= filters["date_to"]
+                    m for m in all_memories if m.created_at <= filters["date_to"]
                 ]
 
             # Sort memories
-            reverse = (sort_order == "desc")
-            all_memories.sort(
-                key=lambda m: getattr(m, sort_by),
-                reverse=reverse
-            )
+            reverse = sort_order == "desc"
+            all_memories.sort(key=lambda m: getattr(m, sort_by), reverse=reverse)
 
             # Get total count
             total_count = len(all_memories)
 
             # Apply pagination
-            paginated = all_memories[offset:offset + limit]
+            paginated = all_memories[offset : offset + limit]
 
             logger.debug(f"Listed {len(paginated)} memories (total {total_count})")
             return paginated, total_count
@@ -1029,15 +1067,16 @@ class QdrantMemoryStore(MemoryStore):
             must_conditions = [
                 FieldCondition(
                     key="category",
-                    match=MatchValue(value="code")  # Fixed: code is stored with category="code", not "context"
+                    match=MatchValue(
+                        value="code"
+                    ),  # Fixed: code is stored with category="code", not "context"
                 )
             ]
 
             if project_name:
                 must_conditions.append(
                     FieldCondition(
-                        key="project_name",
-                        match=MatchValue(value=project_name)
+                        key="project_name", match=MatchValue(value=project_name)
                     )
                 )
 
@@ -1051,7 +1090,9 @@ class QdrantMemoryStore(MemoryStore):
             while True:
                 iteration_count += 1
                 if iteration_count > MAX_SCROLL_ITERATIONS:
-                    logger.warning(f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in list_code_files, breaking")
+                    logger.warning(
+                        f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in list_code_files, breaking"
+                    )
                     break
 
                 result = client.scroll(
@@ -1060,7 +1101,7 @@ class QdrantMemoryStore(MemoryStore):
                     limit=100,
                     offset=scroll_offset,
                     with_payload=True,
-                    with_vectors=False
+                    with_vectors=False,
                 )
 
                 points, next_offset = result
@@ -1070,18 +1111,28 @@ class QdrantMemoryStore(MemoryStore):
                     file_path = payload.get("file_path")
 
                     if file_path:
-                        file_data.setdefault(file_path, {
-                            "file_path": file_path,
-                            "language": payload.get("language", "unknown"),
-                            "last_indexed": payload.get("updated_at", payload.get("created_at")),
-                            "unit_count": 0
-                        })
+                        file_data.setdefault(
+                            file_path,
+                            {
+                                "file_path": file_path,
+                                "language": payload.get("language", "unknown"),
+                                "last_indexed": payload.get(
+                                    "updated_at", payload.get("created_at")
+                                ),
+                                "unit_count": 0,
+                            },
+                        )
 
                         file_data[file_path]["unit_count"] += 1
 
                         # Update to most recent timestamp
-                        current_time = payload.get("updated_at", payload.get("created_at"))
-                        if current_time and current_time > file_data[file_path]["last_indexed"]:
+                        current_time = payload.get(
+                            "updated_at", payload.get("created_at")
+                        )
+                        if (
+                            current_time
+                            and current_time > file_data[file_path]["last_indexed"]
+                        ):
                             file_data[file_path]["last_indexed"] = current_time
 
                 if next_offset is None:
@@ -1096,7 +1147,7 @@ class QdrantMemoryStore(MemoryStore):
             total = len(files_list)
 
             # Apply pagination
-            paginated_files = files_list[offset:offset + limit]
+            paginated_files = files_list[offset : offset + limit]
 
             return {
                 "files": paginated_files,
@@ -1150,32 +1201,27 @@ class QdrantMemoryStore(MemoryStore):
             must_conditions = [
                 FieldCondition(
                     key="category",
-                    match=MatchValue(value="code")  # Fixed: code is stored with category="code", not "context"
+                    match=MatchValue(
+                        value="code"
+                    ),  # Fixed: code is stored with category="code", not "context"
                 )
             ]
 
             if project_name:
                 must_conditions.append(
                     FieldCondition(
-                        key="project_name",
-                        match=MatchValue(value=project_name)
+                        key="project_name", match=MatchValue(value=project_name)
                     )
                 )
 
             if language:
                 must_conditions.append(
-                    FieldCondition(
-                        key="language",
-                        match=MatchValue(value=language)
-                    )
+                    FieldCondition(key="language", match=MatchValue(value=language))
                 )
 
             if unit_type:
                 must_conditions.append(
-                    FieldCondition(
-                        key="unit_type",
-                        match=MatchValue(value=unit_type)
-                    )
+                    FieldCondition(key="unit_type", match=MatchValue(value=unit_type))
                 )
 
             qdrant_filter = Filter(must=must_conditions)
@@ -1188,7 +1234,9 @@ class QdrantMemoryStore(MemoryStore):
             while True:
                 iteration_count += 1
                 if iteration_count > MAX_SCROLL_ITERATIONS:
-                    logger.warning(f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in search_code_units, breaking")
+                    logger.warning(
+                        f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in search_code_units, breaking"
+                    )
                     break
 
                 result = client.scroll(
@@ -1197,7 +1245,7 @@ class QdrantMemoryStore(MemoryStore):
                     limit=100,
                     offset=scroll_offset,
                     with_payload=True,
-                    with_vectors=False
+                    with_vectors=False,
                 )
 
                 points, next_offset = result
@@ -1222,7 +1270,9 @@ class QdrantMemoryStore(MemoryStore):
                         "start_line": payload.get("start_line", 0),
                         "end_line": payload.get("end_line", 0),
                         "signature": payload.get("signature", ""),
-                        "last_indexed": payload.get("updated_at", payload.get("created_at", "")),
+                        "last_indexed": payload.get(
+                            "updated_at", payload.get("created_at", "")
+                        ),
                     }
                     all_units.append(unit)
 
@@ -1237,7 +1287,7 @@ class QdrantMemoryStore(MemoryStore):
             total = len(all_units)
 
             # Apply pagination
-            paginated_units = all_units[offset:offset + limit]
+            paginated_units = all_units[offset : offset + limit]
 
             return {
                 "units": paginated_units,
@@ -1319,10 +1369,14 @@ class QdrantMemoryStore(MemoryStore):
         # Extract and serialize provenance
         provenance = metadata.get("provenance", {})
         if not isinstance(provenance, dict):
-            provenance = provenance.model_dump() if hasattr(provenance, 'model_dump') else {}
+            provenance = (
+                provenance.model_dump() if hasattr(provenance, "model_dump") else {}
+            )
 
         provenance_last_confirmed = provenance.get("last_confirmed")
-        if provenance_last_confirmed and isinstance(provenance_last_confirmed, datetime):
+        if provenance_last_confirmed and isinstance(
+            provenance_last_confirmed, datetime
+        ):
             provenance_last_confirmed = provenance_last_confirmed.isoformat()
 
         # Normalize enum values to strings
@@ -1336,19 +1390,33 @@ class QdrantMemoryStore(MemoryStore):
 
         # Reserved fields that cannot be overridden by user metadata
         RESERVED_FIELDS = {
-            "id", "content", "category", "context_level", "scope", "project_name",
-            "importance", "embedding_model", "created_at", "updated_at",
-            "last_accessed", "lifecycle_state", "tags",
-            "provenance_source", "provenance_created_by", "provenance_last_confirmed",
-            "provenance_confidence", "provenance_verified", "provenance_conversation_id",
-            "provenance_file_context", "provenance_notes",
+            "id",
+            "content",
+            "category",
+            "context_level",
+            "scope",
+            "project_name",
+            "importance",
+            "embedding_model",
+            "created_at",
+            "updated_at",
+            "last_accessed",
+            "lifecycle_state",
+            "tags",
+            "provenance_source",
+            "provenance_created_by",
+            "provenance_last_confirmed",
+            "provenance_confidence",
+            "provenance_verified",
+            "provenance_conversation_id",
+            "provenance_file_context",
+            "provenance_notes",
         }
 
         # Filter user metadata to exclude reserved fields
         user_metadata = metadata.get("metadata", {})
         allowed_metadata = {
-            k: v for k, v in user_metadata.items()
-            if k not in RESERVED_FIELDS
+            k: v for k, v in user_metadata.items() if k not in RESERVED_FIELDS
         }
 
         payload = {
@@ -1363,10 +1431,14 @@ class QdrantMemoryStore(MemoryStore):
             "created_at": created_at,
             "updated_at": now.isoformat(),
             "last_accessed": last_accessed,
-            "lifecycle_state": _normalize_enum(metadata.get("lifecycle_state"), "ACTIVE"),
+            "lifecycle_state": _normalize_enum(
+                metadata.get("lifecycle_state"), "ACTIVE"
+            ),
             "tags": metadata.get("tags", []),
             # Provenance fields
-            "provenance_source": _normalize_enum(provenance.get("source"), "user_explicit"),
+            "provenance_source": _normalize_enum(
+                provenance.get("source"), "user_explicit"
+            ),
             "provenance_created_by": provenance.get("created_by", "user_statement"),
             "provenance_last_confirmed": provenance_last_confirmed,
             "provenance_confidence": provenance.get("confidence", 0.8),
@@ -1406,7 +1478,7 @@ class QdrantMemoryStore(MemoryStore):
             return None
 
         # Match condition for enums and strings
-        if hasattr(value, 'value'):  # Enum
+        if hasattr(value, "value"):  # Enum
             return FieldCondition(key=key, match=MatchValue(value=value.value))
         elif isinstance(value, (str, int, float)) and value:
             return FieldCondition(key=key, match=MatchValue(value=value))
@@ -1438,9 +1510,7 @@ class QdrantMemoryStore(MemoryStore):
             conditions.append(scope_condition)
 
         # Add category condition
-        category_condition = self._build_field_condition(
-            "category", filters.category
-        )
+        category_condition = self._build_field_condition("category", filters.category)
         if category_condition:
             conditions.append(category_condition)
 
@@ -1474,43 +1544,41 @@ class QdrantMemoryStore(MemoryStore):
             if adv.created_after:
                 conditions.append(
                     FieldCondition(
-                        key="created_at",
-                        range=Range(gte=adv.created_after.isoformat())
+                        key="created_at", range=Range(gte=adv.created_after.isoformat())
                     )
                 )
             if adv.created_before:
                 conditions.append(
                     FieldCondition(
                         key="created_at",
-                        range=Range(lte=adv.created_before.isoformat())
+                        range=Range(lte=adv.created_before.isoformat()),
                     )
                 )
             if adv.updated_after:
                 conditions.append(
                     FieldCondition(
-                        key="updated_at",
-                        range=Range(gte=adv.updated_after.isoformat())
+                        key="updated_at", range=Range(gte=adv.updated_after.isoformat())
                     )
                 )
             if adv.updated_before:
                 conditions.append(
                     FieldCondition(
                         key="updated_at",
-                        range=Range(lte=adv.updated_before.isoformat())
+                        range=Range(lte=adv.updated_before.isoformat()),
                     )
                 )
             if adv.accessed_after:
                 conditions.append(
                     FieldCondition(
                         key="last_accessed",
-                        range=Range(gte=adv.accessed_after.isoformat())
+                        range=Range(gte=adv.accessed_after.isoformat()),
                     )
                 )
             if adv.accessed_before:
                 conditions.append(
                     FieldCondition(
                         key="last_accessed",
-                        range=Range(lte=adv.accessed_before.isoformat())
+                        range=Range(lte=adv.accessed_before.isoformat()),
                     )
                 )
 
@@ -1553,7 +1621,7 @@ class QdrantMemoryStore(MemoryStore):
                     lifecycle_conditions.append(
                         FieldCondition(
                             key="lifecycle_state",
-                            match=MatchValue(value=_enum_value(state))
+                            match=MatchValue(value=_enum_value(state)),
                         )
                     )
                 if lifecycle_conditions:
@@ -1565,8 +1633,7 @@ class QdrantMemoryStore(MemoryStore):
                 for cat in adv.exclude_categories:
                     exclude_cat_conditions.append(
                         FieldCondition(
-                            key="category",
-                            match=MatchValue(value=_enum_value(cat))
+                            key="category", match=MatchValue(value=_enum_value(cat))
                         )
                     )
                 if exclude_cat_conditions:
@@ -1587,7 +1654,7 @@ class QdrantMemoryStore(MemoryStore):
                 conditions.append(
                     FieldCondition(
                         key="provenance.confidence",
-                        range=Range(gte=adv.min_trust_score)
+                        range=Range(gte=adv.min_trust_score),
                     )
                 )
 
@@ -1596,7 +1663,7 @@ class QdrantMemoryStore(MemoryStore):
                 conditions.append(
                     FieldCondition(
                         key="provenance.source",
-                        match=MatchValue(value=_enum_value(adv.source))
+                        match=MatchValue(value=_enum_value(adv.source)),
                     )
                 )
 
@@ -1621,13 +1688,17 @@ class QdrantMemoryStore(MemoryStore):
         try:
             memory_id = payload["id"]
         except KeyError:
-            logger.error(f"Missing required field 'id' in payload with keys: {list(payload.keys())}")
+            logger.error(
+                f"Missing required field 'id' in payload with keys: {list(payload.keys())}"
+            )
             raise
 
         try:
             memory_content = payload["content"]
         except KeyError:
-            logger.error(f"Missing required field 'content' in payload with keys: {list(payload.keys())}")
+            logger.error(
+                f"Missing required field 'content' in payload with keys: {list(payload.keys())}"
+            )
             raise
 
         # Parse datetime strings
@@ -1673,10 +1744,14 @@ class QdrantMemoryStore(MemoryStore):
         # Parse provenance
         provenance_last_confirmed = payload.get("provenance_last_confirmed")
         if provenance_last_confirmed and isinstance(provenance_last_confirmed, str):
-            provenance_last_confirmed = datetime.fromisoformat(provenance_last_confirmed)
+            provenance_last_confirmed = datetime.fromisoformat(
+                provenance_last_confirmed
+            )
             # Ensure timezone-aware
             if provenance_last_confirmed.tzinfo is None:
-                provenance_last_confirmed = provenance_last_confirmed.replace(tzinfo=UTC)
+                provenance_last_confirmed = provenance_last_confirmed.replace(
+                    tzinfo=UTC
+                )
 
         provenance = MemoryProvenance(
             source=ProvenanceSource(payload.get("provenance_source", "user_explicit")),
@@ -1686,18 +1761,33 @@ class QdrantMemoryStore(MemoryStore):
             verified=bool(payload.get("provenance_verified", False)),
             conversation_id=payload.get("provenance_conversation_id"),
             file_context=payload.get("provenance_file_context", []),
-            notes=payload.get("provenance_notes")
+            notes=payload.get("provenance_notes"),
         )
 
         # Extract metadata fields (these were flattened by batch_store with **metadata)
         # Known standard fields that shouldn't go into metadata
         standard_fields = {
-            "id", "content", "category", "context_level", "scope",
-            "project_name", "importance", "embedding_model",
-            "created_at", "updated_at", "last_accessed", "lifecycle_state", "tags",
-            "provenance_source", "provenance_created_by", "provenance_last_confirmed",
-            "provenance_confidence", "provenance_verified", "provenance_conversation_id",
-            "provenance_file_context", "provenance_notes"
+            "id",
+            "content",
+            "category",
+            "context_level",
+            "scope",
+            "project_name",
+            "importance",
+            "embedding_model",
+            "created_at",
+            "updated_at",
+            "last_accessed",
+            "lifecycle_state",
+            "tags",
+            "provenance_source",
+            "provenance_created_by",
+            "provenance_last_confirmed",
+            "provenance_confidence",
+            "provenance_verified",
+            "provenance_conversation_id",
+            "provenance_file_context",
+            "provenance_notes",
         }
 
         # Collect any extra fields as metadata
@@ -1742,7 +1832,9 @@ class QdrantMemoryStore(MemoryStore):
             while True:
                 iteration_count += 1
                 if iteration_count > MAX_SCROLL_ITERATIONS:
-                    logger.warning(f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in list_projects, breaking")
+                    logger.warning(
+                        f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in list_projects, breaking"
+                    )
                     break
 
                 results, offset = client.scroll(
@@ -1799,7 +1891,9 @@ class QdrantMemoryStore(MemoryStore):
             while True:
                 iteration_count += 1
                 if iteration_count > MAX_SCROLL_ITERATIONS:
-                    logger.warning(f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in get_project_details, breaking")
+                    logger.warning(
+                        f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in get_project_details, breaking"
+                    )
                     break
 
                 results, offset = client.scroll(
@@ -1807,8 +1901,7 @@ class QdrantMemoryStore(MemoryStore):
                     scroll_filter=Filter(
                         must=[
                             FieldCondition(
-                                key="project_name",
-                                match=MatchValue(value=project_name)
+                                key="project_name", match=MatchValue(value=project_name)
                             )
                         ]
                     ),
@@ -1870,7 +1963,9 @@ class QdrantMemoryStore(MemoryStore):
             }
 
         except Exception as e:
-            logger.error(f"Error getting project stats for {project_name}: {e}", exc_info=True)
+            logger.error(
+                f"Error getting project stats for {project_name}: {e}", exc_info=True
+            )
             raise StorageError(f"Failed to get project stats: {e}") from e
 
         finally:
@@ -2052,7 +2147,9 @@ class QdrantMemoryStore(MemoryStore):
             while True:
                 iteration_count += 1
                 if iteration_count > MAX_SCROLL_ITERATIONS:
-                    logger.warning(f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in get_usage_stats, breaking")
+                    logger.warning(
+                        f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in get_usage_stats, breaking"
+                    )
                     break
 
                 results, offset = client.scroll(
@@ -2069,13 +2166,17 @@ class QdrantMemoryStore(MemoryStore):
                 for point in results:
                     payload = point.payload
                     if "usage_count" in payload:  # Has usage tracking
-                        stats.append({
-                            "memory_id": point.id,
-                            "first_seen": payload.get("usage_first_seen"),
-                            "last_used": payload.get("usage_last_used"),
-                            "use_count": payload.get("usage_count", 0),
-                            "last_search_score": payload.get("usage_last_score", 0.0),
-                        })
+                        stats.append(
+                            {
+                                "memory_id": point.id,
+                                "first_seen": payload.get("usage_first_seen"),
+                                "last_used": payload.get("usage_last_used"),
+                                "use_count": payload.get("usage_count", 0),
+                                "last_search_score": payload.get(
+                                    "usage_last_score", 0.0
+                                ),
+                            }
+                        )
 
                 if offset is None:
                     break
@@ -2181,8 +2282,10 @@ class QdrantMemoryStore(MemoryStore):
                     FieldCondition(
                         key="context_level",
                         match=MatchValue(
-                            value=context_level.value if hasattr(context_level, "value") else context_level
-                        )
+                            value=context_level.value
+                            if hasattr(context_level, "value")
+                            else context_level
+                        ),
                     )
                 )
 
@@ -2197,7 +2300,9 @@ class QdrantMemoryStore(MemoryStore):
             while True:
                 iteration_count += 1
                 if iteration_count > MAX_SCROLL_ITERATIONS:
-                    logger.warning(f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in get_expiring_memories, breaking")
+                    logger.warning(
+                        f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in get_expiring_memories, breaking"
+                    )
                     break
 
                 results, offset = client.scroll(
@@ -2217,7 +2322,9 @@ class QdrantMemoryStore(MemoryStore):
 
                     # Check age if older_than is specified
                     if older_than:
-                        last_used = payload.get("usage_last_used") or payload.get("created_at")
+                        last_used = payload.get("usage_last_used") or payload.get(
+                            "created_at"
+                        )
                         if last_used:
                             if isinstance(last_used, str):
                                 last_used = datetime.fromisoformat(last_used)
@@ -2228,11 +2335,13 @@ class QdrantMemoryStore(MemoryStore):
                             if last_used >= older_than:
                                 continue  # Not old enough
 
-                    results_list.append({
-                        "id": point.id,
-                        "created_at": payload.get("created_at"),
-                        "last_used": payload.get("usage_last_used"),
-                    })
+                    results_list.append(
+                        {
+                            "id": point.id,
+                            "created_at": payload.get("created_at"),
+                            "last_used": payload.get("usage_last_used"),
+                        }
+                    )
 
                 if offset is None:
                     break
@@ -2272,7 +2381,9 @@ class QdrantMemoryStore(MemoryStore):
             while True:
                 iteration_count += 1
                 if iteration_count > MAX_SCROLL_ITERATIONS:
-                    logger.warning(f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in get_orphaned_memories, breaking")
+                    logger.warning(
+                        f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in get_orphaned_memories, breaking"
+                    )
                     break
 
                 results, offset = client.scroll(
@@ -2304,7 +2415,9 @@ class QdrantMemoryStore(MemoryStore):
                         continue  # Has been used
 
                     # Check age
-                    last_used = payload.get("usage_last_used") or payload.get("created_at")
+                    last_used = payload.get("usage_last_used") or payload.get(
+                        "created_at"
+                    )
                     if last_used:
                         if isinstance(last_used, str):
                             last_used = datetime.fromisoformat(last_used)
@@ -2315,13 +2428,15 @@ class QdrantMemoryStore(MemoryStore):
                         if last_used >= cutoff_time:
                             continue  # Not old enough
 
-                    results_list.append({
-                        "id": point.id,
-                        "created_at": payload.get("created_at"),
-                        "context_level": payload.get("context_level"),
-                        "last_used": payload.get("usage_last_used"),
-                        "use_count": use_count,
-                    })
+                    results_list.append(
+                        {
+                            "id": point.id,
+                            "created_at": payload.get("created_at"),
+                            "context_level": payload.get("context_level"),
+                            "last_used": payload.get("usage_last_used"),
+                            "use_count": use_count,
+                        }
+                    )
 
                 if offset is None:
                     break
@@ -2353,7 +2468,9 @@ class QdrantMemoryStore(MemoryStore):
             while True:
                 iteration_count += 1
                 if iteration_count > MAX_SCROLL_ITERATIONS:
-                    logger.warning(f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in export_all, breaking")
+                    logger.warning(
+                        f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in export_all, breaking"
+                    )
                     break
 
                 results, offset = client.scroll(
@@ -2385,7 +2502,9 @@ class QdrantMemoryStore(MemoryStore):
             if client is not None:
                 await self._release_client(client)
 
-    async def migrate_memory_scope(self, memory_id: str, new_project_name: Optional[str]) -> bool:
+    async def migrate_memory_scope(
+        self, memory_id: str, new_project_name: Optional[str]
+    ) -> bool:
         """
         Migrate a memory to a different scope (change project_name).
 
@@ -2501,7 +2620,9 @@ class QdrantMemoryStore(MemoryStore):
             while True:
                 iteration_count += 1
                 if iteration_count > MAX_SCROLL_ITERATIONS:
-                    logger.warning(f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in bulk_update_context_level, breaking")
+                    logger.warning(
+                        f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in bulk_update_context_level, breaking"
+                    )
                     break
 
                 results, offset = client.scroll(
@@ -2539,7 +2660,9 @@ class QdrantMemoryStore(MemoryStore):
                 if offset is None:
                     break
 
-            logger.info(f"Updated context level for {count} memories to {new_context_level}")
+            logger.info(
+                f"Updated context level for {count} memories to {new_context_level}"
+            )
             return count
 
         except Exception as e:
@@ -2603,14 +2726,19 @@ class QdrantMemoryStore(MemoryStore):
                     )
 
                 if project_name:
-                    logger.info(f"Duplicate scan: filtering by project_name='{project_name}' (collection total: {total_points} points)")
+                    logger.info(
+                        f"Duplicate scan: filtering by project_name='{project_name}' (collection total: {total_points} points)"
+                    )
                 else:
-                    logger.info(f"Duplicate scan: {total_points} points in collection (within limit of {MAX_DUPLICATE_SCAN_POINTS})")
+                    logger.info(
+                        f"Duplicate scan: {total_points} points in collection (within limit of {MAX_DUPLICATE_SCAN_POINTS})"
+                    )
             except ValidationError:
                 raise
             except Exception as e:
-                logger.warning(f"Could not validate collection size: {e}. Proceeding with scan.")
-
+                logger.warning(
+                    f"Could not validate collection size: {e}. Proceeding with scan."
+                )
 
             offset = None
             memories = []
@@ -2619,7 +2747,9 @@ class QdrantMemoryStore(MemoryStore):
             while True:
                 iteration_count += 1
                 if iteration_count > MAX_SCROLL_ITERATIONS:
-                    logger.warning(f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in find_duplicates, breaking")
+                    logger.warning(
+                        f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in find_duplicates, breaking"
+                    )
                     break
 
                 results, offset = client.scroll(
@@ -2635,7 +2765,9 @@ class QdrantMemoryStore(MemoryStore):
                     break
 
                 for point in results:
-                    memories.append((point.id, point.vector, point.payload.get("content", "")))
+                    memories.append(
+                        (point.id, point.vector, point.payload.get("content", ""))
+                    )
 
                 if offset is None:
                     break
@@ -2649,13 +2781,18 @@ class QdrantMemoryStore(MemoryStore):
                     continue
 
                 group = [id1]
-                for j, (id2, vec2, content2) in enumerate(memories[i+1:], start=i+1):
+                for j, (id2, vec2, content2) in enumerate(
+                    memories[i + 1 :], start=i + 1
+                ):
                     if id2 in seen:
                         continue
 
                     # Calculate cosine similarity
                     import numpy as np
-                    similarity = np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
+
+                    similarity = np.dot(vec1, vec2) / (
+                        np.linalg.norm(vec1) * np.linalg.norm(vec2)
+                    )
 
                     if similarity >= similarity_threshold:
                         group.append(id2)
@@ -2793,29 +2930,37 @@ class QdrantMemoryStore(MemoryStore):
                     cursor = conn.cursor()
 
                     if project_name:
-                        cursor.execute("""
+                        cursor.execute(
+                            """
                             SELECT search_id, query, timestamp, rating, project_name
                             FROM search_feedback
                             WHERE project_name = ?
                             ORDER BY timestamp DESC
                             LIMIT ?
-                        """, (project_name, limit))
+                        """,
+                            (project_name, limit),
+                        )
                     else:
-                        cursor.execute("""
+                        cursor.execute(
+                            """
                             SELECT search_id, query, timestamp, rating, project_name
                             FROM search_feedback
                             ORDER BY timestamp DESC
                             LIMIT ?
-                        """, (limit,))
+                        """,
+                            (limit,),
+                        )
 
                     for row in cursor.fetchall():
-                        recent_searches.append({
-                            "search_id": row[0],
-                            "query": row[1],
-                            "timestamp": row[2],
-                            "rating": row[3],
-                            "project_name": row[4],
-                        })
+                        recent_searches.append(
+                            {
+                                "search_id": row[0],
+                                "query": row[1],
+                                "timestamp": row[2],
+                                "rating": row[3],
+                                "project_name": row[4],
+                            }
+                        )
 
                     conn.close()
                 except Exception as e:
@@ -2832,8 +2977,7 @@ class QdrantMemoryStore(MemoryStore):
                 scroll_filter = Filter(
                     must=[
                         FieldCondition(
-                            key="project_name",
-                            match=MatchValue(value=project_name)
+                            key="project_name", match=MatchValue(value=project_name)
                         )
                     ]
                 )
@@ -2844,10 +2988,14 @@ class QdrantMemoryStore(MemoryStore):
             all_memories = []
             iteration_count = 0
 
-            while len(all_memories) < limit * 10 and collected < 1000:  # Fetch up to 1000 to sort
+            while (
+                len(all_memories) < limit * 10 and collected < 1000
+            ):  # Fetch up to 1000 to sort
                 iteration_count += 1
                 if iteration_count > MAX_SCROLL_ITERATIONS:
-                    logger.warning(f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in get_recent_memories, breaking")
+                    logger.warning(
+                        f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in get_recent_memories, breaking"
+                    )
                     break
 
                 results, next_offset = client.scroll(
@@ -2866,13 +3014,15 @@ class QdrantMemoryStore(MemoryStore):
                     payload = point.payload
                     created_at = payload.get("created_at")
                     if created_at:
-                        all_memories.append({
-                            "id": str(point.id),
-                            "content": payload.get("content", ""),
-                            "category": payload.get("category", "unknown"),
-                            "created_at": created_at,
-                            "project_name": payload.get("project_name", ""),
-                        })
+                        all_memories.append(
+                            {
+                                "id": str(point.id),
+                                "content": payload.get("content", ""),
+                                "category": payload.get("category", "unknown"),
+                                "created_at": created_at,
+                                "project_name": payload.get("project_name", ""),
+                            }
+                        )
 
                 collected += len(results)
                 offset = next_offset
@@ -2889,13 +3039,15 @@ class QdrantMemoryStore(MemoryStore):
                 if len(content) > 100:
                     content = content[:100] + "..."
 
-                recent_additions.append({
-                    "id": memory["id"],
-                    "content": content,
-                    "category": memory["category"],
-                    "created_at": memory["created_at"],
-                    "project_name": memory["project_name"],
-                })
+                recent_additions.append(
+                    {
+                        "id": memory["id"],
+                        "content": content,
+                        "category": memory["category"],
+                        "created_at": memory["created_at"],
+                        "project_name": memory["project_name"],
+                    }
+                )
 
             return {
                 "recent_searches": recent_searches,
@@ -2985,7 +3137,9 @@ class QdrantMemoryStore(MemoryStore):
 
                 # Generate deterministic UUID from commit hash for Qdrant point ID
                 # This allows us to have consistent IDs across re-indexes
-                point_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"git-commit-{commit_hash}"))
+                point_id = str(
+                    uuid.uuid5(uuid.NAMESPACE_DNS, f"git-commit-{commit_hash}")
+                )
                 payload["id"] = point_id
 
                 # Create point with deterministic UUID as ID
@@ -3066,7 +3220,9 @@ class QdrantMemoryStore(MemoryStore):
                 }
 
                 # Generate deterministic UUID from change ID for Qdrant point ID
-                point_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"git-file-change-{change_id}"))
+                point_id = str(
+                    uuid.uuid5(uuid.NAMESPACE_DNS, f"git-file-change-{change_id}")
+                )
                 payload["id"] = point_id
 
                 # Create point with deterministic UUID as ID
@@ -3131,17 +3287,13 @@ class QdrantMemoryStore(MemoryStore):
             if repository_path:
                 must_conditions.append(
                     FieldCondition(
-                        key="repository_path",
-                        match=MatchValue(value=repository_path)
+                        key="repository_path", match=MatchValue(value=repository_path)
                     )
                 )
 
             if author:
                 must_conditions.append(
-                    FieldCondition(
-                        key="author_email",
-                        match=MatchValue(value=author)
-                    )
+                    FieldCondition(key="author_email", match=MatchValue(value=author))
                 )
 
             if since or until:
@@ -3158,10 +3310,7 @@ class QdrantMemoryStore(MemoryStore):
 
                 if date_range:
                     must_conditions.append(
-                        FieldCondition(
-                            key="author_date",
-                            range=Range(**date_range)
-                        )
+                        FieldCondition(key="author_date", range=Range(**date_range))
                     )
 
             search_filter = Filter(must=must_conditions) if must_conditions else None
@@ -3186,7 +3335,7 @@ class QdrantMemoryStore(MemoryStore):
 
                 for result in search_results:
                     payload = result.payload
-                    vector = result.vector if hasattr(result, 'vector') else []
+                    vector = result.vector if hasattr(result, "vector") else []
                     results.append(self._deserialize_commit(payload, vector))
 
             else:
@@ -3198,7 +3347,9 @@ class QdrantMemoryStore(MemoryStore):
                 while collected < limit:
                     iteration_count += 1
                     if iteration_count > MAX_SCROLL_ITERATIONS:
-                        logger.warning(f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in search_memories (no query), breaking")
+                        logger.warning(
+                            f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in search_memories (no query), breaking"
+                        )
                         break
 
                     scroll_results, next_offset = client.scroll(
@@ -3215,7 +3366,7 @@ class QdrantMemoryStore(MemoryStore):
 
                     for point in scroll_results:
                         payload = point.payload
-                        vector = point.vector if hasattr(point, 'vector') else []
+                        vector = point.vector if hasattr(point, "vector") else []
                         results.append(self._deserialize_commit(payload, vector))
                         collected += 1
 
@@ -3259,7 +3410,9 @@ class QdrantMemoryStore(MemoryStore):
             search_filter = Filter(
                 must=[
                     FieldCondition(key="type", match=MatchValue(value="git_commit")),
-                    FieldCondition(key="commit_hash", match=MatchValue(value=commit_hash)),
+                    FieldCondition(
+                        key="commit_hash", match=MatchValue(value=commit_hash)
+                    ),
                 ]
             )
 
@@ -3276,12 +3429,14 @@ class QdrantMemoryStore(MemoryStore):
 
             point = results[0]
             payload = point.payload
-            vector = point.vector if hasattr(point, 'vector') else []
+            vector = point.vector if hasattr(point, "vector") else []
 
             return self._deserialize_commit(payload, vector)
 
         except Exception as e:
-            logger.error(f"Error retrieving git commit {commit_hash}: {e}", exc_info=True)
+            logger.error(
+                f"Error retrieving git commit {commit_hash}: {e}", exc_info=True
+            )
             raise StorageError(f"Failed to retrieve git commit: {e}") from e
 
         finally:
@@ -3312,7 +3467,9 @@ class QdrantMemoryStore(MemoryStore):
             # First, find file changes for this file
             search_filter = Filter(
                 must=[
-                    FieldCondition(key="type", match=MatchValue(value="git_file_change")),
+                    FieldCondition(
+                        key="type", match=MatchValue(value="git_file_change")
+                    ),
                     FieldCondition(key="file_path", match=MatchValue(value=file_path)),
                 ]
             )
@@ -3325,7 +3482,9 @@ class QdrantMemoryStore(MemoryStore):
             while collected < limit:
                 iteration_count += 1
                 if iteration_count > MAX_SCROLL_ITERATIONS:
-                    logger.warning(f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in get_commit_changes, breaking")
+                    logger.warning(
+                        f"Scroll loop exceeded {MAX_SCROLL_ITERATIONS} iterations in get_commit_changes, breaking"
+                    )
                     break
 
                 scroll_results, next_offset = client.scroll(
@@ -3342,12 +3501,14 @@ class QdrantMemoryStore(MemoryStore):
 
                 for point in scroll_results:
                     payload = point.payload
-                    file_changes.append({
-                        "commit_hash": payload["commit_hash"],
-                        "change_type": payload["change_type"],
-                        "lines_added": payload["lines_added"],
-                        "lines_deleted": payload["lines_deleted"],
-                    })
+                    file_changes.append(
+                        {
+                            "commit_hash": payload["commit_hash"],
+                            "change_type": payload["change_type"],
+                            "lines_added": payload["lines_added"],
+                            "lines_deleted": payload["lines_deleted"],
+                        }
+                    )
                     collected += 1
 
                 offset = next_offset
@@ -3384,7 +3545,9 @@ class QdrantMemoryStore(MemoryStore):
             return results[:limit]
 
         except Exception as e:
-            logger.error(f"Error getting commits by file {file_path}: {e}", exc_info=True)
+            logger.error(
+                f"Error getting commits by file {file_path}: {e}", exc_info=True
+            )
             raise StorageError(f"Failed to get commits by file: {e}") from e
 
         finally:
@@ -3408,11 +3571,19 @@ class QdrantMemoryStore(MemoryStore):
         """
         # Convert Unix timestamps back to ISO format strings
         # Validate required fields with detailed error logging
-        required_fields = ["author_date", "commit_hash", "repository_path",
-                          "author_name", "author_email", "message"]
+        required_fields = [
+            "author_date",
+            "commit_hash",
+            "repository_path",
+            "author_name",
+            "author_email",
+            "message",
+        ]
         for field in required_fields:
             if field not in payload:
-                logger.error(f"Missing required field '{field}' in commit payload with keys: {list(payload.keys())}")
+                logger.error(
+                    f"Missing required field '{field}' in commit payload with keys: {list(payload.keys())}"
+                )
                 raise KeyError(field)
 
         author_date = payload["author_date"]

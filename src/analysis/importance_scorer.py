@@ -190,8 +190,7 @@ class ImportanceScorer:
         if preset_name not in presets:
             available = ", ".join(presets.keys())
             raise ValueError(
-                f"Unknown preset: '{preset_name}'. "
-                f"Available presets: {available}"
+                f"Unknown preset: '{preset_name}'. " f"Available presets: {available}"
             )
 
         weights = presets[preset_name]
@@ -228,15 +227,23 @@ class ImportanceScorer:
         try:
             # Run all analyzers
             complexity_metrics = self.complexity_analyzer.analyze(code_unit)
-            usage_metrics = self.usage_analyzer.analyze(code_unit, all_units, file_content, file_path)
-            criticality_metrics = self.criticality_analyzer.analyze(code_unit, file_path)
+            usage_metrics = self.usage_analyzer.analyze(
+                code_unit, all_units, file_content, file_path
+            )
+            criticality_metrics = self.criticality_analyzer.analyze(
+                code_unit, file_path
+            )
 
             # Apply weights directly to amplify each factor's contribution
             # Higher weight = larger contribution from that factor
             # With default weights (1.0, 1.0, 1.0), this matches original additive behavior
-            weighted_complexity = complexity_metrics.complexity_score * self.complexity_weight
+            weighted_complexity = (
+                complexity_metrics.complexity_score * self.complexity_weight
+            )
             weighted_usage = usage_metrics.usage_boost * self.usage_weight
-            weighted_criticality = criticality_metrics.criticality_boost * self.criticality_weight
+            weighted_criticality = (
+                criticality_metrics.criticality_boost * self.criticality_weight
+            )
 
             # Sum weighted contributions
             raw_score = weighted_complexity + weighted_usage + weighted_criticality
@@ -251,9 +258,11 @@ class ImportanceScorer:
             # baseline_max = (max_complexity * complexity_weight) +
             #                (max_usage * usage_weight) +
             #                (max_criticality * criticality_weight)
-            baseline_max = (0.7 * self.complexity_weight) + \
-                          (0.2 * self.usage_weight) + \
-                          (0.3 * self.criticality_weight)
+            baseline_max = (
+                (0.7 * self.complexity_weight)
+                + (0.2 * self.usage_weight)
+                + (0.3 * self.criticality_weight)
+            )
 
             # Handle edge case: if all weights are 0, baseline_max = 0
             # In this case, return 0.0 to avoid division by zero
@@ -284,7 +293,9 @@ class ImportanceScorer:
             )
 
         except Exception as e:
-            logger.warning(f"Error calculating importance for {code_unit.get('name', 'unknown')}: {e}")
+            logger.warning(
+                f"Error calculating importance for {code_unit.get('name', 'unknown')}: {e}"
+            )
             # Return default mid-range score on error
             return ImportanceScore(
                 importance=0.5,

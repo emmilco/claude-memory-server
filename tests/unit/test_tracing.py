@@ -27,14 +27,14 @@ class TestOperationIDGeneration:
         op_id = new_operation()
         assert len(op_id) == 8
         # Should be UUID prefix (hex chars and hyphens)
-        assert all(c in '0123456789abcdef-' for c in op_id)
+        assert all(c in "0123456789abcdef-" for c in op_id)
 
     def test_get_operation_id_returns_empty_when_not_set(self):
         """Verify get_operation_id returns empty string when not set."""
         clear_operation_id()
         # First call should generate and set a new ID
         op_id = get_operation_id()
-        assert op_id != ''
+        assert op_id != ""
         assert len(op_id) == 8
 
     def test_set_operation_id(self):
@@ -51,7 +51,7 @@ class TestOperationIDGeneration:
         # After clearing, get_operation_id should generate a new one
         new_id = get_operation_id()
         assert new_id != "test1234"
-        assert new_id != ''
+        assert new_id != ""
 
 
 class TestContextPropagation:
@@ -112,7 +112,7 @@ class TestTracedDecorator:
         async def test_func():
             nonlocal captured_id
             captured_id = get_operation_id()
-            assert captured_id != ''
+            assert captured_id != ""
             assert len(captured_id) == 8
             return "result"
 
@@ -126,17 +126,18 @@ class TestTracedDecorator:
 
         # After call: operation ID should be cleared
         # Note: get_operation_id() will generate a new one, so we check it's different
-        new_id = get_operation_id()
+        get_operation_id()
         # The new ID should be different from the one used in the function
         # (since traced() clears it, get_operation_id() generates a fresh one)
 
     @pytest.mark.asyncio
     async def test_traced_decorator_cleans_up_on_exception(self):
         """Verify @traced decorator cleans up operation ID even on exception."""
+
         @traced
         async def failing_func():
             op_id = get_operation_id()
-            assert op_id != ''
+            assert op_id != ""
             raise ValueError("Test error")
 
         clear_operation_id()
@@ -147,7 +148,7 @@ class TestTracedDecorator:
         # Operation ID should be cleared even after exception
         # (get_operation_id will generate a new one)
         new_id = get_operation_id()
-        assert new_id != ''
+        assert new_id != ""
 
 
 class TestContextAwareLogger:
@@ -170,7 +171,7 @@ class TestContextAwareLogger:
         clear_operation_id()
 
         # Manually set empty to avoid auto-generation in get_operation_id
-        set_operation_id('')
+        set_operation_id("")
 
         with caplog.at_level(logging.INFO):
             logger.info("Test message")
@@ -227,22 +228,24 @@ class TestEndToEndScenarios:
         assert result == "success"
 
         # Extract all log lines
-        lines = caplog.text.split('\n')
-        log_lines = [l for l in lines if l.strip() and '[' in l]
+        lines = caplog.text.split("\n")
+        log_lines = [l for l in lines if l.strip() and "[" in l]
 
         # All logs should have the same operation ID
         operation_ids = []
         for line in log_lines:
-            if '[' in line and ']' in line:
+            if "[" in line and "]" in line:
                 # Extract operation ID from [op_id] format
-                start = line.index('[') + 1
-                end = line.index(']')
+                start = line.index("[") + 1
+                end = line.index("]")
                 op_id = line[start:end]
                 operation_ids.append(op_id)
 
         # All operation IDs should be the same
         assert len(operation_ids) >= 3, "Should have at least 3 log entries"
-        assert len(set(operation_ids)) == 1, "All logs should have the same operation ID"
+        assert (
+            len(set(operation_ids)) == 1
+        ), "All logs should have the same operation ID"
 
     @pytest.mark.asyncio
     async def test_multiple_concurrent_requests(self, caplog):

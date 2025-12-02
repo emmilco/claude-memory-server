@@ -3,8 +3,7 @@
 import re
 import logging
 from dataclasses import dataclass
-from pathlib import Path
-from typing import List, Optional, Set, Dict, Any
+from typing import List, Optional, Dict, Any
 from enum import Enum
 
 logger = logging.getLogger(__name__)
@@ -12,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 class ImportType(str, Enum):
     """Types of import statements."""
+
     IMPORT = "import"
     FROM_IMPORT = "from_import"
     REQUIRE = "require"
@@ -23,6 +23,7 @@ class ImportType(str, Enum):
 @dataclass
 class ImportInfo:
     """Represents an import/dependency statement."""
+
     source_file: str  # File containing the import
     imported_module: str  # Module/file being imported
     imported_items: List[str]  # Specific items imported (e.g., ["Path", "Path"])
@@ -48,10 +49,7 @@ class ImportExtractor:
         }
 
     def extract_imports(
-        self,
-        file_path: str,
-        source_code: str,
-        language: str
+        self, file_path: str, source_code: str, language: str
     ) -> List[ImportInfo]:
         """
         Extract all imports from source code.
@@ -78,9 +76,7 @@ class ImportExtractor:
             return []
 
     def _extract_python_imports(
-        self,
-        file_path: str,
-        source_code: str
+        self, file_path: str, source_code: str
     ) -> List[ImportInfo]:
         """
         Extract Python imports.
@@ -94,21 +90,21 @@ class ImportExtractor:
         - from ..parent import something
         """
         imports = []
-        lines = source_code.split('\n')
+        lines = source_code.split("\n")
 
         # Pattern 1: import module [as alias]
         import_pattern = re.compile(
-            r'^\s*import\s+([a-zA-Z0-9_.]+)(?:\s+as\s+([a-zA-Z0-9_]+))?'
+            r"^\s*import\s+([a-zA-Z0-9_.]+)(?:\s+as\s+([a-zA-Z0-9_]+))?"
         )
 
         # Pattern 2: from module import items
         from_import_pattern = re.compile(
-            r'^\s*from\s+(\.{0,2}[a-zA-Z0-9_.]*)\s+import\s+(.+)'
+            r"^\s*from\s+(\.{0,2}[a-zA-Z0-9_.]*)\s+import\s+(.+)"
         )
 
         for line_num, line in enumerate(lines, start=1):
             # Skip comments
-            if line.strip().startswith('#'):
+            if line.strip().startswith("#"):
                 continue
 
             # Match: import module [as alias]
@@ -116,16 +112,18 @@ class ImportExtractor:
             if match:
                 module = match.group(1)
                 alias = match.group(2)
-                imports.append(ImportInfo(
-                    source_file=file_path,
-                    imported_module=module,
-                    imported_items=[],
-                    import_type=ImportType.IMPORT,
-                    line_number=line_num,
-                    is_relative=module.startswith('.'),
-                    alias=alias,
-                    raw_statement=line.strip()
-                ))
+                imports.append(
+                    ImportInfo(
+                        source_file=file_path,
+                        imported_module=module,
+                        imported_items=[],
+                        import_type=ImportType.IMPORT,
+                        line_number=line_num,
+                        is_relative=module.startswith("."),
+                        alias=alias,
+                        raw_statement=line.strip(),
+                    )
+                )
                 continue
 
             # Match: from module import items
@@ -136,34 +134,34 @@ class ImportExtractor:
 
                 # Parse imported items
                 items = []
-                if items_str.strip() == '*':
-                    items = ['*']
+                if items_str.strip() == "*":
+                    items = ["*"]
                 else:
                     # Handle: from x import a, b as c, d
-                    for item in items_str.split(','):
+                    for item in items_str.split(","):
                         item = item.strip()
                         # Remove 'as alias' part
-                        if ' as ' in item:
-                            item = item.split(' as ')[0].strip()
+                        if " as " in item:
+                            item = item.split(" as ")[0].strip()
                         if item:
                             items.append(item)
 
-                imports.append(ImportInfo(
-                    source_file=file_path,
-                    imported_module=module,
-                    imported_items=items,
-                    import_type=ImportType.FROM_IMPORT,
-                    line_number=line_num,
-                    is_relative=module.startswith('.'),
-                    raw_statement=line.strip()
-                ))
+                imports.append(
+                    ImportInfo(
+                        source_file=file_path,
+                        imported_module=module,
+                        imported_items=items,
+                        import_type=ImportType.FROM_IMPORT,
+                        line_number=line_num,
+                        is_relative=module.startswith("."),
+                        raw_statement=line.strip(),
+                    )
+                )
 
         return imports
 
     def _extract_javascript_imports(
-        self,
-        file_path: str,
-        source_code: str
+        self, file_path: str, source_code: str
     ) -> List[ImportInfo]:
         """
         Extract JavaScript/TypeScript imports.
@@ -176,7 +174,7 @@ class ImportExtractor:
         - import('module') - dynamic import
         """
         imports = []
-        lines = source_code.split('\n')
+        lines = source_code.split("\n")
 
         # Pattern 1: import ... from 'module'
         # Handles: import {x} from 'y', import * as x from 'y', import x from 'y'
@@ -190,85 +188,87 @@ class ImportExtractor:
         )
 
         # Pattern 3: import('module') - dynamic
-        dynamic_import_pattern = re.compile(
-            r'import\(["\'](.+?)["\']\)'
-        )
+        dynamic_import_pattern = re.compile(r'import\(["\'](.+?)["\']\)')
 
         for line_num, line in enumerate(lines, start=1):
             # Skip comments
-            if line.strip().startswith('//'):
+            if line.strip().startswith("//"):
                 continue
 
             # Match: import ... from 'module'
             match = import_pattern.match(line)
             if match:
-                items_str = match.group(1) or ''
+                items_str = match.group(1) or ""
                 module = match.group(2)
 
                 # Parse imported items
                 items = []
                 if items_str:
-                    if items_str.startswith('{') and items_str.endswith('}'):
+                    if items_str.startswith("{") and items_str.endswith("}"):
                         # Named imports: { x, y }
                         items_str = items_str[1:-1]
-                        for item in items_str.split(','):
+                        for item in items_str.split(","):
                             item = item.strip()
-                            if ' as ' in item:
-                                item = item.split(' as ')[0].strip()
+                            if " as " in item:
+                                item = item.split(" as ")[0].strip()
                             if item:
                                 items.append(item)
-                    elif '*' in items_str:
+                    elif "*" in items_str:
                         # Namespace import: * as name
-                        items = ['*']
+                        items = ["*"]
                     else:
                         # Default import
                         items = [items_str.strip()]
 
-                imports.append(ImportInfo(
-                    source_file=file_path,
-                    imported_module=module,
-                    imported_items=items,
-                    import_type=ImportType.IMPORT,
-                    line_number=line_num,
-                    is_relative=module.startswith('.'),
-                    raw_statement=line.strip()
-                ))
+                imports.append(
+                    ImportInfo(
+                        source_file=file_path,
+                        imported_module=module,
+                        imported_items=items,
+                        import_type=ImportType.IMPORT,
+                        line_number=line_num,
+                        is_relative=module.startswith("."),
+                        raw_statement=line.strip(),
+                    )
+                )
                 continue
 
             # Match: require('module')
             match = require_pattern.match(line)
             if match:
                 module = match.group(1)
-                imports.append(ImportInfo(
-                    source_file=file_path,
-                    imported_module=module,
-                    imported_items=[],
-                    import_type=ImportType.REQUIRE,
-                    line_number=line_num,
-                    is_relative=module.startswith('.'),
-                    raw_statement=line.strip()
-                ))
+                imports.append(
+                    ImportInfo(
+                        source_file=file_path,
+                        imported_module=module,
+                        imported_items=[],
+                        import_type=ImportType.REQUIRE,
+                        line_number=line_num,
+                        is_relative=module.startswith("."),
+                        raw_statement=line.strip(),
+                    )
+                )
                 continue
 
             # Match: dynamic import (can appear anywhere in line)
             for match in dynamic_import_pattern.finditer(line):
                 module = match.group(1)
-                imports.append(ImportInfo(
-                    source_file=file_path,
-                    imported_module=module,
-                    imported_items=[],
-                    import_type=ImportType.DYNAMIC_IMPORT,
-                    line_number=line_num,
-                    is_relative=module.startswith('.'),
-                    raw_statement=match.group(0)
-                ))
+                imports.append(
+                    ImportInfo(
+                        source_file=file_path,
+                        imported_module=module,
+                        imported_items=[],
+                        import_type=ImportType.DYNAMIC_IMPORT,
+                        line_number=line_num,
+                        is_relative=module.startswith("."),
+                        raw_statement=match.group(0),
+                    )
+                )
 
         return imports
 
     def _extract_java_imports(
-        self,
-        file_path: str,
-        source_code: str
+        self, file_path: str, source_code: str
     ) -> List[ImportInfo]:
         """
         Extract Java imports.
@@ -279,11 +279,11 @@ class ImportExtractor:
         - import package.*;
         """
         imports = []
-        lines = source_code.split('\n')
+        lines = source_code.split("\n")
 
         # Pattern: import [static] package.Class;
         import_pattern = re.compile(
-            r'^\s*import\s+(?:static\s+)?([a-zA-Z0-9_.]+(?:\.\*)?);\s*$'
+            r"^\s*import\s+(?:static\s+)?([a-zA-Z0-9_.]+(?:\.\*)?);\s*$"
         )
 
         for line_num, line in enumerate(lines, start=1):
@@ -295,37 +295,35 @@ class ImportExtractor:
                 items = []
                 module = full_path
 
-                if full_path.endswith('.*'):
-                    items = ['*']
+                if full_path.endswith(".*"):
+                    items = ["*"]
                     module = full_path[:-2]  # Remove .*
                 else:
                     # Last part is the class name, rest is the package
-                    parts = full_path.split('.')
+                    parts = full_path.split(".")
                     if len(parts) > 1:
                         items = [parts[-1]]
-                        module = '.'.join(parts[:-1])
+                        module = ".".join(parts[:-1])
                     else:
                         # Single name (unusual but possible)
                         items = [parts[0]]
-                        module = ''
+                        module = ""
 
-                imports.append(ImportInfo(
-                    source_file=file_path,
-                    imported_module=module,
-                    imported_items=items,
-                    import_type=ImportType.IMPORT,
-                    line_number=line_num,
-                    is_relative=False,  # Java imports are always absolute
-                    raw_statement=line.strip()
-                ))
+                imports.append(
+                    ImportInfo(
+                        source_file=file_path,
+                        imported_module=module,
+                        imported_items=items,
+                        import_type=ImportType.IMPORT,
+                        line_number=line_num,
+                        is_relative=False,  # Java imports are always absolute
+                        raw_statement=line.strip(),
+                    )
+                )
 
         return imports
 
-    def _extract_go_imports(
-        self,
-        file_path: str,
-        source_code: str
-    ) -> List[ImportInfo]:
+    def _extract_go_imports(self, file_path: str, source_code: str) -> List[ImportInfo]:
         """
         Extract Go imports.
 
@@ -335,7 +333,7 @@ class ImportExtractor:
         - import alias "package"
         """
         imports = []
-        lines = source_code.split('\n')
+        lines = source_code.split("\n")
 
         # Single import pattern
         single_import_pattern = re.compile(
@@ -344,11 +342,9 @@ class ImportExtractor:
 
         # Multi-import block
         in_import_block = False
-        import_block_pattern = re.compile(r'^\s*import\s+\(\s*$')
-        import_block_end = re.compile(r'^\s*\)\s*$')
-        import_item_pattern = re.compile(
-            r'^\s*(?:([a-zA-Z0-9_]+)\s+)?"(.+?)"\s*$'
-        )
+        import_block_pattern = re.compile(r"^\s*import\s+\(\s*$")
+        import_block_end = re.compile(r"^\s*\)\s*$")
+        import_item_pattern = re.compile(r'^\s*(?:([a-zA-Z0-9_]+)\s+)?"(.+?)"\s*$')
 
         for line_num, line in enumerate(lines, start=1):
             # Check for import block start
@@ -367,16 +363,18 @@ class ImportExtractor:
                 if match:
                     alias = match.group(1)
                     module = match.group(2)
-                    imports.append(ImportInfo(
-                        source_file=file_path,
-                        imported_module=module,
-                        imported_items=[],
-                        import_type=ImportType.IMPORT,
-                        line_number=line_num,
-                        is_relative=module.startswith('.'),
-                        alias=alias,
-                        raw_statement=line.strip()
-                    ))
+                    imports.append(
+                        ImportInfo(
+                            source_file=file_path,
+                            imported_module=module,
+                            imported_items=[],
+                            import_type=ImportType.IMPORT,
+                            line_number=line_num,
+                            is_relative=module.startswith("."),
+                            alias=alias,
+                            raw_statement=line.strip(),
+                        )
+                    )
                 continue
 
             # Parse single import
@@ -384,23 +382,23 @@ class ImportExtractor:
             if match:
                 alias = match.group(1)
                 module = match.group(2)
-                imports.append(ImportInfo(
-                    source_file=file_path,
-                    imported_module=module,
-                    imported_items=[],
-                    import_type=ImportType.IMPORT,
-                    line_number=line_num,
-                    is_relative=module.startswith('.'),
-                    alias=alias,
-                    raw_statement=line.strip()
-                ))
+                imports.append(
+                    ImportInfo(
+                        source_file=file_path,
+                        imported_module=module,
+                        imported_items=[],
+                        import_type=ImportType.IMPORT,
+                        line_number=line_num,
+                        is_relative=module.startswith("."),
+                        alias=alias,
+                        raw_statement=line.strip(),
+                    )
+                )
 
         return imports
 
     def _extract_rust_imports(
-        self,
-        file_path: str,
-        source_code: str
+        self, file_path: str, source_code: str
     ) -> List[ImportInfo]:
         """
         Extract Rust imports.
@@ -411,17 +409,15 @@ class ImportExtractor:
         - mod module_name;
         """
         imports = []
-        lines = source_code.split('\n')
+        lines = source_code.split("\n")
 
         # Pattern 1: use path::to::item;
         use_pattern = re.compile(
-            r'^\s*(?:pub\s+)?use\s+([a-zA-Z0-9_:]+)(?:::\{(.+?)\})?(?:::\*)?;'
+            r"^\s*(?:pub\s+)?use\s+([a-zA-Z0-9_:]+)(?:::\{(.+?)\})?(?:::\*)?;"
         )
 
         # Pattern 2: mod module;
-        mod_pattern = re.compile(
-            r'^\s*(?:pub\s+)?mod\s+([a-zA-Z0-9_]+)\s*;'
-        )
+        mod_pattern = re.compile(r"^\s*(?:pub\s+)?mod\s+([a-zA-Z0-9_]+)\s*;")
 
         for line_num, line in enumerate(lines, start=1):
             # Match: use path;
@@ -433,44 +429,49 @@ class ImportExtractor:
                 items = []
                 if items_str:
                     # use path::{item1, item2}
-                    for item in items_str.split(','):
+                    for item in items_str.split(","):
                         item = item.strip()
-                        if ' as ' in item:
-                            item = item.split(' as ')[0].strip()
+                        if " as " in item:
+                            item = item.split(" as ")[0].strip()
                         if item:
                             items.append(item)
-                elif '::*' in line:
-                    items = ['*']
+                elif "::*" in line:
+                    items = ["*"]
                 else:
                     # Last part is the item
-                    parts = module.split('::')
+                    parts = module.split("::")
                     if parts:
                         items = [parts[-1]]
 
-                imports.append(ImportInfo(
-                    source_file=file_path,
-                    imported_module=module,
-                    imported_items=items,
-                    import_type=ImportType.USE,
-                    line_number=line_num,
-                    is_relative=module.startswith('crate::') or module.startswith('super::'),
-                    raw_statement=line.strip()
-                ))
+                imports.append(
+                    ImportInfo(
+                        source_file=file_path,
+                        imported_module=module,
+                        imported_items=items,
+                        import_type=ImportType.USE,
+                        line_number=line_num,
+                        is_relative=module.startswith("crate::")
+                        or module.startswith("super::"),
+                        raw_statement=line.strip(),
+                    )
+                )
                 continue
 
             # Match: mod module;
             match = mod_pattern.match(line)
             if match:
                 module = match.group(1)
-                imports.append(ImportInfo(
-                    source_file=file_path,
-                    imported_module=module,
-                    imported_items=[],
-                    import_type=ImportType.MOD,
-                    line_number=line_num,
-                    is_relative=True,  # mod is always relative to current crate
-                    raw_statement=line.strip()
-                ))
+                imports.append(
+                    ImportInfo(
+                        source_file=file_path,
+                        imported_module=module,
+                        imported_items=[],
+                        import_type=ImportType.MOD,
+                        line_number=line_num,
+                        is_relative=True,  # mod is always relative to current crate
+                        raw_statement=line.strip(),
+                    )
+                )
 
         return imports
 
@@ -486,11 +487,7 @@ def build_dependency_metadata(imports: List[ImportInfo]) -> Dict[str, Any]:
         Dictionary with dependency metadata
     """
     if not imports:
-        return {
-            "imports": [],
-            "dependencies": [],
-            "import_count": 0
-        }
+        return {"imports": [], "dependencies": [], "import_count": 0}
 
     # Collect unique dependencies (modules)
     dependencies = set()
@@ -498,17 +495,19 @@ def build_dependency_metadata(imports: List[ImportInfo]) -> Dict[str, Any]:
 
     for imp in imports:
         dependencies.add(imp.imported_module)
-        import_data.append({
-            "module": imp.imported_module,
-            "items": imp.imported_items,
-            "type": imp.import_type.value,
-            "line": imp.line_number,
-            "relative": imp.is_relative,
-            "alias": imp.alias
-        })
+        import_data.append(
+            {
+                "module": imp.imported_module,
+                "items": imp.imported_items,
+                "type": imp.import_type.value,
+                "line": imp.line_number,
+                "relative": imp.is_relative,
+                "alias": imp.alias,
+            }
+        )
 
     return {
         "imports": import_data,
         "dependencies": sorted(list(dependencies)),
-        "import_count": len(imports)
+        "import_count": len(imports),
     }

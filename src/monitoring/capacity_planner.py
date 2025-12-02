@@ -7,9 +7,8 @@ provides recommendations for scaling and optimization.
 
 import logging
 from dataclasses import dataclass, asdict
-from datetime import datetime, timedelta, UTC
+from datetime import datetime, UTC
 from typing import List, Dict, Any, Optional, Literal
-import statistics
 
 from src.monitoring.metrics_collector import MetricsCollector, HealthMetrics
 
@@ -214,7 +213,9 @@ class CapacityPlanner:
         current_size = sizes[-1] if sizes else 0.0
 
         # Calculate growth rate (MB/day) using linear regression
-        growth_rate = self._calculate_linear_growth_rate(historical_metrics, "database_size_mb")
+        growth_rate = self._calculate_linear_growth_rate(
+            historical_metrics, "database_size_mb"
+        )
 
         # Project future size
         projected_size = current_size + (growth_rate * days_ahead)
@@ -283,7 +284,9 @@ class CapacityPlanner:
         current_count = counts[-1] if counts else 0
 
         # Calculate creation rate (memories/day) using linear regression
-        creation_rate = self._calculate_linear_growth_rate(historical_metrics, "total_memories")
+        creation_rate = self._calculate_linear_growth_rate(
+            historical_metrics, "total_memories"
+        )
 
         # Project future count
         projected_count = current_count + (creation_rate * days_ahead)
@@ -301,8 +304,12 @@ class CapacityPlanner:
         status = "HEALTHY"
 
         if creation_rate > 0:
-            days_to_warning = (self.MEMORY_COUNT_WARNING - current_count) / creation_rate
-            days_to_critical = (self.MEMORY_COUNT_CRITICAL - current_count) / creation_rate
+            days_to_warning = (
+                self.MEMORY_COUNT_WARNING - current_count
+            ) / creation_rate
+            days_to_critical = (
+                self.MEMORY_COUNT_CRITICAL - current_count
+            ) / creation_rate
 
             if days_to_critical <= days_ahead:
                 status = "CRITICAL"
@@ -351,7 +358,9 @@ class CapacityPlanner:
         active_counts = [m.active_projects for m in historical_metrics]
         current_active = active_counts[-1] if active_counts else 0
 
-        total_counts = [m.active_projects + m.archived_projects for m in historical_metrics]
+        total_counts = [
+            m.active_projects + m.archived_projects for m in historical_metrics
+        ]
         current_total = total_counts[-1] if total_counts else 0
 
         # Calculate project addition rate (projects/day)
@@ -368,8 +377,12 @@ class CapacityPlanner:
         status = "HEALTHY"
 
         if addition_rate_per_day > 0:
-            days_to_warning = (self.PROJECT_COUNT_WARNING - current_active) / addition_rate_per_day
-            days_to_critical = (self.PROJECT_COUNT_CRITICAL - current_active) / addition_rate_per_day
+            days_to_warning = (
+                self.PROJECT_COUNT_WARNING - current_active
+            ) / addition_rate_per_day
+            days_to_critical = (
+                self.PROJECT_COUNT_CRITICAL - current_active
+            ) / addition_rate_per_day
 
             if days_to_critical <= days_ahead:
                 status = "CRITICAL"
@@ -409,8 +422,7 @@ class CapacityPlanner:
 
         # Extract timestamps and values
         data_points = [
-            (m.timestamp, getattr(m, metric_name, 0))
-            for m in historical_metrics
+            (m.timestamp, getattr(m, metric_name, 0)) for m in historical_metrics
         ]
 
         # Sort by timestamp
@@ -435,7 +447,7 @@ class CapacityPlanner:
         sum_xy = sum(x * y for x, y in zip(x_values, y_values))
         sum_x_squared = sum(x * x for x in x_values)
 
-        denominator = (n * sum_x_squared - sum_x * sum_x)
+        denominator = n * sum_x_squared - sum_x * sum_x
         if abs(denominator) < 1e-10:  # Avoid division by zero
             return 0.0
 
@@ -468,9 +480,7 @@ class CapacityPlanner:
             recommendations.append(
                 f"⚠️ Database approaching capacity limit ({db_forecast.days_until_limit} days)"
             )
-            recommendations.append(
-                "Consider archiving inactive projects"
-            )
+            recommendations.append("Consider archiving inactive projects")
         elif db_forecast.trend == "GROWING":
             recommendations.append(
                 f"📈 Database growing at {db_forecast.growth_rate_mb_per_day:.2f} MB/day - monitor growth"
@@ -489,9 +499,7 @@ class CapacityPlanner:
             recommendations.append(
                 f"⚠️ High memory count approaching limit ({memory_analysis.days_until_limit} days)"
             )
-            recommendations.append(
-                "Review and archive old memories regularly"
-            )
+            recommendations.append("Review and archive old memories regularly")
 
         # Project capacity recommendations
         if project_capacity.status == "CRITICAL":
@@ -499,16 +507,12 @@ class CapacityPlanner:
                 f"🔴 Active project count will exceed {self.PROJECT_COUNT_CRITICAL} in "
                 f"{project_capacity.days_until_limit} days"
             )
-            recommendations.append(
-                "Archive completed projects to free up capacity"
-            )
+            recommendations.append("Archive completed projects to free up capacity")
         elif project_capacity.status == "WARNING":
             recommendations.append(
                 f"⚠️ Many active projects ({project_capacity.current_active_projects})"
             )
-            recommendations.append(
-                "Review which projects are actively used"
-            )
+            recommendations.append("Review which projects are actively used")
 
         # Default healthy recommendation
         if not recommendations:
@@ -599,7 +603,8 @@ class CapacityPlanner:
             ),
             project_capacity=ProjectCapacityReport(
                 current_active_projects=metrics.active_projects,
-                current_total_projects=metrics.active_projects + metrics.archived_projects,
+                current_total_projects=metrics.active_projects
+                + metrics.archived_projects,
                 projected_active_projects=metrics.active_projects,  # No change projected
                 project_addition_rate_per_week=0.0,
                 days_until_limit=None,

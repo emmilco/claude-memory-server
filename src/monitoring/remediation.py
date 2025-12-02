@@ -13,7 +13,6 @@ from typing import List, Optional, Callable, Dict, Any
 from enum import Enum
 
 from src.store.base import MemoryStore
-from src.core.models import LifecycleState
 
 logger = logging.getLogger(__name__)
 
@@ -202,7 +201,9 @@ class RemediationEngine:
 
             return result
 
-    def execute_automatic_actions(self, dry_run: bool = False) -> Dict[str, RemediationResult]:
+    def execute_automatic_actions(
+        self, dry_run: bool = False
+    ) -> Dict[str, RemediationResult]:
         """
         Execute all automatic remediation actions.
 
@@ -379,7 +380,10 @@ class RemediationEngine:
             return RemediationResult(
                 success=True,
                 items_affected=1,
-                details={"action": "optimized_database", "operations": ["VACUUM", "ANALYZE"]},
+                details={
+                    "action": "optimized_database",
+                    "operations": ["VACUUM", "ANALYZE"],
+                },
             )
         except Exception as e:
             return RemediationResult(

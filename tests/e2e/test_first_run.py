@@ -8,9 +8,6 @@ See TEST-027 for tracking.
 """
 
 import pytest
-import os
-import sys
-from pathlib import Path
 
 # E2E tests for first-run experience - API compatibility fixed
 
@@ -18,6 +15,7 @@ from pathlib import Path
 # ============================================================================
 # Installation Verification Tests (3 tests)
 # ============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -107,13 +105,16 @@ async def test_embedding_model_loadable():
     embedding = await generator.generate("test text for embedding")
 
     # Verify embedding has correct dimensions
-    assert len(embedding) == 768  # all-mpnet-base-v2 produces 768-dimensional embeddings
+    assert (
+        len(embedding) == 768
+    )  # all-mpnet-base-v2 produces 768-dimensional embeddings
     assert all(isinstance(x, (int, float)) for x in embedding)
 
 
 # ============================================================================
 # Configuration Tests (2 tests)
 # ============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -143,7 +144,9 @@ async def test_default_config_valid(fresh_server):
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
-async def test_custom_config_applied(clean_environment, unique_qdrant_collection, monkeypatch):
+async def test_custom_config_applied(
+    clean_environment, unique_qdrant_collection, monkeypatch
+):
     """Test: Custom config options respected.
 
     Verifies that configuration can be customized and that
@@ -170,9 +173,11 @@ async def test_custom_config_applied(clean_environment, unique_qdrant_collection
     try:
         # Verify custom settings are applied
         # Check SQLite path
-        if hasattr(server, 'store') and hasattr(server.store, 'db_path'):
+        if hasattr(server, "store") and hasattr(server.store, "db_path"):
             # SQLite store
-            assert str(server.store.db_path) == custom_settings["CLAUDE_RAG_SQLITE_PATH"]
+            assert (
+                str(server.store.db_path) == custom_settings["CLAUDE_RAG_SQLITE_PATH"]
+            )
 
         # Test that server works with custom config
         status = await server.get_status()
@@ -186,6 +191,7 @@ async def test_custom_config_applied(clean_environment, unique_qdrant_collection
 # ============================================================================
 # Additional First-Run Experience Tests
 # ============================================================================
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
@@ -204,7 +210,7 @@ async def test_first_index_performance(fresh_server, sample_code_project):
     result = await server.index_codebase(
         directory_path=str(project_path),
         project_name="first-index-test",
-        recursive=True
+        recursive=True,
     )
     index_time = time.time() - start_time
 
@@ -234,9 +240,7 @@ async def test_error_messages_helpful(fresh_server):
     # Test 1: Search non-existent project
     try:
         result = await server.search_code(
-            query="test",
-            project_name="non-existent-project-xyz",
-            limit=5
+            query="test", project_name="non-existent-project-xyz", limit=5
         )
 
         # Should either return empty results or include helpful message
@@ -253,24 +257,33 @@ async def test_error_messages_helpful(fresh_server):
         error_msg = str(e).lower()
         assert len(error_msg) > 10  # Should have meaningful message
         # Ideally includes the project name
-        assert "non-existent" in error_msg or "project" in error_msg or "not found" in error_msg
+        assert (
+            "non-existent" in error_msg
+            or "project" in error_msg
+            or "not found" in error_msg
+        )
 
     # Test 2: Invalid directory path
     try:
         result = await server.index_codebase(
             directory_path="/path/that/does/not/exist/xyz123",
-            project_name="test-project"
+            project_name="test-project",
         )
 
         # Should fail gracefully with helpful message
         if isinstance(result, dict):
             # Check for error indication
-            assert result.get("status") == "error" or result.get("files_indexed", 0) == 0
+            assert (
+                result.get("status") == "error" or result.get("files_indexed", 0) == 0
+            )
 
     except Exception as e:
         error_msg = str(e).lower()
         # Should mention the problem clearly
-        assert any(keyword in error_msg for keyword in ["not found", "does not exist", "invalid", "directory"])
+        assert any(
+            keyword in error_msg
+            for keyword in ["not found", "does not exist", "invalid", "directory"]
+        )
 
 
 @pytest.mark.e2e
@@ -287,7 +300,7 @@ async def test_readme_quick_start_works(fresh_server, sample_code_project):
     result = await server.index_codebase(
         directory_path=str(sample_code_project),
         project_name="my-project",
-        recursive=True
+        recursive=True,
     )
 
     assert result is not None
@@ -296,9 +309,7 @@ async def test_readme_quick_start_works(fresh_server, sample_code_project):
 
     # Step 2: Search the code (from README)
     search_result = await server.search_code(
-        query="authentication",
-        project_name="my-project",
-        limit=5
+        query="authentication", project_name="my-project", limit=5
     )
 
     assert search_result is not None
@@ -310,7 +321,7 @@ async def test_readme_quick_start_works(fresh_server, sample_code_project):
     memory_result = await server.store_memory(
         content="This project uses SHA-256 for password hashing",
         category="fact",
-        tags=["security", "authentication"]
+        tags=["security", "authentication"],
     )
 
     assert memory_result is not None
@@ -318,10 +329,7 @@ async def test_readme_quick_start_works(fresh_server, sample_code_project):
     print(f"✓ Stored memory with ID: {memory_result['memory_id'][:16]}...")
 
     # Step 4: Retrieve memories (from README)
-    memories_result = await server.retrieve_memories(
-        query="password hashing",
-        limit=5
-    )
+    memories_result = await server.retrieve_memories(query="password hashing", limit=5)
 
     assert memories_result is not None
     # Handle both dict with results and list formats

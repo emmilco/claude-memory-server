@@ -2,10 +2,9 @@
 
 import pytest
 import pytest_asyncio
-import asyncio
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import Mock, AsyncMock
 
 from src.memory.incremental_indexer import IncrementalIndexer
 from src.config import ServerConfig
@@ -29,7 +28,7 @@ class Calculator:
         return self.result
 '''
 
-SAMPLE_JAVASCRIPT_CODE = '''
+SAMPLE_JAVASCRIPT_CODE = """
 function greet(name) {
     return `Hello, ${name}!`;
 }
@@ -43,7 +42,7 @@ class Person {
         return `I am ${this.name}`;
     }
 }
-'''
+"""
 
 
 @pytest.fixture
@@ -83,12 +82,12 @@ async def mock_store():
     """Create mock vector store."""
     store = AsyncMock()
     store.initialize = AsyncMock()
-    
+
     # Smart mock that returns IDs matching input size
     async def batch_store_side_effect(items):
         """Store items and return matching IDs."""
         return [f"id{i}" for i in range(len(items))]
-    
+
     store.batch_store = AsyncMock(side_effect=batch_store_side_effect)
     store.close = AsyncMock()
     store.client = Mock()
@@ -102,13 +101,13 @@ async def mock_store():
 async def mock_embedding_generator():
     """Create mock embedding generator."""
     gen = AsyncMock()
-    
+
     # Smart mock that returns embeddings matching input size
     async def batch_generate_side_effect(texts, show_progress=False):
         """Generate embeddings matching input size."""
         # Return one embedding per text
         return [[0.1 + (i * 0.01) for _ in range(384)] for i in range(len(texts))]
-    
+
     gen.batch_generate = AsyncMock(side_effect=batch_generate_side_effect)
     gen.close = AsyncMock()
     return gen
@@ -136,7 +135,9 @@ class TestIncrementalIndexer:
         await indexer.close()
 
     @pytest.mark.asyncio
-    async def test_index_python_file(self, sample_python_file, config, mock_store, mock_embedding_generator):
+    async def test_index_python_file(
+        self, sample_python_file, config, mock_store, mock_embedding_generator
+    ):
         """Test indexing a Python file."""
         indexer = IncrementalIndexer(
             store=mock_store,
@@ -151,7 +152,9 @@ class TestIncrementalIndexer:
         result = await indexer.index_file(sample_python_file)
 
         # Verify results
-        assert result["units_indexed"] > 0  # Should find at least the function and class
+        assert (
+            result["units_indexed"] > 0
+        )  # Should find at least the function and class
         assert "parse_time_ms" in result
         assert result["language"] == "Python"
         assert len(result["unit_ids"]) == result["units_indexed"]
@@ -166,15 +169,19 @@ class TestIncrementalIndexer:
 
         # Verify stored content includes expected function/class names from sample code
         stored_contents = [item[0] for item in stored_items]
-        assert any("calculate_sum" in content for content in stored_contents), \
-            "Should index the calculate_sum function"
-        assert any("Calculator" in content for content in stored_contents), \
-            "Should index the Calculator class"
+        assert any(
+            "calculate_sum" in content for content in stored_contents
+        ), "Should index the calculate_sum function"
+        assert any(
+            "Calculator" in content for content in stored_contents
+        ), "Should index the Calculator class"
 
         await indexer.close()
 
     @pytest.mark.asyncio
-    async def test_index_javascript_file(self, sample_js_file, config, mock_store, mock_embedding_generator):
+    async def test_index_javascript_file(
+        self, sample_js_file, config, mock_store, mock_embedding_generator
+    ):
         """Test indexing a JavaScript file."""
         indexer = IncrementalIndexer(
             store=mock_store,
@@ -195,7 +202,9 @@ class TestIncrementalIndexer:
         await indexer.close()
 
     @pytest.mark.asyncio
-    async def test_index_unsupported_file(self, temp_dir, config, mock_store, mock_embedding_generator):
+    async def test_index_unsupported_file(
+        self, temp_dir, config, mock_store, mock_embedding_generator
+    ):
         """Test that unsupported files are skipped."""
         # Create unsupported file
         unsupported_file = temp_dir / "test.txt"
@@ -224,7 +233,9 @@ class TestIncrementalIndexer:
         await indexer.close()
 
     @pytest.mark.asyncio
-    async def test_index_directory(self, temp_dir, config, mock_store, mock_embedding_generator):
+    async def test_index_directory(
+        self, temp_dir, config, mock_store, mock_embedding_generator
+    ):
         """Test indexing an entire directory."""
         # Create multiple files
         (temp_dir / "file1.py").write_text(SAMPLE_PYTHON_CODE)
@@ -241,7 +252,9 @@ class TestIncrementalIndexer:
         await indexer.initialize()
 
         # Index directory
-        result = await indexer.index_directory(temp_dir, recursive=False, show_progress=False)
+        result = await indexer.index_directory(
+            temp_dir, recursive=False, show_progress=False
+        )
 
         # Verify results
         assert result["total_files"] == 3
@@ -254,7 +267,9 @@ class TestIncrementalIndexer:
         await indexer.close()
 
     @pytest.mark.asyncio
-    async def test_delete_file_units(self, sample_python_file, config, mock_store, mock_embedding_generator):
+    async def test_delete_file_units(
+        self, sample_python_file, config, mock_store, mock_embedding_generator
+    ):
         """Test deleting units for a specific file."""
         indexer = IncrementalIndexer(
             store=mock_store,
@@ -276,7 +291,9 @@ class TestIncrementalIndexer:
         await indexer.close()
 
     @pytest.mark.asyncio
-    async def test_build_indexable_content(self, sample_python_file, config, mock_store, mock_embedding_generator):
+    async def test_build_indexable_content(
+        self, sample_python_file, config, mock_store, mock_embedding_generator
+    ):
         """Test building indexable content from semantic unit."""
         from mcp_performance_core import parse_source_file
 
@@ -304,7 +321,9 @@ class TestIncrementalIndexer:
         assert "Content:" in content
 
     @pytest.mark.asyncio
-    async def test_index_file_updates_existing(self, sample_python_file, config, mock_store, mock_embedding_generator):
+    async def test_index_file_updates_existing(
+        self, sample_python_file, config, mock_store, mock_embedding_generator
+    ):
         """Test that re-indexing a file deletes old units first."""
         indexer = IncrementalIndexer(
             store=mock_store,
@@ -326,7 +345,9 @@ class TestIncrementalIndexer:
         await indexer.close()
 
     @pytest.mark.asyncio
-    async def test_index_nonexistent_file(self, temp_dir, config, mock_store, mock_embedding_generator):
+    async def test_index_nonexistent_file(
+        self, temp_dir, config, mock_store, mock_embedding_generator
+    ):
         """Test that indexing a non-existent file raises error."""
         nonexistent = temp_dir / "nonexistent.py"
 
@@ -346,7 +367,9 @@ class TestIncrementalIndexer:
         await indexer.close()
 
     @pytest.mark.asyncio
-    async def test_recursive_directory_indexing(self, temp_dir, config, mock_store, mock_embedding_generator):
+    async def test_recursive_directory_indexing(
+        self, temp_dir, config, mock_store, mock_embedding_generator
+    ):
         """Test recursive directory indexing."""
         # Create subdirectory with files
         subdir = temp_dir / "subdir"
@@ -364,7 +387,9 @@ class TestIncrementalIndexer:
         await indexer.initialize()
 
         # Index recursively
-        result = await indexer.index_directory(temp_dir, recursive=True, show_progress=False)
+        result = await indexer.index_directory(
+            temp_dir, recursive=True, show_progress=False
+        )
 
         # Should find both files
         assert result["total_files"] == 2
@@ -373,7 +398,9 @@ class TestIncrementalIndexer:
         await indexer.close()
 
     @pytest.mark.asyncio
-    async def test_skip_hidden_files(self, temp_dir, config, mock_store, mock_embedding_generator):
+    async def test_skip_hidden_files(
+        self, temp_dir, config, mock_store, mock_embedding_generator
+    ):
         """Test that hidden files are skipped."""
         # Create hidden file
         (temp_dir / ".hidden.py").write_text(SAMPLE_PYTHON_CODE)
@@ -388,7 +415,9 @@ class TestIncrementalIndexer:
 
         await indexer.initialize()
 
-        result = await indexer.index_directory(temp_dir, recursive=False, show_progress=False)
+        result = await indexer.index_directory(
+            temp_dir, recursive=False, show_progress=False
+        )
 
         # Should only find visible file
         assert result["total_files"] == 1

@@ -1,11 +1,8 @@
 """Tests for health check command."""
 
 import pytest
-import sys
-import subprocess
-import shutil
 from pathlib import Path
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
+from unittest.mock import patch, AsyncMock, MagicMock
 from src.cli.health_command import HealthCommand
 from tests.conftest import mock_embedding
 
@@ -24,7 +21,7 @@ class TestHealthCommandInitialization:
 
     def test_init_without_rich(self):
         """Test initialization when rich is not available."""
-        with patch('src.cli.health_command.RICH_AVAILABLE', False):
+        with patch("src.cli.health_command.RICH_AVAILABLE", False):
             cmd = HealthCommand()
             assert cmd.console is None
 
@@ -52,7 +49,7 @@ class TestSystemChecks:
         mock_version.minor = 7
         mock_version.micro = 0
 
-        with patch('sys.version_info', mock_version):
+        with patch("sys.version_info", mock_version):
             success, message = await cmd.check_python_version()
             assert success is False
             assert "3.7.0" in message
@@ -75,7 +72,7 @@ class TestSystemChecks:
         mock_usage = MagicMock()
         mock_usage.free = 100 * 1024 * 1024  # 100MB
 
-        with patch('shutil.disk_usage', return_value=mock_usage):
+        with patch("shutil.disk_usage", return_value=mock_usage):
             success, message = await cmd.check_disk_space()
             assert success is False
             assert "need 0.5 GB" in message
@@ -85,7 +82,7 @@ class TestSystemChecks:
         """Test disk space check with error."""
         cmd = HealthCommand()
 
-        with patch('shutil.disk_usage', side_effect=Exception("Disk error")):
+        with patch("shutil.disk_usage", side_effect=Exception("Disk error")):
             success, message = await cmd.check_disk_space()
             assert success is False
             assert "Could not check" in message
@@ -95,12 +92,12 @@ class TestSystemChecks:
         """Test memory check on macOS."""
         cmd = HealthCommand()
 
-        with patch('sys.platform', 'darwin'):
+        with patch("sys.platform", "darwin"):
             mock_result = MagicMock()
             mock_result.returncode = 0
             mock_result.stdout = "hw.memsize: 17179869184"  # 16GB
 
-            with patch('subprocess.run', return_value=mock_result):
+            with patch("subprocess.run", return_value=mock_result):
                 success, message = await cmd.check_memory()
                 assert success is True
                 assert "GB total" in message
@@ -110,7 +107,7 @@ class TestSystemChecks:
         """Test memory check on unknown platform."""
         cmd = HealthCommand()
 
-        with patch('sys.platform', 'unknown'):
+        with patch("sys.platform", "unknown"):
             success, message = await cmd.check_memory()
             assert success is True
             assert "Unknown" in message or "Available" in message
@@ -124,7 +121,7 @@ class TestParserChecks:
         """Test Rust parser check when available."""
         cmd = HealthCommand()
 
-        with patch.dict('sys.modules', {'mcp_performance_core': MagicMock()}):
+        with patch.dict("sys.modules", {"mcp_performance_core": MagicMock()}):
             success, message = await cmd.check_rust_parser()
             assert success is True
             assert "optimal" in message.lower()
@@ -134,7 +131,10 @@ class TestParserChecks:
         """Test Rust parser check when not available."""
         cmd = HealthCommand()
 
-        with patch('builtins.__import__', side_effect=ImportError("No module named 'mcp_performance_core'")):
+        with patch(
+            "builtins.__import__",
+            side_effect=ImportError("No module named 'mcp_performance_core'"),
+        ):
             success, message = await cmd.check_rust_parser()
             assert success is False
             assert "fallback" in message.lower()
@@ -158,14 +158,14 @@ class TestStorageChecks:
         """Test SQLite storage check when database exists."""
         cmd = HealthCommand()
 
-        with patch('src.config.get_config') as mock_config:
+        with patch("src.config.get_config") as mock_config:
             config = MagicMock()
             config.storage_backend = "sqlite"
             config.sqlite_path_expanded = Path("/tmp/test.db")
             mock_config.return_value = config
 
-            with patch.object(Path, 'exists', return_value=True):
-                with patch.object(Path, 'stat') as mock_stat:
+            with patch.object(Path, "exists", return_value=True):
+                with patch.object(Path, "stat") as mock_stat:
                     mock_stat.return_value.st_size = 1024 * 1024  # 1MB
                     success, backend, message = await cmd.check_storage_backend()
 
@@ -178,13 +178,13 @@ class TestStorageChecks:
         """Test SQLite storage check when database doesn't exist."""
         cmd = HealthCommand()
 
-        with patch('src.config.get_config') as mock_config:
+        with patch("src.config.get_config") as mock_config:
             config = MagicMock()
             config.storage_backend = "sqlite"
             config.sqlite_path_expanded = Path("/tmp/test.db")
             mock_config.return_value = config
 
-            with patch.object(Path, 'exists', return_value=False):
+            with patch.object(Path, "exists", return_value=False):
                 success, backend, message = await cmd.check_storage_backend()
 
                 assert success is True
@@ -196,7 +196,7 @@ class TestStorageChecks:
         """Test Qdrant storage check when running."""
         cmd = HealthCommand()
 
-        with patch('src.config.get_config') as mock_config:
+        with patch("src.config.get_config") as mock_config:
             config = MagicMock()
             config.storage_backend = "qdrant"
             config.qdrant_url = "http://localhost:6333"
@@ -206,7 +206,7 @@ class TestStorageChecks:
             mock_result.returncode = 0
             mock_result.stdout = '{"version":"v1.0.0"}'
 
-            with patch('subprocess.run', return_value=mock_result):
+            with patch("subprocess.run", return_value=mock_result):
                 success, backend, message = await cmd.check_storage_backend()
 
                 assert success is True
@@ -218,7 +218,7 @@ class TestStorageChecks:
         """Test Qdrant storage check when not running."""
         cmd = HealthCommand()
 
-        with patch('src.config.get_config') as mock_config:
+        with patch("src.config.get_config") as mock_config:
             config = MagicMock()
             config.storage_backend = "qdrant"
             config.qdrant_url = "http://localhost:6333"
@@ -228,7 +228,7 @@ class TestStorageChecks:
             mock_result.returncode = 1
             mock_result.stdout = ""
 
-            with patch('subprocess.run', return_value=mock_result):
+            with patch("subprocess.run", return_value=mock_result):
                 success, backend, message = await cmd.check_storage_backend()
 
                 assert success is False
@@ -244,13 +244,15 @@ class TestEmbeddingChecks:
         """Test embedding model check when successful."""
         cmd = HealthCommand()
 
-        with patch('src.embeddings.generator.EmbeddingGenerator') as mock_gen:
+        with patch("src.embeddings.generator.EmbeddingGenerator") as mock_gen:
             mock_instance = AsyncMock()
             # all-MiniLM-L6-v2 has 384 dimensions
-            mock_instance.generate = AsyncMock(return_value=mock_embedding(dim=384, value=0.1))
+            mock_instance.generate = AsyncMock(
+                return_value=mock_embedding(dim=384, value=0.1)
+            )
             mock_gen.return_value = mock_instance
 
-            with patch('src.config.get_config') as mock_config:
+            with patch("src.config.get_config") as mock_config:
                 config = MagicMock()
                 config.embedding_model = "all-MiniLM-L6-v2"
                 mock_config.return_value = config
@@ -266,7 +268,10 @@ class TestEmbeddingChecks:
         """Test embedding model check when error occurs."""
         cmd = HealthCommand()
 
-        with patch('src.embeddings.generator.EmbeddingGenerator', side_effect=Exception("Model error")):
+        with patch(
+            "src.embeddings.generator.EmbeddingGenerator",
+            side_effect=Exception("Model error"),
+        ):
             success, message = await cmd.check_embedding_model()
 
             assert success is False
@@ -277,20 +282,20 @@ class TestEmbeddingChecks:
         """Test embedding cache check when cache exists."""
         cmd = HealthCommand()
 
-        with patch('src.config.get_config') as mock_config:
+        with patch("src.config.get_config") as mock_config:
             config = MagicMock()
             config.embedding_cache_path_expanded = Path("/tmp/cache.db")
             mock_config.return_value = config
 
-            with patch.object(Path, 'exists', return_value=True):
-                with patch.object(Path, 'stat') as mock_stat:
+            with patch.object(Path, "exists", return_value=True):
+                with patch.object(Path, "stat") as mock_stat:
                     mock_stat.return_value.st_size = 2 * 1024 * 1024  # 2MB
 
-                    with patch('src.embeddings.cache.EmbeddingCache') as mock_cache:
+                    with patch("src.embeddings.cache.EmbeddingCache") as mock_cache:
                         mock_instance = MagicMock()
                         mock_instance.get_stats.return_value = {
                             "hit_rate": 0.85,
-                            "total_entries": 100
+                            "total_entries": 100,
                         }
                         mock_cache.return_value = mock_instance
 
@@ -305,12 +310,12 @@ class TestEmbeddingChecks:
         """Test embedding cache check when cache doesn't exist."""
         cmd = HealthCommand()
 
-        with patch('src.config.get_config') as mock_config:
+        with patch("src.config.get_config") as mock_config:
             config = MagicMock()
             config.embedding_cache_path_expanded = Path("/tmp/cache.db")
             mock_config.return_value = config
 
-            with patch.object(Path, 'exists', return_value=False):
+            with patch.object(Path, "exists", return_value=False):
                 success, message = await cmd.check_embedding_cache()
 
                 assert success is True
@@ -406,7 +411,7 @@ class TestPrintMethods:
     def test_print_section_with_rich(self):
         """Test print_section with rich available."""
         cmd = HealthCommand()
-        with patch.object(cmd, 'console') as mock_console:
+        with patch.object(cmd, "console") as mock_console:
             cmd.print_section("Test Section")
             # Verify console.print was called to display section
             assert mock_console.print.called
@@ -416,11 +421,11 @@ class TestPrintMethods:
 
     def test_print_section_without_rich(self):
         """Test print_section without rich."""
-        with patch('src.cli.health_command.RICH_AVAILABLE', False):
+        with patch("src.cli.health_command.RICH_AVAILABLE", False):
             cmd = HealthCommand()
             cmd.console = None
             # Mock print to verify fallback behavior
-            with patch('builtins.print') as mock_print:
+            with patch("builtins.print") as mock_print:
                 cmd.print_section("Test Section")
                 # Verify print fallback was used
                 assert mock_print.called
@@ -431,7 +436,7 @@ class TestPrintMethods:
     def test_print_check_success(self):
         """Test print_check with success."""
         cmd = HealthCommand()
-        with patch.object(cmd, 'console') as mock_console:
+        with patch.object(cmd, "console") as mock_console:
             cmd.print_check("Test", True, "Success message")
             # Verify console.print was called
             assert mock_console.print.called
@@ -442,7 +447,7 @@ class TestPrintMethods:
     def test_print_check_failure(self):
         """Test print_check with failure."""
         cmd = HealthCommand()
-        with patch.object(cmd, 'console') as mock_console:
+        with patch.object(cmd, "console") as mock_console:
             cmd.print_check("Test", False, "Failure message")
             # Verify console.print was called
             assert mock_console.print.called
@@ -453,7 +458,7 @@ class TestPrintMethods:
     def test_print_warning(self):
         """Test print_warning."""
         cmd = HealthCommand()
-        with patch.object(cmd, 'console') as mock_console:
+        with patch.object(cmd, "console") as mock_console:
             cmd.print_warning("Test", "Warning message")
             # Verify console.print was called
             assert mock_console.print.called
@@ -467,14 +472,17 @@ class TestPrintMethods:
         cmd.errors = []
         cmd.warnings = []
         cmd.recommendations = []
-        with patch.object(cmd, 'console') as mock_console:
+        with patch.object(cmd, "console") as mock_console:
             cmd.print_summary()
             # Verify console.print was called to display summary
             assert mock_console.print.called
             # Verify healthy status message was shown
             call_args = str(mock_console.print.call_args_list)
             # Should contain success/healthy indicator
-            assert any(keyword in call_args.lower() for keyword in ['healthy', 'success', 'ready', 'ok'])
+            assert any(
+                keyword in call_args.lower()
+                for keyword in ["healthy", "success", "ready", "ok"]
+            )
 
     def test_print_summary_with_errors(self):
         """Test print_summary with errors."""
@@ -482,7 +490,7 @@ class TestPrintMethods:
         cmd.errors = ["Error 1", "Error 2"]
         cmd.warnings = ["Warning 1"]
         cmd.recommendations = ["Rec 1"]
-        with patch.object(cmd, 'console') as mock_console:
+        with patch.object(cmd, "console") as mock_console:
             cmd.print_summary()
             # Verify console.print was called to display summary
             assert mock_console.print.called
@@ -490,7 +498,10 @@ class TestPrintMethods:
             call_args = str(mock_console.print.call_args_list)
             assert "Error 1" in call_args or "2" in call_args  # Error count or content
             # Should indicate problems found
-            assert any(keyword in call_args.lower() for keyword in ['error', 'warning', 'issue', 'problem'])
+            assert any(
+                keyword in call_args.lower()
+                for keyword in ["error", "warning", "issue", "problem"]
+            )
 
 
 class TestRunCommand:
@@ -545,15 +556,12 @@ class TestPerformanceChecks:
         """Test cache hit rate check with good hit rate."""
         cmd = HealthCommand()
 
-        with patch('src.embeddings.cache.EmbeddingCache') as mock_cache_cls:
+        with patch("src.embeddings.cache.EmbeddingCache") as mock_cache_cls:
             mock_cache = MagicMock()
-            mock_cache.get_stats.return_value = {
-                "total_queries": 100,
-                "cache_hits": 85
-            }
+            mock_cache.get_stats.return_value = {"total_queries": 100, "cache_hits": 85}
             mock_cache_cls.return_value = mock_cache
 
-            with patch('src.config.get_config') as mock_config:
+            with patch("src.config.get_config") as mock_config:
                 config = MagicMock()
                 mock_config.return_value = config
 
@@ -573,15 +581,12 @@ class TestPerformanceChecks:
         """Test cache hit rate check with low hit rate."""
         cmd = HealthCommand()
 
-        with patch('src.embeddings.cache.EmbeddingCache') as mock_cache_cls:
+        with patch("src.embeddings.cache.EmbeddingCache") as mock_cache_cls:
             mock_cache = MagicMock()
-            mock_cache.get_stats.return_value = {
-                "total_queries": 100,
-                "cache_hits": 50
-            }
+            mock_cache.get_stats.return_value = {"total_queries": 100, "cache_hits": 50}
             mock_cache_cls.return_value = mock_cache
 
-            with patch('src.config.get_config') as mock_config:
+            with patch("src.config.get_config") as mock_config:
                 config = MagicMock()
                 mock_config.return_value = config
 
@@ -597,15 +602,12 @@ class TestPerformanceChecks:
         """Test cache hit rate check with no queries yet."""
         cmd = HealthCommand()
 
-        with patch('src.embeddings.cache.EmbeddingCache') as mock_cache_cls:
+        with patch("src.embeddings.cache.EmbeddingCache") as mock_cache_cls:
             mock_cache = MagicMock()
-            mock_cache.get_stats.return_value = {
-                "total_queries": 0,
-                "cache_hits": 0
-            }
+            mock_cache.get_stats.return_value = {"total_queries": 0, "cache_hits": 0}
             mock_cache_cls.return_value = mock_cache
 
-            with patch('src.config.get_config') as mock_config:
+            with patch("src.config.get_config") as mock_config:
                 config = MagicMock()
                 mock_config.return_value = config
 
@@ -620,7 +622,9 @@ class TestPerformanceChecks:
         """Test cache hit rate check with error."""
         cmd = HealthCommand()
 
-        with patch('src.embeddings.cache.EmbeddingCache', side_effect=Exception("Cache error")):
+        with patch(
+            "src.embeddings.cache.EmbeddingCache", side_effect=Exception("Cache error")
+        ):
             success, message, hit_rate = await cmd.check_cache_hit_rate()
 
             assert success is False
@@ -636,7 +640,9 @@ class TestEdgeCases:
         """Test check_indexed_projects with error."""
         cmd = HealthCommand()
 
-        with patch('src.store.create_memory_store', side_effect=Exception("Store error")):
+        with patch(
+            "src.store.create_memory_store", side_effect=Exception("Store error")
+        ):
             success, message, projects = await cmd.check_indexed_projects()
 
             assert success is False
@@ -648,12 +654,12 @@ class TestEdgeCases:
         """Test check_indexed_projects success path."""
         cmd = HealthCommand()
 
-        with patch('src.store.create_memory_store') as mock_create:
+        with patch("src.store.create_memory_store") as mock_create:
             mock_store = AsyncMock()
             mock_store.initialize = AsyncMock()
             mock_create.return_value = mock_store
 
-            with patch('src.config.get_config') as mock_config:
+            with patch("src.config.get_config") as mock_config:
                 config = MagicMock()
                 mock_config.return_value = config
 
@@ -671,21 +677,24 @@ class TestStaleProjectChecks:
         """Test stale projects check when all projects are current."""
         cmd = HealthCommand()
 
-        with patch('src.store.create_memory_store') as mock_create:
+        with patch("src.store.create_memory_store") as mock_create:
             mock_store = AsyncMock()
             mock_store.initialize = AsyncMock()
-            mock_store.get_all_projects = AsyncMock(return_value=["project1", "project2"])
+            mock_store.get_all_projects = AsyncMock(
+                return_value=["project1", "project2"]
+            )
 
             from datetime import datetime, UTC
+
             recent_date = datetime.now(UTC).isoformat()
 
-            mock_store.get_project_stats = AsyncMock(return_value={
-                "last_updated": recent_date
-            })
+            mock_store.get_project_stats = AsyncMock(
+                return_value={"last_updated": recent_date}
+            )
             mock_store.close = AsyncMock()
             mock_create.return_value = mock_store
 
-            with patch('src.config.get_config') as mock_config:
+            with patch("src.config.get_config") as mock_config:
                 config = MagicMock()
                 mock_config.return_value = config
 
@@ -700,21 +709,22 @@ class TestStaleProjectChecks:
         """Test stale projects check when there are stale projects."""
         cmd = HealthCommand()
 
-        with patch('src.store.create_memory_store') as mock_create:
+        with patch("src.store.create_memory_store") as mock_create:
             mock_store = AsyncMock()
             mock_store.initialize = AsyncMock()
             mock_store.get_all_projects = AsyncMock(return_value=["old_project"])
 
             from datetime import datetime, timedelta, UTC
+
             old_date = (datetime.now(UTC) - timedelta(days=45)).isoformat()
 
-            mock_store.get_project_stats = AsyncMock(return_value={
-                "last_updated": old_date
-            })
+            mock_store.get_project_stats = AsyncMock(
+                return_value={"last_updated": old_date}
+            )
             mock_store.close = AsyncMock()
             mock_create.return_value = mock_store
 
-            with patch('src.config.get_config') as mock_config:
+            with patch("src.config.get_config") as mock_config:
                 config = MagicMock()
                 mock_config.return_value = config
 
@@ -731,7 +741,9 @@ class TestStaleProjectChecks:
         """Test stale projects check with error."""
         cmd = HealthCommand()
 
-        with patch('src.store.create_memory_store', side_effect=Exception("Store error")):
+        with patch(
+            "src.store.create_memory_store", side_effect=Exception("Store error")
+        ):
             success, message, stale = await cmd.check_stale_projects()
 
             assert success is False
@@ -747,14 +759,12 @@ class TestTokenSavingsEstimation:
         """Test token savings estimation with no cache hits."""
         cmd = HealthCommand()
 
-        with patch('src.embeddings.cache.EmbeddingCache') as mock_cache_cls:
+        with patch("src.embeddings.cache.EmbeddingCache") as mock_cache_cls:
             mock_cache = MagicMock()
-            mock_cache.get_stats.return_value = {
-                "cache_hits": 0
-            }
+            mock_cache.get_stats.return_value = {"cache_hits": 0}
             mock_cache_cls.return_value = mock_cache
 
-            with patch('src.config.get_config') as mock_config:
+            with patch("src.config.get_config") as mock_config:
                 config = MagicMock()
                 mock_config.return_value = config
 
@@ -769,14 +779,12 @@ class TestTokenSavingsEstimation:
         """Test token savings estimation with small number of hits."""
         cmd = HealthCommand()
 
-        with patch('src.embeddings.cache.EmbeddingCache') as mock_cache_cls:
+        with patch("src.embeddings.cache.EmbeddingCache") as mock_cache_cls:
             mock_cache = MagicMock()
-            mock_cache.get_stats.return_value = {
-                "cache_hits": 5
-            }
+            mock_cache.get_stats.return_value = {"cache_hits": 5}
             mock_cache_cls.return_value = mock_cache
 
-            with patch('src.config.get_config') as mock_config:
+            with patch("src.config.get_config") as mock_config:
                 config = MagicMock()
                 mock_config.return_value = config
 
@@ -791,14 +799,12 @@ class TestTokenSavingsEstimation:
         """Test token savings estimation with thousands of tokens."""
         cmd = HealthCommand()
 
-        with patch('src.embeddings.cache.EmbeddingCache') as mock_cache_cls:
+        with patch("src.embeddings.cache.EmbeddingCache") as mock_cache_cls:
             mock_cache = MagicMock()
-            mock_cache.get_stats.return_value = {
-                "cache_hits": 50
-            }
+            mock_cache.get_stats.return_value = {"cache_hits": 50}
             mock_cache_cls.return_value = mock_cache
 
-            with patch('src.config.get_config') as mock_config:
+            with patch("src.config.get_config") as mock_config:
                 config = MagicMock()
                 mock_config.return_value = config
 
@@ -813,14 +819,12 @@ class TestTokenSavingsEstimation:
         """Test token savings estimation with millions of tokens."""
         cmd = HealthCommand()
 
-        with patch('src.embeddings.cache.EmbeddingCache') as mock_cache_cls:
+        with patch("src.embeddings.cache.EmbeddingCache") as mock_cache_cls:
             mock_cache = MagicMock()
-            mock_cache.get_stats.return_value = {
-                "cache_hits": 50000
-            }
+            mock_cache.get_stats.return_value = {"cache_hits": 50000}
             mock_cache_cls.return_value = mock_cache
 
-            with patch('src.config.get_config') as mock_config:
+            with patch("src.config.get_config") as mock_config:
                 config = MagicMock()
                 mock_config.return_value = config
 
@@ -835,7 +839,9 @@ class TestTokenSavingsEstimation:
         """Test token savings estimation with error."""
         cmd = HealthCommand()
 
-        with patch('src.embeddings.cache.EmbeddingCache', side_effect=Exception("Cache error")):
+        with patch(
+            "src.embeddings.cache.EmbeddingCache", side_effect=Exception("Cache error")
+        ):
             success, message, tokens = await cmd.estimate_token_savings()
 
             assert success is False
@@ -851,7 +857,7 @@ class TestQdrantLatencyChecks:
         """Test Qdrant latency check with excellent performance."""
         cmd = HealthCommand()
 
-        with patch('src.store.create_memory_store') as mock_create:
+        with patch("src.store.create_memory_store") as mock_create:
             mock_store = AsyncMock()
             mock_store.initialize = AsyncMock()
             mock_store.client = MagicMock()
@@ -860,12 +866,12 @@ class TestQdrantLatencyChecks:
             mock_store.close = AsyncMock()
             mock_create.return_value = mock_store
 
-            with patch('src.config.get_config') as mock_config:
+            with patch("src.config.get_config") as mock_config:
                 config = MagicMock()
                 config.storage_backend = "qdrant"
                 mock_config.return_value = config
 
-                with patch('time.time', side_effect=[0, 0.010]):  # 10ms
+                with patch("time.time", side_effect=[0, 0.010]):  # 10ms
                     success, message, latency = await cmd.check_qdrant_latency()
 
                     assert success is True
@@ -877,7 +883,7 @@ class TestQdrantLatencyChecks:
         """Test Qdrant latency check with warning threshold."""
         cmd = HealthCommand()
 
-        with patch('src.store.create_memory_store') as mock_create:
+        with patch("src.store.create_memory_store") as mock_create:
             mock_store = AsyncMock()
             mock_store.initialize = AsyncMock()
             mock_store.client = MagicMock()
@@ -886,12 +892,12 @@ class TestQdrantLatencyChecks:
             mock_store.close = AsyncMock()
             mock_create.return_value = mock_store
 
-            with patch('src.config.get_config') as mock_config:
+            with patch("src.config.get_config") as mock_config:
                 config = MagicMock()
                 config.storage_backend = "qdrant"
                 mock_config.return_value = config
 
-                with patch('time.time', side_effect=[0, 0.060]):  # 60ms
+                with patch("time.time", side_effect=[0, 0.060]):  # 60ms
                     success, message, latency = await cmd.check_qdrant_latency()
 
                     assert success is False
@@ -903,7 +909,7 @@ class TestQdrantLatencyChecks:
         """Test Qdrant latency check when using SQLite."""
         cmd = HealthCommand()
 
-        with patch('src.config.get_config') as mock_config:
+        with patch("src.config.get_config") as mock_config:
             config = MagicMock()
             config.storage_backend = "sqlite"
             mock_config.return_value = config
@@ -940,12 +946,14 @@ class TestEnhancedRunChecks:
         cmd.check_cache_hit_rate = AsyncMock(return_value=(True, "85%", 85.0))
         cmd.estimate_token_savings = AsyncMock(return_value=(True, "5.0K tokens", 5000))
         cmd.check_stale_projects = AsyncMock(return_value=(True, "All current", []))
-        cmd.get_project_stats_summary = AsyncMock(return_value={
-            "total_projects": 1,
-            "total_memories": 100,
-            "total_files": 50,
-            "index_size_bytes": 1024 * 1024
-        })
+        cmd.get_project_stats_summary = AsyncMock(
+            return_value={
+                "total_projects": 1,
+                "total_memories": 100,
+                "total_files": 50,
+                "index_size_bytes": 1024 * 1024,
+            }
+        )
 
         await cmd.run_checks()
 
@@ -970,12 +978,14 @@ class TestEnhancedRunChecks:
         cmd.check_cache_hit_rate = AsyncMock(return_value=(False, "50% (low)", 50.0))
         cmd.estimate_token_savings = AsyncMock(return_value=(True, "1.0K tokens", 1000))
         cmd.check_stale_projects = AsyncMock(return_value=(True, "All current", []))
-        cmd.get_project_stats_summary = AsyncMock(return_value={
-            "total_projects": 1,
-            "total_memories": 100,
-            "total_files": 50,
-            "index_size_bytes": 1024 * 1024
-        })
+        cmd.get_project_stats_summary = AsyncMock(
+            return_value={
+                "total_projects": 1,
+                "total_memories": 100,
+                "total_files": 50,
+                "index_size_bytes": 1024 * 1024,
+            }
+        )
 
         await cmd.run_checks()
 

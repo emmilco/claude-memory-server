@@ -2,7 +2,6 @@
 
 import pytest
 from unittest.mock import MagicMock, patch
-from qdrant_client.models import CollectionInfo, CollectionsResponse, CollectionDescription
 
 from src.config import ServerConfig
 from src.store.qdrant_setup import QdrantSetup
@@ -14,7 +13,7 @@ class TestQdrantSetupCoverage:
 
     def test_config_none_uses_get_config(self):
         """Test that config=None triggers get_config() (lines 34-35)."""
-        with patch('src.config.get_config') as mock_get_config:
+        with patch("src.config.get_config") as mock_get_config:
             mock_config = ServerConfig(qdrant_url="http://localhost:6333")
             mock_get_config.return_value = mock_config
 
@@ -28,7 +27,7 @@ class TestQdrantSetupCoverage:
         config = ServerConfig(qdrant_url="http://invalid:9999")
         setup = QdrantSetup(config)
 
-        with patch('src.store.qdrant_setup.QdrantClient') as mock_client_class:
+        with patch("src.store.qdrant_setup.QdrantClient") as mock_client_class:
             mock_client_class.side_effect = ConnectionError("Cannot connect")
 
             with pytest.raises(QdrantConnectionError):
@@ -41,7 +40,7 @@ class TestQdrantSetupCoverage:
 
         assert setup.client is None
 
-        with patch.object(setup, 'connect') as mock_connect:
+        with patch.object(setup, "connect") as mock_connect:
             mock_client = MagicMock()
             setup.client = mock_client
 
@@ -87,8 +86,8 @@ class TestQdrantSetupCoverage:
 
         assert setup.client is None
 
-        with patch.object(setup, 'connect') as mock_connect:
-            with patch.object(setup, 'collection_exists', return_value=False):
+        with patch.object(setup, "connect") as mock_connect:
+            with patch.object(setup, "collection_exists", return_value=False):
                 mock_client = MagicMock()
                 setup.client = mock_client
 
@@ -116,11 +115,13 @@ class TestQdrantSetupCoverage:
         setup.client = MagicMock()
 
         # Mock collection exists
-        with patch.object(setup, 'collection_exists', side_effect=[True, False]):
+        with patch.object(setup, "collection_exists", side_effect=[True, False]):
             setup.create_collection(recreate=True)
 
             # Should have deleted the collection
-            setup.client.delete_collection.assert_called_once_with(setup.collection_name)
+            setup.client.delete_collection.assert_called_once_with(
+                setup.collection_name
+            )
 
     def test_create_collection_already_exists(self):
         """Test create_collection early return if exists (lines 106-107)."""
@@ -129,7 +130,7 @@ class TestQdrantSetupCoverage:
         setup.client = MagicMock()
 
         # Mock collection exists
-        with patch.object(setup, 'collection_exists', return_value=True):
+        with patch.object(setup, "collection_exists", return_value=True):
             setup.create_collection(recreate=False)
 
             # Should not call create_collection
@@ -141,7 +142,7 @@ class TestQdrantSetupCoverage:
         setup = QdrantSetup(config)
         setup.client = MagicMock()
 
-        with patch.object(setup, 'collection_exists', return_value=False):
+        with patch.object(setup, "collection_exists", return_value=False):
             setup.client.create_collection.side_effect = RuntimeError("Creation failed")
 
             with pytest.raises(StorageError) as exc_info:
@@ -156,7 +157,7 @@ class TestQdrantSetupCoverage:
 
         assert setup.client is None
 
-        with patch.object(setup, 'connect') as mock_connect:
+        with patch.object(setup, "connect") as mock_connect:
             mock_client = MagicMock()
 
             def connect_side_effect():
@@ -180,7 +181,9 @@ class TestQdrantSetupCoverage:
         setup.client = MagicMock()
 
         # Mock create_payload_index to raise error (index already exists)
-        setup.client.create_payload_index.side_effect = Exception("Index already exists")
+        setup.client.create_payload_index.side_effect = Exception(
+            "Index already exists"
+        )
 
         # Should not raise, just log
         setup.create_payload_indices()
@@ -195,7 +198,10 @@ class TestQdrantSetupCoverage:
         setup.client = MagicMock()
 
         # Make the iteration itself fail
-        with patch('src.store.qdrant_setup.PayloadSchemaType', side_effect=RuntimeError("Unexpected error")):
+        with patch(
+            "src.store.qdrant_setup.PayloadSchemaType",
+            side_effect=RuntimeError("Unexpected error"),
+        ):
             # Should not raise, just log warning
             setup.create_payload_indices()
 
@@ -206,8 +212,8 @@ class TestQdrantSetupCoverage:
 
         assert setup.client is None
 
-        with patch.object(setup, 'connect') as mock_connect:
-            with patch.object(setup, 'collection_exists', return_value=True):
+        with patch.object(setup, "connect") as mock_connect:
+            with patch.object(setup, "collection_exists", return_value=True):
                 mock_client = MagicMock()
 
                 def connect_side_effect():
@@ -229,7 +235,7 @@ class TestQdrantSetupCoverage:
 
         assert setup.client is None
 
-        with patch.object(setup, 'connect') as mock_connect:
+        with patch.object(setup, "connect") as mock_connect:
             mock_client = MagicMock()
 
             def connect_side_effect():
@@ -275,7 +281,7 @@ class TestQdrantSetupCoverage:
 
         assert setup.client is None
 
-        with patch.object(setup, 'connect') as mock_connect:
+        with patch.object(setup, "connect") as mock_connect:
             mock_client = MagicMock()
 
             def connect_side_effect():

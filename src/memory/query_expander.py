@@ -57,28 +57,94 @@ def extract_key_terms(text: str, min_length: int = 3) -> Set[str]:
         Set of key terms
     """
     # Remove punctuation and convert to lowercase
-    text = re.sub(r'[^\w\s]', ' ', text.lower())
+    text = re.sub(r"[^\w\s]", " ", text.lower())
 
     # Split into words
     words = text.split()
 
     # Common stop words to exclude
     stop_words = {
-        'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
-        'of', 'with', 'by', 'from', 'up', 'about', 'into', 'through', 'during',
-        'before', 'after', 'above', 'below', 'between', 'under', 'again',
-        'further', 'then', 'once', 'here', 'there', 'when', 'where', 'why',
-        'how', 'all', 'both', 'each', 'few', 'more', 'most', 'other', 'some',
-        'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than',
-        'too', 'very', 'can', 'will', 'just', 'should', 'now',
-        'what', 'does', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
-        'have', 'has', 'had', 'having', 'do', 'did', 'doing',
+        "the",
+        "a",
+        "an",
+        "and",
+        "or",
+        "but",
+        "in",
+        "on",
+        "at",
+        "to",
+        "for",
+        "of",
+        "with",
+        "by",
+        "from",
+        "up",
+        "about",
+        "into",
+        "through",
+        "during",
+        "before",
+        "after",
+        "above",
+        "below",
+        "between",
+        "under",
+        "again",
+        "further",
+        "then",
+        "once",
+        "here",
+        "there",
+        "when",
+        "where",
+        "why",
+        "how",
+        "all",
+        "both",
+        "each",
+        "few",
+        "more",
+        "most",
+        "other",
+        "some",
+        "such",
+        "no",
+        "nor",
+        "not",
+        "only",
+        "own",
+        "same",
+        "so",
+        "than",
+        "too",
+        "very",
+        "can",
+        "will",
+        "just",
+        "should",
+        "now",
+        "what",
+        "does",
+        "is",
+        "are",
+        "was",
+        "were",
+        "be",
+        "been",
+        "being",
+        "have",
+        "has",
+        "had",
+        "having",
+        "do",
+        "did",
+        "doing",
     }
 
     # Filter and return
     return {
-        word for word in words
-        if len(word) >= min_length and word not in stop_words
+        word for word in words if len(word) >= min_length and word not in stop_words
     }
 
 
@@ -138,8 +204,7 @@ class QueryExpander:
 
             # Find related queries
             related_terms = await self._find_related_terms(
-                current_embedding,
-                recent_queries
+                current_embedding, recent_queries
             )
 
             # Apply expansion if we found related terms
@@ -225,7 +290,7 @@ class QueryExpander:
         terms_to_add = list(new_terms)[:max_expansion_terms]
 
         # Build expanded query
-        expansion_str = ' '.join(terms_to_add)
+        expansion_str = " ".join(terms_to_add)
         expanded = f"{query} {expansion_str}"
 
         # Update stats
@@ -233,8 +298,8 @@ class QueryExpander:
         total_expansions = self.stats["queries_expanded"] + 1
         current_avg = self.stats["avg_expansion_length"]
         self.stats["avg_expansion_length"] = (
-            (current_avg * (total_expansions - 1) + expansion_length) / total_expansions
-        )
+            current_avg * (total_expansions - 1) + expansion_length
+        ) / total_expansions
 
         return expanded
 
@@ -269,15 +334,21 @@ class QueryExpander:
                 expanded_with_synonyms = expand_with_synonyms(expanded, max_synonyms=2)
                 if expanded_with_synonyms != expanded:
                     self.stats["synonym_expansions"] += 1
-                    logger.debug(f"Added synonyms: '{expanded}' -> '{expanded_with_synonyms}'")
+                    logger.debug(
+                        f"Added synonyms: '{expanded}' -> '{expanded_with_synonyms}'"
+                    )
                     expanded = expanded_with_synonyms
 
             # Apply code context expansion
             if enable_context:
-                expanded_with_context = expand_with_code_context(expanded, max_context_terms=3)
+                expanded_with_context = expand_with_code_context(
+                    expanded, max_context_terms=3
+                )
                 if expanded_with_context != expanded:
                     self.stats["context_expansions"] += 1
-                    logger.debug(f"Added context: '{expanded}' -> '{expanded_with_context}'")
+                    logger.debug(
+                        f"Added context: '{expanded}' -> '{expanded_with_context}'"
+                    )
                     expanded = expanded_with_context
 
             # Update overall stats if query was expanded

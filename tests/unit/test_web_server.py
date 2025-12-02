@@ -17,9 +17,7 @@ import json
 import asyncio
 import threading
 from datetime import datetime, UTC
-from http.server import HTTPServer
 from unittest.mock import AsyncMock, MagicMock, patch, call
-from urllib.parse import urlencode
 from io import BytesIO
 
 from src.dashboard.web_server import (
@@ -79,19 +77,23 @@ class TestDashboardHandlerInitialization:
 
         # We can't easily instantiate DashboardHandler due to HTTP server behavior
         # So we test the class property indirectly
-        dashboard_dir = Path(__file__).parent.parent.parent.parent / "src" / "dashboard" / "static"
+        dashboard_dir = (
+            Path(__file__).parent.parent.parent.parent / "src" / "dashboard" / "static"
+        )
         assert dashboard_dir.exists() or True  # Directory path is defined in __init__
 
         # Test that class has the expected structure
-        assert hasattr(DashboardHandler, '__init__')
-        assert hasattr(DashboardHandler, 'do_GET')
-        assert hasattr(DashboardHandler, 'do_POST')
+        assert hasattr(DashboardHandler, "__init__")
+        assert hasattr(DashboardHandler, "do_GET")
+        assert hasattr(DashboardHandler, "do_POST")
 
     def test_handler_class_variables(self):
         """Test handler has class variables for RAG server and event loop."""
-        assert hasattr(DashboardHandler, 'rag_server')
-        assert hasattr(DashboardHandler, 'event_loop')
-        assert DashboardHandler.rag_server is None or isinstance(DashboardHandler.rag_server, object)
+        assert hasattr(DashboardHandler, "rag_server")
+        assert hasattr(DashboardHandler, "event_loop")
+        assert DashboardHandler.rag_server is None or isinstance(
+            DashboardHandler.rag_server, object
+        )
 
 
 class TestDashboardHandlerGetEndpoints:
@@ -111,14 +113,34 @@ class TestDashboardHandlerGetEndpoints:
 
         # Bind the actual methods from DashboardHandler
         handler._handle_api_stats = lambda: DashboardHandler._handle_api_stats(handler)
-        handler._handle_api_activity = lambda query: DashboardHandler._handle_api_activity(handler, query)
-        handler._handle_api_health = lambda: DashboardHandler._handle_api_health(handler)
-        handler._handle_api_insights = lambda: DashboardHandler._handle_api_insights(handler)
-        handler._handle_api_trends = lambda query: DashboardHandler._handle_api_trends(handler, query)
-        handler._send_json_response = lambda data: DashboardHandler._send_json_response(handler, data)
-        handler._send_error_response = lambda code, msg: DashboardHandler._send_error_response(handler, code, msg)
-        handler._generate_insights = lambda stats, health: DashboardHandler._generate_insights(handler, stats, health)
-        handler._generate_trends = lambda stats, period, metric: DashboardHandler._generate_trends(handler, stats, period, metric)
+        handler._handle_api_activity = (
+            lambda query: DashboardHandler._handle_api_activity(handler, query)
+        )
+        handler._handle_api_health = lambda: DashboardHandler._handle_api_health(
+            handler
+        )
+        handler._handle_api_insights = lambda: DashboardHandler._handle_api_insights(
+            handler
+        )
+        handler._handle_api_trends = lambda query: DashboardHandler._handle_api_trends(
+            handler, query
+        )
+        handler._send_json_response = lambda data: DashboardHandler._send_json_response(
+            handler, data
+        )
+        handler._send_error_response = (
+            lambda code, msg: DashboardHandler._send_error_response(handler, code, msg)
+        )
+        handler._generate_insights = (
+            lambda stats, health: DashboardHandler._generate_insights(
+                handler, stats, health
+            )
+        )
+        handler._generate_trends = (
+            lambda stats, period, metric: DashboardHandler._generate_trends(
+                handler, stats, period, metric
+            )
+        )
 
         return handler
 
@@ -126,28 +148,29 @@ class TestDashboardHandlerGetEndpoints:
     def mock_rag_server(self):
         """Create a mock MemoryRAGServer."""
         server = AsyncMock()
-        server.get_dashboard_stats = AsyncMock(return_value={
-            "status": "success",
-            "total_memories": 100,
-            "num_projects": 5,
-            "projects": []
-        })
-        server.get_recent_activity = AsyncMock(return_value={
-            "recent_searches": [],
-            "recent_additions": []
-        })
-        server.get_health_score = AsyncMock(return_value={
-            "overall_score": 95,
-            "component_scores": {},
-            "metrics": {
-                "search_latency_p50_ms": 10,
-                "search_latency_p95_ms": 20,
-                "cache_hit_rate": 0.85
+        server.get_dashboard_stats = AsyncMock(
+            return_value={
+                "status": "success",
+                "total_memories": 100,
+                "num_projects": 5,
+                "projects": [],
             }
-        })
-        server.get_active_alerts = AsyncMock(return_value={
-            "alerts": []
-        })
+        )
+        server.get_recent_activity = AsyncMock(
+            return_value={"recent_searches": [], "recent_additions": []}
+        )
+        server.get_health_score = AsyncMock(
+            return_value={
+                "overall_score": 95,
+                "component_scores": {},
+                "metrics": {
+                    "search_latency_p50_ms": 10,
+                    "search_latency_p95_ms": 20,
+                    "cache_hit_rate": 0.85,
+                },
+            }
+        )
+        server.get_active_alerts = AsyncMock(return_value={"alerts": []})
         server.metrics_collector = MagicMock()
         server.metrics_collector.get_daily_aggregate = AsyncMock(return_value=[])
         return server
@@ -159,18 +182,22 @@ class TestDashboardHandlerGetEndpoints:
         loop.call_soon_threadsafe = MagicMock()
         return loop
 
-    def test_api_stats_endpoint_success(self, mock_handler, mock_rag_server, mock_event_loop):
+    def test_api_stats_endpoint_success(
+        self, mock_handler, mock_rag_server, mock_event_loop
+    ):
         """Test /api/stats returns dashboard statistics."""
         DashboardHandler.rag_server = mock_rag_server
         DashboardHandler.event_loop = mock_event_loop
         mock_handler.path = "/api/stats"
 
         # Mock asyncio.run_coroutine_threadsafe
-        with patch("src.dashboard.web_server.asyncio.run_coroutine_threadsafe") as mock_run:
+        with patch(
+            "src.dashboard.web_server.asyncio.run_coroutine_threadsafe"
+        ) as mock_run:
             mock_future = MagicMock()
             mock_future.result.return_value = {
                 "status": "success",
-                "total_memories": 100
+                "total_memories": 100,
             }
             mock_run.return_value = mock_future
 
@@ -179,7 +206,9 @@ class TestDashboardHandlerGetEndpoints:
         mock_handler.send_response.assert_called_once_with(200)
         # Check if the call was made (not if it's in a list - call_args_list is different)
         calls = [str(c) for c in mock_handler.send_header.call_args_list]
-        assert any("Content-Type" in str(c) and "application/json" in str(c) for c in calls)
+        assert any(
+            "Content-Type" in str(c) and "application/json" in str(c) for c in calls
+        )
 
         # Check response body
         response_data = json.loads(mock_handler.wfile.getvalue().decode())
@@ -203,13 +232,17 @@ class TestDashboardHandlerGetEndpoints:
         response_data = json.loads(mock_handler.wfile.getvalue().decode())
         assert "error" in response_data
 
-    def test_api_stats_exception_handling(self, mock_handler, mock_rag_server, mock_event_loop):
+    def test_api_stats_exception_handling(
+        self, mock_handler, mock_rag_server, mock_event_loop
+    ):
         """Test /api/stats handles server errors gracefully."""
         DashboardHandler.rag_server = mock_rag_server
         DashboardHandler.event_loop = mock_event_loop
         mock_handler.path = "/api/stats"
 
-        with patch("src.dashboard.web_server.asyncio.run_coroutine_threadsafe") as mock_run:
+        with patch(
+            "src.dashboard.web_server.asyncio.run_coroutine_threadsafe"
+        ) as mock_run:
             mock_future = MagicMock()
             mock_future.result.side_effect = Exception("Database error")
             mock_run.return_value = mock_future
@@ -218,17 +251,21 @@ class TestDashboardHandlerGetEndpoints:
 
         mock_handler.send_response.assert_called_once_with(500)
 
-    def test_api_activity_endpoint_success(self, mock_handler, mock_rag_server, mock_event_loop):
+    def test_api_activity_endpoint_success(
+        self, mock_handler, mock_rag_server, mock_event_loop
+    ):
         """Test /api/activity returns recent activity."""
         DashboardHandler.rag_server = mock_rag_server
         DashboardHandler.event_loop = mock_event_loop
         mock_handler.path = "/api/activity?limit=10"
 
-        with patch("src.dashboard.web_server.asyncio.run_coroutine_threadsafe") as mock_run:
+        with patch(
+            "src.dashboard.web_server.asyncio.run_coroutine_threadsafe"
+        ) as mock_run:
             mock_future = MagicMock()
             mock_future.result.return_value = {
                 "recent_searches": [{"query": "test"}],
-                "recent_additions": []
+                "recent_additions": [],
             }
             mock_run.return_value = mock_future
 
@@ -238,16 +275,20 @@ class TestDashboardHandlerGetEndpoints:
         response_data = json.loads(mock_handler.wfile.getvalue().decode())
         assert len(response_data["recent_searches"]) == 1
 
-    def test_api_activity_with_project_filter(self, mock_handler, mock_rag_server, mock_event_loop):
+    def test_api_activity_with_project_filter(
+        self, mock_handler, mock_rag_server, mock_event_loop
+    ):
         """Test /api/activity filters by project_name query param."""
         DashboardHandler.rag_server = mock_rag_server
         DashboardHandler.event_loop = mock_event_loop
 
-        with patch("src.dashboard.web_server.asyncio.run_coroutine_threadsafe") as mock_run:
+        with patch(
+            "src.dashboard.web_server.asyncio.run_coroutine_threadsafe"
+        ) as mock_run:
             mock_future = MagicMock()
             mock_future.result.return_value = {
                 "recent_searches": [],
-                "recent_additions": []
+                "recent_additions": [],
             }
             mock_run.return_value = mock_future
 
@@ -257,12 +298,16 @@ class TestDashboardHandlerGetEndpoints:
         response_data = json.loads(mock_handler.wfile.getvalue().decode())
         assert "recent_searches" in response_data
 
-    def test_api_health_endpoint_success(self, mock_handler, mock_rag_server, mock_event_loop):
+    def test_api_health_endpoint_success(
+        self, mock_handler, mock_rag_server, mock_event_loop
+    ):
         """Test /api/health returns health score and metrics."""
         DashboardHandler.rag_server = mock_rag_server
         DashboardHandler.event_loop = mock_event_loop
 
-        with patch("src.dashboard.web_server.asyncio.run_coroutine_threadsafe") as mock_run:
+        with patch(
+            "src.dashboard.web_server.asyncio.run_coroutine_threadsafe"
+        ) as mock_run:
             # First call returns health score, second returns alerts
             mock_futures = [MagicMock(), MagicMock()]
             mock_futures[0].result.return_value = {
@@ -271,8 +316,8 @@ class TestDashboardHandlerGetEndpoints:
                 "metrics": {
                     "search_latency_p50_ms": 10,
                     "search_latency_p95_ms": 20,
-                    "cache_hit_rate": 0.85
-                }
+                    "cache_hit_rate": 0.85,
+                },
             }
             mock_futures[1].result.return_value = {
                 "alerts": [{"severity": "WARNING", "message": "Test"}]
@@ -287,22 +332,26 @@ class TestDashboardHandlerGetEndpoints:
         assert len(response_data["alerts"]) == 1
         assert response_data["performance_metrics"]["cache_hit_rate"] == 0.85
 
-    def test_api_insights_endpoint_success(self, mock_handler, mock_rag_server, mock_event_loop):
+    def test_api_insights_endpoint_success(
+        self, mock_handler, mock_rag_server, mock_event_loop
+    ):
         """Test /api/insights returns automated insights."""
         DashboardHandler.rag_server = mock_rag_server
         DashboardHandler.event_loop = mock_event_loop
 
-        with patch("src.dashboard.web_server.asyncio.run_coroutine_threadsafe") as mock_run:
+        with patch(
+            "src.dashboard.web_server.asyncio.run_coroutine_threadsafe"
+        ) as mock_run:
             # Mock both stats and health futures
             mock_futures = [MagicMock(), MagicMock()]
             mock_futures[0].result.return_value = {
                 "total_memories": 100,
                 "num_projects": 2,
-                "projects": []
+                "projects": [],
             }
             mock_futures[1].result.return_value = {
                 "overall_score": 95,
-                "metrics": {"cache_hit_rate": 0.85, "search_latency_p95_ms": 15}
+                "metrics": {"cache_hit_rate": 0.85, "search_latency_p95_ms": 15},
             }
             mock_run.side_effect = mock_futures
 
@@ -312,22 +361,30 @@ class TestDashboardHandlerGetEndpoints:
         assert "insights" in response_data
         assert isinstance(response_data["insights"], list)
 
-    def test_api_trends_endpoint_calls_generate_trends(self, mock_handler, mock_rag_server, mock_event_loop):
+    def test_api_trends_endpoint_calls_generate_trends(
+        self, mock_handler, mock_rag_server, mock_event_loop
+    ):
         """Test /api/trends calls _generate_trends with correct parameters."""
         DashboardHandler.rag_server = mock_rag_server
         DashboardHandler.event_loop = mock_event_loop
 
-        with patch("src.dashboard.web_server.asyncio.run_coroutine_threadsafe") as mock_run:
+        with patch(
+            "src.dashboard.web_server.asyncio.run_coroutine_threadsafe"
+        ) as mock_run:
             mock_future = MagicMock()
             mock_future.result.return_value = {"total_memories": 100}
             mock_run.return_value = mock_future
 
             # Mock _generate_trends to return valid data
-            with patch.object(DashboardHandler, '_generate_trends', return_value={
-                "period": "7d",
-                "dates": ["2025-01-01", "2025-01-02"],
-                "metrics": {"memory_count": [10, 20]}
-            }):
+            with patch.object(
+                DashboardHandler,
+                "_generate_trends",
+                return_value={
+                    "period": "7d",
+                    "dates": ["2025-01-01", "2025-01-02"],
+                    "metrics": {"memory_count": [10, 20]},
+                },
+            ):
                 mock_handler._handle_api_trends("period=7d&metric=memories")
 
         # Verify response was successful (200 status)
@@ -341,13 +398,20 @@ class TestInsightsGeneration:
     def mock_handler(self):
         """Create a DashboardHandler with mocked methods."""
         handler = MagicMock(spec=DashboardHandler)
-        handler._generate_insights = lambda stats, health: DashboardHandler._generate_insights(handler, stats, health)
+        handler._generate_insights = (
+            lambda stats, health: DashboardHandler._generate_insights(
+                handler, stats, health
+            )
+        )
         return handler
 
     def test_generate_insights_low_cache_warning(self, mock_handler):
         """Test insight generated for cache hit rate < 70%."""
         stats = {"total_memories": 100, "num_projects": 2, "projects": []}
-        health = {"overall_score": 80, "metrics": {"cache_hit_rate": 0.65, "search_latency_p95_ms": 25}}
+        health = {
+            "overall_score": 80,
+            "metrics": {"cache_hit_rate": 0.65, "search_latency_p95_ms": 25},
+        }
 
         insights = mock_handler._generate_insights(stats, health)
 
@@ -359,7 +423,10 @@ class TestInsightsGeneration:
     def test_generate_insights_excellent_cache(self, mock_handler):
         """Test positive insight for cache hit rate >= 90%."""
         stats = {"total_memories": 100, "num_projects": 2, "projects": []}
-        health = {"overall_score": 95, "metrics": {"cache_hit_rate": 0.95, "search_latency_p95_ms": 10}}
+        health = {
+            "overall_score": 95,
+            "metrics": {"cache_hit_rate": 0.95, "search_latency_p95_ms": 10},
+        }
 
         insights = mock_handler._generate_insights(stats, health)
 
@@ -370,7 +437,10 @@ class TestInsightsGeneration:
     def test_generate_insights_high_latency_warning(self, mock_handler):
         """Test insight for P95 latency > 50ms."""
         stats = {"total_memories": 100, "num_projects": 2, "projects": []}
-        health = {"overall_score": 80, "metrics": {"cache_hit_rate": 0.8, "search_latency_p95_ms": 75}}
+        health = {
+            "overall_score": 80,
+            "metrics": {"cache_hit_rate": 0.8, "search_latency_p95_ms": 75},
+        }
 
         insights = mock_handler._generate_insights(stats, health)
 
@@ -387,9 +457,12 @@ class TestInsightsGeneration:
                 {"name": "proj1", "needs_reindex": True},
                 {"name": "proj2", "needs_reindex": False},
                 {"name": "proj3", "needs_reindex": True},
-            ]
+            ],
         }
-        health = {"overall_score": 80, "metrics": {"cache_hit_rate": 0.8, "search_latency_p95_ms": 20}}
+        health = {
+            "overall_score": 80,
+            "metrics": {"cache_hit_rate": 0.8, "search_latency_p95_ms": 20},
+        }
 
         insights = mock_handler._generate_insights(stats, health)
 
@@ -400,7 +473,10 @@ class TestInsightsGeneration:
     def test_generate_insights_critical_health(self, mock_handler):
         """Test critical insight for health score < 70."""
         stats = {"total_memories": 100, "num_projects": 2, "projects": []}
-        health = {"overall_score": 65, "metrics": {"cache_hit_rate": 0.5, "search_latency_p95_ms": 100}}
+        health = {
+            "overall_score": 65,
+            "metrics": {"cache_hit_rate": 0.5, "search_latency_p95_ms": 100},
+        }
 
         insights = mock_handler._generate_insights(stats, health)
 
@@ -411,7 +487,10 @@ class TestInsightsGeneration:
     def test_insights_sorted_by_priority(self, mock_handler):
         """Test insights returned in priority order (lower = higher priority)."""
         stats = {"total_memories": 100, "num_projects": 2, "projects": []}
-        health = {"overall_score": 65, "metrics": {"cache_hit_rate": 0.6, "search_latency_p95_ms": 60}}
+        health = {
+            "overall_score": 65,
+            "metrics": {"cache_hit_rate": 0.6, "search_latency_p95_ms": 60},
+        }
 
         insights = mock_handler._generate_insights(stats, health)
 
@@ -432,8 +511,14 @@ class TestTrendsGeneration:
     def mock_handler(self):
         """Create a DashboardHandler with mocked methods."""
         handler = MagicMock(spec=DashboardHandler)
-        handler._generate_trends = lambda stats, period, metric: DashboardHandler._generate_trends(handler, stats, period, metric)
-        handler._generate_empty_trends = lambda days: DashboardHandler._generate_empty_trends(handler, days)
+        handler._generate_trends = (
+            lambda stats, period, metric: DashboardHandler._generate_trends(
+                handler, stats, period, metric
+            )
+        )
+        handler._generate_empty_trends = (
+            lambda days: DashboardHandler._generate_empty_trends(handler, days)
+        )
         return handler
 
     def test_generate_trends_7d_period(self, mock_handler):
@@ -493,11 +578,19 @@ class TestDashboardHandlerPostEndpoints:
         handler.headers = {"Content-Length": "0"}
 
         # Bind actual methods
-        handler._handle_create_memory = lambda: DashboardHandler._handle_create_memory(handler)
-        handler._handle_trigger_index = lambda: DashboardHandler._handle_trigger_index(handler)
+        handler._handle_create_memory = lambda: DashboardHandler._handle_create_memory(
+            handler
+        )
+        handler._handle_trigger_index = lambda: DashboardHandler._handle_trigger_index(
+            handler
+        )
         handler._handle_export = lambda: DashboardHandler._handle_export(handler)
-        handler._send_json_response = lambda data: DashboardHandler._send_json_response(handler, data)
-        handler._send_error_response = lambda code, msg: DashboardHandler._send_error_response(handler, code, msg)
+        handler._send_json_response = lambda data: DashboardHandler._send_json_response(
+            handler, data
+        )
+        handler._send_error_response = (
+            lambda code, msg: DashboardHandler._send_error_response(handler, code, msg)
+        )
 
         return handler
 
@@ -515,7 +608,9 @@ class TestDashboardHandlerPostEndpoints:
         """Create a mock event loop."""
         return MagicMock()
 
-    def test_create_memory_success(self, mock_handler, mock_rag_server, mock_event_loop):
+    def test_create_memory_success(
+        self, mock_handler, mock_rag_server, mock_event_loop
+    ):
         """Test POST /api/memories creates new memory."""
         DashboardHandler.rag_server = mock_rag_server
         DashboardHandler.event_loop = mock_event_loop
@@ -526,7 +621,9 @@ class TestDashboardHandlerPostEndpoints:
         mock_handler.rfile = BytesIO(body)
         mock_handler.headers = {"Content-Length": str(len(body))}
 
-        with patch("src.dashboard.web_server.asyncio.run_coroutine_threadsafe") as mock_run:
+        with patch(
+            "src.dashboard.web_server.asyncio.run_coroutine_threadsafe"
+        ) as mock_run:
             mock_future = MagicMock()
             mock_future.result.return_value = {"memory_id": "test-id"}
             mock_run.return_value = mock_future
@@ -537,7 +634,9 @@ class TestDashboardHandlerPostEndpoints:
         assert response_data["status"] == "success"
         assert response_data["memory_id"] == "test-id"
 
-    def test_create_memory_missing_content(self, mock_handler, mock_rag_server, mock_event_loop):
+    def test_create_memory_missing_content(
+        self, mock_handler, mock_rag_server, mock_event_loop
+    ):
         """Test /api/memories returns 400 when content missing."""
         DashboardHandler.rag_server = mock_rag_server
         DashboardHandler.event_loop = mock_event_loop
@@ -552,7 +651,9 @@ class TestDashboardHandlerPostEndpoints:
 
         mock_handler.send_response.assert_called_once_with(400)
 
-    def test_create_memory_invalid_json(self, mock_handler, mock_rag_server, mock_event_loop):
+    def test_create_memory_invalid_json(
+        self, mock_handler, mock_rag_server, mock_event_loop
+    ):
         """Test /api/memories returns 400 for malformed JSON."""
         DashboardHandler.rag_server = mock_rag_server
         DashboardHandler.event_loop = mock_event_loop
@@ -566,7 +667,9 @@ class TestDashboardHandlerPostEndpoints:
 
         mock_handler.send_response.assert_called_once_with(400)
 
-    def test_trigger_index_success(self, mock_handler, mock_rag_server, mock_event_loop):
+    def test_trigger_index_success(
+        self, mock_handler, mock_rag_server, mock_event_loop
+    ):
         """Test POST /api/index triggers codebase indexing."""
         DashboardHandler.rag_server = mock_rag_server
         DashboardHandler.event_loop = mock_event_loop
@@ -576,7 +679,9 @@ class TestDashboardHandlerPostEndpoints:
         mock_handler.rfile = BytesIO(body)
         mock_handler.headers = {"Content-Length": str(len(body))}
 
-        with patch("src.dashboard.web_server.asyncio.run_coroutine_threadsafe") as mock_run:
+        with patch(
+            "src.dashboard.web_server.asyncio.run_coroutine_threadsafe"
+        ) as mock_run:
             mock_future = MagicMock()
             mock_future.result.return_value = {"files_indexed": 10}
             mock_run.return_value = mock_future
@@ -587,7 +692,9 @@ class TestDashboardHandlerPostEndpoints:
         assert response_data["status"] == "success"
         assert "Indexing started" in response_data["message"]
 
-    def test_trigger_index_missing_fields(self, mock_handler, mock_rag_server, mock_event_loop):
+    def test_trigger_index_missing_fields(
+        self, mock_handler, mock_rag_server, mock_event_loop
+    ):
         """Test /api/index returns 400 when required fields missing."""
         DashboardHandler.rag_server = mock_rag_server
         DashboardHandler.event_loop = mock_event_loop
@@ -611,7 +718,9 @@ class TestDashboardHandlerPostEndpoints:
         mock_handler.rfile = BytesIO(body)
         mock_handler.headers = {"Content-Length": str(len(body))}
 
-        with patch("src.dashboard.web_server.asyncio.run_coroutine_threadsafe") as mock_run:
+        with patch(
+            "src.dashboard.web_server.asyncio.run_coroutine_threadsafe"
+        ) as mock_run:
             mock_future = MagicMock()
             mock_future.result.return_value = '{"data": "test"}'
             mock_run.return_value = mock_future
@@ -620,7 +729,9 @@ class TestDashboardHandlerPostEndpoints:
 
         # Verify content type
         calls = [str(c) for c in mock_handler.send_header.call_args_list]
-        assert any("Content-Type" in str(c) and "application/json" in str(c) for c in calls)
+        assert any(
+            "Content-Type" in str(c) and "application/json" in str(c) for c in calls
+        )
 
     def test_export_endpoint_csv(self, mock_handler, mock_rag_server, mock_event_loop):
         """Test POST /api/export supports CSV format."""
@@ -632,7 +743,9 @@ class TestDashboardHandlerPostEndpoints:
         mock_handler.rfile = BytesIO(body)
         mock_handler.headers = {"Content-Length": str(len(body))}
 
-        with patch("src.dashboard.web_server.asyncio.run_coroutine_threadsafe") as mock_run:
+        with patch(
+            "src.dashboard.web_server.asyncio.run_coroutine_threadsafe"
+        ) as mock_run:
             mock_future = MagicMock()
             mock_future.result.return_value = "data,value\ntest,123"
             mock_run.return_value = mock_future
@@ -656,7 +769,9 @@ class TestCorsHandling:
         handler.end_headers = MagicMock()
         handler.wfile = BytesIO()  # Add wfile for _send_json_response
         handler.do_OPTIONS = lambda: DashboardHandler.do_OPTIONS(handler)
-        handler._send_json_response = lambda data: DashboardHandler._send_json_response(handler, data)
+        handler._send_json_response = lambda data: DashboardHandler._send_json_response(
+            handler, data
+        )
 
         return handler
 
@@ -696,7 +811,9 @@ class TestErrorHandling:
         handler.send_header = MagicMock()
         handler.end_headers = MagicMock()
         handler.wfile = BytesIO()
-        handler._send_error_response = lambda code, msg: DashboardHandler._send_error_response(handler, code, msg)
+        handler._send_error_response = (
+            lambda code, msg: DashboardHandler._send_error_response(handler, code, msg)
+        )
         handler._handle_api_stats = lambda: DashboardHandler._handle_api_stats(handler)
 
         return handler
@@ -727,7 +844,9 @@ class TestErrorHandling:
         DashboardHandler.rag_server = AsyncMock()
         DashboardHandler.event_loop = MagicMock()
 
-        with patch("src.dashboard.web_server.asyncio.run_coroutine_threadsafe") as mock_run:
+        with patch(
+            "src.dashboard.web_server.asyncio.run_coroutine_threadsafe"
+        ) as mock_run:
             mock_future = MagicMock()
             mock_future.result.side_effect = TimeoutError("Operation timed out")
             mock_run.return_value = mock_future
@@ -750,6 +869,7 @@ class TestEventLoopHelpers:
 
         # Give it a moment to start
         import time
+
         time.sleep(0.1)
 
         # Verify loop is running
@@ -770,7 +890,9 @@ class TestLogging:
         """Create a DashboardHandler with mocked dependencies."""
         handler = MagicMock(spec=DashboardHandler)
         handler.address_string = MagicMock(return_value="127.0.0.1")
-        handler.log_message = lambda fmt, *args: DashboardHandler.log_message(handler, fmt, *args)
+        handler.log_message = lambda fmt, *args: DashboardHandler.log_message(
+            handler, fmt, *args
+        )
 
         return handler
 
@@ -902,7 +1024,9 @@ class TestAdditionalEdgeCases:
     def test_generate_empty_trends_with_custom_days(self):
         """Test _generate_empty_trends with custom day counts."""
         handler = MagicMock(spec=DashboardHandler)
-        handler._generate_empty_trends = lambda days: DashboardHandler._generate_empty_trends(handler, days)
+        handler._generate_empty_trends = (
+            lambda days: DashboardHandler._generate_empty_trends(handler, days)
+        )
 
         # Test with 15 days
         trends = handler._generate_empty_trends(15)
@@ -912,10 +1036,17 @@ class TestAdditionalEdgeCases:
     def test_generate_insights_with_no_projects(self):
         """Test insights generation when no projects exist."""
         handler = MagicMock(spec=DashboardHandler)
-        handler._generate_insights = lambda stats, health: DashboardHandler._generate_insights(handler, stats, health)
+        handler._generate_insights = (
+            lambda stats, health: DashboardHandler._generate_insights(
+                handler, stats, health
+            )
+        )
 
         stats = {"total_memories": 0, "num_projects": 0, "projects": []}
-        health = {"overall_score": 100, "metrics": {"cache_hit_rate": 0.9, "search_latency_p95_ms": 10}}
+        health = {
+            "overall_score": 100,
+            "metrics": {"cache_hit_rate": 0.9, "search_latency_p95_ms": 10},
+        }
 
         insights = handler._generate_insights(stats, health)
 
@@ -929,13 +1060,12 @@ class TestAdditionalEdgeCases:
         handler.send_response = MagicMock()
         handler.send_header = MagicMock()
         handler.end_headers = MagicMock()
-        handler._send_json_response = lambda data: DashboardHandler._send_json_response(handler, data)
+        handler._send_json_response = lambda data: DashboardHandler._send_json_response(
+            handler, data
+        )
 
         # Send data with datetime
-        data = {
-            "timestamp": datetime(2025, 1, 15, 10, 30, 0, tzinfo=UTC),
-            "value": 42
-        }
+        data = {"timestamp": datetime(2025, 1, 15, 10, 30, 0, tzinfo=UTC), "value": 42}
 
         handler._send_json_response(data)
 
@@ -986,7 +1116,7 @@ class TestDashboardServerClass:
             alert_engine=mock_alerts,
             health_reporter=mock_health,
             store=mock_store,
-            config=mock_config
+            config=mock_config,
         )
 
         assert server.metrics_collector is mock_metrics
@@ -1003,11 +1133,12 @@ class TestDashboardServerClass:
         server = DashboardServer()
 
         # Mock the RAG server initialization
-        with patch("src.dashboard.web_server.MemoryRAGServer") as mock_rag_class, \
-             patch("src.dashboard.web_server.HTTPServer") as mock_http_server, \
-             patch("src.dashboard.web_server.asyncio.new_event_loop") as mock_new_loop, \
-             patch("src.dashboard.web_server.threading.Thread") as mock_thread:
-
+        with (
+            patch("src.dashboard.web_server.MemoryRAGServer") as mock_rag_class,
+            patch("src.dashboard.web_server.HTTPServer"),
+            patch("src.dashboard.web_server.asyncio.new_event_loop") as mock_new_loop,
+            patch("src.dashboard.web_server.threading.Thread") as mock_thread,
+        ):
             mock_rag_instance = AsyncMock()
             mock_rag_instance.initialize = AsyncMock()
             mock_rag_class.return_value = mock_rag_instance
@@ -1019,7 +1150,9 @@ class TestDashboardServerClass:
             mock_thread.return_value = mock_thread_instance
 
             # Mock asyncio.run_coroutine_threadsafe
-            with patch("src.dashboard.web_server.asyncio.run_coroutine_threadsafe") as mock_run_coro:
+            with patch(
+                "src.dashboard.web_server.asyncio.run_coroutine_threadsafe"
+            ) as mock_run_coro:
                 mock_future = MagicMock()
                 mock_future.result.return_value = None
                 mock_run_coro.return_value = mock_future
@@ -1069,7 +1202,9 @@ class TestDashboardServerClass:
         mock_thread.join = MagicMock()
         server.loop_thread = mock_thread
 
-        with patch("src.dashboard.web_server.asyncio.run_coroutine_threadsafe") as mock_run_coro:
+        with patch(
+            "src.dashboard.web_server.asyncio.run_coroutine_threadsafe"
+        ) as mock_run_coro:
             mock_future = MagicMock()
             mock_future.result.return_value = None
             mock_run_coro.return_value = mock_future
@@ -1110,7 +1245,9 @@ class TestDashboardServerClass:
         mock_loop.call_soon_threadsafe = MagicMock()
         server.event_loop = mock_loop
 
-        with patch("src.dashboard.web_server.asyncio.run_coroutine_threadsafe") as mock_run_coro:
+        with patch(
+            "src.dashboard.web_server.asyncio.run_coroutine_threadsafe"
+        ) as mock_run_coro:
             mock_future = MagicMock()
             mock_future.result.side_effect = Exception("Close failed")
             mock_run_coro.return_value = mock_future
@@ -1134,8 +1271,14 @@ class TestGetDailyMetrics:
         mock_rag_server = MagicMock()
         mock_collector = MagicMock()
         expected_result = [
-            MagicMock(timestamp=datetime.now(), total_memories=100, queries_per_day=50, avg_search_latency_ms=15.5)
+            MagicMock(
+                timestamp=datetime.now(),
+                total_memories=100,
+                queries_per_day=50,
+                avg_search_latency_ms=15.5,
+            )
         ]
+
         # The get_daily_aggregate returns a coroutine that we need to await
         async def mock_get_daily_aggregate(days):
             return expected_result
@@ -1159,7 +1302,9 @@ class TestGetDailyMetrics:
         mock_rag_server.metrics_collector = None
         handler.rag_server = mock_rag_server
 
-        handler._get_daily_metrics = lambda days: DashboardHandler._get_daily_metrics(handler, days)
+        handler._get_daily_metrics = lambda days: DashboardHandler._get_daily_metrics(
+            handler, days
+        )
 
         result = await handler._get_daily_metrics(7)
 
@@ -1173,8 +1318,14 @@ class TestGenerateTrendsEdgeCases:
     def mock_handler(self):
         """Create a handler mock."""
         handler = MagicMock(spec=DashboardHandler)
-        handler._generate_trends = lambda stats, period, metric: DashboardHandler._generate_trends(handler, stats, period, metric)
-        handler._generate_empty_trends = lambda days: DashboardHandler._generate_empty_trends(handler, days)
+        handler._generate_trends = (
+            lambda stats, period, metric: DashboardHandler._generate_trends(
+                handler, stats, period, metric
+            )
+        )
+        handler._generate_empty_trends = (
+            lambda days: DashboardHandler._generate_empty_trends(handler, days)
+        )
         handler._get_daily_metrics = AsyncMock(return_value=[])
         return handler
 
@@ -1198,7 +1349,7 @@ class TestGenerateTrendsEdgeCases:
                 timestamp=datetime(2025, 1, i),
                 total_memories=100 + i,
                 queries_per_day=20 + i,
-                avg_search_latency_ms=15.5 + i
+                avg_search_latency_ms=15.5 + i,
             )
             for i in range(1, 8)
         ]
@@ -1211,7 +1362,9 @@ class TestGenerateTrendsEdgeCases:
         DashboardHandler.event_loop = mock_loop
 
         # Mock the async call
-        with patch("src.dashboard.web_server.asyncio.run_coroutine_threadsafe") as mock_run:
+        with patch(
+            "src.dashboard.web_server.asyncio.run_coroutine_threadsafe"
+        ) as mock_run:
             mock_future = MagicMock()
             mock_future.result.return_value = mock_metrics
             mock_run.return_value = mock_future
@@ -1236,19 +1389,25 @@ class TestApiStatsTimeRangeSupport:
         handler.end_headers = MagicMock()
         handler.wfile = BytesIO()
         handler._handle_api_stats = lambda: DashboardHandler._handle_api_stats(handler)
-        handler._send_json_response = lambda data: DashboardHandler._send_json_response(handler, data)
+        handler._send_json_response = lambda data: DashboardHandler._send_json_response(
+            handler, data
+        )
         return handler
 
     def test_api_stats_with_time_range(self, mock_handler):
         """Test /api/stats accepts start_date and end_date parameters."""
         mock_rag_server = AsyncMock()
-        mock_rag_server.get_dashboard_stats = AsyncMock(return_value={"status": "success"})
+        mock_rag_server.get_dashboard_stats = AsyncMock(
+            return_value={"status": "success"}
+        )
         DashboardHandler.rag_server = mock_rag_server
         DashboardHandler.event_loop = MagicMock()
 
         mock_handler.path = "/api/stats?start_date=2025-01-01&end_date=2025-01-31"
 
-        with patch("src.dashboard.web_server.asyncio.run_coroutine_threadsafe") as mock_run:
+        with patch(
+            "src.dashboard.web_server.asyncio.run_coroutine_threadsafe"
+        ) as mock_run:
             mock_future = MagicMock()
             mock_future.result.return_value = {"status": "success"}
             mock_run.return_value = mock_future
@@ -1270,23 +1429,33 @@ class TestApiActivityTimeRangeSupport:
         handler.send_header = MagicMock()
         handler.end_headers = MagicMock()
         handler.wfile = BytesIO()
-        handler._handle_api_activity = lambda query: DashboardHandler._handle_api_activity(handler, query)
-        handler._send_json_response = lambda data: DashboardHandler._send_json_response(handler, data)
+        handler._handle_api_activity = (
+            lambda query: DashboardHandler._handle_api_activity(handler, query)
+        )
+        handler._send_json_response = lambda data: DashboardHandler._send_json_response(
+            handler, data
+        )
         return handler
 
     def test_api_activity_with_time_range(self, mock_handler):
         """Test /api/activity accepts start_date and end_date parameters."""
         mock_rag_server = AsyncMock()
-        mock_rag_server.get_recent_activity = AsyncMock(return_value={"recent_searches": []})
+        mock_rag_server.get_recent_activity = AsyncMock(
+            return_value={"recent_searches": []}
+        )
         DashboardHandler.rag_server = mock_rag_server
         DashboardHandler.event_loop = MagicMock()
 
-        with patch("src.dashboard.web_server.asyncio.run_coroutine_threadsafe") as mock_run:
+        with patch(
+            "src.dashboard.web_server.asyncio.run_coroutine_threadsafe"
+        ) as mock_run:
             mock_future = MagicMock()
             mock_future.result.return_value = {"recent_searches": []}
             mock_run.return_value = mock_future
 
-            mock_handler._handle_api_activity("start_date=2025-01-01&end_date=2025-01-31&limit=10")
+            mock_handler._handle_api_activity(
+                "start_date=2025-01-01&end_date=2025-01-31&limit=10"
+            )
 
         # Verify the call was made
         mock_run.assert_called_once()
@@ -1298,10 +1467,17 @@ class TestInsightsLowMemoryDensity:
     def test_generate_insights_low_memory_density(self):
         """Test insight generated for < 10 avg memories per project."""
         handler = MagicMock(spec=DashboardHandler)
-        handler._generate_insights = lambda stats, health: DashboardHandler._generate_insights(handler, stats, health)
+        handler._generate_insights = (
+            lambda stats, health: DashboardHandler._generate_insights(
+                handler, stats, health
+            )
+        )
 
         stats = {"total_memories": 15, "num_projects": 3, "projects": []}
-        health = {"overall_score": 85, "metrics": {"cache_hit_rate": 0.8, "search_latency_p95_ms": 20}}
+        health = {
+            "overall_score": 85,
+            "metrics": {"cache_hit_rate": 0.8, "search_latency_p95_ms": 20},
+        }
 
         insights = handler._generate_insights(stats, health)
 
@@ -1317,10 +1493,17 @@ class TestInsightsOptimalHealth:
     def test_generate_insights_optimal_health(self):
         """Test positive insight for health score >= 95."""
         handler = MagicMock(spec=DashboardHandler)
-        handler._generate_insights = lambda stats, health: DashboardHandler._generate_insights(handler, stats, health)
+        handler._generate_insights = (
+            lambda stats, health: DashboardHandler._generate_insights(
+                handler, stats, health
+            )
+        )
 
         stats = {"total_memories": 100, "num_projects": 5, "projects": []}
-        health = {"overall_score": 98, "metrics": {"cache_hit_rate": 0.92, "search_latency_p95_ms": 12}}
+        health = {
+            "overall_score": 98,
+            "metrics": {"cache_hit_rate": 0.92, "search_latency_p95_ms": 12},
+        }
 
         insights = handler._generate_insights(stats, health)
 
@@ -1336,15 +1519,17 @@ class TestStartDashboardServerFunction:
     @pytest.mark.asyncio
     async def test_start_dashboard_server_initializes_components(self):
         """Test start_dashboard_server creates all necessary components."""
-        from src.dashboard.web_server import start_dashboard_server
 
-        with patch("src.dashboard.web_server.asyncio.new_event_loop") as mock_new_loop, \
-             patch("src.dashboard.web_server.threading.Thread") as mock_thread, \
-             patch("src.dashboard.web_server.get_config") as mock_get_config, \
-             patch("src.dashboard.web_server.MemoryRAGServer") as mock_rag_class, \
-             patch("src.dashboard.web_server.HTTPServer") as mock_http_server, \
-             patch("src.dashboard.web_server.asyncio.run_coroutine_threadsafe") as mock_run_coro:
-
+        with (
+            patch("src.dashboard.web_server.asyncio.new_event_loop") as mock_new_loop,
+            patch("src.dashboard.web_server.threading.Thread") as mock_thread,
+            patch("src.dashboard.web_server.get_config") as mock_get_config,
+            patch("src.dashboard.web_server.MemoryRAGServer") as mock_rag_class,
+            patch("src.dashboard.web_server.HTTPServer") as mock_http_server,
+            patch(
+                "src.dashboard.web_server.asyncio.run_coroutine_threadsafe"
+            ) as mock_run_coro,
+        ):
             # Set up mocks
             mock_loop = MagicMock()
             mock_new_loop.return_value = mock_loop
@@ -1360,7 +1545,9 @@ class TestStartDashboardServerFunction:
             mock_rag_class.return_value = mock_rag_instance
 
             mock_server_instance = MagicMock()
-            mock_server_instance.serve_forever = MagicMock(side_effect=KeyboardInterrupt())
+            mock_server_instance.serve_forever = MagicMock(
+                side_effect=KeyboardInterrupt()
+            )
             mock_http_server.return_value = mock_server_instance
 
             mock_future = MagicMock()
@@ -1382,15 +1569,15 @@ class TestStartDashboardServerFunction:
     @pytest.mark.asyncio
     async def test_start_dashboard_server_default_port(self):
         """Test start_dashboard_server uses default port 8080."""
-        from src.dashboard.web_server import start_dashboard_server
 
-        with patch("src.dashboard.web_server.asyncio.new_event_loop"), \
-             patch("src.dashboard.web_server.threading.Thread"), \
-             patch("src.dashboard.web_server.get_config"), \
-             patch("src.dashboard.web_server.MemoryRAGServer"), \
-             patch("src.dashboard.web_server.HTTPServer") as mock_http_server, \
-             patch("src.dashboard.web_server.asyncio.run_coroutine_threadsafe"):
-
+        with (
+            patch("src.dashboard.web_server.asyncio.new_event_loop"),
+            patch("src.dashboard.web_server.threading.Thread"),
+            patch("src.dashboard.web_server.get_config"),
+            patch("src.dashboard.web_server.MemoryRAGServer"),
+            patch("src.dashboard.web_server.HTTPServer") as mock_http_server,
+            patch("src.dashboard.web_server.asyncio.run_coroutine_threadsafe"),
+        ):
             mock_server = MagicMock()
             mock_server.serve_forever = MagicMock(side_effect=KeyboardInterrupt())
             mock_http_server.return_value = mock_server
@@ -1407,15 +1594,17 @@ class TestStartDashboardServerFunction:
     @pytest.mark.asyncio
     async def test_start_dashboard_server_keyboard_interrupt_cleanup(self):
         """Test start_dashboard_server handles KeyboardInterrupt and cleans up."""
-        from src.dashboard.web_server import start_dashboard_server
 
-        with patch("src.dashboard.web_server.asyncio.new_event_loop") as mock_new_loop, \
-             patch("src.dashboard.web_server.threading.Thread") as mock_thread, \
-             patch("src.dashboard.web_server.get_config"), \
-             patch("src.dashboard.web_server.MemoryRAGServer") as mock_rag_class, \
-             patch("src.dashboard.web_server.HTTPServer") as mock_http_server, \
-             patch("src.dashboard.web_server.asyncio.run_coroutine_threadsafe") as mock_run_coro:
-
+        with (
+            patch("src.dashboard.web_server.asyncio.new_event_loop") as mock_new_loop,
+            patch("src.dashboard.web_server.threading.Thread") as mock_thread,
+            patch("src.dashboard.web_server.get_config"),
+            patch("src.dashboard.web_server.MemoryRAGServer") as mock_rag_class,
+            patch("src.dashboard.web_server.HTTPServer") as mock_http_server,
+            patch(
+                "src.dashboard.web_server.asyncio.run_coroutine_threadsafe"
+            ) as mock_run_coro,
+        ):
             mock_loop = MagicMock()
             mock_new_loop.return_value = mock_loop
 
@@ -1428,7 +1617,9 @@ class TestStartDashboardServerFunction:
             mock_rag_class.return_value = mock_rag_instance
 
             mock_server_instance = MagicMock()
-            mock_server_instance.serve_forever = MagicMock(side_effect=KeyboardInterrupt())
+            mock_server_instance.serve_forever = MagicMock(
+                side_effect=KeyboardInterrupt()
+            )
             mock_server_instance.shutdown = MagicMock()
             mock_http_server.return_value = mock_server_instance
 
@@ -1455,10 +1646,11 @@ class TestMainFunction:
         from src.dashboard.web_server import main
 
         # Patch argparse.ArgumentParser at the module level since it's imported locally in main()
-        with patch("argparse.ArgumentParser") as mock_parser_class, \
-             patch("src.dashboard.web_server.logging.basicConfig") as mock_logging, \
-             patch("src.dashboard.web_server.asyncio.run") as mock_asyncio_run:
-
+        with (
+            patch("argparse.ArgumentParser") as mock_parser_class,
+            patch("src.dashboard.web_server.logging.basicConfig") as mock_logging,
+            patch("src.dashboard.web_server.asyncio.run") as mock_asyncio_run,
+        ):
             mock_parser = MagicMock()
             mock_args = MagicMock()
             mock_args.port = 8080
@@ -1477,10 +1669,11 @@ class TestMainFunction:
         """Test main() accepts custom port via CLI args."""
         from src.dashboard.web_server import main
 
-        with patch("argparse.ArgumentParser") as mock_parser_class, \
-             patch("src.dashboard.web_server.logging.basicConfig"), \
-             patch("src.dashboard.web_server.asyncio.run"):
-
+        with (
+            patch("argparse.ArgumentParser") as mock_parser_class,
+            patch("src.dashboard.web_server.logging.basicConfig"),
+            patch("src.dashboard.web_server.asyncio.run"),
+        ):
             mock_parser = MagicMock()
             mock_args = MagicMock()
             mock_args.port = 9000
@@ -1491,7 +1684,9 @@ class TestMainFunction:
             main()
 
             # Verify parser was configured to accept port/host
-            add_argument_calls = [str(c) for c in mock_parser.add_argument.call_args_list]
+            add_argument_calls = [
+                str(c) for c in mock_parser.add_argument.call_args_list
+            ]
             assert any("--port" in str(c) for c in add_argument_calls)
             assert any("--host" in str(c) for c in add_argument_calls)
 
@@ -1499,10 +1694,11 @@ class TestMainFunction:
         """Test main() sets up logging with correct format."""
         from src.dashboard.web_server import main
 
-        with patch("argparse.ArgumentParser"), \
-             patch("src.dashboard.web_server.logging.basicConfig") as mock_logging, \
-             patch("src.dashboard.web_server.asyncio.run"):
-
+        with (
+            patch("argparse.ArgumentParser"),
+            patch("src.dashboard.web_server.logging.basicConfig") as mock_logging,
+            patch("src.dashboard.web_server.asyncio.run"),
+        ):
             main()
 
             # Verify logging.basicConfig was called with level and format
@@ -1514,11 +1710,12 @@ class TestMainFunction:
         """Test main() calls start_dashboard_server with parsed args."""
         from src.dashboard.web_server import main
 
-        with patch("argparse.ArgumentParser") as mock_parser_class, \
-             patch("src.dashboard.web_server.logging.basicConfig"), \
-             patch("src.dashboard.web_server.asyncio.run") as mock_asyncio_run, \
-             patch("src.dashboard.web_server.start_dashboard_server") as mock_start:
-
+        with (
+            patch("argparse.ArgumentParser") as mock_parser_class,
+            patch("src.dashboard.web_server.logging.basicConfig"),
+            patch("src.dashboard.web_server.asyncio.run") as mock_asyncio_run,
+            patch("src.dashboard.web_server.start_dashboard_server"),
+        ):
             mock_parser = MagicMock()
             mock_args = MagicMock()
             mock_args.port = 8888
@@ -1533,7 +1730,7 @@ class TestMainFunction:
             # The call will be to start_dashboard_server coroutine
             call_arg = mock_asyncio_run.call_args[0][0]
             # It should be a coroutine, we can check the function name
-            assert callable(call_arg) or hasattr(call_arg, '__await__')
+            assert callable(call_arg) or hasattr(call_arg, "__await__")
 
 
 class TestMainEntryPoint:
@@ -1551,10 +1748,11 @@ class TestMainEntryPoint:
         """Test ArgumentParser is configured correctly."""
         from src.dashboard.web_server import main
 
-        with patch("argparse.ArgumentParser") as mock_parser_class, \
-             patch("src.dashboard.web_server.logging.basicConfig"), \
-             patch("src.dashboard.web_server.asyncio.run"):
-
+        with (
+            patch("argparse.ArgumentParser") as mock_parser_class,
+            patch("src.dashboard.web_server.logging.basicConfig"),
+            patch("src.dashboard.web_server.asyncio.run"),
+        ):
             mock_parser = MagicMock()
             mock_args = MagicMock()
             mock_args.port = 8080
@@ -1577,8 +1775,14 @@ class TestTrendsPeriodParsing:
     def mock_handler(self):
         """Create a handler mock."""
         handler = MagicMock(spec=DashboardHandler)
-        handler._generate_trends = lambda stats, period, metric: DashboardHandler._generate_trends(handler, stats, period, metric)
-        handler._generate_empty_trends = lambda days: DashboardHandler._generate_empty_trends(handler, days)
+        handler._generate_trends = (
+            lambda stats, period, metric: DashboardHandler._generate_trends(
+                handler, stats, period, metric
+            )
+        )
+        handler._generate_empty_trends = (
+            lambda days: DashboardHandler._generate_empty_trends(handler, days)
+        )
         return handler
 
     def test_generate_trends_period_7d(self, mock_handler):
@@ -1635,7 +1839,9 @@ class TestExportContentTypes:
         mock_handler.rfile = BytesIO(body)
         mock_handler.headers = {"Content-Length": str(len(body))}
 
-        with patch("src.dashboard.web_server.asyncio.run_coroutine_threadsafe") as mock_run:
+        with patch(
+            "src.dashboard.web_server.asyncio.run_coroutine_threadsafe"
+        ) as mock_run:
             mock_future = MagicMock()
             mock_future.result.return_value = "<data>test</data>"
             mock_run.return_value = mock_future
@@ -1645,4 +1851,3 @@ class TestExportContentTypes:
         # Verify text/plain was used
         calls = [str(c) for c in mock_handler.send_header.call_args_list]
         assert any("Content-Type" in str(c) and "text/plain" in str(c) for c in calls)
-

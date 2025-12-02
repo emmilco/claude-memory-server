@@ -2,7 +2,6 @@
 
 import logging
 from typing import Optional
-from datetime import datetime
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
@@ -152,7 +151,9 @@ def _display_detailed_stats(analytics) -> None:
     relevance_color = (
         "green"
         if analytics.avg_relevance > 0.8
-        else "yellow" if analytics.avg_relevance > 0.6 else "red"
+        else "yellow"
+        if analytics.avg_relevance > 0.6
+        else "red"
     )
     table.add_row(
         "Average Relevance",

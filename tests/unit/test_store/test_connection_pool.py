@@ -14,7 +14,7 @@ PERF-007: Connection Pooling for Qdrant
 import asyncio
 import pytest
 from datetime import datetime, UTC, timedelta
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
+from unittest.mock import Mock, patch
 
 from qdrant_client import QdrantClient
 
@@ -27,7 +27,6 @@ from src.store.connection_pool import (
     PoolStats,
 )
 from src.store.connection_health_checker import (
-    ConnectionHealthChecker,
     HealthCheckLevel,
     HealthCheckResult,
 )
@@ -53,6 +52,7 @@ def mock_qdrant_client(monkeypatch):
     This is necessary because get_collections() is called via run_in_executor(),
     and sharing a single mock instance across threads can cause deadlocks.
     """
+
     def create_mock():
         client = Mock(spec=QdrantClient)
         client.get_collections = Mock(return_value=Mock(collections=[]))
@@ -140,7 +140,9 @@ class TestConnectionPoolInitialization:
             enable_health_checks=False,
         )
 
-        with patch("src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client):
+        with patch(
+            "src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client
+        ):
             await pool.initialize()
 
             assert pool._initialized
@@ -162,7 +164,7 @@ class TestConnectionPoolInitialization:
         # Mock client creation to fail
         with patch(
             "src.store.connection_pool.QdrantClient",
-            side_effect=ConnectionError("Connection refused")
+            side_effect=ConnectionError("Connection refused"),
         ):
             with pytest.raises(QdrantConnectionError):
                 await pool.initialize()
@@ -181,7 +183,9 @@ class TestConnectionPoolInitialization:
             enable_health_checks=False,
         )
 
-        with patch("src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client):
+        with patch(
+            "src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client
+        ):
             await pool.initialize()
 
             # Second initialization should log warning but not fail
@@ -206,7 +210,9 @@ class TestConnectionAcquireRelease:
             enable_health_checks=False,
         )
 
-        with patch("src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client):
+        with patch(
+            "src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client
+        ):
             await pool.initialize()
 
             client = await pool.acquire()
@@ -241,7 +247,9 @@ class TestConnectionAcquireRelease:
             enable_health_checks=False,
         )
 
-        with patch("src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client):
+        with patch(
+            "src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client
+        ):
             await pool.initialize()
             await pool.close()
 
@@ -249,7 +257,9 @@ class TestConnectionAcquireRelease:
                 await pool.acquire()
 
     @pytest.mark.asyncio
-    async def test_release_connection_back_to_pool(self, test_config, mock_qdrant_client):
+    async def test_release_connection_back_to_pool(
+        self, test_config, mock_qdrant_client
+    ):
         """Test releasing connection back to pool."""
         pool = QdrantConnectionPool(
             config=test_config,
@@ -258,7 +268,9 @@ class TestConnectionAcquireRelease:
             enable_health_checks=False,
         )
 
-        with patch("src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client):
+        with patch(
+            "src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client
+        ):
             await pool.initialize()
 
             client = await pool.acquire()
@@ -294,7 +306,9 @@ class TestConnectionAcquireRelease:
             client.close = Mock()
             return client
 
-        with patch("src.store.connection_pool.QdrantClient", side_effect=create_mock_client):
+        with patch(
+            "src.store.connection_pool.QdrantClient", side_effect=create_mock_client
+        ):
             await pool.initialize()
 
             # Simulate concurrent workload (reduced from 20 to 5 to avoid executor exhaustion)
@@ -327,7 +341,9 @@ class TestPoolExhaustion:
             enable_health_checks=False,
         )
 
-        with patch("src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client):
+        with patch(
+            "src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client
+        ):
             await pool.initialize()
 
             # Acquire all connections
@@ -335,7 +351,9 @@ class TestPoolExhaustion:
             client2 = await pool.acquire()
 
             # Pool is exhausted, next acquire should timeout
-            with pytest.raises(ConnectionPoolExhaustedError, match="Connection pool exhausted"):
+            with pytest.raises(
+                ConnectionPoolExhaustedError, match="Connection pool exhausted"
+            ):
                 await pool.acquire()
 
             # Release connections
@@ -356,7 +374,9 @@ class TestPoolExhaustion:
             enable_health_checks=False,
         )
 
-        with patch("src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client):
+        with patch(
+            "src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client
+        ):
             await pool.initialize()
 
             # Acquire all initial connections
@@ -385,7 +405,9 @@ class TestPoolExhaustion:
             enable_health_checks=False,
         )
 
-        with patch("src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client):
+        with patch(
+            "src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client
+        ):
             await pool.initialize()
 
             # Acquire the only connection
@@ -425,7 +447,9 @@ class TestHealthChecking:
             duration_ms=0.5,
         )
 
-        with patch("src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client):
+        with patch(
+            "src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client
+        ):
             await pool.initialize()
 
             # Mock health check
@@ -454,7 +478,9 @@ class TestHealthChecking:
             enable_health_checks=True,
         )
 
-        with patch("src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client):
+        with patch(
+            "src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client
+        ):
             await pool.initialize()
 
             # First health check fails, second succeeds
@@ -498,7 +524,9 @@ class TestHealthChecking:
 
         assert pool._health_checker is None
 
-        with patch("src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client):
+        with patch(
+            "src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client
+        ):
             await pool.initialize()
 
             client = await pool.acquire()
@@ -525,7 +553,9 @@ class TestConnectionRecycling:
             enable_health_checks=False,
         )
 
-        with patch("src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client):
+        with patch(
+            "src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client
+        ):
             await pool.initialize()
 
             # Get initial connection count
@@ -559,7 +589,9 @@ class TestConnectionRecycling:
             enable_health_checks=False,
         )
 
-        with patch("src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client):
+        with patch(
+            "src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client
+        ):
             await pool.initialize()
 
             # Age all connections
@@ -618,7 +650,9 @@ class TestMetricsAndStatistics:
             enable_health_checks=False,
         )
 
-        with patch("src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client):
+        with patch(
+            "src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client
+        ):
             await pool.initialize()
 
             client = await pool.acquire()
@@ -643,7 +677,9 @@ class TestMetricsAndStatistics:
             enable_health_checks=False,
         )
 
-        with patch("src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client):
+        with patch(
+            "src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client
+        ):
             await pool.initialize()
 
             client = await pool.acquire()
@@ -665,7 +701,9 @@ class TestMetricsAndStatistics:
             enable_health_checks=False,
         )
 
-        with patch("src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client):
+        with patch(
+            "src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client
+        ):
             await pool.initialize()
 
             # Acquire multiple times to build metrics
@@ -695,7 +733,9 @@ class TestMetricsAndStatistics:
             enable_health_checks=False,
         )
 
-        with patch("src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client):
+        with patch(
+            "src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client
+        ):
             await pool.initialize()
 
             # Acquire many times to exceed history limit
@@ -722,7 +762,9 @@ class TestPoolClosing:
             enable_health_checks=False,
         )
 
-        with patch("src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client):
+        with patch(
+            "src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client
+        ):
             await pool.initialize()
 
             await pool.close()
@@ -745,7 +787,9 @@ class TestPoolClosing:
             enable_health_checks=False,
         )
 
-        with patch("src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client):
+        with patch(
+            "src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client
+        ):
             await pool.initialize()
 
             await pool.close()
@@ -766,7 +810,9 @@ class TestPoolClosing:
             enable_health_checks=False,
         )
 
-        with patch("src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client):
+        with patch(
+            "src.store.connection_pool.QdrantClient", return_value=mock_qdrant_client
+        ):
             await pool.initialize()
 
             client = await pool.acquire()

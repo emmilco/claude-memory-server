@@ -24,10 +24,7 @@ class TestRetrievalPredictorInitialization:
 
     def test_custom_parameters(self):
         """Test predictor accepts custom configuration parameters."""
-        predictor = RetrievalPredictor(
-            min_query_length=5,
-            max_small_talk_length=50
-        )
+        predictor = RetrievalPredictor(min_query_length=5, max_small_talk_length=50)
 
         assert predictor.min_query_length == 5
         assert predictor.max_small_talk_length == 50
@@ -38,6 +35,7 @@ class TestRetrievalPredictorInitialization:
 
         # Verify patterns are compiled regex objects
         import re
+
         assert isinstance(predictor._small_talk_regex, re.Pattern)
         assert isinstance(predictor._needs_retrieval_regex, re.Pattern)
 
@@ -83,47 +81,56 @@ class TestSmallTalkDetection:
         """Create predictor instance for tests."""
         return RetrievalPredictor()
 
-    @pytest.mark.parametrize("query", [
-        "hi",
-        "hello",
-        "hey",
-        "thanks",
-        "thank you",
-        "ok",
-        "okay",
-        "sure",
-        "yes",
-        "no",
-        "got it",
-    ])
+    @pytest.mark.parametrize(
+        "query",
+        [
+            "hi",
+            "hello",
+            "hey",
+            "thanks",
+            "thank you",
+            "ok",
+            "okay",
+            "sure",
+            "yes",
+            "no",
+            "got it",
+        ],
+    )
     def test_short_greetings_low_utility(self, predictor, query):
         """Test short greetings and acknowledgments have very low utility."""
         utility = predictor.predict_utility(query)
 
         assert utility <= 0.1, f"Query '{query}' should have low utility, got {utility}"
 
-    @pytest.mark.parametrize("query", [
-        "great",
-        "cool",
-        "nice",
-        "awesome",
-        "perfect",
-        "great!",
-        "cool.",
-        "nice!",
-    ])
+    @pytest.mark.parametrize(
+        "query",
+        [
+            "great",
+            "cool",
+            "nice",
+            "awesome",
+            "perfect",
+            "great!",
+            "cool.",
+            "nice!",
+        ],
+    )
     def test_positive_acknowledgments_low_utility(self, predictor, query):
         """Test positive acknowledgments have very low utility."""
         utility = predictor.predict_utility(query)
 
         assert utility <= 0.2, f"Query '{query}' should have low utility, got {utility}"
 
-    @pytest.mark.parametrize("query", [
-        "bye",
-        "goodbye",
-        "see you",
-        "ttyl",
-    ])
+    @pytest.mark.parametrize(
+        "query",
+        [
+            "bye",
+            "goodbye",
+            "see you",
+            "ttyl",
+        ],
+    )
     def test_farewells_low_utility(self, predictor, query):
         """Test farewell messages have low utility."""
         utility = predictor.predict_utility(query)
@@ -145,68 +152,83 @@ class TestRetrievalKeywordDetection:
         """Create predictor instance for tests."""
         return RetrievalPredictor()
 
-    @pytest.mark.parametrize("query", [
-        "how do I implement authentication?",
-        "what is the best way to do this?",
-        "where is the database connection code?",
-        "when was this function last modified?",
-        "why is this returning null?",
-        "who wrote this module?",
-        "which implementation should I use?",
-    ])
+    @pytest.mark.parametrize(
+        "query",
+        [
+            "how do I implement authentication?",
+            "what is the best way to do this?",
+            "where is the database connection code?",
+            "when was this function last modified?",
+            "why is this returning null?",
+            "who wrote this module?",
+            "which implementation should I use?",
+        ],
+    )
     def test_question_words_high_utility(self, predictor, query):
         """Test queries with question words have high utility."""
         utility = predictor.predict_utility(query)
 
         assert utility > 0.7, f"Query '{query}' should have high utility, got {utility}"
 
-    @pytest.mark.parametrize("query", [
-        "find the authentication module",
-        "search for database connections",
-        "show me the API endpoints",
-        "get the user model",
-        "retrieve previous implementation",
-        "look up the config settings",
-    ])
+    @pytest.mark.parametrize(
+        "query",
+        [
+            "find the authentication module",
+            "search for database connections",
+            "show me the API endpoints",
+            "get the user model",
+            "retrieve previous implementation",
+            "look up the config settings",
+        ],
+    )
     def test_action_verbs_high_utility(self, predictor, query):
         """Test queries with action verbs have high utility."""
         utility = predictor.predict_utility(query)
 
         assert utility > 0.7, f"Query '{query}' should have high utility, got {utility}"
 
-    @pytest.mark.parametrize("query", [
-        "code for authentication",
-        "function to validate input",
-        "class for user management",
-        "method to process requests",
-        "file containing config",
-        "implementation of the parser",
-    ])
+    @pytest.mark.parametrize(
+        "query",
+        [
+            "code for authentication",
+            "function to validate input",
+            "class for user management",
+            "method to process requests",
+            "file containing config",
+            "implementation of the parser",
+        ],
+    )
     def test_code_terms_high_utility(self, predictor, query):
         """Test queries with code-related terms have high utility."""
         utility = predictor.predict_utility(query)
 
         assert utility > 0.6, f"Query '{query}' should have high utility, got {utility}"
 
-    @pytest.mark.parametrize("query", [
-        "error in the login function",
-        "bug in authentication",
-        "issue with database",
-        "problem with API",
-        "fix for the parser",
-    ])
+    @pytest.mark.parametrize(
+        "query",
+        [
+            "error in the login function",
+            "bug in authentication",
+            "issue with database",
+            "problem with API",
+            "fix for the parser",
+        ],
+    )
     def test_issue_terms_high_utility(self, predictor, query):
         """Test queries about issues/errors have high utility."""
         utility = predictor.predict_utility(query)
 
         assert utility > 0.7, f"Query '{query}' should have high utility, got {utility}"
 
-    @pytest.mark.parametrize("query", [
-        "remember the previous implementation",
-        "recall the stored configuration",
-        "what was saved earlier",
-        "previous conversation context",
-    ])
+    @pytest.mark.parametrize(
+        "query",
+        [
+            "remember the previous implementation",
+            "recall the stored configuration",
+            "what was saved earlier",
+            "previous conversation context",
+        ],
+    )
     def test_memory_terms_high_utility(self, predictor, query):
         """Test queries about memory/stored content have high utility."""
         utility = predictor.predict_utility(query)
@@ -222,11 +244,26 @@ class TestTechnicalKeywords:
         """Create predictor instance for tests."""
         return RetrievalPredictor()
 
-    @pytest.mark.parametrize("keyword", [
-        "api", "endpoint", "database", "query", "authentication",
-        "test", "config", "deployment", "server", "client",
-        "middleware", "model", "controller", "service", "repository",
-    ])
+    @pytest.mark.parametrize(
+        "keyword",
+        [
+            "api",
+            "endpoint",
+            "database",
+            "query",
+            "authentication",
+            "test",
+            "config",
+            "deployment",
+            "server",
+            "client",
+            "middleware",
+            "model",
+            "controller",
+            "service",
+            "repository",
+        ],
+    )
     def test_single_technical_keyword(self, predictor, keyword):
         """Test queries with single technical keyword have increased utility."""
         query = f"need help with {keyword}"
@@ -242,7 +279,9 @@ class TestTechnicalKeywords:
         utility_one = predictor.predict_utility(query_one_kw)
         utility_many = predictor.predict_utility(query_many_kw)
 
-        assert utility_many > utility_one, "More technical keywords should increase utility"
+        assert (
+            utility_many > utility_one
+        ), "More technical keywords should increase utility"
 
     def test_three_or_more_technical_keywords(self, predictor):
         """Test that 3+ technical keywords give substantial boost."""
@@ -287,19 +326,24 @@ class TestCodeMarkerDetection:
         """Create predictor instance for tests."""
         return RetrievalPredictor()
 
-    @pytest.mark.parametrize("code_marker,query", [
-        ("()", "find authenticate() function"),
-        ("{}", "show me the object {} structure"),
-        ("[]", "array[] indexing code"),
-        ("->", "pointer-> access pattern"),
-        ("=>", "arrow => function implementation"),
-        ("::", "namespace::function call"),
-    ])
+    @pytest.mark.parametrize(
+        "code_marker,query",
+        [
+            ("()", "find authenticate() function"),
+            ("{}", "show me the object {} structure"),
+            ("[]", "array[] indexing code"),
+            ("->", "pointer-> access pattern"),
+            ("=>", "arrow => function implementation"),
+            ("::", "namespace::function call"),
+        ],
+    )
     def test_code_markers_increase_utility(self, predictor, code_marker, query):
         """Test that code markers increase utility."""
         utility = predictor.predict_utility(query)
 
-        assert utility > 0.5, f"Query with '{code_marker}' should have moderate+ utility"
+        assert (
+            utility > 0.5
+        ), f"Query with '{code_marker}' should have moderate+ utility"
 
     def test_code_marker_without_context(self, predictor):
         """Test code marker in short query."""
@@ -333,7 +377,9 @@ class TestQueryLength:
     def test_long_query_increases_utility(self, predictor):
         """Test that longer queries (>50 chars) get utility boost."""
         short_query = "database code"
-        long_query = "I need to find the database connection code for the authentication module"
+        long_query = (
+            "I need to find the database connection code for the authentication module"
+        )
 
         utility_short = predictor.predict_utility(short_query)
         utility_long = predictor.predict_utility(long_query)
@@ -364,45 +410,47 @@ class TestExtractSignals:
         query = "test query"
         signals = predictor._extract_signals(query, query.lower())
 
-        assert signals['length'] == len(query)
+        assert signals["length"] == len(query)
 
     def test_signals_is_very_short(self, predictor):
         """Test is_very_short signal detection."""
         short = predictor._extract_signals("hi", "hi")
-        long = predictor._extract_signals("this is a longer query", "this is a longer query")
+        long = predictor._extract_signals(
+            "this is a longer query", "this is a longer query"
+        )
 
-        assert short['is_very_short'] == 1.0
-        assert long['is_very_short'] == 0.0
+        assert short["is_very_short"] == 1.0
+        assert long["is_very_short"] == 0.0
 
     def test_signals_word_count(self, predictor):
         """Test word count signal."""
         query = "one two three four five"
         signals = predictor._extract_signals(query, query.lower())
 
-        assert signals['word_count'] == 5
+        assert signals["word_count"] == 5
 
     def test_signals_is_specific(self, predictor):
         """Test is_specific signal (4+ words)."""
         short = predictor._extract_signals("one two", "one two")
         long = predictor._extract_signals("one two three four", "one two three four")
 
-        assert short['is_specific'] == 0.0
-        assert long['is_specific'] == 1.0
+        assert short["is_specific"] == 0.0
+        assert long["is_specific"] == 1.0
 
     def test_signals_technical_keyword_count(self, predictor):
         """Test technical keyword count signal."""
         query = "api endpoint database"
         signals = predictor._extract_signals(query, query.lower())
 
-        assert signals['technical_keyword_count'] >= 3
+        assert signals["technical_keyword_count"] >= 3
 
     def test_signals_has_code_markers(self, predictor):
         """Test has_code_markers signal."""
         with_marker = predictor._extract_signals("func()", "func()")
         without_marker = predictor._extract_signals("func", "func")
 
-        assert with_marker['has_code_markers'] == 1.0
-        assert without_marker['has_code_markers'] == 0.0
+        assert with_marker["has_code_markers"] == 1.0
+        assert without_marker["has_code_markers"] == 0.0
 
 
 class TestComputeUtility:
@@ -417,17 +465,17 @@ class TestComputeUtility:
         """Test that utility is always between 0 and 1."""
         # Test many positive signals
         signals_high = {
-            'is_very_short': 0.0,
-            'is_small_talk_length': 0.0,
-            'has_small_talk': 0.0,
-            'has_retrieval_keywords': 1.0,
-            'has_technical_content': 1.0,
-            'is_question': 1.0,
-            'has_code_markers': 1.0,
-            'is_specific': 1.0,
-            'length': 100,
-            'technical_keyword_count': 5,
-            'word_count': 10,
+            "is_very_short": 0.0,
+            "is_small_talk_length": 0.0,
+            "has_small_talk": 0.0,
+            "has_retrieval_keywords": 1.0,
+            "has_technical_content": 1.0,
+            "is_question": 1.0,
+            "has_code_markers": 1.0,
+            "is_specific": 1.0,
+            "length": 100,
+            "technical_keyword_count": 5,
+            "word_count": 10,
         }
 
         utility = predictor._compute_utility(signals_high)
@@ -435,17 +483,17 @@ class TestComputeUtility:
 
         # Test many negative signals
         signals_low = {
-            'is_very_short': 1.0,
-            'is_small_talk_length': 1.0,
-            'has_small_talk': 1.0,
-            'has_retrieval_keywords': 0.0,
-            'has_technical_content': 0.0,
-            'is_question': 0.0,
-            'has_code_markers': 0.0,
-            'is_specific': 0.0,
-            'length': 2,
-            'technical_keyword_count': 0,
-            'word_count': 1,
+            "is_very_short": 1.0,
+            "is_small_talk_length": 1.0,
+            "has_small_talk": 1.0,
+            "has_retrieval_keywords": 0.0,
+            "has_technical_content": 0.0,
+            "is_question": 0.0,
+            "has_code_markers": 0.0,
+            "is_specific": 0.0,
+            "length": 2,
+            "technical_keyword_count": 0,
+            "word_count": 1,
         }
 
         utility = predictor._compute_utility(signals_low)
@@ -454,17 +502,17 @@ class TestComputeUtility:
     def test_small_talk_with_short_query_returns_zero(self, predictor):
         """Test definite skip for short small talk."""
         signals = {
-            'is_very_short': 1.0,
-            'is_small_talk_length': 1.0,
-            'has_small_talk': 1.0,
-            'has_retrieval_keywords': 0.0,
-            'has_technical_content': 0.0,
-            'is_question': 0.0,
-            'has_code_markers': 0.0,
-            'is_specific': 0.0,
-            'length': 5,
-            'technical_keyword_count': 0,
-            'word_count': 1,
+            "is_very_short": 1.0,
+            "is_small_talk_length": 1.0,
+            "has_small_talk": 1.0,
+            "has_retrieval_keywords": 0.0,
+            "has_technical_content": 0.0,
+            "is_question": 0.0,
+            "has_code_markers": 0.0,
+            "is_specific": 0.0,
+            "length": 5,
+            "technical_keyword_count": 0,
+            "word_count": 1,
         }
 
         utility = predictor._compute_utility(signals)
@@ -473,17 +521,17 @@ class TestComputeUtility:
     def test_small_talk_length_without_keywords_returns_low(self, predictor):
         """Test very low utility for small talk without retrieval keywords."""
         signals = {
-            'is_very_short': 0.0,
-            'is_small_talk_length': 1.0,
-            'has_small_talk': 1.0,
-            'has_retrieval_keywords': 0.0,
-            'has_technical_content': 0.0,
-            'is_question': 0.0,
-            'has_code_markers': 0.0,
-            'is_specific': 0.0,
-            'length': 20,
-            'technical_keyword_count': 0,
-            'word_count': 3,
+            "is_very_short": 0.0,
+            "is_small_talk_length": 1.0,
+            "has_small_talk": 1.0,
+            "has_retrieval_keywords": 0.0,
+            "has_technical_content": 0.0,
+            "is_question": 0.0,
+            "has_code_markers": 0.0,
+            "is_specific": 0.0,
+            "length": 20,
+            "technical_keyword_count": 0,
+            "word_count": 3,
         }
 
         utility = predictor._compute_utility(signals)
@@ -525,7 +573,9 @@ class TestGetExplanation:
         utility = predictor.predict_utility(query)
 
         # Verify utility is actually in medium range before testing explanation
-        assert 0.3 <= utility <= 0.7, f"Query should produce medium utility, got {utility}"
+        assert (
+            0.3 <= utility <= 0.7
+        ), f"Query should produce medium utility, got {utility}"
 
         explanation = predictor.get_explanation(query, utility)
         assert "uncertain" in explanation.lower()
@@ -675,41 +725,53 @@ class TestRealisticQueries:
         """Create predictor instance for tests."""
         return RetrievalPredictor()
 
-    @pytest.mark.parametrize("query,expected_min_utility", [
-        # Queries that SHOULD need retrieval
-        ("How do I implement user authentication?", 0.7),
-        ("Find the function that handles API requests", 0.7),
-        ("Show me examples of database connection patterns", 0.7),
-        ("What code handles error responses?", 0.7),
-        ("Where is the middleware configuration?", 0.7),
-        ("I need to fix a bug in the authentication module", 0.7),
-        ("Search for all async function implementations", 0.7),
-        # Queries that should have moderate utility
-        ("update the config file", 0.4),
-        ("implement new feature", 0.5),
-    ])
+    @pytest.mark.parametrize(
+        "query,expected_min_utility",
+        [
+            # Queries that SHOULD need retrieval
+            ("How do I implement user authentication?", 0.7),
+            ("Find the function that handles API requests", 0.7),
+            ("Show me examples of database connection patterns", 0.7),
+            ("What code handles error responses?", 0.7),
+            ("Where is the middleware configuration?", 0.7),
+            ("I need to fix a bug in the authentication module", 0.7),
+            ("Search for all async function implementations", 0.7),
+            # Queries that should have moderate utility
+            ("update the config file", 0.4),
+            ("implement new feature", 0.5),
+        ],
+    )
     def test_queries_needing_retrieval(self, predictor, query, expected_min_utility):
         """Test queries that should have at least expected utility."""
         utility = predictor.predict_utility(query)
 
-        assert utility >= expected_min_utility, f"Query '{query}' expected >= {expected_min_utility}, got {utility}"
+        assert (
+            utility >= expected_min_utility
+        ), f"Query '{query}' expected >= {expected_min_utility}, got {utility}"
 
-    @pytest.mark.parametrize("query,expected_max_utility", [
-        # Queries that should NOT need retrieval
-        ("ok", 0.2),
-        ("thanks!", 0.2),
-        ("got it", 0.2),
-        ("sure", 0.2),
-        ("yes", 0.2),
-        ("no", 0.2),
-        ("great!", 0.3),
-        ("sounds good", 0.3),
-    ])
-    def test_queries_not_needing_retrieval(self, predictor, query, expected_max_utility):
+    @pytest.mark.parametrize(
+        "query,expected_max_utility",
+        [
+            # Queries that should NOT need retrieval
+            ("ok", 0.2),
+            ("thanks!", 0.2),
+            ("got it", 0.2),
+            ("sure", 0.2),
+            ("yes", 0.2),
+            ("no", 0.2),
+            ("great!", 0.3),
+            ("sounds good", 0.3),
+        ],
+    )
+    def test_queries_not_needing_retrieval(
+        self, predictor, query, expected_max_utility
+    ):
         """Test queries that should have at most expected utility."""
         utility = predictor.predict_utility(query)
 
-        assert utility <= expected_max_utility, f"Query '{query}' expected <= {expected_max_utility}, got {utility}"
+        assert (
+            utility <= expected_max_utility
+        ), f"Query '{query}' expected <= {expected_max_utility}, got {utility}"
 
 
 class TestClassConstants:

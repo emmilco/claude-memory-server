@@ -1,13 +1,9 @@
 """Final targeted tests to push coverage to 85%."""
 
 import pytest
-import pytest_asyncio
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime, UTC
+from unittest.mock import AsyncMock, patch
 
 from src.memory.incremental_indexer import IncrementalIndexer
-from src.embeddings.generator import EmbeddingGenerator
 from src.embeddings.cache import EmbeddingCache
 from src.config import ServerConfig, get_config
 from tests.conftest import mock_embedding
@@ -23,8 +19,10 @@ class TestIncrementalIndexerAdditional:
         test_file = tmp_path / "test.py"
         test_file.write_text("def hello():\n    return 'world'")
 
-        with patch.object(indexer.store, 'initialize', new_callable=AsyncMock):
-            with patch.object(indexer.store, 'batch_store', new_callable=AsyncMock) as mock_store:
+        with patch.object(indexer.store, "initialize", new_callable=AsyncMock):
+            with patch.object(
+                indexer.store, "batch_store", new_callable=AsyncMock
+            ) as mock_store:
                 indexer.is_initialized = True
                 mock_store.return_value = ["id1", "id2"]
 
@@ -42,14 +40,12 @@ class TestIncrementalIndexerAdditional:
         (tmp_path / "file1.py").write_text("def func1(): pass")
         (tmp_path / "file2.py").write_text("def func2(): pass")
 
-        with patch.object(indexer.store, 'initialize', new_callable=AsyncMock):
-            with patch.object(indexer.store, 'batch_store', new_callable=AsyncMock):
+        with patch.object(indexer.store, "initialize", new_callable=AsyncMock):
+            with patch.object(indexer.store, "batch_store", new_callable=AsyncMock):
                 indexer.is_initialized = True
 
                 result = await indexer.index_directory(
-                    tmp_path,
-                    recursive=False,
-                    show_progress=True
+                    tmp_path, recursive=False, show_progress=True
                 )
 
                 assert "total_files" in result
@@ -62,7 +58,7 @@ class TestIncrementalIndexerAdditional:
         bad_file = tmp_path / "bad.py"
         bad_file.write_text("def incomplete(")  # Syntax error
 
-        with patch.object(indexer.store, 'initialize', new_callable=AsyncMock):
+        with patch.object(indexer.store, "initialize", new_callable=AsyncMock):
             indexer.is_initialized = True
 
             result = await indexer.index_file(bad_file)
@@ -75,9 +71,9 @@ class TestIncrementalIndexerAdditional:
         """Test indexing binary file (should skip)."""
         indexer = IncrementalIndexer(project_name="test")
         binary_file = tmp_path / "test.bin"
-        binary_file.write_bytes(b'\x00\x01\x02\x03')
+        binary_file.write_bytes(b"\x00\x01\x02\x03")
 
-        with patch.object(indexer.store, 'initialize', new_callable=AsyncMock):
+        with patch.object(indexer.store, "initialize", new_callable=AsyncMock):
             indexer.is_initialized = True
 
             result = await indexer.index_file(binary_file)
@@ -94,7 +90,7 @@ class TestCacheAdditional:
         """Test caching for multiple models."""
         config = ServerConfig(
             embedding_cache_enabled=True,
-            embedding_cache_path=str(tmp_path / "cache.db")
+            embedding_cache_path=str(tmp_path / "cache.db"),
         )
         cache = EmbeddingCache(config)
 
@@ -122,7 +118,7 @@ class TestCacheAdditional:
         """Test cache statistics tracking."""
         config = ServerConfig(
             embedding_cache_enabled=True,
-            embedding_cache_path=str(tmp_path / "cache.db")
+            embedding_cache_path=str(tmp_path / "cache.db"),
         )
         cache = EmbeddingCache(config)
 
@@ -199,7 +195,12 @@ class TestModelsAdditional:
 
     def test_search_filters_all_options(self):
         """Test SearchFilters with all options."""
-        from src.core.models import SearchFilters, MemoryCategory, ContextLevel, MemoryScope
+        from src.core.models import (
+            SearchFilters,
+            MemoryCategory,
+            ContextLevel,
+            MemoryScope,
+        )
 
         filters = SearchFilters(
             category=MemoryCategory.PREFERENCE,
@@ -214,5 +215,3 @@ class TestModelsAdditional:
         assert filters.scope == MemoryScope.GLOBAL
         assert filters.project_name == "test-project"
         assert filters.min_importance == 0.7
-
-

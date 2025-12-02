@@ -9,7 +9,7 @@ import pytest
 from mcp_performance_core import parse_source_file
 
 # Sample SQL code for testing
-SAMPLE_SQL_CODE = '''
+SAMPLE_SQL_CODE = """
 -- Create a users table
 CREATE TABLE users (
     id INTEGER PRIMARY KEY,
@@ -42,9 +42,9 @@ BEGIN
         updated_at = CURRENT_TIMESTAMP
     WHERE id = user_id;
 END;
-'''
+"""
 
-SAMPLE_SQL_COMPLEX = '''
+SAMPLE_SQL_COMPLEX = """
 -- Complex table with foreign keys
 CREATE TABLE orders (
     order_id INTEGER PRIMARY KEY,
@@ -68,7 +68,7 @@ BEGIN
     SELECT COUNT(*) INTO count FROM users;
     RETURN count;
 END;
-'''
+"""
 
 
 class TestSQLParsing:
@@ -103,7 +103,9 @@ class TestSQLParsing:
         assert len(views) >= 1
 
         # Check for active_users view
-        active_users_view = next((v for v in views if "active_users" in v.name.lower()), None)
+        active_users_view = next(
+            (v for v in views if "active_users" in v.name.lower()), None
+        )
         assert active_users_view is not None
 
     def test_sql_function_extraction(self):
@@ -192,11 +194,11 @@ class TestSQLParsing:
 
     def test_sql_comments_only(self):
         """Test parsing SQL file with only comments."""
-        sql_comments = '''
+        sql_comments = """
         -- This is a comment
         /* Multi-line
            comment */
-        '''
+        """
         result = parse_source_file("comments.sql", sql_comments)
 
         assert result.language == "Sql"
@@ -205,7 +207,7 @@ class TestSQLParsing:
 
     def test_sql_mixed_case(self):
         """Test parsing SQL with mixed case keywords."""
-        mixed_case_sql = '''
+        mixed_case_sql = """
         Create Table Products (
             product_id INT PRIMARY KEY,
             name VARCHAR(100)
@@ -216,7 +218,7 @@ class TestSQLParsing:
         BEGIN
             RETURN (SELECT name FROM Products WHERE product_id = pid);
         END;
-        '''
+        """
         result = parse_source_file("mixed.sql", mixed_case_sql)
 
         assert result.language == "Sql"
@@ -251,12 +253,12 @@ class TestSQLParsing:
 
     def test_sql_unicode_content(self):
         """Test parsing SQL with unicode characters."""
-        unicode_sql = '''
+        unicode_sql = """
         CREATE TABLE users (
             id INTEGER PRIMARY KEY,
             name VARCHAR(100) -- Names like José, François, 中文
         );
-        '''
+        """
         result = parse_source_file("unicode.sql", unicode_sql)
 
         assert result.language == "Sql"
@@ -280,10 +282,10 @@ class TestSQLParsing:
     def test_sql_error_recovery(self):
         """Test that parser handles malformed SQL gracefully."""
         # Malformed SQL but still valid syntax tree
-        malformed_sql = '''
+        malformed_sql = """
         CREATE TABLE incomplete (
             id INTEGER
-        '''
+        """
 
         # Should not crash, might return empty units
         result = parse_source_file("malformed.sql", malformed_sql)

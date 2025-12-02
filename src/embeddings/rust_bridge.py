@@ -1,6 +1,5 @@
 """Python wrapper for Rust performance functions with pure Python fallbacks."""
 
-import numpy as np
 from typing import List
 import logging
 
@@ -11,6 +10,7 @@ RUST_AVAILABLE = False
 try:
     from mcp_performance_core import batch_normalize_embeddings as rust_batch_normalize
     from mcp_performance_core import cosine_similarity as rust_cosine_similarity
+
     RUST_AVAILABLE = True
     logger.info("Rust performance core loaded successfully")
 except ImportError as e:
@@ -35,7 +35,9 @@ def normalize_vector(vector: List[float]) -> List[float]:
     return [0.0] * len(vector)
 
 
-def batch_normalize_embeddings_python(embeddings: List[List[float]]) -> List[List[float]]:
+def batch_normalize_embeddings_python(
+    embeddings: List[List[float]],
+) -> List[List[float]]:
     """
     Normalize a batch of embeddings (pure Python fallback).
 

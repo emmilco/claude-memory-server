@@ -10,10 +10,9 @@ import asyncio
 import logging
 import threading
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional, List, Dict
 from datetime import datetime, UTC
-from weakref import WeakValueDictionary
 
 from qdrant_client import QdrantClient
 from requests.exceptions import Timeout
@@ -23,7 +22,6 @@ from src.core.exceptions import QdrantConnectionError, StorageError
 from src.store.connection_health_checker import (
     ConnectionHealthChecker,
     HealthCheckLevel,
-    HealthCheckResult,
 )
 from src.store.connection_pool_monitor import ConnectionPoolMonitor
 
@@ -93,9 +91,7 @@ class HealthCheckFailedError(StorageError):
         self.reason = reason
         self.attempt = attempt
 
-        message = (
-            f"Connection health check failed on attempt {attempt}: {reason}"
-        )
+        message = f"Connection health check failed on attempt {attempt}: {reason}"
         solution = (
             "Steps to diagnose:\n"
             "1. Check Qdrant is running: curl http://localhost:6333/health\n"
@@ -182,7 +178,9 @@ class QdrantConnectionPool:
         if max_size < 1:
             raise ValueError(f"max_size must be >= 1, got {max_size}")
         if min_size > max_size:
-            raise ValueError(f"min_size ({min_size}) cannot exceed max_size ({max_size})")
+            raise ValueError(
+                f"min_size ({min_size}) cannot exceed max_size ({max_size})"
+            )
         if timeout <= 0:
             raise ValueError(f"timeout must be > 0, got {timeout}")
         if recycle <= 0:
@@ -263,8 +261,7 @@ class QdrantConnectionPool:
             # Clean up any created connections
             await self.close()
             raise QdrantConnectionError(
-                url=self.config.qdrant_url,
-                reason=f"Pool initialization failed: {e}"
+                url=self.config.qdrant_url, reason=f"Pool initialization failed: {e}"
             )
 
     async def acquire(self) -> QdrantClient:
@@ -340,8 +337,7 @@ class QdrantConnectionPool:
             if pooled_conn is None:
                 try:
                     pooled_conn = await asyncio.wait_for(
-                        self._pool.get(),
-                        timeout=self.timeout
+                        self._pool.get(), timeout=self.timeout
                     )
 
                     # Check if connection needs recycling
@@ -369,14 +365,14 @@ class QdrantConnectionPool:
                     raise PoolExhaustedError(
                         active=self._active_connections,
                         max_size=self.max_size,
-                        timeout=self.timeout
+                        timeout=self.timeout,
                     )
 
             # Perform health check if enabled
             if self._health_checker:
                 health_result = await self._health_checker.check_health(
                     pooled_conn.client,
-                    HealthCheckLevel.FAST  # Use fast check for minimal overhead
+                    HealthCheckLevel.FAST,  # Use fast check for minimal overhead
                 )
 
                 if not health_result.healthy:
@@ -402,16 +398,17 @@ class QdrantConnectionPool:
 
                     # Re-check new connection
                     health_result = await self._health_checker.check_health(
-                        pooled_conn.client,
-                        HealthCheckLevel.FAST
+                        pooled_conn.client, HealthCheckLevel.FAST
                     )
 
                     if not health_result.healthy:
                         # Even new connection is unhealthy - serious issue
-                        logger.error("Newly created connection is unhealthy!", exc_info=True)
+                        logger.error(
+                            "Newly created connection is unhealthy!", exc_info=True
+                        )
                         raise HealthCheckFailedError(
                             reason="Unable to create healthy connection after retry",
-                            attempt=2
+                            attempt=2,
                         )
 
             # Update connection stats
@@ -440,7 +437,11 @@ class QdrantConnectionPool:
 
             return pooled_conn.client
 
-        except (PoolExhaustedError, HealthCheckFailedError, ConnectionCreationFailedError):
+        except (
+            PoolExhaustedError,
+            HealthCheckFailedError,
+            ConnectionCreationFailedError,
+        ):
             raise
         except Exception as e:
             logger.error(f"Failed to acquire connection: {e}", exc_info=True)
@@ -574,7 +575,9 @@ class QdrantConnectionPool:
             await self.initialize()
             logger.info("Connection pool reset and reinitialized successfully")
         else:
-            logger.info("Connection pool reset (not reinitialized - was not initialized before)")
+            logger.info(
+                "Connection pool reset (not reinitialized - was not initialized before)"
+            )
 
     def is_healthy(self) -> bool:
         """Check if pool is in a healthy state.
@@ -589,9 +592,15 @@ class QdrantConnectionPool:
 
         # Check for state corruption: created_count at max but nothing available
         idle_count = self._pool.qsize()
-        active_count = len(self._client_map)  # More accurate than self._active_connections
+        active_count = len(
+            self._client_map
+        )  # More accurate than self._active_connections
 
-        if self._created_count >= self.max_size and idle_count == 0 and active_count == 0:
+        if (
+            self._created_count >= self.max_size
+            and idle_count == 0
+            and active_count == 0
+        ):
             logger.warning(
                 f"Pool state corruption detected: created_count={self._created_count}, "
                 f"idle={idle_count}, active={active_count}, max={self.max_size}"
@@ -640,7 +649,7 @@ class QdrantConnectionPool:
                     url=self.config.qdrant_url,
                     api_key=self.config.qdrant_api_key,
                     timeout=30.0,
-                    prefer_grpc=getattr(self.config, 'qdrant_prefer_grpc', False),
+                    prefer_grpc=getattr(self.config, "qdrant_prefer_grpc", False),
                 )
 
                 # BUG-066: Run blocking get_collections() in executor to prevent event loop blocking
@@ -655,13 +664,13 @@ class QdrantConnectionPool:
                     last_used=datetime.now(UTC),
                 )
 
-                logger.debug(f"Created new connection")
+                logger.debug("Created new connection")
                 return pooled_conn
 
             except (ConnectionError, Timeout) as e:
                 # Connection error or timeout - retry with exponential backoff
                 if attempt < max_attempts - 1:
-                    delay = 2 ** attempt  # 1s, 2s, 4s delays
+                    delay = 2**attempt  # 1s, 2s, 4s delays
                     logger.warning(
                         f"Connection error on attempt {attempt + 1}/{max_attempts}: {e}. "
                         f"Retrying in {delay}s..."
@@ -670,10 +679,13 @@ class QdrantConnectionPool:
                     continue
                 else:
                     # Final attempt failed
-                    logger.error(f"Failed to create connection after {max_attempts} attempts: {e}", exc_info=True)
+                    logger.error(
+                        f"Failed to create connection after {max_attempts} attempts: {e}",
+                        exc_info=True,
+                    )
                     raise QdrantConnectionError(
                         url=self.config.qdrant_url,
-                        reason=f"Failed to connect after {max_attempts} attempts: {e}"
+                        reason=f"Failed to connect after {max_attempts} attempts: {e}",
                     )
 
             except Exception as e:
@@ -681,7 +693,7 @@ class QdrantConnectionPool:
                 logger.error(f"Failed to create connection: {e}", exc_info=True)
                 raise QdrantConnectionError(
                     url=self.config.qdrant_url,
-                    reason=f"Connection creation failed: {e}"
+                    reason=f"Connection creation failed: {e}",
                 )
 
     def _should_recycle(self, pooled_conn: PooledConnection) -> bool:
@@ -724,7 +736,11 @@ class QdrantConnectionPool:
             return
 
         # Calculate average (guard against division by zero)
-        self._stats.avg_acquire_time_ms = sum(self._acquire_times) / len(self._acquire_times) if self._acquire_times else 0.0
+        self._stats.avg_acquire_time_ms = (
+            sum(self._acquire_times) / len(self._acquire_times)
+            if self._acquire_times
+            else 0.0
+        )
 
         # Calculate P95 (safe: early return above guarantees non-empty list)
         sorted_times = sorted(self._acquire_times)

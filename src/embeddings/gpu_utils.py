@@ -15,6 +15,7 @@ def detect_cuda() -> bool:
     """
     try:
         import torch
+
         return torch.cuda.is_available()
     except ImportError:
         logger.debug("PyTorch not installed, CUDA unavailable")
@@ -33,6 +34,7 @@ def detect_mps() -> bool:
     """
     try:
         import torch
+
         return torch.backends.mps.is_available()
     except ImportError:
         logger.debug("PyTorch not installed, MPS unavailable")

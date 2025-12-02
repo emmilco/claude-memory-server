@@ -2,8 +2,6 @@
 
 import asyncio
 import logging
-from pathlib import Path
-from typing import Optional
 import sys
 
 from rich.console import Console
@@ -50,10 +48,10 @@ async def health_schedule_enable() -> int:
         console.print()
         console.print(
             Panel.fit(
-                f"[bold green]Health Maintenance Schedule Enabled[/bold green]\n\n"
-                f"[cyan]Weekly Archival:[/cyan] Sundays at 01:00 (memories older than 90 days)\n"
-                f"[cyan]Monthly Cleanup:[/cyan] 1st of month at 02:00 (stale memories older than 180 days)\n"
-                f"[cyan]Weekly Reports:[/cyan] Mondays at 09:00\n",
+                "[bold green]Health Maintenance Schedule Enabled[/bold green]\n\n"
+                "[cyan]Weekly Archival:[/cyan] Sundays at 01:00 (memories older than 90 days)\n"
+                "[cyan]Monthly Cleanup:[/cyan] 1st of month at 02:00 (stale memories older than 180 days)\n"
+                "[cyan]Weekly Reports:[/cyan] Mondays at 09:00\n",
                 border_style="green",
             )
         )
@@ -149,10 +147,14 @@ async def health_schedule_status() -> int:
         table.add_column("Schedule", style="white")
 
         status_emoji = "✅" if schedule_config.enabled else "❌"
-        overall_status = f"{status_emoji} {'Enabled' if schedule_config.enabled else 'Disabled'}"
+        overall_status = (
+            f"{status_emoji} {'Enabled' if schedule_config.enabled else 'Disabled'}"
+        )
 
         # Weekly archival
-        archival_status = "✅ Enabled" if schedule_config.weekly_archival_enabled else "❌ Disabled"
+        archival_status = (
+            "✅ Enabled" if schedule_config.weekly_archival_enabled else "❌ Disabled"
+        )
         archival_schedule = (
             f"Sundays at {schedule_config.weekly_archival_time}\n"
             f"(memories older than {schedule_config.weekly_archival_threshold_days} days)"
@@ -160,7 +162,9 @@ async def health_schedule_status() -> int:
         table.add_row("Weekly Archival", archival_status, archival_schedule)
 
         # Monthly cleanup
-        cleanup_status = "✅ Enabled" if schedule_config.monthly_cleanup_enabled else "❌ Disabled"
+        cleanup_status = (
+            "✅ Enabled" if schedule_config.monthly_cleanup_enabled else "❌ Disabled"
+        )
         cleanup_schedule = (
             f"Day {schedule_config.monthly_cleanup_day} at {schedule_config.monthly_cleanup_time}\n"
             f"(stale memories older than {schedule_config.monthly_cleanup_threshold_days} days)"
@@ -168,11 +172,11 @@ async def health_schedule_status() -> int:
         table.add_row("Monthly Cleanup", cleanup_status, cleanup_schedule)
 
         # Weekly report
-        report_status = "✅ Enabled" if schedule_config.weekly_report_enabled else "❌ Disabled"
-        days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-        report_schedule = (
-            f"{days[schedule_config.weekly_report_day]}s at {schedule_config.weekly_report_time}"
+        report_status = (
+            "✅ Enabled" if schedule_config.weekly_report_enabled else "❌ Disabled"
         )
+        days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        report_schedule = f"{days[schedule_config.weekly_report_day]}s at {schedule_config.weekly_report_time}"
         table.add_row("Weekly Health Report", report_status, report_schedule)
 
         console.print()
@@ -213,7 +217,9 @@ async def health_schedule_test(job: str = "all") -> int:
         schedule_config_path = config.data_dir / "health_schedule.json"
 
         if not schedule_config_path.exists():
-            console.print("\n[bold red]Error:[/bold red] No health schedule configured.\n")
+            console.print(
+                "\n[bold red]Error:[/bold red] No health schedule configured.\n"
+            )
             console.print("Run [cyan]health-schedule enable[/cyan] first.\n")
             return 1
 
@@ -249,7 +255,7 @@ async def health_schedule_test(job: str = "all") -> int:
                 console.print("[cyan]Generating weekly health report...[/cyan]")
                 result = await scheduler.trigger_report_now()
                 results.append(("Report", result))
-                console.print(f"  → Report generated successfully\n")
+                console.print("  → Report generated successfully\n")
 
         finally:
             await scheduler.stop()

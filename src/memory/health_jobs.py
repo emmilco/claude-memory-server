@@ -5,8 +5,7 @@ health reporting to maintain system quality over time.
 """
 
 import logging
-import asyncio
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional
 from datetime import datetime, UTC, timedelta
 from dataclasses import dataclass
 
@@ -114,7 +113,7 @@ class HealthMaintenanceJobs:
 
             for memory in all_memories:
                 # Skip if already ARCHIVED or STALE
-                current_state = memory.get('lifecycle_state', LifecycleState.ACTIVE)
+                current_state = memory.get("lifecycle_state", LifecycleState.ACTIVE)
                 if isinstance(current_state, str):
                     try:
                         current_state = LifecycleState(current_state)
@@ -125,18 +124,20 @@ class HealthMaintenanceJobs:
                     continue
 
                 # Parse datetime if it's a string
-                created_at = memory.get('created_at')
+                created_at = memory.get("created_at")
                 if isinstance(created_at, str):
                     from dateutil.parser import parse
+
                     created_at = parse(created_at)
 
-                last_accessed = memory.get('last_accessed', created_at)
+                last_accessed = memory.get("last_accessed", created_at)
                 if isinstance(last_accessed, str):
                     from dateutil.parser import parse
+
                     last_accessed = parse(last_accessed)
 
                 # Parse context_level if it's a string
-                context_level = memory.get('context_level', ContextLevel.SESSION_STATE)
+                context_level = memory.get("context_level", ContextLevel.SESSION_STATE)
                 if isinstance(context_level, str):
                     try:
                         context_level = ContextLevel(context_level)
@@ -147,7 +148,7 @@ class HealthMaintenanceJobs:
                 target_state = self.lifecycle_manager.calculate_state(
                     created_at=created_at,
                     last_accessed=last_accessed,
-                    use_count=memory.get('use_count', 0),
+                    use_count=memory.get("use_count", 0),
                     context_level=context_level,
                 )
 
@@ -158,9 +159,7 @@ class HealthMaintenanceJobs:
             result.memories_processed = len(candidates)
 
             if dry_run:
-                logger.info(
-                    f"DRY RUN: Would archive {len(candidates)} memories"
-                )
+                logger.info(f"DRY RUN: Would archive {len(candidates)} memories")
                 result.success = True
                 result.memories_archived = len(candidates)
             else:
@@ -170,7 +169,7 @@ class HealthMaintenanceJobs:
                     try:
                         # Update lifecycle state
                         await self.store.update_lifecycle_state(
-                            memory.get('id'), target_state
+                            memory.get("id"), target_state
                         )
                         archived_count += 1
                     except Exception as e:
@@ -231,7 +230,7 @@ class HealthMaintenanceJobs:
 
             for memory in all_memories:
                 # Only delete STALE memories
-                current_state = memory.get('lifecycle_state', LifecycleState.ACTIVE)
+                current_state = memory.get("lifecycle_state", LifecycleState.ACTIVE)
                 if isinstance(current_state, str):
                     try:
                         current_state = LifecycleState(current_state)
@@ -242,16 +241,17 @@ class HealthMaintenanceJobs:
                     continue
 
                 # Check age
-                created_at = memory.get('created_at')
+                created_at = memory.get("created_at")
                 if isinstance(created_at, str):
                     from dateutil.parser import parse
+
                     created_at = parse(created_at)
 
                 if created_at > cutoff_date:
                     continue
 
                 # Skip USER_PREFERENCE (they're more valuable)
-                context_level = memory.get('context_level', ContextLevel.SESSION_STATE)
+                context_level = memory.get("context_level", ContextLevel.SESSION_STATE)
                 if isinstance(context_level, str):
                     try:
                         context_level = ContextLevel(context_level)
@@ -262,9 +262,11 @@ class HealthMaintenanceJobs:
                     continue
 
                 # Check usage (skip if frequently accessed)
-                use_count = memory.get('use_count', 0)
+                use_count = memory.get("use_count", 0)
                 config = get_config()
-                if use_count > config.quality.stale_memory_usage_threshold:  # REF-021: Configurable threshold
+                if (
+                    use_count > config.quality.stale_memory_usage_threshold
+                ):  # REF-021: Configurable threshold
                     continue
 
                 candidates.append(memory)
@@ -272,9 +274,7 @@ class HealthMaintenanceJobs:
             result.memories_processed = len(candidates)
 
             if dry_run:
-                logger.info(
-                    f"DRY RUN: Would delete {len(candidates)} STALE memories"
-                )
+                logger.info(f"DRY RUN: Would delete {len(candidates)} STALE memories")
                 result.success = True
                 result.memories_deleted = len(candidates)
             else:
@@ -282,7 +282,7 @@ class HealthMaintenanceJobs:
                 deleted_count = 0
                 for memory in candidates:
                     try:
-                        await self.store.delete_memory(memory.get('id'))
+                        await self.store.delete_memory(memory.get("id"))
                         deleted_count += 1
                     except Exception as e:
                         error_msg = f"Failed to delete memory {memory.get('id')}: {e}"
@@ -353,7 +353,7 @@ class HealthMaintenanceJobs:
                 f"\n"
                 f"Recommendations:\n"
                 + "\n".join(f"  • {rec}" for rec in health_score.recommendations)
-                + f"\n═══════════════════════════════════════"
+                + "\n═══════════════════════════════════════"
             )
 
             result.success = True

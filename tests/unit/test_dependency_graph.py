@@ -16,14 +16,38 @@ def sample_imports():
     """Sample import data for testing."""
     return {
         "/project/main.py": [
-            {"module": "utils", "items": ["helper"], "type": "from_import", "line": 1, "relative": True},
-            {"module": "models", "items": ["User"], "type": "from_import", "line": 2, "relative": True},
+            {
+                "module": "utils",
+                "items": ["helper"],
+                "type": "from_import",
+                "line": 1,
+                "relative": True,
+            },
+            {
+                "module": "models",
+                "items": ["User"],
+                "type": "from_import",
+                "line": 2,
+                "relative": True,
+            },
         ],
         "/project/utils.py": [
-            {"module": "logging", "items": ["Logger"], "type": "from_import", "line": 1, "relative": False},
+            {
+                "module": "logging",
+                "items": ["Logger"],
+                "type": "from_import",
+                "line": 1,
+                "relative": False,
+            },
         ],
         "/project/models.py": [
-            {"module": "dataclasses", "items": ["dataclass"], "type": "from_import", "line": 1, "relative": False},
+            {
+                "module": "dataclasses",
+                "items": ["dataclass"],
+                "type": "from_import",
+                "line": 1,
+                "relative": False,
+            },
         ],
     }
 
@@ -42,7 +66,13 @@ class TestBasicDependencies:
     def test_add_single_dependency(self, graph):
         """Test adding a single dependency."""
         imports = [
-            {"module": "os", "items": [], "type": "import", "line": 1, "relative": False}
+            {
+                "module": "os",
+                "items": [],
+                "type": "import",
+                "line": 1,
+                "relative": False,
+            }
         ]
 
         graph.add_file_dependencies("/project/main.py", imports)
@@ -152,11 +182,13 @@ class TestTransitiveDependencies:
     def test_max_depth_limit(self, graph):
         """Test max depth limit for transitive queries."""
         # Create long chain: A -> B -> C -> D -> E
-        files = [str(Path(f"/project/{chr(ord('a')+i)}.py").resolve()) for i in range(5)]
+        files = [
+            str(Path(f"/project/{chr(ord('a')+i)}.py").resolve()) for i in range(5)
+        ]
 
         for i in range(4):
-            graph.dependencies[files[i]].add(files[i+1])
-            graph.dependents[files[i+1]].add(files[i])
+            graph.dependencies[files[i]].add(files[i + 1])
+            graph.dependents[files[i + 1]].add(files[i])
 
         # Limit depth to 2
         all_deps = graph.get_all_dependencies(files[0], max_depth=2)
@@ -285,12 +317,14 @@ class TestImportDetails:
         target = str(Path("/project/utils.py").resolve())
 
         graph.dependencies[source].add(target)
-        graph.import_details[(source, target)].append({
-            "module": "utils",
-            "items": ["helper"],
-            "type": "from_import",
-            "line": 5,
-        })
+        graph.import_details[(source, target)].append(
+            {
+                "module": "utils",
+                "items": ["helper"],
+                "type": "from_import",
+                "line": 5,
+            }
+        )
 
         details = graph.get_import_details(source, target)
 
@@ -304,10 +338,22 @@ class TestImportDetails:
         source = str(Path("/project/main.py").resolve())
         target = str(Path("/project/utils.py").resolve())
 
-        graph.import_details[(source, target)].extend([
-            {"module": "utils", "items": ["helper1"], "type": "from_import", "line": 5},
-            {"module": "utils", "items": ["helper2"], "type": "from_import", "line": 6},
-        ])
+        graph.import_details[(source, target)].extend(
+            [
+                {
+                    "module": "utils",
+                    "items": ["helper1"],
+                    "type": "from_import",
+                    "line": 5,
+                },
+                {
+                    "module": "utils",
+                    "items": ["helper2"],
+                    "type": "from_import",
+                    "line": 6,
+                },
+            ]
+        )
 
         details = graph.get_import_details(source, target)
 
@@ -320,12 +366,14 @@ class TestImportDetails:
         source = str(Path("/project/main.py").resolve())
         target = str(Path("/project/utils.py").resolve())
 
-        graph.import_details[(source, target)].append({
-            "module": "utils",
-            "items": ["helper"],
-            "type": "from_import",
-            "line": 5,
-        })
+        graph.import_details[(source, target)].append(
+            {
+                "module": "utils",
+                "items": ["helper"],
+                "type": "from_import",
+                "line": 5,
+            }
+        )
 
         details1 = graph.get_import_details(source, target)
         details1.append({"fake": "data"})

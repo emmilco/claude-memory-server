@@ -7,7 +7,6 @@ import sqlite3
 import tempfile
 import os
 from datetime import datetime, timedelta, UTC
-from pathlib import Path
 
 from src.analytics.usage_tracker import UsagePatternTracker
 
@@ -112,7 +111,7 @@ class TestQueryTracking:
             query="test query",
             result_count=5,
             execution_time_ms=10.5,
-            query_type="memory"
+            query_type="memory",
         )
 
         # Verify data was inserted
@@ -136,7 +135,7 @@ class TestQueryTracking:
             result_count=3,
             execution_time_ms=8.2,
             query_type="code",
-            user_session="session-123"
+            user_session="session-123",
         )
 
         conn = sqlite3.connect(temp_db)
@@ -159,11 +158,14 @@ class TestQueryTracking:
 
         conn = sqlite3.connect(temp_db)
         cursor = conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT access_count, avg_result_count
             FROM usage_statistics
             WHERE stat_type='query' AND item_key=?
-        """, (query,))
+        """,
+            (query,),
+        )
         row = cursor.fetchone()
         conn.close()
 
@@ -193,9 +195,7 @@ class TestCodeAccessTracking:
     async def test_track_code_access_basic(self, tracker, temp_db):
         """Test basic code access tracking."""
         await tracker.track_code_access(
-            file_path="src/test.py",
-            function_name="test_function",
-            access_type="search"
+            file_path="src/test.py", function_name="test_function", access_type="search"
         )
 
         conn = sqlite3.connect(temp_db)
@@ -212,10 +212,7 @@ class TestCodeAccessTracking:
     @pytest.mark.asyncio
     async def test_track_code_access_file_only(self, tracker, temp_db):
         """Test tracking code access without function name."""
-        await tracker.track_code_access(
-            file_path="src/test.py",
-            access_type="view"
-        )
+        await tracker.track_code_access(file_path="src/test.py", access_type="view")
 
         conn = sqlite3.connect(temp_db)
         cursor = conn.cursor()
@@ -239,11 +236,14 @@ class TestCodeAccessTracking:
         conn = sqlite3.connect(temp_db)
         cursor = conn.cursor()
         item_key = f"{file_path}::{function_name}"
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT access_count
             FROM usage_statistics
             WHERE stat_type='code_access' AND item_key=?
-        """, (item_key,))
+        """,
+            (item_key,),
+        )
         count = cursor.fetchone()[0]
         conn.close()
 
@@ -256,7 +256,7 @@ class TestCodeAccessTracking:
             file_path="src/test.py",
             function_name="test_func",
             access_type="search",
-            user_session="session-456"
+            user_session="session-456",
         )
 
         conn = sqlite3.connect(temp_db)
@@ -310,10 +310,13 @@ class TestTopQueries:
         conn = sqlite3.connect(temp_db)
         cursor = conn.cursor()
         old_date = (datetime.now(UTC) - timedelta(days=31)).isoformat()
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO query_history (query_text, result_count, execution_time_ms, timestamp)
             VALUES (?, ?, ?, ?)
-        """, ("old query", 3, 8.0, old_date))
+        """,
+            ("old query", 3, 8.0, old_date),
+        )
         conn.commit()
         conn.close()
 
@@ -351,9 +354,9 @@ class TestFrequentlyAccessedCode:
         assert len(code_items) > 0
         # "file1.py::function1" was accessed twice
         assert any(
-            item["file_path"] == "file1.py" and
-            item["function_name"] == "function1" and
-            item["access_count"] == 2
+            item["file_path"] == "file1.py"
+            and item["function_name"] == "function1"
+            and item["access_count"] == 2
             for item in code_items
         )
 
@@ -389,10 +392,13 @@ class TestFrequentlyAccessedCode:
         conn = sqlite3.connect(temp_db)
         cursor = conn.cursor()
         old_date = (datetime.now(UTC) - timedelta(days=31)).isoformat()
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO code_access_log (file_path, function_name, access_type, timestamp)
             VALUES (?, ?, ?, ?)
-        """, ("old.py", "old_func", "search", old_date))
+        """,
+            ("old.py", "old_func", "search", old_date),
+        )
         conn.commit()
         conn.close()
 
@@ -470,15 +476,21 @@ class TestDataCleanup:
         cursor = conn.cursor()
         old_date = (datetime.now(UTC) - timedelta(days=91)).isoformat()
 
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO query_history (query_text, result_count, execution_time_ms, timestamp)
             VALUES (?, ?, ?, ?)
-        """, ("old query", 3, 8.0, old_date))
+        """,
+            ("old query", 3, 8.0, old_date),
+        )
 
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO code_access_log (file_path, function_name, access_type, timestamp)
             VALUES (?, ?, ?, ?)
-        """, ("old.py", "old_func", "search", old_date))
+        """,
+            ("old.py", "old_func", "search", old_date),
+        )
 
         conn.commit()
         conn.close()
@@ -545,14 +557,10 @@ class TestEdgeCases:
     async def test_concurrent_tracking(self, tracker):
         """Test concurrent tracking operations."""
         # Track multiple items concurrently
-        tasks = [
-            tracker.track_query(f"query {i}", i, float(i))
-            for i in range(10)
-        ]
-        tasks.extend([
-            tracker.track_code_access(f"file{i}.py", f"func{i}")
-            for i in range(10)
-        ])
+        tasks = [tracker.track_query(f"query {i}", i, float(i)) for i in range(10)]
+        tasks.extend(
+            [tracker.track_code_access(f"file{i}.py", f"func{i}") for i in range(10)]
+        )
 
         # Should complete without errors
         await asyncio.gather(*tasks)

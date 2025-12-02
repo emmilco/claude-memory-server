@@ -7,20 +7,22 @@ from src.core.validation import (
     validate_filter_params,
 )
 from src.core.exceptions import ValidationError
-from src.core.models import MemoryCategory, MemoryScope
 
 
 class TestNumericBoundaries:
     """Test numeric boundary conditions."""
 
-    @pytest.mark.parametrize("importance,should_pass", [
-        (-0.1, False),  # Below minimum
-        (0.0, True),    # Minimum valid
-        (0.5, True),    # Middle
-        (1.0, True),    # Maximum valid
-        (1.1, False),   # Above maximum
-        (None, True),   # None should use default
-    ])
+    @pytest.mark.parametrize(
+        "importance,should_pass",
+        [
+            (-0.1, False),  # Below minimum
+            (0.0, True),  # Minimum valid
+            (0.5, True),  # Middle
+            (1.0, True),  # Maximum valid
+            (1.1, False),  # Above maximum
+            (None, True),  # None should use default
+        ],
+    )
     def test_importance_boundaries(self, importance, should_pass):
         """Test importance value boundaries (0.0-1.0)."""
         payload = {
@@ -41,16 +43,22 @@ class TestNumericBoundaries:
         else:
             with pytest.raises(ValidationError) as exc:
                 validate_store_request(payload)
-            assert "importance" in str(exc.value).lower() or "greater" in str(exc.value).lower()
+            assert (
+                "importance" in str(exc.value).lower()
+                or "greater" in str(exc.value).lower()
+            )
 
-    @pytest.mark.parametrize("limit,should_pass", [
-        (-1, False),   # Negative
-        (0, False),    # Zero (minimum is 1)
-        (1, True),     # Minimum valid
-        (50, True),    # Middle
-        (100, True),   # Maximum valid
-        (101, False),  # Above maximum
-    ])
+    @pytest.mark.parametrize(
+        "limit,should_pass",
+        [
+            (-1, False),  # Negative
+            (0, False),  # Zero (minimum is 1)
+            (1, True),  # Minimum valid
+            (50, True),  # Middle
+            (100, True),  # Maximum valid
+            (101, False),  # Above maximum
+        ],
+    )
     def test_limit_boundaries(self, limit, should_pass):
         """Test limit parameter boundaries (1-100)."""
         payload = {
@@ -65,7 +73,10 @@ class TestNumericBoundaries:
             with pytest.raises(ValidationError) as exc:
                 validate_query_request(payload)
             # Pydantic will raise validation error for out of range
-            assert "validation" in str(exc.value).lower() or "limit" in str(exc.value).lower()
+            assert (
+                "validation" in str(exc.value).lower()
+                or "limit" in str(exc.value).lower()
+            )
 
     def test_offset_boundaries_note(self):
         """Note: offset is not part of QueryRequest model.
@@ -83,19 +94,22 @@ class TestNumericBoundaries:
 
         result = validate_query_request(payload)
         # QueryRequest doesn't have offset field - it's in server methods
-        assert not hasattr(result, 'offset')
+        assert not hasattr(result, "offset")
 
 
 class TestStringBoundaries:
     """Test string boundary conditions."""
 
-    @pytest.mark.parametrize("content,should_pass,reason", [
-        ("", False, "empty string"),
-        (" ", False, "whitespace only"),
-        ("a", True, "single character"),
-        ("a" * 50000, True, "exactly at max length"),
-        ("a" * 50001, False, "exceeds max length"),
-    ])
+    @pytest.mark.parametrize(
+        "content,should_pass,reason",
+        [
+            ("", False, "empty string"),
+            (" ", False, "whitespace only"),
+            ("a", True, "single character"),
+            ("a" * 50000, True, "exactly at max length"),
+            ("a" * 50001, False, "exceeds max length"),
+        ],
+    )
     def test_content_boundaries(self, content, should_pass, reason):
         """Test content string boundaries."""
         payload = {
@@ -112,7 +126,10 @@ class TestStringBoundaries:
                 validate_store_request(payload)
             # Check for relevant error message
             error_msg = str(exc.value).lower()
-            assert any(keyword in error_msg for keyword in ["empty", "length", "maximum", "validation"])
+            assert any(
+                keyword in error_msg
+                for keyword in ["empty", "length", "maximum", "validation"]
+            )
 
     def test_content_exactly_50kb_bytes(self):
         """Test content at exactly 50KB (51200 bytes) - should fail character limit."""
@@ -148,14 +165,17 @@ class TestStringBoundaries:
             validate_store_request(payload)
         assert "length" in str(exc.value).lower() or "maximum" in str(exc.value).lower()
 
-    @pytest.mark.parametrize("query,should_pass,reason", [
-        ("", False, "empty string"),
-        (" ", False, "whitespace only"),
-        ("a", True, "single character"),
-        ("a" * 1000, True, "exactly at max length"),
-        ("a" * 1001, False, "exceeds max length"),
-        ("a" * 10000, False, "very long query"),
-    ])
+    @pytest.mark.parametrize(
+        "query,should_pass,reason",
+        [
+            ("", False, "empty string"),
+            (" ", False, "whitespace only"),
+            ("a", True, "single character"),
+            ("a" * 1000, True, "exactly at max length"),
+            ("a" * 1001, False, "exceeds max length"),
+            ("a" * 10000, False, "very long query"),
+        ],
+    )
     def test_query_boundaries(self, query, should_pass, reason):
         """Test query string boundaries (max 1000 chars)."""
         payload = {"query": query}
@@ -167,20 +187,26 @@ class TestStringBoundaries:
             with pytest.raises(ValidationError) as exc:
                 validate_query_request(payload)
             error_msg = str(exc.value).lower()
-            assert any(keyword in error_msg for keyword in ["empty", "length", "maximum", "validation"])
+            assert any(
+                keyword in error_msg
+                for keyword in ["empty", "length", "maximum", "validation"]
+            )
 
 
 class TestCollectionBoundaries:
     """Test collection boundary conditions."""
 
-    @pytest.mark.parametrize("tags,should_pass,reason", [
-        ([], True, "empty list"),
-        ([""], True, "list with empty string (filtered out)"),
-        (["tag"], True, "single tag"),
-        (["tag" + str(i) for i in range(20)], True, "exactly 20 tags (max)"),
-        (["tag" + str(i) for i in range(21)], False, "21 tags (exceeds max)"),
-        (["tag" + str(i) for i in range(1000)], False, "1000 tags"),
-    ])
+    @pytest.mark.parametrize(
+        "tags,should_pass,reason",
+        [
+            ([], True, "empty list"),
+            ([""], True, "list with empty string (filtered out)"),
+            (["tag"], True, "single tag"),
+            (["tag" + str(i) for i in range(20)], True, "exactly 20 tags (max)"),
+            (["tag" + str(i) for i in range(21)], False, "21 tags (exceeds max)"),
+            (["tag" + str(i) for i in range(1000)], False, "1000 tags"),
+        ],
+    )
     def test_tags_boundaries(self, tags, should_pass, reason):
         """Test tags list boundaries (max 20)."""
         payload = {
@@ -198,16 +224,41 @@ class TestCollectionBoundaries:
         else:
             with pytest.raises(ValidationError) as exc:
                 validate_store_request(payload)
-            assert "tag" in str(exc.value).lower() or "maximum" in str(exc.value).lower()
+            assert (
+                "tag" in str(exc.value).lower() or "maximum" in str(exc.value).lower()
+            )
 
-    @pytest.mark.parametrize("metadata,should_pass,reason", [
-        ({}, True, "empty dict"),
-        (None, True, "None (becomes empty dict)"),
-        ({"key": "value"}, True, "single key-value"),
-        ({"nested": {"level1": {"level2": "value"}}}, True, "nested dict (3 levels)"),
-        # Create 10-level nested dict
-        ({"l1": {"l2": {"l3": {"l4": {"l5": {"l6": {"l7": {"l8": {"l9": {"l10": "deep"}}}}}}}}}}, True, "deeply nested (10 levels)"),
-    ])
+    @pytest.mark.parametrize(
+        "metadata,should_pass,reason",
+        [
+            ({}, True, "empty dict"),
+            (None, True, "None (becomes empty dict)"),
+            ({"key": "value"}, True, "single key-value"),
+            (
+                {"nested": {"level1": {"level2": "value"}}},
+                True,
+                "nested dict (3 levels)",
+            ),
+            # Create 10-level nested dict
+            (
+                {
+                    "l1": {
+                        "l2": {
+                            "l3": {
+                                "l4": {
+                                    "l5": {
+                                        "l6": {"l7": {"l8": {"l9": {"l10": "deep"}}}}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                True,
+                "deeply nested (10 levels)",
+            ),
+        ],
+    )
     def test_metadata_boundaries(self, metadata, should_pass, reason):
         """Test metadata structure boundaries."""
         payload = {
@@ -328,16 +379,19 @@ class TestEdgeCaseInputs:
 class TestProjectNameBoundaries:
     """Test project name boundary conditions."""
 
-    @pytest.mark.parametrize("project_name,should_pass", [
-        ("", True),              # Empty (returns None)
-        (None, True),            # None
-        ("a", True),             # Single character
-        ("project-name", True),  # Valid with hyphen
-        ("project_name", True),  # Valid with underscore
-        ("project.v1", True),    # Valid with dot
-        ("project123", True),    # Valid with numbers
-        ("a" * 100, True),       # Long name
-    ])
+    @pytest.mark.parametrize(
+        "project_name,should_pass",
+        [
+            ("", True),  # Empty (returns None)
+            (None, True),  # None
+            ("a", True),  # Single character
+            ("project-name", True),  # Valid with hyphen
+            ("project_name", True),  # Valid with underscore
+            ("project.v1", True),  # Valid with dot
+            ("project123", True),  # Valid with numbers
+            ("a" * 100, True),  # Long name
+        ],
+    )
     def test_project_name_valid_cases(self, project_name, should_pass):
         """Test valid project name cases."""
         filters = {}
@@ -355,14 +409,17 @@ class TestProjectNameBoundaries:
 class TestMinImportanceBoundaries:
     """Test min_importance parameter boundaries."""
 
-    @pytest.mark.parametrize("min_importance,should_pass", [
-        (-0.1, False),  # Below minimum
-        (0.0, True),    # Minimum valid
-        (0.5, True),    # Middle
-        (1.0, True),    # Maximum valid
-        (1.1, False),   # Above maximum
-        (None, True),   # None should use default (0.0)
-    ])
+    @pytest.mark.parametrize(
+        "min_importance,should_pass",
+        [
+            (-0.1, False),  # Below minimum
+            (0.0, True),  # Minimum valid
+            (0.5, True),  # Middle
+            (1.0, True),  # Maximum valid
+            (1.1, False),  # Above maximum
+            (None, True),  # None should use default (0.0)
+        ],
+    )
     def test_min_importance_boundaries(self, min_importance, should_pass):
         """Test min_importance boundaries in query requests."""
         payload = {"query": "test query"}
@@ -380,4 +437,8 @@ class TestMinImportanceBoundaries:
             with pytest.raises(ValidationError) as exc:
                 validate_query_request(payload)
             error_msg = str(exc.value).lower()
-            assert "importance" in error_msg or "greater" in error_msg or "validation" in error_msg
+            assert (
+                "importance" in error_msg
+                or "greater" in error_msg
+                or "validation" in error_msg
+            )

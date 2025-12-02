@@ -1,6 +1,5 @@
 """Health check command for diagnosing system status."""
 
-import asyncio
 import sys
 import subprocess
 import shutil
@@ -10,8 +9,8 @@ from typing import Dict, Any, Tuple, Optional, List
 
 try:
     from rich.console import Console
-    from rich.table import Table
     from rich.panel import Panel
+
     RICH_AVAILABLE = True
 except ImportError:
     RICH_AVAILABLE = False
@@ -108,7 +107,8 @@ class HealthCommand:
     async def check_rust_parser(self) -> Tuple[bool, str]:
         """Check if Rust parser is available."""
         try:
-            import mcp_performance_core
+            import mcp_performance_core  # noqa: F401
+
             return True, "Available (optimal performance)"
         except ImportError:
             return False, "Not available (using Python fallback)"
@@ -185,10 +185,14 @@ class HealthCommand:
             # Try to get cache stats
             try:
                 from src.embeddings.cache import EmbeddingCache
+
                 cache = EmbeddingCache(config)
                 stats = cache.get_stats()
                 hit_rate = stats.get("hit_rate", 0)
-                return True, f"{cache_path} ({size_mb:.1f} MB, {hit_rate*100:.1f}% hit rate)"
+                return (
+                    True,
+                    f"{cache_path} ({size_mb:.1f} MB, {hit_rate*100:.1f}% hit rate)",
+                )
             except Exception as e:
                 logger.debug(f"Failed to get cache stats: {e}")
                 return True, f"{cache_path} ({size_mb:.1f} MB)"
@@ -215,7 +219,9 @@ class HealthCommand:
                     stats = await store.get_project_stats(project_name)
                     project_stats.append(stats)
                 except Exception as e:
-                    logger.debug(f"Failed to get stats for project '{project_name}': {e}")
+                    logger.debug(
+                        f"Failed to get stats for project '{project_name}': {e}"
+                    )
 
             await store.close()
 
@@ -243,7 +249,7 @@ class HealthCommand:
             start = time.time()
             try:
                 # Try a simple retrieval or count operation
-                if hasattr(store, 'client'):
+                if hasattr(store, "client"):
                     # For Qdrant, do a simple collection check
                     store.client.get_collection(store.collection_name)
             except Exception as e:
@@ -257,7 +263,11 @@ class HealthCommand:
             elif latency_ms < 50:
                 return True, f"{latency_ms:.1f}ms (good)", latency_ms
             else:
-                return False, f"{latency_ms:.1f}ms (slow - check Docker resources)", latency_ms
+                return (
+                    False,
+                    f"{latency_ms:.1f}ms (slow - check Docker resources)",
+                    latency_ms,
+                )
 
         except Exception as e:
             return False, f"Could not measure: {str(e)[:40]}", None
@@ -312,7 +322,9 @@ class HealthCommand:
 
                     if last_updated:
                         if isinstance(last_updated, str):
-                            last_updated = datetime.fromisoformat(last_updated.replace('Z', '+00:00'))
+                            last_updated = datetime.fromisoformat(
+                                last_updated.replace("Z", "+00:00")
+                            )
 
                         # Make timezone-aware if needed
                         if last_updated.tzinfo is None:
@@ -320,20 +332,28 @@ class HealthCommand:
 
                         if last_updated < threshold:
                             days_old = (datetime.now(UTC) - last_updated).days
-                            stale_projects.append({
-                                "name": project_name,
-                                "days_old": days_old,
-                                "last_updated": last_updated
-                            })
+                            stale_projects.append(
+                                {
+                                    "name": project_name,
+                                    "days_old": days_old,
+                                    "last_updated": last_updated,
+                                }
+                            )
                 except Exception as e:
-                    logger.debug(f"Failed to check staleness for project '{project_name}': {e}")
+                    logger.debug(
+                        f"Failed to check staleness for project '{project_name}': {e}"
+                    )
 
             await store.close()
 
             if not stale_projects:
                 return True, "All projects current", []
             else:
-                return False, f"{len(stale_projects)} projects not indexed in 30+ days", stale_projects
+                return (
+                    False,
+                    f"{len(stale_projects)} projects not indexed in 30+ days",
+                    stale_projects,
+                )
 
         except Exception as e:
             return False, f"Could not check: {str(e)[:40]}", []
@@ -358,11 +378,23 @@ class HealthCommand:
             estimated_tokens = hits * 100
 
             if estimated_tokens >= 1000000:
-                return True, f"~{estimated_tokens/1000000:.1f}M tokens saved ({hits:,} cache hits)", estimated_tokens
+                return (
+                    True,
+                    f"~{estimated_tokens/1000000:.1f}M tokens saved ({hits:,} cache hits)",
+                    estimated_tokens,
+                )
             elif estimated_tokens >= 1000:
-                return True, f"~{estimated_tokens/1000:.1f}K tokens saved ({hits:,} cache hits)", estimated_tokens
+                return (
+                    True,
+                    f"~{estimated_tokens/1000:.1f}K tokens saved ({hits:,} cache hits)",
+                    estimated_tokens,
+                )
             else:
-                return True, f"~{estimated_tokens} tokens saved ({hits:,} cache hits)", estimated_tokens
+                return (
+                    True,
+                    f"~{estimated_tokens} tokens saved ({hits:,} cache hits)",
+                    estimated_tokens,
+                )
 
         except Exception as e:
             return False, f"Could not estimate: {str(e)[:40]}", None
@@ -372,7 +404,6 @@ class HealthCommand:
         try:
             from src.store import create_memory_store
             from src.config import get_config
-            from pathlib import Path
 
             config = get_config()
             store = create_memory_store(config=config)
@@ -388,7 +419,9 @@ class HealthCommand:
                     total_memories += stats.get("total_memories", 0)
                     total_files += stats.get("total_files", 0)
                 except Exception as e:
-                    logger.debug(f"Failed to get stats for project '{project_name}' during index size check: {e}")
+                    logger.debug(
+                        f"Failed to get stats for project '{project_name}' during index size check: {e}"
+                    )
 
             await store.close()
 
@@ -530,21 +563,21 @@ class HealthCommand:
             if stale:
                 self.warnings.append(f"{len(stale)} stale projects (30+ days old)")
                 for project in stale[:3]:  # Show up to 3
-                    project_name = project['name']
-                    days = project['days_old']
+                    project_name = project["name"]
+                    days = project["days_old"]
                     self.recommendations.append(
                         f"Re-index '{project_name}' ({days} days old): python -m src.cli index <path>"
                     )
 
         # Get project stats summary
         stats = await self.get_project_stats_summary()
-        if stats['total_projects'] > 0:
-            size_mb = stats['index_size_bytes'] / (1024 * 1024)
+        if stats["total_projects"] > 0:
+            size_mb = stats["index_size_bytes"] / (1024 * 1024)
             summary_msg = f"{stats['total_projects']} projects | {stats['total_memories']:,} memories | {size_mb:.1f} MB"
             self.print_check("Project summary", True, summary_msg)
 
             # Add smart recommendations based on stats
-            if self.storage_backend == "SQLite" and stats['total_memories'] > 10000:
+            if self.storage_backend == "SQLite" and stats["total_memories"] > 10000:
                 self.recommendations.append(
                     f"📊 Using SQLite with {stats['total_memories']:,} memories - consider upgrading to Qdrant for better performance"
                 )
@@ -568,13 +601,17 @@ class HealthCommand:
 
         if not self.errors and not self.warnings:
             if self.console:
-                self.console.print("\n[bold green]✓ All systems healthy![/bold green]\n")
+                self.console.print(
+                    "\n[bold green]✓ All systems healthy![/bold green]\n"
+                )
             else:
                 print("\n✓ All systems healthy!\n")
         else:
             if self.errors:
                 if self.console:
-                    self.console.print(f"\n[bold red]✗ {len(self.errors)} error(s) found:[/bold red]")
+                    self.console.print(
+                        f"\n[bold red]✗ {len(self.errors)} error(s) found:[/bold red]"
+                    )
                     for error in self.errors:
                         self.console.print(f"  • {error}")
                 else:
@@ -584,7 +621,9 @@ class HealthCommand:
 
             if self.warnings:
                 if self.console:
-                    self.console.print(f"\n[bold yellow]⚠ {len(self.warnings)} warning(s):[/bold yellow]")
+                    self.console.print(
+                        f"\n[bold yellow]⚠ {len(self.warnings)} warning(s):[/bold yellow]"
+                    )
                     for warning in self.warnings:
                         self.console.print(f"  • {warning}")
                 else:
@@ -594,7 +633,7 @@ class HealthCommand:
 
         if self.recommendations:
             if self.console:
-                self.console.print(f"\n[bold cyan]Recommendations:[/bold cyan]")
+                self.console.print("\n[bold cyan]Recommendations:[/bold cyan]")
                 for rec in self.recommendations:
                     self.console.print(f"  • {rec}")
             else:

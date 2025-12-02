@@ -7,9 +7,7 @@ Tests export, import, validation, conflict resolution, and roundtrip integrity.
 import pytest
 import pytest_asyncio
 import tempfile
-import json
 from pathlib import Path
-from datetime import datetime, UTC
 
 from src.memory.archive_exporter import ArchiveExporter
 from src.memory.archive_importer import ArchiveImporter
@@ -319,7 +317,9 @@ class TestArchiveImporter:
         assert validation_result["valid"] is True
         assert validation_result["project_name"] == sample_archive
         assert "manifest" in validation_result
-        assert validation_result["archive_size_mb"] >= 0  # Small test files may round to 0
+        assert (
+            validation_result["archive_size_mb"] >= 0
+        )  # Small test files may round to 0
 
     def test_validate_nonexistent_archive(self, importer):
         """Test validating a non-existent archive."""
@@ -333,9 +333,7 @@ class TestRoundtripIntegrity:
     """Test export → import roundtrip integrity."""
 
     @pytest.mark.asyncio
-    async def test_roundtrip_basic(
-        self, exporter, importer, sample_archive, temp_dirs
-    ):
+    async def test_roundtrip_basic(self, exporter, importer, sample_archive, temp_dirs):
         """Test basic export → import roundtrip."""
         # Export
         export_path = temp_dirs["export_dir"] / "roundtrip_basic.tar.gz"
@@ -383,9 +381,7 @@ class TestRoundtripIntegrity:
         # Compare key fields
         assert imported_info["project_name"] == original_manifest["project_name"]
         assert imported_info["archive_version"] == original_manifest["archive_version"]
-        assert (
-            imported_info["statistics"] == original_manifest["statistics"]
-        )
+        assert imported_info["statistics"] == original_manifest["statistics"]
         assert (
             imported_info["compression_info"]["original_size_mb"]
             == original_manifest["compression_info"]["original_size_mb"]

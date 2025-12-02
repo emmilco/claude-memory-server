@@ -1,7 +1,7 @@
 """Tests for intent detection."""
 
 import pytest
-from src.memory.intent_detector import IntentDetector, DetectedIntent
+from src.memory.intent_detector import IntentDetector
 
 
 class TestIntentDetector:
@@ -16,63 +16,59 @@ class TestIntentDetector:
         """Test with empty query list."""
         result = detector.detect_intent([])
 
-        assert result.intent_type == 'general'
+        assert result.intent_type == "general"
         assert result.keywords == []
         assert result.confidence == 0.0
-        assert result.search_query == ''
+        assert result.search_query == ""
 
     def test_implementation_intent(self, detector):
         """Test implementation intent detection."""
         queries = [
             "I need to implement user authentication",
-            "How do I add JWT token validation?"
+            "How do I add JWT token validation?",
         ]
 
         result = detector.detect_intent(queries)
 
-        assert result.intent_type == 'implementation'
+        assert result.intent_type == "implementation"
         assert result.confidence > 0.5
-        assert 'jwt' in result.keywords or 'token' in result.keywords
-        assert 'implement' in result.search_query
+        assert "jwt" in result.keywords or "token" in result.keywords
+        assert "implement" in result.search_query
 
     def test_debugging_intent(self, detector):
         """Test debugging intent detection."""
         queries = [
             "Why is my API returning 401 errors?",
-            "Authentication middleware not working"
+            "Authentication middleware not working",
         ]
 
         result = detector.detect_intent(queries)
 
-        assert result.intent_type == 'debugging'
+        assert result.intent_type == "debugging"
         assert result.confidence > 0.5
-        assert any(kw in result.keywords for kw in ['api', 'authentication', 'middleware'])
+        assert any(
+            kw in result.keywords for kw in ["api", "authentication", "middleware"]
+        )
 
     def test_learning_intent(self, detector):
         """Test learning intent detection."""
-        queries = [
-            "What are Python decorators?",
-            "Show me examples of async functions"
-        ]
+        queries = ["What are Python decorators?", "Show me examples of async functions"]
 
         result = detector.detect_intent(queries)
 
-        assert result.intent_type == 'learning'
+        assert result.intent_type == "learning"
         assert result.confidence > 0.5
-        assert 'async' in result.keywords or 'decorators' in result.keywords
+        assert "async" in result.keywords or "decorators" in result.keywords
 
     def test_exploration_intent(self, detector):
         """Test exploration intent detection."""
-        queries = [
-            "Find all database models",
-            "Where are the API endpoints defined?"
-        ]
+        queries = ["Find all database models", "Where are the API endpoints defined?"]
 
         result = detector.detect_intent(queries)
 
-        assert result.intent_type == 'exploration'
+        assert result.intent_type == "exploration"
         assert result.confidence > 0.3
-        assert any(kw in result.keywords for kw in ['database', 'api', 'endpoint'])
+        assert any(kw in result.keywords for kw in ["database", "api", "endpoint"])
 
     def test_keyword_extraction_technical_terms(self, detector):
         """Test extraction of technical terms."""
@@ -81,9 +77,9 @@ class TestIntentDetector:
         result = detector.detect_intent(queries)
 
         # Should extract technical terms
-        assert 'jwt' in result.keywords
-        assert 'authentication' in result.keywords
-        assert 'api' in result.keywords
+        assert "jwt" in result.keywords
+        assert "authentication" in result.keywords
+        assert "api" in result.keywords
 
     def test_keyword_extraction_pascal_case(self, detector):
         """Test extraction of PascalCase class names."""
@@ -92,7 +88,7 @@ class TestIntentDetector:
         result = detector.detect_intent(queries)
 
         # Should extract PascalCase
-        assert 'userauthenticator' in result.keywords
+        assert "userauthenticator" in result.keywords
 
     def test_keyword_extraction_snake_case(self, detector):
         """Test extraction of snake_case identifiers."""
@@ -101,7 +97,7 @@ class TestIntentDetector:
         result = detector.detect_intent(queries)
 
         # Should extract snake_case
-        assert 'validate_token' in result.keywords
+        assert "validate_token" in result.keywords
 
     def test_keyword_extraction_function_calls(self, detector):
         """Test extraction of function calls."""
@@ -110,7 +106,7 @@ class TestIntentDetector:
         result = detector.detect_intent(queries)
 
         # Should extract function name
-        assert 'authenticate' in result.keywords
+        assert "authenticate" in result.keywords
 
     def test_stop_words_filtered(self, detector):
         """Test that stop words are filtered out."""
@@ -119,7 +115,7 @@ class TestIntentDetector:
         result = detector.detect_intent(queries)
 
         # Stop words should be filtered
-        stop_words = {'i', 'am', 'to', 'this'}
+        stop_words = {"i", "am", "to", "this"}
         for word in stop_words:
             assert word not in result.keywords
 
@@ -148,8 +144,8 @@ class TestIntentDetector:
         result = detector.detect_intent(queries)
 
         # Should synthesize implementation-focused query
-        assert 'implement' in result.search_query.lower()
-        assert any(kw in result.search_query for kw in ['oauth', 'authentication'])
+        assert "implement" in result.search_query.lower()
+        assert any(kw in result.search_query for kw in ["oauth", "authentication"])
 
     def test_search_query_synthesis_debugging(self, detector):
         """Test search query synthesis for debugging intent."""
@@ -159,7 +155,7 @@ class TestIntentDetector:
 
         # Should synthesize debugging-focused query
         query_lower = result.search_query.lower()
-        assert 'fix' in query_lower or 'debug' in query_lower
+        assert "fix" in query_lower or "debug" in query_lower
 
     def test_search_query_synthesis_learning(self, detector):
         """Test search query synthesis for learning intent."""
@@ -168,7 +164,7 @@ class TestIntentDetector:
         result = detector.detect_intent(queries)
 
         # Should synthesize learning-focused query
-        assert 'example' in result.search_query.lower()
+        assert "example" in result.search_query.lower()
 
     def test_multiple_intents_highest_wins(self, detector):
         """Test that highest scoring intent wins."""
@@ -181,7 +177,7 @@ class TestIntentDetector:
         result = detector.detect_intent(queries)
 
         # Implementation should win (appears more)
-        assert result.intent_type == 'implementation'
+        assert result.intent_type == "implementation"
 
     def test_confidence_with_many_keywords(self, detector):
         """Test that more keywords increase confidence."""
@@ -202,7 +198,7 @@ class TestIntentDetector:
 
         result = detector.detect_intent(queries)
 
-        assert result.intent_type == 'implementation'
+        assert result.intent_type == "implementation"
         assert len(result.original_queries) == 1
         assert result.keywords  # Should extract some keywords
 
@@ -211,13 +207,13 @@ class TestIntentDetector:
         queries = [
             "I need authentication help",
             "How does authentication work?",
-            "Show me authentication examples"
+            "Show me authentication examples",
         ]
 
         result = detector.detect_intent(queries)
 
         # 'authentication' appears 3 times, should be top keyword
-        assert result.keywords[0] == 'authentication'
+        assert result.keywords[0] == "authentication"
 
     def test_general_intent_fallback(self, detector):
         """Test fallback to general intent."""
@@ -226,7 +222,7 @@ class TestIntentDetector:
         result = detector.detect_intent(queries)
 
         # Should fall back to general
-        assert result.intent_type in ['general', 'learning']
+        assert result.intent_type in ["general", "learning"]
         assert result.confidence < 0.5
 
     def test_case_insensitive_matching(self, detector):
@@ -235,9 +231,9 @@ class TestIntentDetector:
 
         result = detector.detect_intent(queries)
 
-        assert result.intent_type == 'implementation'
-        assert 'jwt' in result.keywords
-        assert 'authentication' in result.keywords
+        assert result.intent_type == "implementation"
+        assert "jwt" in result.keywords
+        assert "authentication" in result.keywords
 
     def test_special_characters_handled(self, detector):
         """Test handling of special characters."""
@@ -245,20 +241,18 @@ class TestIntentDetector:
 
         result = detector.detect_intent(queries)
 
-        assert result.intent_type == 'debugging'
+        assert result.intent_type == "debugging"
         # Should extract decorator name without special chars
-        assert 'authenticate' in result.keywords
+        assert "authenticate" in result.keywords
 
     def test_multiple_technical_terms(self, detector):
         """Test extraction of multiple technical terms."""
-        queries = [
-            "I need to add database caching to my API endpoints with Redis"
-        ]
+        queries = ["I need to add database caching to my API endpoints with Redis"]
 
         result = detector.detect_intent(queries)
 
         # Should extract multiple technical terms
-        technical_terms = ['database', 'cache', 'api', 'endpoint']
+        technical_terms = ["database", "cache", "api", "endpoint"]
         found_terms = [term for term in technical_terms if term in result.keywords]
         assert len(found_terms) >= 2
 
@@ -269,8 +263,8 @@ class TestIntentDetector:
         result = detector.detect_intent(queries)
 
         # Should still work with empty strings
-        assert result.intent_type == 'implementation'
-        assert 'authentication' in result.keywords
+        assert result.intent_type == "implementation"
+        assert "authentication" in result.keywords
 
     def test_very_short_query(self, detector):
         """Test with very short query."""
@@ -279,5 +273,5 @@ class TestIntentDetector:
         result = detector.detect_intent(queries)
 
         # Should extract the keyword
-        assert 'api' in result.keywords
+        assert "api" in result.keywords
         assert result.search_query  # Should still generate query

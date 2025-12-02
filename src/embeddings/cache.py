@@ -8,7 +8,6 @@ import logging
 import threading
 from typing import List, Optional
 from datetime import datetime, timedelta, UTC
-from pathlib import Path
 
 from src.config import ServerConfig
 from src.embeddings.rust_bridge import RustBridge
@@ -36,6 +35,7 @@ class EmbeddingCache:
         """
         if config is None:
             from src.config import get_config
+
             config = get_config()
 
         self.config = config
@@ -100,7 +100,9 @@ class EmbeddingCache:
                 try:
                     conn.close()
                 except Exception as close_err:
-                    logger.warning(f"Error closing connection during cleanup: {close_err}")
+                    logger.warning(
+                        f"Error closing connection during cleanup: {close_err}"
+                    )
 
             logger.error(f"Failed to initialize cache database: {e}")
             self.enabled = False
@@ -117,7 +119,7 @@ class EmbeddingCache:
         Returns:
             tuple: (cache_key, text_hash)
         """
-        text_hash = hashlib.sha256(text.encode('utf-8')).hexdigest()
+        text_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
         cache_key = f"{text_hash}:{model_name}"
         return cache_key, text_hash
 
@@ -157,7 +159,7 @@ class EmbeddingCache:
                     FROM embeddings
                     WHERE cache_key = ?
                     """,
-                    (cache_key,)
+                    (cache_key,),
                 )
 
                 row = cursor.fetchone()
@@ -173,7 +175,9 @@ class EmbeddingCache:
                 created_at = datetime.fromisoformat(created_at_str)
                 if datetime.now(UTC) - created_at > timedelta(days=self.ttl_days):
                     # Expired, delete it
-                    self.conn.execute("DELETE FROM embeddings WHERE cache_key = ?", (cache_key,))
+                    self.conn.execute(
+                        "DELETE FROM embeddings WHERE cache_key = ?", (cache_key,)
+                    )
                     self.conn.commit()
                     with self._counter_lock:  # REF-030: Atomic counter increment
                         self.misses += 1
@@ -186,7 +190,7 @@ class EmbeddingCache:
                     SET accessed_at = ?, access_count = ?
                     WHERE cache_key = ?
                     """,
-                    (datetime.now(UTC).isoformat(), access_count + 1, cache_key)
+                    (datetime.now(UTC).isoformat(), access_count + 1, cache_key),
                 )
                 self.conn.commit()
 
@@ -244,7 +248,7 @@ class EmbeddingCache:
                     (cache_key, text_hash, model_name, embedding, created_at, accessed_at, access_count)
                     VALUES (?, ?, ?, ?, ?, ?, 1)
                     """,
-                    (cache_key, text_hash, model_name, embedding_json, now, now)
+                    (cache_key, text_hash, model_name, embedding_json, now, now),
                 )
                 self.conn.commit()
                 logger.debug(f"Cached embedding for key: {cache_key[:16]}...")
@@ -304,10 +308,14 @@ class EmbeddingCache:
             async with asyncio.timeout(30.0):
                 return await asyncio.to_thread(self._batch_get_sync, texts, model_name)
         except asyncio.TimeoutError:
-            logger.error(f"Cache batch_get timeout for {len(texts)} items (model: {model_name})")
+            logger.error(
+                f"Cache batch_get timeout for {len(texts)} items (model: {model_name})"
+            )
             return [None] * len(texts)
 
-    def _batch_get_sync(self, texts: List[str], model_name: str) -> List[Optional[List[float]]]:
+    def _batch_get_sync(
+        self, texts: List[str], model_name: str
+    ) -> List[Optional[List[float]]]:
         """Synchronous implementation of batch_get() for thread pool execution."""
         if not self.enabled or self.conn is None or not texts:
             return [None] * len(texts)
@@ -315,17 +323,17 @@ class EmbeddingCache:
         try:
             # Compute cache keys for all texts
             cache_keys = [self._compute_key(text, model_name)[0] for text in texts]
-            
+
             with self._db_lock:
                 # Single query for all keys using IN clause
-                placeholders = ','.join('?' * len(cache_keys))
+                placeholders = ",".join("?" * len(cache_keys))
                 cursor = self.conn.execute(
                     f"""
                     SELECT cache_key, embedding, created_at, access_count
                     FROM embeddings
                     WHERE cache_key IN ({placeholders})
                     """,
-                    cache_keys
+                    cache_keys,
                 )
 
                 rows = cursor.fetchall()
@@ -353,17 +361,17 @@ class EmbeddingCache:
                         SET accessed_at = ?, access_count = ?
                         WHERE cache_key = ?
                         """,
-                        (datetime.now(UTC).isoformat(), access_count + 1, cache_key)
+                        (datetime.now(UTC).isoformat(), access_count + 1, cache_key),
                     )
 
                 # Delete expired entries
                 if expired_keys:
-                    placeholders = ','.join('?' * len(expired_keys))
+                    placeholders = ",".join("?" * len(expired_keys))
                     self.conn.execute(
                         f"DELETE FROM embeddings WHERE cache_key IN ({placeholders})",
-                        expired_keys
+                        expired_keys,
                     )
-                    
+
                 self.conn.commit()
 
                 # Build result list in same order as input
@@ -378,7 +386,9 @@ class EmbeddingCache:
                         with self._counter_lock:  # REF-030: Atomic counter increment
                             self.misses += 1
 
-                logger.debug(f"Batch cache lookup: {len(cache_keys)} keys, {len(embeddings_by_key)} hits")
+                logger.debug(
+                    f"Batch cache lookup: {len(cache_keys)} keys, {len(embeddings_by_key)} hits"
+                )
                 return results
 
         except Exception as e:
@@ -417,14 +427,15 @@ class EmbeddingCache:
 
             with self._db_lock:
                 cursor = self.conn.execute(
-                    "DELETE FROM embeddings WHERE created_at < ?",
-                    (cutoff,)
+                    "DELETE FROM embeddings WHERE created_at < ?", (cutoff,)
                 )
 
                 deleted = cursor.rowcount
                 self.conn.commit()
 
-            logger.info(f"Cleaned {deleted} expired cache entries (older than {days} days)")
+            logger.info(
+                f"Cleaned {deleted} expired cache entries (older than {days} days)"
+            )
             return deleted
 
         except Exception as e:

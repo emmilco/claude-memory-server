@@ -135,27 +135,22 @@ INJECTION_PATTERNS = [
     r"(?i)(\bSELECT\b|\bUNION\b|\bDROP\b|\bDELETE\b|\bINSERT\b|\bUPDATE\b)",
     r"(?i)(\bFROM\b|\bWHERE\b|\bJOIN\b|\bGROUP\s+BY\b|\bORDER\s+BY\b)",
     r"(?i)(\bEXEC\b|\bEXECUTE\b|\bSCRIPT\b|\bJAVASCRIPT\b)",
-    
     # SQL operators and functions
     r"(?i)(\bOR\b\s+\d+=\d+|\bAND\b\s+\d+=\d+)",
     r"(?i)(--|\#|\/\*|\*\/|;|\|{2})",
-    
     # Common injection attempts
     r"('|\")\s*;\s*DROP",
     r"('|\")\s*OR\s*('|\")\s*=\s*('|\")",
     r"admin.*?'.*?--",
     r"\bor\b.*?\d+=\d+",
-    
     # Command injection patterns
     r"[;&|`$(){}[\]<>]",  # Shell metacharacters
     r"\$\{.*?\}",  # Template injection
     r"\$\(.*?\)",  # Command substitution
-    
     # Path traversal
     r"\.\./",
     r"\.\.\\",
     r"%2e%2e",
-    
     # XSS patterns
     r"<script[^>]*>",
     r"javascript:",
@@ -239,13 +234,13 @@ def validate_field_value(field_name: str, value: Any) -> tuple[bool, str]:
     # Check type
     expected_type = constraints.get("type")
     if expected_type and not isinstance(value, expected_type):
-        if expected_type == str and not isinstance(value, str):
+        if expected_type is str and not isinstance(value, str):
             return False, f"Field '{field_name}' must be a string"
-        elif expected_type == float and not isinstance(value, (int, float)):
+        elif expected_type is float and not isinstance(value, (int, float)):
             return False, f"Field '{field_name}' must be a number"
-        elif expected_type == list and not isinstance(value, list):
+        elif expected_type is list and not isinstance(value, list):
             return False, f"Field '{field_name}' must be a list"
-        elif expected_type == dict and not isinstance(value, dict):
+        elif expected_type is dict and not isinstance(value, dict):
             return False, f"Field '{field_name}' must be a dictionary"
 
     # Check allowed values

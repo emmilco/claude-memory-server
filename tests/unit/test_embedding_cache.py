@@ -1,10 +1,8 @@
 """Comprehensive tests for EmbeddingCache."""
 
 import pytest
-import pytest_asyncio
-from pathlib import Path
 from datetime import datetime, timedelta, UTC
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock
 from src.embeddings.cache import EmbeddingCache
 from src.config import ServerConfig
 
@@ -106,11 +104,13 @@ class TestCacheOperations:
         # or check that it's a valid normalized vector
         assert result is not None
         assert len(result) == len(embedding)
-        
+
         # Check that it's normalized (magnitude should be 1.0 within floating point precision)
         magnitude = sum(x * x for x in result) ** 0.5
-        assert abs(magnitude - 1.0) < 1e-5, f"Normalized embedding should have magnitude 1.0, got {magnitude}"
-        
+        assert (
+            abs(magnitude - 1.0) < 1e-5
+        ), f"Normalized embedding should have magnitude 1.0, got {magnitude}"
+
         assert cache.hits == 1
         assert cache.misses == 0
 
@@ -153,8 +153,7 @@ class TestCacheOperations:
         # Check access count in database
         cache_key, _ = cache._compute_key(text, model)
         cursor = cache.conn.execute(
-            "SELECT access_count FROM embeddings WHERE cache_key = ?",
-            (cache_key,)
+            "SELECT access_count FROM embeddings WHERE cache_key = ?", (cache_key,)
         )
         access_count = cursor.fetchone()[0]
 
@@ -179,7 +178,7 @@ class TestCacheTTL:
         old_date = (datetime.now(UTC) - timedelta(days=cache.ttl_days + 1)).isoformat()
         cache.conn.execute(
             "UPDATE embeddings SET created_at = ? WHERE cache_key = ?",
-            (old_date, cache_key)
+            (old_date, cache_key),
         )
         cache.conn.commit()
 
@@ -191,8 +190,7 @@ class TestCacheTTL:
 
         # Verify entry was deleted
         cursor = cache.conn.execute(
-            "SELECT COUNT(*) FROM embeddings WHERE cache_key = ?",
-            (cache_key,)
+            "SELECT COUNT(*) FROM embeddings WHERE cache_key = ?", (cache_key,)
         )
         assert cursor.fetchone()[0] == 0
 
@@ -211,7 +209,7 @@ class TestCacheTTL:
             (cache_key, text_hash, model_name, embedding, created_at, accessed_at, access_count)
             VALUES (?, ?, ?, ?, ?, ?, 1)
             """,
-            (cache_key, text_hash, "model", "[0.1]", old_date, old_date)
+            (cache_key, text_hash, "model", "[0.1]", old_date, old_date),
         )
         cache.conn.commit()
 
@@ -305,7 +303,7 @@ class TestGetOrGenerate:
         # Result will be normalized
         assert result is not None
         assert len(result) == len(embedding)
-        
+
         # Verify generator was not called (cache hit)
         generator.assert_not_called()
         assert cache.hits == 1

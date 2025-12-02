@@ -16,6 +16,7 @@ from src.memory.docstring_extractor import (
 @dataclass
 class MockSemanticUnit:
     """Mock semantic unit for testing."""
+
     name: str
     unit_type: str
     start_line: int
@@ -130,7 +131,7 @@ class TestJSDocDocstrings:
 
     def test_basic_jsdoc(self, extractor):
         """Test basic JSDoc comment."""
-        code = '''
+        code = """
 /**
  * This is a JSDoc comment.
  * @param {string} name - The name parameter
@@ -138,7 +139,7 @@ class TestJSDocDocstrings:
 function greet(name) {
     return "Hello " + name;
 }
-'''
+"""
         docstrings = extractor.extract_from_code(code, "javascript")
 
         assert len(docstrings) == 1
@@ -148,7 +149,7 @@ function greet(name) {
 
     def test_multiline_jsdoc(self, extractor):
         """Test multi-line JSDoc."""
-        code = '''
+        code = """
 /**
  * Calculate the sum of two numbers.
  *
@@ -161,7 +162,7 @@ function greet(name) {
 function add(a, b) {
     return a + b;
 }
-'''
+"""
         docstrings = extractor.extract_from_code(code, "javascript")
 
         assert len(docstrings) == 1
@@ -172,7 +173,7 @@ function add(a, b) {
 
     def test_typescript_jsdoc(self, extractor):
         """Test JSDoc extraction from TypeScript."""
-        code = '''
+        code = """
 /**
  * User interface
  */
@@ -187,7 +188,7 @@ interface User {
 function getUser(id: number): User {
     return { name: "Test", email: "test@example.com" };
 }
-'''
+"""
         docstrings = extractor.extract_from_code(code, "typescript")
 
         assert len(docstrings) == 2
@@ -201,7 +202,7 @@ class TestJavadocDocstrings:
 
     def test_basic_javadoc(self, extractor):
         """Test basic Javadoc comment."""
-        code = '''
+        code = """
 /**
  * This is a Javadoc comment.
  * @param name The name parameter
@@ -210,7 +211,7 @@ class TestJavadocDocstrings:
 public String greet(String name) {
     return "Hello " + name;
 }
-'''
+"""
         docstrings = extractor.extract_from_code(code, "java")
 
         assert len(docstrings) == 1
@@ -219,7 +220,7 @@ public String greet(String name) {
 
     def test_class_javadoc(self, extractor):
         """Test class-level Javadoc."""
-        code = '''
+        code = """
 /**
  * Represents a user in the system.
  *
@@ -237,7 +238,7 @@ public class User {
         return name;
     }
 }
-'''
+"""
         docstrings = extractor.extract_from_code(code, "java")
 
         assert len(docstrings) == 2
@@ -251,13 +252,13 @@ class TestGoDocDocstrings:
 
     def test_basic_godoc(self, extractor):
         """Test basic GoDoc comment."""
-        code = '''
+        code = """
 // Add returns the sum of a and b.
 // This is a multi-line comment.
 func Add(a, b int) int {
     return a + b
 }
-'''
+"""
         docstrings = extractor.extract_from_code(code, "go")
 
         assert len(docstrings) == 1
@@ -268,13 +269,13 @@ func Add(a, b int) int {
 
     def test_package_godoc(self, extractor):
         """Test package-level GoDoc."""
-        code = '''
+        code = """
 // Package utils provides utility functions.
 // It includes various helpers for common tasks.
 package utils
 
 import "fmt"
-'''
+"""
         docstrings = extractor.extract_from_code(code, "go")
 
         assert len(docstrings) >= 1
@@ -286,7 +287,7 @@ class TestRustDocDocstrings:
 
     def test_triple_slash_rustdoc(self, extractor):
         """Test /// style RustDoc."""
-        code = '''
+        code = """
 /// Adds two numbers together.
 ///
 /// # Examples
@@ -298,7 +299,7 @@ class TestRustDocDocstrings:
 fn add(a: i32, b: i32) -> i32 {
     a + b
 }
-'''
+"""
         docstrings = extractor.extract_from_code(code, "rust")
 
         assert len(docstrings) == 1
@@ -309,7 +310,7 @@ fn add(a: i32, b: i32) -> i32 {
 
     def test_inner_rustdoc(self, extractor):
         """Test //! style RustDoc."""
-        code = '''
+        code = """
 //! This module provides math utilities.
 //!
 //! It includes basic arithmetic operations.
@@ -317,7 +318,7 @@ fn add(a: i32, b: i32) -> i32 {
 pub fn multiply(a: i32, b: i32) -> i32 {
     a * b
 }
-'''
+"""
         docstrings = extractor.extract_from_code(code, "rust")
 
         assert len(docstrings) >= 1
@@ -355,14 +356,14 @@ def foo():
 
     def test_link_jsdoc_before_function(self, extractor):
         """Test linking JSDoc comment before function."""
-        code = '''
+        code = """
 /**
  * Bar function description.
  */
 function bar() {
     return 42;
 }
-'''
+"""
         # JSDoc is before function (lines 2-4), function starts at line 5
         units = [
             MockSemanticUnit(
@@ -404,8 +405,8 @@ class TestMultipleLanguages:
     def test_stats_tracking(self, extractor):
         """Test statistics tracking across languages."""
         extractor.extract_from_code('"""Test."""', "python")
-        extractor.extract_from_code('/** Test */', "javascript")
-        extractor.extract_from_code('// Test', "go")
+        extractor.extract_from_code("/** Test */", "javascript")
+        extractor.extract_from_code("// Test", "go")
 
         stats = extractor.get_stats()
 
@@ -481,11 +482,11 @@ class TestEdgeCases:
 
     def test_code_without_docstrings(self, extractor):
         """Test code with no docstrings."""
-        code = '''
+        code = """
 def foo():
     x = 42
     return x
-'''
+"""
         docstrings = extractor.extract_from_code(code, "python")
 
         assert len(docstrings) == 0

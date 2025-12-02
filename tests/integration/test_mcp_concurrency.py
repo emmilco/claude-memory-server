@@ -11,14 +11,14 @@ Qdrant resource contention. They pass reliably when run in isolation.
 import pytest
 import pytest_asyncio
 import asyncio
-from typing import List, Dict, Any
 
 from src.config import ServerConfig
 from src.core.server import MemoryRAGServer
-from src.core.models import MemoryCategory
 
 # Skip in parallel test runs - flaky due to Qdrant resource contention
-pytestmark = pytest.mark.skip(reason="Flaky in parallel execution - pass when run in isolation")
+pytestmark = pytest.mark.skip(
+    reason="Flaky in parallel execution - pass when run in isolation"
+)
 
 
 @pytest.fixture
@@ -130,8 +130,7 @@ class TestConcurrentToolCalls:
         ]
 
         search_tasks = [
-            server.retrieve_memories(query="mixed operation")
-            for _ in range(5)
+            server.retrieve_memories(query="mixed operation") for _ in range(5)
         ]
 
         # Interleave tasks
@@ -165,7 +164,7 @@ class TestConcurrentToolCalls:
             # Create test Python files
             for i in range(3):
                 test_file = os.path.join(tmpdir, f"test_{i}.py")
-                with open(test_file, 'w') as f:
+                with open(test_file, "w") as f:
                     f.write(f"def test_function_{i}():\n    return {i}\n")
 
             # Start indexing in background
@@ -173,26 +172,25 @@ class TestConcurrentToolCalls:
                 server.index_codebase(
                     directory_path=tmpdir,
                     project_name="concurrent-test",
-                    recursive=False
+                    recursive=False,
                 )
             )
 
             # While indexing, perform searches
             search_tasks = [
-                server.retrieve_memories(query="test function")
-                for _ in range(10)
+                server.retrieve_memories(query="test function") for _ in range(10)
             ]
 
             # Wait for all to complete
             all_results = await asyncio.gather(
-                index_task,
-                *search_tasks,
-                return_exceptions=True
+                index_task, *search_tasks, return_exceptions=True
             )
 
             # Check for errors
             errors = [r for r in all_results if isinstance(r, Exception)]
-            assert len(errors) == 0, f"Got {len(errors)} errors during concurrent index/search"
+            assert (
+                len(errors) == 0
+            ), f"Got {len(errors)} errors during concurrent index/search"
 
             # First result should be indexing result
             index_result = all_results[0]
@@ -220,9 +218,7 @@ class TestConcurrentToolCalls:
 
         # 50 searches
         for i in range(50):
-            tasks.append(
-                server.retrieve_memories(query=f"load test {i % 10}")
-            )
+            tasks.append(server.retrieve_memories(query=f"load test {i % 10}"))
 
         # Execute all concurrently
         start_time = asyncio.get_event_loop().time()
@@ -260,17 +256,13 @@ class TestConcurrencyEdgeCases:
         memory_id = result["memory_id"]
 
         # Try to delete it 5 times concurrently
-        delete_tasks = [
-            server.delete_memory(memory_id)
-            for _ in range(5)
-        ]
+        delete_tasks = [server.delete_memory(memory_id) for _ in range(5)]
 
         results = await asyncio.gather(*delete_tasks, return_exceptions=True)
 
         # At least one should succeed
         successes = [
-            r for r in results
-            if isinstance(r, dict) and r.get("status") == "success"
+            r for r in results if isinstance(r, dict) and r.get("status") == "success"
         ]
         assert len(successes) >= 1, "At least one deletion should succeed"
 
@@ -308,7 +300,8 @@ class TestConcurrencyEdgeCases:
         # Some failures are acceptable due to connection pool limits
         # The key is that the server doesn't crash and at least some succeed
         successes = [
-            r for r in results
+            r
+            for r in results
             if isinstance(r, dict) and r.get("status") in ["updated", "success"]
         ]
         assert len(successes) > 0, "At least one update should succeed"
@@ -346,9 +339,7 @@ class TestConcurrencyEdgeCases:
 
         # 10 searches (reduced from 20)
         for i in range(10):
-            tasks.append(
-                server.retrieve_memories(query=f"initial memory {i % 5}")
-            )
+            tasks.append(server.retrieve_memories(query=f"initial memory {i % 5}"))
 
         # 5 new stores (reduced from 10)
         for i in range(5):
@@ -370,18 +361,15 @@ class TestConcurrencyEdgeCases:
 
         # 2 deletes (reduced from 5)
         for memory_id in initial_memories[:2]:
-            tasks.append(
-                server.delete_memory(memory_id)
-            )
+            tasks.append(server.delete_memory(memory_id))
 
         # 5 list operations (reduced from 10)
         for i in range(5):
-            tasks.append(
-                server.list_memories(limit=5, offset=i)
-            )
+            tasks.append(server.list_memories(limit=5, offset=i))
 
         # Shuffle tasks to randomize order
         import random
+
         random.shuffle(tasks)
 
         # Execute all concurrently
@@ -391,7 +379,9 @@ class TestConcurrencyEdgeCases:
         # The key is that most operations succeed and server doesn't crash
         exceptions = [r for r in results if isinstance(r, Exception)]
         success_rate = (len(results) - len(exceptions)) / len(results)
-        assert success_rate >= 0.7, f"Only {success_rate:.1%} operations succeeded (expected >=70%)"
+        assert (
+            success_rate >= 0.7
+        ), f"Only {success_rate:.1%} operations succeeded (expected >=70%)"
 
         # Successful results should be valid dicts
         for result in results:
@@ -412,9 +402,7 @@ class TestAsyncAwaitSemantics:
         import time
 
         # Start a long-running search
-        slow_search = asyncio.create_task(
-            server.retrieve_memories(query="test")
-        )
+        slow_search = asyncio.create_task(server.retrieve_memories(query="test"))
 
         # While it's running, do a quick operation
         start = time.time()
@@ -439,9 +427,7 @@ class TestAsyncAwaitSemantics:
         Verifies proper async cancellation semantics.
         """
         # Create a task
-        task = asyncio.create_task(
-            server.retrieve_memories(query="cancellation test")
-        )
+        task = asyncio.create_task(server.retrieve_memories(query="cancellation test"))
 
         # Cancel it immediately
         task.cancel()
@@ -471,6 +457,5 @@ class TestAsyncAwaitSemantics:
             # Use wait_for instead
             with pytest.raises(asyncio.TimeoutError):
                 await asyncio.wait_for(
-                    server.retrieve_memories(query="timeout test"),
-                    timeout=0.001
+                    server.retrieve_memories(query="timeout test"), timeout=0.001
                 )

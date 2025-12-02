@@ -1,9 +1,7 @@
 """Tests for duplicate memory detection (TEST-007-D)."""
 
 import pytest
-from datetime import datetime, UTC
-from typing import List
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 from src.memory.duplicate_detector import (
     DuplicateDetector,
@@ -13,10 +11,7 @@ from src.memory.duplicate_detector import (
 from src.core.models import (
     MemoryUnit,
     MemoryCategory,
-    ContextLevel,
     MemoryScope,
-    MemoryProvenance,
-    ProvenanceSource,
 )
 from src.core.exceptions import ValidationError
 
@@ -288,9 +283,7 @@ class TestDuplicateDetector:
         )
 
         # Mock embedding generation
-        self.mock_embedding_generator.generate = AsyncMock(
-            return_value=[0.1, 0.2, 0.3]
-        )
+        self.mock_embedding_generator.generate = AsyncMock(return_value=[0.1, 0.2, 0.3])
 
         # Mock store retrieval
         similar_memory = MemoryUnit(
@@ -324,14 +317,18 @@ class TestDuplicateDetector:
             category=MemoryCategory.CODE,
         )
 
-        self.mock_embedding_generator.generate = AsyncMock(
-            return_value=[0.1, 0.2, 0.3]
-        )
+        self.mock_embedding_generator.generate = AsyncMock(return_value=[0.1, 0.2, 0.3])
 
         # Mock memories with various similarity scores
-        similar1 = MemoryUnit(id="similar-1", content="similar 1", category=MemoryCategory.CODE)
-        similar2 = MemoryUnit(id="similar-2", content="similar 2", category=MemoryCategory.CODE)
-        similar3 = MemoryUnit(id="similar-3", content="similar 3", category=MemoryCategory.CODE)
+        similar1 = MemoryUnit(
+            id="similar-1", content="similar 1", category=MemoryCategory.CODE
+        )
+        similar2 = MemoryUnit(
+            id="similar-2", content="similar 2", category=MemoryCategory.CODE
+        )
+        similar3 = MemoryUnit(
+            id="similar-3", content="similar 3", category=MemoryCategory.CODE
+        )
 
         self.mock_store.retrieve = AsyncMock(
             return_value=[
@@ -343,7 +340,9 @@ class TestDuplicateDetector:
         )
 
         # Find duplicates with custom threshold
-        duplicates = await self.detector.find_duplicates(test_memory, min_threshold=0.80)
+        duplicates = await self.detector.find_duplicates(
+            test_memory, min_threshold=0.80
+        )
 
         # Verify only memories above threshold are returned
         assert len(duplicates) == 2
@@ -361,14 +360,18 @@ class TestDuplicateDetector:
             category=MemoryCategory.CODE,
         )
 
-        self.mock_embedding_generator.generate = AsyncMock(
-            return_value=[0.1, 0.2, 0.3]
-        )
+        self.mock_embedding_generator.generate = AsyncMock(return_value=[0.1, 0.2, 0.3])
 
         # Mock memories with unsorted scores
-        similar1 = MemoryUnit(id="similar-1", content="similar 1", category=MemoryCategory.CODE)
-        similar2 = MemoryUnit(id="similar-2", content="similar 2", category=MemoryCategory.CODE)
-        similar3 = MemoryUnit(id="similar-3", content="similar 3", category=MemoryCategory.CODE)
+        similar1 = MemoryUnit(
+            id="similar-1", content="similar 1", category=MemoryCategory.CODE
+        )
+        similar2 = MemoryUnit(
+            id="similar-2", content="similar 2", category=MemoryCategory.CODE
+        )
+        similar3 = MemoryUnit(
+            id="similar-3", content="similar 3", category=MemoryCategory.CODE
+        )
 
         self.mock_store.retrieve = AsyncMock(
             return_value=[
@@ -395,9 +398,7 @@ class TestDuplicateDetector:
             category=MemoryCategory.CODE,
         )
 
-        self.mock_embedding_generator.generate = AsyncMock(
-            return_value=[0.1, 0.2, 0.3]
-        )
+        self.mock_embedding_generator.generate = AsyncMock(return_value=[0.1, 0.2, 0.3])
         self.mock_store.retrieve = AsyncMock(return_value=[(test_memory, 1.0)])
 
         duplicates = await self.detector.find_duplicates(test_memory)
@@ -413,14 +414,10 @@ class TestDuplicateDetector:
             category=MemoryCategory.CODE,
         )
 
-        self.mock_embedding_generator.generate = AsyncMock(
-            return_value=[0.1, 0.2, 0.3]
-        )
+        self.mock_embedding_generator.generate = AsyncMock(return_value=[0.1, 0.2, 0.3])
 
         # Return the same memory (perfect match)
-        self.mock_store.retrieve = AsyncMock(
-            return_value=[(test_memory, 1.0)]
-        )
+        self.mock_store.retrieve = AsyncMock(return_value=[(test_memory, 1.0)])
 
         duplicates = await self.detector.find_duplicates(test_memory)
 
@@ -431,9 +428,15 @@ class TestDuplicateDetector:
     async def test_find_all_duplicates_basic(self):
         """Test scanning entire database for duplicates."""
         # Create test memories
-        memory1 = MemoryUnit(id="mem-1", content="content 1", category=MemoryCategory.CODE)
-        memory2 = MemoryUnit(id="mem-2", content="content 2", category=MemoryCategory.CODE)
-        memory3 = MemoryUnit(id="mem-3", content="content 3", category=MemoryCategory.CODE)
+        memory1 = MemoryUnit(
+            id="mem-1", content="content 1", category=MemoryCategory.CODE
+        )
+        memory2 = MemoryUnit(
+            id="mem-2", content="content 2", category=MemoryCategory.CODE
+        )
+        memory3 = MemoryUnit(
+            id="mem-3", content="content 3", category=MemoryCategory.CODE
+        )
 
         # Mock store retrieval for initial scan
         self.mock_store.retrieve = AsyncMock(
@@ -468,11 +471,11 @@ class TestDuplicateDetector:
     @pytest.mark.asyncio
     async def test_find_all_duplicates_with_category_filter(self):
         """Test scanning with category filter."""
-        memory1 = MemoryUnit(id="mem-1", content="content 1", category=MemoryCategory.CODE)
-
-        self.mock_store.retrieve = AsyncMock(
-            return_value=[(memory1, 0.5)]
+        memory1 = MemoryUnit(
+            id="mem-1", content="content 1", category=MemoryCategory.CODE
         )
+
+        self.mock_store.retrieve = AsyncMock(return_value=[(memory1, 0.5)])
         self.detector.find_duplicates = AsyncMock(return_value=[])
 
         await self.detector.find_all_duplicates(category=MemoryCategory.CODE)
@@ -483,11 +486,11 @@ class TestDuplicateDetector:
     @pytest.mark.asyncio
     async def test_find_all_duplicates_custom_threshold(self):
         """Test scanning with custom threshold."""
-        memory1 = MemoryUnit(id="mem-1", content="content 1", category=MemoryCategory.CODE)
-
-        self.mock_store.retrieve = AsyncMock(
-            return_value=[(memory1, 0.5)]
+        memory1 = MemoryUnit(
+            id="mem-1", content="content 1", category=MemoryCategory.CODE
         )
+
+        self.mock_store.retrieve = AsyncMock(return_value=[(memory1, 0.5)])
         self.detector.find_duplicates = AsyncMock(return_value=[])
 
         await self.detector.find_all_duplicates(min_threshold=0.90)
@@ -524,8 +527,7 @@ class TestDuplicateDetector:
 
         # Verify category was passed through
         self.detector.find_all_duplicates.assert_called_once_with(
-            category=MemoryCategory.CODE,
-            min_threshold=0.95
+            category=MemoryCategory.CODE, min_threshold=0.95
         )
 
     @pytest.mark.asyncio
@@ -534,7 +536,10 @@ class TestDuplicateDetector:
         # Mock find_all_duplicates to return controlled results
         self.detector.find_all_duplicates = AsyncMock(
             return_value={
-                "canonical-1": [("dup-1", 0.96), ("dup-2", 0.97)],  # All high (excluded)
+                "canonical-1": [
+                    ("dup-1", 0.96),
+                    ("dup-2", 0.97),
+                ],  # All high (excluded)
                 "canonical-2": [("dup-3", 0.90), ("dup-4", 0.88)],  # Has medium
                 "canonical-3": [("dup-5", 0.70)],  # Below medium (excluded)
             }
@@ -558,8 +563,7 @@ class TestDuplicateDetector:
 
         # Verify category was passed through
         self.detector.find_all_duplicates.assert_called_once_with(
-            category=MemoryCategory.FACT,
-            min_threshold=0.85
+            category=MemoryCategory.FACT, min_threshold=0.85
         )
 
     @pytest.mark.asyncio
@@ -617,7 +621,7 @@ class TestDuplicateDetector:
                 "file_path": "/path/to/file1.py",
                 "unit_name": "function_1",
                 "line_count": 10,
-            }
+            },
         )
         memory2 = MemoryUnit(
             id="mem-2",
@@ -627,7 +631,7 @@ class TestDuplicateDetector:
                 "file_path": "/path/to/file2.py",
                 "unit_name": "function_2",
                 "line_count": 12,
-            }
+            },
         )
 
         # Mock store retrieval
@@ -674,14 +678,16 @@ class TestDuplicateDetector:
                 id=f"mem-{i}",
                 content=f"code {i}",
                 category=MemoryCategory.CODE,
-                metadata={"file_path": f"/file{i}.py", "unit_name": f"func_{i}", "line_count": 10}
+                metadata={
+                    "file_path": f"/file{i}.py",
+                    "unit_name": f"func_{i}",
+                    "line_count": 10,
+                },
             )
             for i in range(4)
         ]
 
-        self.mock_store.retrieve = AsyncMock(
-            return_value=[(m, 0.5) for m in memories]
-        )
+        self.mock_store.retrieve = AsyncMock(return_value=[(m, 0.5) for m in memories])
 
         # Create two clusters: one with 3 members, one with 2
         async def mock_find_duplicates(unit, min_threshold):
@@ -715,7 +721,7 @@ class TestDuplicateDetector:
                 "has_documentation": False,
                 "cyclomatic_complexity": 5,
                 "line_count": 10,
-            }
+            },
         )
         documented = MemoryUnit(
             id="doc-id",
@@ -725,7 +731,7 @@ class TestDuplicateDetector:
                 "has_documentation": True,
                 "cyclomatic_complexity": 8,
                 "line_count": 15,
-            }
+            },
         )
 
         all_memories = [undocumented, documented]
@@ -750,7 +756,7 @@ class TestDuplicateDetector:
                 "has_documentation": False,
                 "cyclomatic_complexity": 2,
                 "line_count": 10,
-            }
+            },
         )
         complex_code = MemoryUnit(
             id="complex-id",
@@ -760,7 +766,7 @@ class TestDuplicateDetector:
                 "has_documentation": False,
                 "cyclomatic_complexity": 15,
                 "line_count": 10,
-            }
+            },
         )
 
         all_memories = [simple, complex_code]
@@ -785,7 +791,7 @@ class TestDuplicateDetector:
                 "has_documentation": False,
                 "cyclomatic_complexity": 5,
                 "line_count": 10,
-            }
+            },
         )
         long = MemoryUnit(
             id="long-id",
@@ -795,7 +801,7 @@ class TestDuplicateDetector:
                 "has_documentation": False,
                 "cyclomatic_complexity": 5,
                 "line_count": 50,
-            }
+            },
         )
 
         all_memories = [short, long]

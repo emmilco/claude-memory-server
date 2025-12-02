@@ -3,7 +3,6 @@
 import pytest
 import tempfile
 from pathlib import Path
-from datetime import datetime, UTC, timedelta
 
 from src.memory.feedback_tracker import FeedbackTracker
 from src.memory.pattern_detector import PatternType
@@ -80,9 +79,7 @@ class TestFeedbackTracker:
             confidence=0.91,
         )
 
-        success = tracker.record_feedback(
-            suggestion_id, accepted=True, implicit=False
-        )
+        success = tracker.record_feedback(suggestion_id, accepted=True, implicit=False)
         assert success is True
 
         feedback = tracker._cache[suggestion_id]
@@ -310,9 +307,7 @@ class TestFeedbackTracker:
         assert "implementation_request" in stats["per_pattern"]
         assert stats["per_pattern"]["implementation_request"]["total"] == 3
         assert stats["per_pattern"]["implementation_request"]["accepted"] == 3
-        assert (
-            stats["per_pattern"]["implementation_request"]["acceptance_rate"] == 1.0
-        )
+        assert stats["per_pattern"]["implementation_request"]["acceptance_rate"] == 1.0
 
     def test_get_stats_custom_period(self, tracker):
         """Test statistics with custom time period."""

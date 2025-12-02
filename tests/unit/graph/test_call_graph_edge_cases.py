@@ -8,8 +8,12 @@ Comprehensive testing for:
 - Boundary conditions
 """
 
-import pytest
-from src.graph.call_graph import CallGraph, CallSite, FunctionNode, InterfaceImplementation
+from src.graph.call_graph import (
+    CallGraph,
+    CallSite,
+    FunctionNode,
+    InterfaceImplementation,
+)
 
 
 class TestEdgeCases:
@@ -24,7 +28,7 @@ class TestEdgeCases:
             file_path="/test.py",
             language="python",
             start_line=1,
-            end_line=5
+            end_line=5,
         )
         graph.add_function(node)
         assert None in graph.nodes
@@ -38,7 +42,7 @@ class TestEdgeCases:
             file_path="/test.py",
             language="python",
             start_line=1,
-            end_line=5
+            end_line=5,
         )
         graph.add_function(node)
         assert "" in graph.nodes
@@ -47,7 +51,9 @@ class TestEdgeCases:
         """Test that adding duplicate function overwrites previous."""
         graph = CallGraph()
         node1 = FunctionNode("func", "func", "/test.py", "python", 1, 10)
-        node2 = FunctionNode("func", "func", "/test.py", "python", 1, 20)  # Different end_line
+        node2 = FunctionNode(
+            "func", "func", "/test.py", "python", 1, 20
+        )  # Different end_line
 
         graph.add_function(node1)
         graph.add_function(node2)
@@ -75,7 +81,7 @@ class TestEdgeCases:
             file_path="/test.py",
             language="python",
             start_line=-1,
-            end_line=-1
+            end_line=-1,
         )
         graph.add_function(node)
         assert graph.nodes["test"].start_line == -1
@@ -90,7 +96,7 @@ class TestEdgeCases:
             file_path="/test.py",
             language="python",
             start_line=1,
-            end_line=5
+            end_line=5,
         )
         graph.add_function(node)
         assert long_name in graph.nodes
@@ -104,7 +110,7 @@ class TestEdgeCases:
             file_path="/test.py",
             language="python",
             start_line=1,
-            end_line=5
+            end_line=5,
         )
         graph.add_function(node)
         assert "模块.测试函数" in graph.nodes
@@ -119,7 +125,7 @@ class TestEdgeCases:
             file_path=special_path,
             language="python",
             start_line=1,
-            end_line=5
+            end_line=5,
         )
         graph.add_function(node)
         assert graph.nodes["test"].file_path == special_path
@@ -153,7 +159,7 @@ class TestPerformance:
                 file_path=f"/file_{i // 100}.py",
                 language="python",
                 start_line=i,
-                end_line=i + 10
+                end_line=i + 10,
             )
             graph.add_function(node)
 
@@ -167,23 +173,14 @@ class TestPerformance:
 
         # Build chain: func_0 -> func_1 -> ... -> func_99
         for i in range(100):
-            graph.add_function(FunctionNode(
-                f"func_{i}",
-                f"func_{i}",
-                "/test.py",
-                "python",
-                i,
-                i + 1
-            ))
+            graph.add_function(
+                FunctionNode(f"func_{i}", f"func_{i}", "/test.py", "python", i, i + 1)
+            )
 
         for i in range(99):
-            graph.add_call(CallSite(
-                f"func_{i}",
-                "/test.py",
-                i,
-                f"func_{i+1}",
-                "/test.py"
-            ))
+            graph.add_call(
+                CallSite(f"func_{i}", "/test.py", i, f"func_{i+1}", "/test.py")
+            )
 
         # Find call chain from start to end
         paths = graph.find_call_chain("func_0", "func_99", max_depth=100)
@@ -201,21 +198,14 @@ class TestPerformance:
 
         # 100 helper functions
         for i in range(100):
-            graph.add_function(FunctionNode(
-                f"helper_{i}",
-                f"helper_{i}",
-                f"/helper_{i}.py",
-                "python",
-                1,
-                10
-            ))
-            graph.add_call(CallSite(
-                "main",
-                "/main.py",
-                i + 10,
-                f"helper_{i}",
-                f"/helper_{i}.py"
-            ))
+            graph.add_function(
+                FunctionNode(
+                    f"helper_{i}", f"helper_{i}", f"/helper_{i}.py", "python", 1, 10
+                )
+            )
+            graph.add_call(
+                CallSite("main", "/main.py", i + 10, f"helper_{i}", f"/helper_{i}.py")
+            )
 
         callees = graph.find_callees("main", include_indirect=False)
         assert len(callees) == 100
@@ -225,25 +215,20 @@ class TestPerformance:
         graph = CallGraph()
 
         # Shared utility function
-        graph.add_function(FunctionNode("utility", "utility", "/util.py", "python", 1, 10))
+        graph.add_function(
+            FunctionNode("utility", "utility", "/util.py", "python", 1, 10)
+        )
 
         # 100 callers
         for i in range(100):
-            graph.add_function(FunctionNode(
-                f"caller_{i}",
-                f"caller_{i}",
-                f"/caller_{i}.py",
-                "python",
-                1,
-                20
-            ))
-            graph.add_call(CallSite(
-                f"caller_{i}",
-                f"/caller_{i}.py",
-                10,
-                "utility",
-                "/util.py"
-            ))
+            graph.add_function(
+                FunctionNode(
+                    f"caller_{i}", f"caller_{i}", f"/caller_{i}.py", "python", 1, 20
+                )
+            )
+            graph.add_call(
+                CallSite(f"caller_{i}", f"/caller_{i}.py", 10, "utility", "/util.py")
+            )
 
         callers = graph.find_callers("utility", include_indirect=False)
         assert len(callers) == 100
@@ -259,8 +244,12 @@ class TestPerformance:
         # Create 50 intermediate nodes, each providing a path
         for i in range(50):
             mid_name = f"mid_{i}"
-            graph.add_function(FunctionNode(mid_name, mid_name, f"/{mid_name}.py", "python", 1, 5))
-            graph.add_call(CallSite("start", "/start.py", i, mid_name, f"/{mid_name}.py"))
+            graph.add_function(
+                FunctionNode(mid_name, mid_name, f"/{mid_name}.py", "python", 1, 5)
+            )
+            graph.add_call(
+                CallSite("start", "/start.py", i, mid_name, f"/{mid_name}.py")
+            )
             graph.add_call(CallSite(mid_name, f"/{mid_name}.py", 1, "end", "/end.py"))
 
         # Find limited number of paths
@@ -274,7 +263,9 @@ class TestPerformance:
 
         # Add 50 functions
         for i in range(50):
-            graph.add_function(FunctionNode(f"f{i}", f"f{i}", "/test.py", "python", i, i+1))
+            graph.add_function(
+                FunctionNode(f"f{i}", f"f{i}", "/test.py", "python", i, i + 1)
+            )
 
         # Add 200 calls (random connections)
         for i in range(200):
@@ -284,13 +275,15 @@ class TestPerformance:
 
         # Add 10 implementations
         for i in range(10):
-            graph.add_implementation(InterfaceImplementation(
-                f"Interface{i % 3}",
-                f"Impl{i}",
-                "/test.py",
-                "python",
-                ["method1", "method2"]
-            ))
+            graph.add_implementation(
+                InterfaceImplementation(
+                    f"Interface{i % 3}",
+                    f"Impl{i}",
+                    "/test.py",
+                    "python",
+                    ["method1", "method2"],
+                )
+            )
 
         stats = graph.get_statistics()
         assert stats["total_functions"] == 50
@@ -322,7 +315,7 @@ class TestComplexScenarios:
 
         # Should find 2 paths: A->B->D and A->C->D
         assert len(paths) == 2
-        path_strs = [str(p) for p in paths]
+        [str(p) for p in paths]
         assert ["A", "B", "D"] in paths
         assert ["A", "C", "D"] in paths
 
@@ -350,7 +343,9 @@ class TestComplexScenarios:
         """Test function that calls itself (recursion)."""
         graph = CallGraph()
 
-        graph.add_function(FunctionNode("factorial", "factorial", "/math.py", "python", 1, 5))
+        graph.add_function(
+            FunctionNode("factorial", "factorial", "/math.py", "python", 1, 5)
+        )
         graph.add_call(CallSite("factorial", "/math.py", 3, "factorial", "/math.py"))
 
         # Should not cause infinite loop
@@ -369,7 +364,7 @@ class TestComplexScenarios:
                 implementation_name=f"Storage{i}",
                 file_path=f"/storage{i}.py",
                 language="python",
-                methods=["get", "set", "delete"]
+                methods=["get", "set", "delete"],
             )
             graph.add_implementation(impl)
             implementations.append(impl)
@@ -387,24 +382,14 @@ class TestComplexScenarios:
         graph = CallGraph()
 
         # Python function
-        graph.add_function(FunctionNode(
-            "py_func",
-            "py_func",
-            "/main.py",
-            "python",
-            1,
-            10
-        ))
+        graph.add_function(
+            FunctionNode("py_func", "py_func", "/main.py", "python", 1, 10)
+        )
 
         # JavaScript function
-        graph.add_function(FunctionNode(
-            "jsFunc",
-            "jsFunc",
-            "/main.js",
-            "javascript",
-            1,
-            10
-        ))
+        graph.add_function(
+            FunctionNode("jsFunc", "jsFunc", "/main.js", "javascript", 1, 10)
+        )
 
         # Python calls JavaScript (e.g., via API)
         graph.add_call(CallSite("py_func", "/main.py", 5, "jsFunc", "/main.js"))
@@ -421,30 +406,63 @@ class TestComplexScenarios:
         layers = {
             "controller": ["UserController.get_user", "UserController.create_user"],
             "service": ["UserService.find_user", "UserService.save_user"],
-            "repository": ["UserRepository.query", "UserRepository.insert"]
+            "repository": ["UserRepository.query", "UserRepository.insert"],
         }
 
         for layer, functions in layers.items():
             for func in functions:
-                graph.add_function(FunctionNode(
-                    func.split(".")[-1],
-                    func,
-                    f"/{layer}.py",
-                    "python",
-                    1,
-                    10
-                ))
+                graph.add_function(
+                    FunctionNode(
+                        func.split(".")[-1], func, f"/{layer}.py", "python", 1, 10
+                    )
+                )
 
         # Connect layers
-        graph.add_call(CallSite("UserController.get_user", "/controller.py", 5, "UserService.find_user", "/service.py"))
-        graph.add_call(CallSite("UserController.create_user", "/controller.py", 5, "UserService.save_user", "/service.py"))
-        graph.add_call(CallSite("UserService.find_user", "/service.py", 5, "UserRepository.query", "/repository.py"))
-        graph.add_call(CallSite("UserService.save_user", "/service.py", 5, "UserRepository.insert", "/repository.py"))
+        graph.add_call(
+            CallSite(
+                "UserController.get_user",
+                "/controller.py",
+                5,
+                "UserService.find_user",
+                "/service.py",
+            )
+        )
+        graph.add_call(
+            CallSite(
+                "UserController.create_user",
+                "/controller.py",
+                5,
+                "UserService.save_user",
+                "/service.py",
+            )
+        )
+        graph.add_call(
+            CallSite(
+                "UserService.find_user",
+                "/service.py",
+                5,
+                "UserRepository.query",
+                "/repository.py",
+            )
+        )
+        graph.add_call(
+            CallSite(
+                "UserService.save_user",
+                "/service.py",
+                5,
+                "UserRepository.insert",
+                "/repository.py",
+            )
+        )
 
         # Verify layered call chain
         paths = graph.find_call_chain("UserController.get_user", "UserRepository.query")
         assert len(paths) >= 1
-        assert paths[0] == ["UserController.get_user", "UserService.find_user", "UserRepository.query"]
+        assert paths[0] == [
+            "UserController.get_user",
+            "UserService.find_user",
+            "UserRepository.query",
+        ]
 
 
 class TestBoundaryConditions:
@@ -456,7 +474,9 @@ class TestBoundaryConditions:
 
         # Build chain of exactly 5 functions
         for i in range(5):
-            graph.add_function(FunctionNode(f"f{i}", f"f{i}", "/test.py", "python", i, i+1))
+            graph.add_function(
+                FunctionNode(f"f{i}", f"f{i}", "/test.py", "python", i, i + 1)
+            )
 
         for i in range(4):
             graph.add_call(CallSite(f"f{i}", "/test.py", i, f"f{i+1}", "/test.py"))
@@ -471,7 +491,9 @@ class TestBoundaryConditions:
 
         # Build chain of 5 functions
         for i in range(5):
-            graph.add_function(FunctionNode(f"f{i}", f"f{i}", "/test.py", "python", i, i+1))
+            graph.add_function(
+                FunctionNode(f"f{i}", f"f{i}", "/test.py", "python", i, i + 1)
+            )
 
         for i in range(4):
             graph.add_call(CallSite(f"f{i}", "/test.py", i, f"f{i+1}", "/test.py"))
@@ -490,7 +512,7 @@ class TestBoundaryConditions:
             language="python",
             start_line=1,
             end_line=5,
-            parameters=[]
+            parameters=[],
         )
         graph.add_function(node)
         assert graph.nodes["no_params"].parameters == []
@@ -506,7 +528,7 @@ class TestBoundaryConditions:
             language="python",
             start_line=1,
             end_line=5,
-            parameters=params
+            parameters=params,
         )
         graph.add_function(node)
         assert len(graph.nodes["many_params"].parameters) == 100
@@ -519,7 +541,7 @@ class TestBoundaryConditions:
             implementation_name="MarkerImpl",
             file_path="/test.py",
             language="python",
-            methods=[]
+            methods=[],
         )
         graph.add_implementation(impl)
 

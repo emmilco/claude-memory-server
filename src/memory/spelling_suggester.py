@@ -33,7 +33,12 @@ class SpellingSuggester:
             return
 
         try:
-            from src.core.models import SearchFilters, MemoryScope, MemoryCategory, ContextLevel
+            from src.core.models import (
+                SearchFilters,
+                MemoryScope,
+                MemoryCategory,
+                ContextLevel,
+            )
 
             filters = SearchFilters(
                 scope=MemoryScope.PROJECT if project_name else MemoryScope.GLOBAL,
@@ -50,7 +55,9 @@ class SpellingSuggester:
 
             # Extract unit names
             for memory in memories:
-                metadata = memory.get("metadata", {}) if isinstance(memory, dict) else {}
+                metadata = (
+                    memory.get("metadata", {}) if isinstance(memory, dict) else {}
+                )
                 unit_name = metadata.get("unit_name", "")
                 if unit_name:
                     # Add the name and its lowercase version
@@ -63,7 +70,9 @@ class SpellingSuggester:
                             self.indexed_terms.add(word.lower())
 
             self._terms_loaded = True
-            logger.info(f"Loaded {len(self.indexed_terms)} indexed terms for spelling suggestions")
+            logger.info(
+                f"Loaded {len(self.indexed_terms)} indexed terms for spelling suggestions"
+            )
 
         except Exception as e:
             logger.warning(f"Failed to load indexed terms: {e}")
@@ -111,8 +120,7 @@ class SpellingSuggester:
                 if self.indexed_terms:
                     # Prioritize synonyms that exist in indexed terms
                     indexed_synonyms = sorted(
-                        synonyms,
-                        key=lambda s: (s.lower() not in self.indexed_terms, s)
+                        synonyms, key=lambda s: (s.lower() not in self.indexed_terms, s)
                     )
                 else:
                     indexed_synonyms = sorted(synonyms)  # Deterministic ordering

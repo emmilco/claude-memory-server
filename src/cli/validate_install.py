@@ -9,7 +9,6 @@ from src.core.dependency_checker import check_all_dependencies
 try:
     from rich.console import Console
     from rich.panel import Panel
-    from rich.table import Table
 
     RICH_AVAILABLE = True
 except ImportError:
@@ -79,7 +78,7 @@ async def validate_installation():
             console.print(f"{status} {req.name}{version_str} [{req.priority.upper()}]")
 
             if not req.installed and show_commands:
-                console.print(f"\n   [dim]Install:[/dim]")
+                console.print("\n   [dim]Install:[/dim]")
                 for line in req.install_command.split("\n"):
                     console.print(f"   [dim]{line}[/dim]")
                 console.print()
@@ -196,7 +195,7 @@ async def validate_installation():
         from src.config import ServerConfig
 
         config = ServerConfig()
-        store = QdrantMemoryStore(config)
+        QdrantMemoryStore(config)
 
         if console:
             console.print(f"✅ Qdrant reachable at [cyan]{config.qdrant_url}[/cyan]")
@@ -235,7 +234,7 @@ async def validate_installation():
         print("\n4. Code Parser\n")
 
     try:
-        import rust_core
+        import rust_core  # noqa: F401
 
         if console:
             console.print("✅ Rust parser available")
@@ -247,9 +246,7 @@ async def validate_installation():
     except ImportError:
         if console:
             console.print("⚠️  Rust parser not built")
-            console.print(
-                "   [dim]System will use Python fallback (tree-sitter)[/dim]"
-            )
+            console.print("   [dim]System will use Python fallback (tree-sitter)[/dim]")
             console.print("   [dim]Performance impact: 10-20x slower parsing[/dim]")
             console.print()
             console.print("   [dim]To enable Rust parser:[/dim]")
@@ -295,7 +292,9 @@ async def validate_installation():
             console.print(f"❌ Embedding model failed to load: [red]{e}[/red]")
             console.print()
             console.print("   [dim]The model will download on first use[/dim]")
-            console.print("   [dim]Requires: ~100MB disk space, internet connection[/dim]")
+            console.print(
+                "   [dim]Requires: ~100MB disk space, internet connection[/dim]"
+            )
         else:
             print(f"❌ Embedding model failed to load: {e}")
             print()
@@ -316,7 +315,9 @@ async def validate_installation():
 
     if all_ok:
         if console:
-            console.print("✅ [bold green]Installation valid! Ready to use.[/bold green]\n")
+            console.print(
+                "✅ [bold green]Installation valid! Ready to use.[/bold green]\n"
+            )
             console.print("[cyan]Quick start:[/cyan]")
             console.print("  [dim]python -m src.cli index ./your-code[/dim]")
             console.print("  [dim]python -m src.cli status[/dim]")
@@ -336,9 +337,7 @@ async def validate_installation():
             console.print(
                 "  [dim]docs/troubleshooting.md[/dim] - Common installation issues"
             )
-            console.print(
-                "  [dim]docs/setup.md[/dim] - Complete setup instructions"
-            )
+            console.print("  [dim]docs/setup.md[/dim] - Complete setup instructions")
             console.print()
         else:
             print("❌ Installation incomplete. Fix required errors above.\n")

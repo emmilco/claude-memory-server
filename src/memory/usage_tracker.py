@@ -5,8 +5,7 @@ import logging
 import math
 import threading
 from typing import Dict, Any, Optional, List, TYPE_CHECKING
-from datetime import datetime, UTC, timedelta
-from collections import defaultdict
+from datetime import datetime, UTC
 
 from src.config import ServerConfig
 
@@ -121,9 +120,7 @@ class UsageTracker:
         await self._flush()
         logger.info("Usage tracker stopped")
 
-    async def record_usage(
-        self, memory_id: str, search_score: float = 0.0
-    ) -> None:
+    async def record_usage(self, memory_id: str, search_score: float = 0.0) -> None:
         """
         Record usage of a memory.
 
@@ -278,9 +275,9 @@ class UsageTracker:
 
         # Weighted combination
         composite_score = (
-            self.config.ranking_weight_similarity * similarity_component +
-            self.config.ranking_weight_recency * recency_score +
-            self.config.ranking_weight_usage * usage_score
+            self.config.ranking_weight_similarity * similarity_component
+            + self.config.ranking_weight_recency * recency_score
+            + self.config.ranking_weight_usage * usage_score
         )
 
         # Ensure result is in [0, 1]

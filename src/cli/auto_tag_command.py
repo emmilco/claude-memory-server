@@ -4,7 +4,6 @@ import asyncio
 import click
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
-from typing import List
 
 from src.config import get_config
 from src.store import create_memory_store
@@ -15,9 +14,13 @@ console = Console()
 
 
 @click.command(name="auto-tag")
-@click.option("--dry-run", is_flag=True, help="Show what would be tagged without applying")
+@click.option(
+    "--dry-run", is_flag=True, help="Show what would be tagged without applying"
+)
 @click.option("--memory-ids", default=None, help="Comma-separated memory IDs to tag")
-@click.option("--min-confidence", default=0.6, type=float, help="Minimum tag confidence (0-1)")
+@click.option(
+    "--min-confidence", default=0.6, type=float, help="Minimum tag confidence (0-1)"
+)
 def auto_tag_command(dry_run: bool, memory_ids: str, min_confidence: float):
     """Auto-tag memories based on content analysis."""
     asyncio.run(_auto_tag(dry_run, memory_ids, min_confidence))
@@ -45,6 +48,7 @@ async def _auto_tag(dry_run: bool, memory_ids_str: str, min_confidence: float):
     else:
         # Get all memories
         from src.core.models import SearchFilters
+
         results = await store.retrieve([], SearchFilters(), limit=1000)
         memories = [mem for mem, _ in results]
 
@@ -90,14 +94,18 @@ async def _auto_tag(dry_run: bool, memory_ids_str: str, min_confidence: float):
                     # Get or create tag
                     tag = tag_manager.get_or_create_tag(tag_name)
                     # Associate with memory
-                    tag_manager.tag_memory(memory.id, tag.id, confidence, auto_generated=True)
+                    tag_manager.tag_memory(
+                        memory.id, tag.id, confidence, auto_generated=True
+                    )
                     total_tags += 1
 
                 # Apply hierarchical tags
                 for h_tag in hierarchical_tags:
                     if h_tag not in flat_tags:  # Don't duplicate
                         tag = tag_manager.get_or_create_tag(h_tag)
-                        tag_manager.tag_memory(memory.id, tag.id, 0.8, auto_generated=True)
+                        tag_manager.tag_memory(
+                            memory.id, tag.id, 0.8, auto_generated=True
+                        )
                         total_tags += 1
 
                 tagged_count += 1
@@ -105,9 +113,11 @@ async def _auto_tag(dry_run: bool, memory_ids_str: str, min_confidence: float):
             progress.advance(task)
 
     if dry_run:
-        console.print(f"\n[yellow]Dry run complete - no tags applied[/yellow]")
+        console.print("\n[yellow]Dry run complete - no tags applied[/yellow]")
     else:
-        console.print(f"\n[green]✓ Tagged {tagged_count} memories with {total_tags} total tags[/green]")
+        console.print(
+            f"\n[green]✓ Tagged {tagged_count} memories with {total_tags} total tags[/green]"
+        )
 
     await store.close()
 

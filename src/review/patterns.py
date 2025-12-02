@@ -26,11 +26,11 @@ SECURITY_PATTERNS = [
         category="security",
         severity="critical",
         description="Direct string concatenation or formatting in SQL query enables SQL injection attacks",
-        example_code='''query = "SELECT * FROM users WHERE id = " + user_id
+        example_code="""query = "SELECT * FROM users WHERE id = " + user_id
 # OR
 query = f"SELECT * FROM users WHERE id = {user_id}"
 # OR
-cursor.execute("SELECT * FROM users WHERE id = " + str(user_id))''',
+cursor.execute("SELECT * FROM users WHERE id = " + str(user_id))""",
         fix_description="Use parameterized queries with placeholders: cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))",
         languages=["python", "javascript", "java", "php", "ruby", "go"],
     ),
@@ -52,8 +52,8 @@ aws_secret = "AKIAIOSFODNN7EXAMPLE"''',
         category="security",
         severity="high",
         description="Using eval() or exec() with user input can execute arbitrary code",
-        example_code='''result = eval(user_input)
-exec(code_from_user)''',
+        example_code="""result = eval(user_input)
+exec(code_from_user)""",
         fix_description="Use safer alternatives like ast.literal_eval() for data, or parse input explicitly",
         languages=["python", "javascript"],
     ),
@@ -63,8 +63,8 @@ exec(code_from_user)''',
         category="security",
         severity="critical",
         description="Using shell commands with user input without sanitization enables command injection",
-        example_code='''os.system("ls " + user_filename)
-subprocess.call("rm " + file_path, shell=True)''',
+        example_code="""os.system("ls " + user_filename)
+subprocess.call("rm " + file_path, shell=True)""",
         fix_description="Use subprocess with list arguments instead of shell=True, and validate all user input",
         languages=["python", "ruby", "php", "java"],
     ),
@@ -78,12 +78,12 @@ PERFORMANCE_PATTERNS = [
         category="performance",
         severity="high",
         description="Loop with database query inside causes N+1 queries, severely impacting performance",
-        example_code='''for user in users:
+        example_code="""for user in users:
     profile = db.query("SELECT * FROM profiles WHERE user_id = ?", user.id)
     # Process profile
 
 for order in orders:
-    customer = Customer.objects.get(id=order.customer_id)''',
+    customer = Customer.objects.get(id=order.customer_id)""",
         fix_description="Use JOIN or prefetch to load all related data at once: profiles = db.query('SELECT * FROM profiles WHERE user_id IN (?)', user_ids)",
         languages=["python", "javascript", "ruby", "java", "php"],
     ),
@@ -109,8 +109,8 @@ for line in lines:
         category="performance",
         severity="medium",
         description="Database queries on unindexed columns cause full table scans",
-        example_code='''SELECT * FROM users WHERE email = 'user@example.com'
--- If email column has no index''',
+        example_code="""SELECT * FROM users WHERE email = 'user@example.com'
+-- If email column has no index""",
         fix_description="Add database index on frequently queried columns: CREATE INDEX idx_users_email ON users(email)",
         languages=["sql"],
     ),
@@ -124,11 +124,11 @@ MAINTAINABILITY_PATTERNS = [
         category="maintainability",
         severity="medium",
         description="Hardcoded numeric constants reduce code readability and maintainability",
-        example_code='''if status_code == 200:
+        example_code="""if status_code == 200:
     process_success()
 
 timeout = 300
-max_retries = 3''',
+max_retries = 3""",
         fix_description="Extract to named constants: HTTP_OK = 200, TIMEOUT_SECONDS = 300, MAX_RETRIES = 3",
         languages=["python", "javascript", "java", "go", "rust", "c", "cpp"],
     ),
@@ -138,7 +138,7 @@ max_retries = 3''',
         category="maintainability",
         severity="medium",
         description="Class with too many responsibilities violates Single Responsibility Principle",
-        example_code='''class UserManager:
+        example_code="""class UserManager:
     def create_user(self): ...
     def delete_user(self): ...
     def send_email(self): ...
@@ -146,7 +146,7 @@ max_retries = 3''',
     def generate_report(self): ...
     def export_data(self): ...
     def import_data(self): ...
-    # 10+ methods doing unrelated things''',
+    # 10+ methods doing unrelated things""",
         fix_description="Split into focused classes: UserService, EmailService, ReportService, etc.",
         languages=["python", "javascript", "java", "go", "rust", "ruby", "php"],
     ),
@@ -156,8 +156,8 @@ max_retries = 3''',
         category="maintainability",
         severity="low",
         description="Long method chains reduce readability and make debugging difficult",
-        example_code='''result = user.get_profile().get_settings().get_preferences().get_theme().get_color().to_hex()
-data = api.fetch().filter().map().reduce().format()''',
+        example_code="""result = user.get_profile().get_settings().get_preferences().get_theme().get_color().to_hex()
+data = api.fetch().filter().map().reduce().format()""",
         fix_description="Break into intermediate variables with meaningful names for clarity",
         languages=["python", "javascript", "ruby", "java"],
     ),
@@ -167,13 +167,13 @@ data = api.fetch().filter().map().reduce().format()''',
         category="maintainability",
         severity="low",
         description="Large blocks of commented code clutter the codebase and confuse readers",
-        example_code='''# def old_function():
+        example_code="""# def old_function():
 #     # This was the old implementation
 #     return calculate_old_way()
 
 # Legacy code - might need later
 # for item in items:
-#     process(item)''',
+#     process(item)""",
         fix_description="Remove commented code (it's in version control if needed): delete the commented blocks",
         languages=["python", "javascript", "java", "go", "rust", "c", "cpp", "php"],
     ),
@@ -187,12 +187,12 @@ BEST_PRACTICE_PATTERNS = [
         category="best_practice",
         severity="medium",
         description="Operations that can fail without error handling lead to crashes",
-        example_code='''file = open("data.txt")
+        example_code="""file = open("data.txt")
 data = file.read()
 file.close()
 
 result = int(user_input)
-response = requests.get(url)''',
+response = requests.get(url)""",
         fix_description="Add try/except blocks around operations that can fail: try: file = open(...) except FileNotFoundError: ...",
         languages=["python", "javascript", "java", "go", "rust", "ruby"],
     ),
@@ -202,12 +202,12 @@ response = requests.get(url)''',
         category="best_practice",
         severity="medium",
         description="Using user input directly without validation can cause errors or security issues",
-        example_code='''def process_age(age):
+        example_code="""def process_age(age):
     # No validation
     return age * 2
 
 username = request.form['username']
-save_to_db(username)''',
+save_to_db(username)""",
         fix_description="Validate all user input: if not isinstance(age, int) or age < 0: raise ValueError('Invalid age')",
         languages=["python", "javascript", "java", "php", "ruby"],
     ),
@@ -217,7 +217,7 @@ save_to_db(username)''',
         category="best_practice",
         severity="medium",
         description="Catching all exceptions with bare 'except:' hides bugs and makes debugging hard",
-        example_code='''try:
+        example_code="""try:
     risky_operation()
 except Exception:
     pass
@@ -225,7 +225,7 @@ except Exception:
 try:
     process_data()
 except Exception:
-    logger.error("Something went wrong")''',
+    logger.error("Something went wrong")""",
         fix_description="Catch specific exceptions: except (ValueError, KeyError) as e: ...",
         languages=["python"],
     ),
@@ -252,4 +252,8 @@ def get_patterns_by_severity(severity: str) -> List[CodeSmellPattern]:
 
 def get_patterns_by_language(language: str) -> List[CodeSmellPattern]:
     """Get all patterns applicable to a specific language."""
-    return [p for p in ALL_PATTERNS if language.lower() in [lang.lower() for lang in p.languages]]
+    return [
+        p
+        for p in ALL_PATTERNS
+        if language.lower() in [lang.lower() for lang in p.languages]
+    ]

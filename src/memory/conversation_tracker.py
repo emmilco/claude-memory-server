@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set
 from datetime import datetime, UTC, timedelta
 from uuid import uuid4
 from dataclasses import dataclass, field
@@ -41,7 +41,7 @@ class ConversationSession:
         self,
         query: str,
         results_shown: List[str],
-        query_embedding: Optional[List[float]] = None
+        query_embedding: Optional[List[float]] = None,
     ) -> None:
         """Add a query to the session history."""
         record = QueryRecord(
@@ -149,7 +149,9 @@ class ConversationTracker:
 
         if session:
             # Check if expired
-            if session.is_expired(self.config.memory.conversation_session_timeout_minutes):
+            if session.is_expired(
+                self.config.memory.conversation_session_timeout_minutes
+            ):
                 logger.info(f"Session {session_id} has expired")
                 self.end_session(session_id)
                 return None
@@ -181,7 +183,7 @@ class ConversationTracker:
         session_id: str,
         query: str,
         results_shown: List[str],
-        query_embedding: Optional[List[float]] = None
+        query_embedding: Optional[List[float]] = None,
     ) -> None:
         """
         Track a query and its results in a session.

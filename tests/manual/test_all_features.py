@@ -7,6 +7,7 @@ from pathlib import Path
 from src.core.server import MemoryRAGServer
 from src.config import get_config
 
+
 class FeatureTester:
     def __init__(self):
         self.config = get_config()
@@ -24,11 +25,9 @@ class FeatureTester:
 
     def log_result(self, test_name: str, status: str, details: str = ""):
         """Log test result."""
-        self.test_results.append({
-            "test": test_name,
-            "status": status,
-            "details": details
-        })
+        self.test_results.append(
+            {"test": test_name, "status": status, "details": details}
+        )
         symbol = "✅" if status == "PASS" else "❌" if status == "FAIL" else "⚠️"
         print(f"{symbol} {test_name}: {status}")
         if details:
@@ -48,18 +47,20 @@ class FeatureTester:
                 query="parallel embedding generation",
                 project_name="claude-memory-server",
                 mode="semantic",
-                limit=5
+                limit=5,
             )
             latency = (time.time() - start) * 1000
 
-            if results and len(results.get('results', [])) > 0:
+            if results and len(results.get("results", [])) > 0:
                 self.log_result(
                     "Semantic Search",
                     "PASS",
-                    f"Found {len(results['results'])} results in {latency:.1f}ms"
+                    f"Found {len(results['results'])} results in {latency:.1f}ms",
                 )
-                for i, r in enumerate(results['results'][:2], 1):
-                    print(f"   Result {i}: {r.get('file_path', 'N/A')} - {r.get('unit_name', 'N/A')} (score: {r.get('score', 0):.3f})")
+                for i, r in enumerate(results["results"][:2], 1):
+                    print(
+                        f"   Result {i}: {r.get('file_path', 'N/A')} - {r.get('unit_name', 'N/A')} (score: {r.get('score', 0):.3f})"
+                    )
             else:
                 self.log_result("Semantic Search", "FAIL", "No results returned")
 
@@ -70,15 +71,15 @@ class FeatureTester:
                 query="MemoryCategory",
                 project_name="claude-memory-server",
                 mode="keyword",
-                limit=5
+                limit=5,
             )
             latency = (time.time() - start) * 1000
 
-            if results and len(results.get('results', [])) > 0:
+            if results and len(results.get("results", [])) > 0:
                 self.log_result(
                     "Keyword Search",
                     "PASS",
-                    f"Found {len(results['results'])} results in {latency:.1f}ms"
+                    f"Found {len(results['results'])} results in {latency:.1f}ms",
                 )
             else:
                 self.log_result("Keyword Search", "FAIL", "No results returned")
@@ -90,15 +91,15 @@ class FeatureTester:
                 query="indexing code files",
                 project_name="claude-memory-server",
                 mode="hybrid",
-                limit=5
+                limit=5,
             )
             latency = (time.time() - start) * 1000
 
-            if results and len(results.get('results', [])) > 0:
+            if results and len(results.get("results", [])) > 0:
                 self.log_result(
                     "Hybrid Search",
                     "PASS",
-                    f"Found {len(results['results'])} results in {latency:.1f}ms"
+                    f"Found {len(results['results'])} results in {latency:.1f}ms",
                 )
             else:
                 self.log_result("Hybrid Search", "FAIL", "No results returned")
@@ -119,47 +120,39 @@ class FeatureTester:
                 content="This is a test memory for E2E testing",
                 category="fact",
                 importance=0.8,
-                tags=["test", "e2e", "automated"]
+                tags=["test", "e2e", "automated"],
             )
 
-            if memory_result and memory_result.get('id'):
-                memory_id = memory_result['id']
+            if memory_result and memory_result.get("id"):
+                memory_id = memory_result["id"]
                 self.log_result(
                     "Store Memory",
                     "PASS",
-                    f"Memory stored with ID: {memory_id[:16]}..."
+                    f"Memory stored with ID: {memory_id[:16]}...",
                 )
 
                 # Retrieve memories
                 print("\n2b. Retrieve Memories")
                 results = await self.server.retrieve_memories(
-                    query="test memory",
-                    limit=5
+                    query="test memory", limit=5
                 )
 
                 if results and len(results) > 0:
                     self.log_result(
-                        "Retrieve Memories",
-                        "PASS",
-                        f"Found {len(results)} memories"
+                        "Retrieve Memories", "PASS", f"Found {len(results)} memories"
                     )
                 else:
                     self.log_result("Retrieve Memories", "FAIL", "No memories found")
 
                 # List all memories
                 print("\n2c. List Memories")
-                list_result = await self.server.list_memories(
-                    limit=10,
-                    offset=0
-                )
+                list_result = await self.server.list_memories(limit=10, offset=0)
 
                 if list_result:
-                    total = list_result.get('total', 0)
-                    returned = len(list_result.get('memories', []))
+                    total = list_result.get("total", 0)
+                    returned = len(list_result.get("memories", []))
                     self.log_result(
-                        "List Memories",
-                        "PASS",
-                        f"Total: {total}, Returned: {returned}"
+                        "List Memories", "PASS", f"Total: {total}, Returned: {returned}"
                     )
                 else:
                     self.log_result("List Memories", "FAIL", "No result")
@@ -185,7 +178,7 @@ class FeatureTester:
                 self.log_result(
                     "Get Status",
                     "PASS",
-                    f"Projects: {status.get('total_projects', 0)}, Files: {status.get('total_indexed_files', 0)}"
+                    f"Projects: {status.get('total_projects', 0)}, Files: {status.get('total_indexed_files', 0)}",
                 )
                 print(f"   Backend: {status.get('storage_backend', 'N/A')}")
                 print(f"   Total units: {status.get('total_indexed_units', 0)}")
@@ -195,37 +188,38 @@ class FeatureTester:
             # Get indexed files
             print("\n3b. Get Indexed Files")
             files_result = await self.server.get_indexed_files(
-                project_name="claude-memory-server",
-                limit=5
+                project_name="claude-memory-server", limit=5
             )
 
-            if files_result and files_result.get('files'):
+            if files_result and files_result.get("files"):
                 self.log_result(
                     "Get Indexed Files",
                     "PASS",
-                    f"Found {len(files_result['files'])} files"
+                    f"Found {len(files_result['files'])} files",
                 )
-                for f in files_result['files'][:2]:
-                    print(f"   {f.get('file_path', 'N/A')} - {f.get('unit_count', 0)} units")
+                for f in files_result["files"][:2]:
+                    print(
+                        f"   {f.get('file_path', 'N/A')} - {f.get('unit_count', 0)} units"
+                    )
             else:
                 self.log_result("Get Indexed Files", "FAIL", "No files returned")
 
             # List indexed units
             print("\n3c. List Indexed Units")
             units_result = await self.server.list_indexed_units(
-                project_name="claude-memory-server",
-                limit=5,
-                unit_type="function"
+                project_name="claude-memory-server", limit=5, unit_type="function"
             )
 
-            if units_result and units_result.get('units'):
+            if units_result and units_result.get("units"):
                 self.log_result(
                     "List Indexed Units",
                     "PASS",
-                    f"Found {len(units_result['units'])} functions"
+                    f"Found {len(units_result['units'])} functions",
                 )
-                for u in units_result['units'][:2]:
-                    print(f"   {u.get('unit_name', 'N/A')} in {u.get('file_path', 'N/A')}")
+                for u in units_result["units"][:2]:
+                    print(
+                        f"   {u.get('unit_name', 'N/A')} in {u.get('file_path', 'N/A')}"
+                    )
             else:
                 self.log_result("List Indexed Units", "FAIL", "No units returned")
 
@@ -249,11 +243,11 @@ class FeatureTester:
             print("\n4b. List Opted-in Projects")
             opted_result = await self.server.list_opted_in_projects()
 
-            if opted_result and opted_result.get('projects'):
+            if opted_result and opted_result.get("projects"):
                 self.log_result(
                     "List Opted-in Projects",
                     "PASS",
-                    f"Found {len(opted_result['projects'])} opted-in projects"
+                    f"Found {len(opted_result['projects'])} opted-in projects",
                 )
             else:
                 self.log_result("List Opted-in Projects", "FAIL", "No projects")
@@ -261,18 +255,19 @@ class FeatureTester:
             # Search across all projects
             print("\n4c. Search All Projects")
             results = await self.server.search_all_projects(
-                query="async function",
-                limit=5
+                query="async function", limit=5
             )
 
-            if results and results.get('results'):
+            if results and results.get("results"):
                 self.log_result(
                     "Search All Projects",
                     "PASS",
-                    f"Found {len(results['results'])} results across projects"
+                    f"Found {len(results['results'])} results across projects",
                 )
-                for r in results['results'][:2]:
-                    print(f"   {r.get('project_name', 'N/A')}: {r.get('unit_name', 'N/A')}")
+                for r in results["results"][:2]:
+                    print(
+                        f"   {r.get('project_name', 'N/A')}: {r.get('unit_name', 'N/A')}"
+                    )
             else:
                 self.log_result("Search All Projects", "FAIL", "No results")
 
@@ -289,17 +284,16 @@ class FeatureTester:
             # Get file dependencies
             print("\n5a. Get File Dependencies")
             deps = await self.server.get_file_dependencies(
-                project_name="claude-memory-server",
-                file_path="src/core/server.py"
+                project_name="claude-memory-server", file_path="src/core/server.py"
             )
 
-            if deps and deps.get('dependencies'):
+            if deps and deps.get("dependencies"):
                 self.log_result(
                     "Get File Dependencies",
                     "PASS",
-                    f"Found {len(deps['dependencies'])} dependencies"
+                    f"Found {len(deps['dependencies'])} dependencies",
                 )
-                for d in deps['dependencies'][:3]:
+                for d in deps["dependencies"][:3]:
                     print(f"   {d}")
             else:
                 self.log_result("Get File Dependencies", "FAIL", "No dependencies")
@@ -314,7 +308,7 @@ class FeatureTester:
                 self.log_result(
                     "Get Dependency Stats",
                     "PASS",
-                    f"Total files: {stats.get('total_files', 0)}"
+                    f"Total files: {stats.get('total_files', 0)}",
                 )
                 print(f"   Most imported: {stats.get('most_imported_file', 'N/A')}")
             else:
@@ -340,7 +334,7 @@ class FeatureTester:
                     query="function test",
                     project_name="claude-memory-server",
                     mode="semantic",
-                    limit=5
+                    limit=5,
                 )
                 latency = (time.time() - start) * 1000
                 latencies.append(latency)
@@ -351,7 +345,7 @@ class FeatureTester:
             self.log_result(
                 "Search Latency",
                 "PASS" if avg_latency < 100 else "WARN",
-                f"Avg: {avg_latency:.1f}ms, P95: {p95_latency:.1f}ms"
+                f"Avg: {avg_latency:.1f}ms, P95: {p95_latency:.1f}ms",
             )
 
         except Exception as e:
@@ -369,16 +363,14 @@ class FeatureTester:
             test_dir = Path("./src/core")
 
             result = await self.server.index_codebase(
-                directory=str(test_dir),
-                project_name="test-reindex",
-                recursive=False
+                directory=str(test_dir), project_name="test-reindex", recursive=False
             )
 
             if result:
                 self.log_result(
                     "Re-index Project",
                     "PASS",
-                    f"Indexed {result.get('files_indexed', 0)} files"
+                    f"Indexed {result.get('files_indexed', 0)} files",
                 )
             else:
                 self.log_result("Re-index Project", "FAIL", "No result")
@@ -393,9 +385,9 @@ class FeatureTester:
         print("=" * 80)
 
         total = len(self.test_results)
-        passed = sum(1 for r in self.test_results if r['status'] == 'PASS')
-        failed = sum(1 for r in self.test_results if r['status'] == 'FAIL')
-        warned = sum(1 for r in self.test_results if r['status'] == 'WARN')
+        passed = sum(1 for r in self.test_results if r["status"] == "PASS")
+        failed = sum(1 for r in self.test_results if r["status"] == "FAIL")
+        warned = sum(1 for r in self.test_results if r["status"] == "WARN")
 
         print(f"\nTotal Tests: {total}")
         print(f"✅ Passed: {passed} ({passed/total*100:.1f}%)")
@@ -405,10 +397,11 @@ class FeatureTester:
         if failed > 0:
             print("\nFailed Tests:")
             for r in self.test_results:
-                if r['status'] == 'FAIL':
+                if r["status"] == "FAIL":
                     print(f"  ❌ {r['test']}: {r['details']}")
 
         print("\n" + "=" * 80)
+
 
 async def main():
     """Run all tests."""
@@ -429,7 +422,9 @@ async def main():
     except Exception as e:
         print(f"\n❌ FATAL ERROR: {e}")
         import traceback
+
         traceback.print_exc()
+
 
 if __name__ == "__main__":
     asyncio.run(main())

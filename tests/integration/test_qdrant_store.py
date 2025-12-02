@@ -3,8 +3,6 @@
 import pytest
 import pytest_asyncio
 import asyncio
-import uuid
-from typing import List
 
 from src.config import ServerConfig
 from src.store.qdrant_store import QdrantMemoryStore
@@ -72,7 +70,7 @@ async def test_store_initialization(store):
             health = await store.health_check()
             assert health is True
             break
-        except Exception as e:
+        except Exception:
             if attempt == max_retries - 1:
                 raise
             await asyncio.sleep(0.1)
@@ -94,7 +92,7 @@ async def test_store_and_retrieve_memory(store):
             "scope": MemoryScope.GLOBAL.value,
             "importance": 0.9,
             "tags": ["python", "backend"],
-        }
+        },
     )
 
     assert memory_id is not None
@@ -126,7 +124,7 @@ async def test_vector_search(store):
                 "category": MemoryCategory.FACT.value,
                 "context_level": ContextLevel.PROJECT_CONTEXT.value,
                 "scope": MemoryScope.GLOBAL.value,
-            }
+            },
         )
 
     # Search with similar embedding
@@ -154,7 +152,7 @@ async def test_filtered_search(store):
             "context_level": ContextLevel.USER_PREFERENCE.value,
             "scope": MemoryScope.GLOBAL.value,
             "importance": 0.9,
-        }
+        },
     )
 
     await store.store(
@@ -166,7 +164,7 @@ async def test_filtered_search(store):
             "scope": MemoryScope.PROJECT.value,
             "project_name": "my-project",
             "importance": 0.7,
-        }
+        },
     )
 
     # Search with filter for preferences only
@@ -196,7 +194,7 @@ async def test_batch_store(store):
                 "category": MemoryCategory.CONTEXT.value,
                 "context_level": ContextLevel.SESSION_STATE.value,
                 "scope": MemoryScope.GLOBAL.value,
-            }
+            },
         )
         for i in range(10)
     ]
@@ -222,7 +220,7 @@ async def test_delete_memory(store):
             "category": MemoryCategory.EVENT.value,
             "context_level": ContextLevel.SESSION_STATE.value,
             "scope": MemoryScope.GLOBAL.value,
-        }
+        },
     )
 
     # Verify it exists
@@ -250,7 +248,7 @@ async def test_update_memory(store):
             "context_level": ContextLevel.PROJECT_CONTEXT.value,
             "scope": MemoryScope.GLOBAL.value,
             "importance": 0.5,
-        }
+        },
     )
 
     # Update importance
@@ -274,7 +272,7 @@ async def test_importance_filter(store):
             "context_level": ContextLevel.PROJECT_CONTEXT.value,
             "scope": MemoryScope.GLOBAL.value,
             "importance": 0.3,
-        }
+        },
     )
 
     await store.store(
@@ -285,7 +283,7 @@ async def test_importance_filter(store):
             "context_level": ContextLevel.PROJECT_CONTEXT.value,
             "scope": MemoryScope.GLOBAL.value,
             "importance": 0.9,
-        }
+        },
     )
 
     # Search with minimum importance filter
@@ -315,7 +313,7 @@ async def test_search_with_multiple_filters(store):
             "project_name": "backend-api",
             "importance": 0.8,
             "tags": ["python", "backend"],
-        }
+        },
     )
 
     await store.store(
@@ -327,7 +325,7 @@ async def test_search_with_multiple_filters(store):
             "scope": MemoryScope.PROJECT.value,
             "project_name": "frontend-app",
             "importance": 0.6,
-        }
+        },
     )
 
     # Filter by category, scope, and project
@@ -363,7 +361,7 @@ async def test_count_with_filters(store):
                 "category": MemoryCategory.PREFERENCE.value,
                 "context_level": ContextLevel.USER_PREFERENCE.value,
                 "scope": MemoryScope.GLOBAL.value,
-            }
+            },
         )
 
     for i in range(3):
@@ -374,7 +372,7 @@ async def test_count_with_filters(store):
                 "category": MemoryCategory.FACT.value,
                 "context_level": ContextLevel.PROJECT_CONTEXT.value,
                 "scope": MemoryScope.GLOBAL.value,
-            }
+            },
         )
 
     # Count all
@@ -399,7 +397,7 @@ async def test_retrieve_with_limit(store):
                 "category": MemoryCategory.CONTEXT.value,
                 "context_level": ContextLevel.SESSION_STATE.value,
                 "scope": MemoryScope.GLOBAL.value,
-            }
+            },
         )
 
     # Retrieve with limit
@@ -410,7 +408,9 @@ async def test_retrieve_with_limit(store):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Flaky in parallel execution - collection state issues cause inconsistent result counts")
+@pytest.mark.skip(
+    reason="Flaky in parallel execution - collection state issues cause inconsistent result counts"
+)
 async def test_retrieve_with_large_limit(store, test_project_name):
     """Test that retrieve caps limit to prevent memory issues."""
     from src.core.models import SearchFilters
@@ -426,18 +426,22 @@ async def test_retrieve_with_large_limit(store, test_project_name):
                 "context_level": ContextLevel.PROJECT_CONTEXT.value,
                 "scope": MemoryScope.PROJECT.value,
                 "project_name": test_project_name,
-            }
+            },
         )
 
     # Request excessive limit, filtered by project name
     results = await store.retrieve(
         [0.5] * 768,
         limit=1000,
-        filters=SearchFilters(project_name=test_project_name, scope=MemoryScope.PROJECT)
+        filters=SearchFilters(
+            project_name=test_project_name, scope=MemoryScope.PROJECT
+        ),
     )
 
     # Should cap to exactly 100 (the safe limit)
-    assert len(results) == 100, f"Expected exactly 100 results (capped), got {len(results)}"
+    assert (
+        len(results) == 100
+    ), f"Expected exactly 100 results (capped), got {len(results)}"
 
 
 @pytest.mark.asyncio
@@ -502,7 +506,7 @@ async def test_store_with_tags(store):
             "scope": MemoryScope.PROJECT.value,
             "project_name": "api-service",
             "tags": tags,
-        }
+        },
     )
 
     retrieved = await store.get_by_id(memory_id)
@@ -527,7 +531,7 @@ async def test_store_with_custom_metadata(store):
             "context_level": ContextLevel.PROJECT_CONTEXT.value,
             "scope": MemoryScope.GLOBAL.value,
             "metadata": custom_metadata,
-        }
+        },
     )
 
     retrieved = await store.get_by_id(memory_id)

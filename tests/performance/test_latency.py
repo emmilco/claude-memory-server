@@ -2,7 +2,6 @@
 
 import pytest
 import time
-import asyncio
 
 
 @pytest.mark.performance
@@ -33,17 +32,13 @@ async def test_search_latency_p95_under_50ms(indexed_test_project, performance_t
         query = queries[i % len(queries)]
 
         start = time.perf_counter()
-        results = await server.search_code(
-            query=query,
-            project_name="perf_test",
-            limit=10
-        )
+        await server.search_code(query=query, project_name="perf_test", limit=10)
         elapsed_ms = (time.perf_counter() - start) * 1000
         performance_tracker.record(elapsed_ms)
 
     # Print detailed stats
     print(f"\n{'='*50}")
-    print(f"SEARCH LATENCY PERFORMANCE RESULTS")
+    print("SEARCH LATENCY PERFORMANCE RESULTS")
     print(f"{'='*50}")
     print(f"P50: {performance_tracker.p50:.2f}ms")
     print(f"P95: {performance_tracker.p95:.2f}ms")
@@ -75,11 +70,7 @@ async def test_search_latency_p50_under_20ms(indexed_test_project, performance_t
         query = f"function_{i % 10}"
 
         start = time.perf_counter()
-        await server.search_code(
-            query=query,
-            project_name="perf_test",
-            limit=5
-        )
+        await server.search_code(query=query, project_name="perf_test", limit=5)
         elapsed_ms = (time.perf_counter() - start) * 1000
         performance_tracker.record(elapsed_ms)
 
@@ -87,9 +78,9 @@ async def test_search_latency_p50_under_20ms(indexed_test_project, performance_t
     print(f"P95 Search Latency: {performance_tracker.p95:.2f}ms")
 
     # Internal performance goal
-    assert performance_tracker.p50 < 20, (
-        f"P50 latency {performance_tracker.p50:.2f}ms exceeds 20ms internal goal"
-    )
+    assert (
+        performance_tracker.p50 < 20
+    ), f"P50 latency {performance_tracker.p50:.2f}ms exceeds 20ms internal goal"
 
 
 @pytest.mark.performance
@@ -114,21 +105,18 @@ async def test_memory_retrieve_latency(server_with_memories, performance_tracker
         query = queries[i % len(queries)]
 
         start = time.perf_counter()
-        await server.retrieve_memories(
-            query=query,
-            limit=10
-        )
+        await server.retrieve_memories(query=query, limit=10)
         elapsed_ms = (time.perf_counter() - start) * 1000
         performance_tracker.record(elapsed_ms)
 
-    print(f"\nMemory Retrieval Latency:")
+    print("\nMemory Retrieval Latency:")
     print(f"  P50: {performance_tracker.p50:.2f}ms")
     print(f"  P95: {performance_tracker.p95:.2f}ms")
     print(f"  P99: {performance_tracker.p99:.2f}ms")
 
-    assert performance_tracker.p95 < 30, (
-        f"Memory retrieval P95 latency {performance_tracker.p95:.2f}ms exceeds 30ms"
-    )
+    assert (
+        performance_tracker.p95 < 30
+    ), f"Memory retrieval P95 latency {performance_tracker.p95:.2f}ms exceeds 30ms"
 
 
 @pytest.mark.performance
@@ -142,18 +130,14 @@ async def test_latency_stable_under_load(indexed_test_project, performance_track
 
     # Sustained load: 200 consecutive searches
     for i in range(200):
-        query = f"function authenticate process execute"
+        query = "function authenticate process execute"
 
         start = time.perf_counter()
-        await server.search_code(
-            query=query,
-            project_name="perf_test",
-            limit=5
-        )
+        await server.search_code(query=query, project_name="perf_test", limit=5)
         elapsed_ms = (time.perf_counter() - start) * 1000
         performance_tracker.record(elapsed_ms)
 
-    print(f"\nLatency Stability under Load (200 requests):")
+    print("\nLatency Stability under Load (200 requests):")
     print(f"  P50: {performance_tracker.p50:.2f}ms")
     print(f"  P95: {performance_tracker.p95:.2f}ms")
     print(f"  P99: {performance_tracker.p99:.2f}ms")
@@ -192,12 +176,12 @@ async def test_cold_vs_warm_search_latency(indexed_test_project):
 
     avg_warm_latency = sum(warm_latencies) / len(warm_latencies)
 
-    print(f"\nCold vs Warm Search Latency:")
+    print("\nCold vs Warm Search Latency:")
     print(f"  Cold (first): {cold_latency_ms:.2f}ms")
     print(f"  Warm (avg of 10): {avg_warm_latency:.2f}ms")
     print(f"  Speedup: {cold_latency_ms / avg_warm_latency:.2f}x")
 
     # Warm searches should be reasonably fast
-    assert avg_warm_latency < 50, (
-        f"Warm search latency {avg_warm_latency:.2f}ms exceeds 50ms"
-    )
+    assert (
+        avg_warm_latency < 50
+    ), f"Warm search latency {avg_warm_latency:.2f}ms exceeds 50ms"

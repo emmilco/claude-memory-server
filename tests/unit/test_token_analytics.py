@@ -24,7 +24,7 @@ class TestTokenTracker:
 
     def test_init_creates_database(self, temp_db):
         """Test that initialization creates the database schema."""
-        tracker = TokenTracker(db_path=temp_db)
+        TokenTracker(db_path=temp_db)
         assert os.path.exists(temp_db)
 
     def test_track_search(self, temp_db):
@@ -176,15 +176,9 @@ class TestTokenTracker:
         """Test average relevance calculation."""
         tracker = TokenTracker(db_path=temp_db)
 
-        tracker.track_search(
-            tokens_used=100, results_count=1, relevance_avg=0.8
-        )
-        tracker.track_search(
-            tokens_used=100, results_count=1, relevance_avg=0.9
-        )
-        tracker.track_search(
-            tokens_used=100, results_count=1, relevance_avg=1.0
-        )
+        tracker.track_search(tokens_used=100, results_count=1, relevance_avg=0.8)
+        tracker.track_search(tokens_used=100, results_count=1, relevance_avg=0.9)
+        tracker.track_search(tokens_used=100, results_count=1, relevance_avg=1.0)
 
         analytics = tracker.get_analytics(period_days=1)
         # Average of 0.8, 0.9, 1.0 = 0.9

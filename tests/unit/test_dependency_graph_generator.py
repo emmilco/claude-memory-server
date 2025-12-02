@@ -2,7 +2,6 @@
 
 import pytest
 import json
-from pathlib import Path
 from src.memory.dependency_graph import DependencyGraph
 from src.memory.graph_generator import DependencyGraphGenerator
 
@@ -17,14 +16,14 @@ def simple_graph():
     graph.dependencies = {
         "/test/a.py": {"/test/b.py"},
         "/test/b.py": {"/test/c.py"},
-        "/test/c.py": set()
+        "/test/c.py": set(),
     }
 
     # Build reverse dependencies
     graph.dependents = {
         "/test/a.py": set(),
         "/test/b.py": {"/test/a.py"},
-        "/test/c.py": {"/test/b.py"}
+        "/test/c.py": {"/test/b.py"},
     }
 
     return graph
@@ -39,12 +38,12 @@ def circular_graph():
     graph.dependencies = {
         "/test/a.py": {"/test/b.py"},
         "/test/b.py": {"/test/c.py"},
-        "/test/c.py": {"/test/a.py"}
+        "/test/c.py": {"/test/a.py"},
     }
     graph.dependents = {
         "/test/a.py": {"/test/c.py"},
         "/test/b.py": {"/test/a.py"},
-        "/test/c.py": {"/test/b.py"}
+        "/test/c.py": {"/test/b.py"},
     }
 
     return graph
@@ -126,7 +125,9 @@ class TestDependencyGraphGenerator:
     def test_circular_dependency_detection(self, circular_graph):
         """Test circular dependency detection."""
         generator = DependencyGraphGenerator(circular_graph)
-        graph_data, stats, circular = generator.generate(format="json", highlight_circular=True)
+        graph_data, stats, circular = generator.generate(
+            format="json", highlight_circular=True
+        )
 
         assert stats["circular_dependency_count"] >= 1
         assert len(circular) >= 1
@@ -136,7 +137,9 @@ class TestDependencyGraphGenerator:
     def test_circular_highlighting_dot(self, circular_graph):
         """Test circular dependency highlighting in DOT format."""
         generator = DependencyGraphGenerator(circular_graph)
-        graph_data, stats, circular = generator.generate(format="dot", highlight_circular=True)
+        graph_data, stats, circular = generator.generate(
+            format="dot", highlight_circular=True
+        )
 
         # Should have red edges for circular dependencies
         assert "color=red" in graph_data
@@ -145,7 +148,9 @@ class TestDependencyGraphGenerator:
     def test_circular_highlighting_mermaid(self, circular_graph):
         """Test circular dependency highlighting in Mermaid format."""
         generator = DependencyGraphGenerator(circular_graph)
-        graph_data, stats, circular = generator.generate(format="mermaid", highlight_circular=True)
+        graph_data, stats, circular = generator.generate(
+            format="mermaid", highlight_circular=True
+        )
 
         # Should have styling for circular nodes
         assert "style" in graph_data
@@ -159,7 +164,7 @@ class TestDependencyGraphGenerator:
 
         # Depth 1 should only include direct dependencies
         graph_data, stats, circular = generator.generate(format="json", max_depth=1)
-        data = json.loads(graph_data)
+        json.loads(graph_data)
 
         # Should have fewer nodes with depth limit
         assert stats["node_count"] <= 5  # All nodes in this simple graph
@@ -170,8 +175,7 @@ class TestDependencyGraphGenerator:
 
         # Filter only config files
         graph_data, stats, circular = generator.generate(
-            format="json",
-            file_pattern="*config.py"
+            format="json", file_pattern="*config.py"
         )
         data = json.loads(graph_data)
 
@@ -185,8 +189,7 @@ class TestDependencyGraphGenerator:
 
         # All files are Python in this test
         graph_data, stats, circular = generator.generate(
-            format="json",
-            language="python"
+            format="json", language="python"
         )
         data = json.loads(graph_data)
 
@@ -198,8 +201,7 @@ class TestDependencyGraphGenerator:
         generator = DependencyGraphGenerator(simple_graph)
 
         graph_data, stats, circular = generator.generate(
-            format="json",
-            include_metadata=True
+            format="json", include_metadata=True
         )
         data = json.loads(graph_data)
 
@@ -215,8 +217,7 @@ class TestDependencyGraphGenerator:
 
         # Should work even without metadata
         graph_data, stats, circular = generator.generate(
-            format="json",
-            include_metadata=False
+            format="json", include_metadata=False
         )
         data = json.loads(graph_data)
 
@@ -242,12 +243,9 @@ class TestDependencyGraphGenerator:
 
         # Combine depth and pattern filters
         graph_data, stats, circular = generator.generate(
-            format="json",
-            max_depth=2,
-            file_pattern="*.py",
-            language="python"
+            format="json", max_depth=2, file_pattern="*.py", language="python"
         )
-        data = json.loads(graph_data)
+        json.loads(graph_data)
 
         # Should have filtered results
         assert stats["node_count"] >= 0  # May filter down to nothing or some nodes

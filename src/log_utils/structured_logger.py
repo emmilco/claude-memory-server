@@ -65,7 +65,7 @@ class StructuredLogger(logging.Logger):
         msg: str,
         context: Optional[Dict[str, Any]] = None,
         exc_info: Any = None,
-        **kwargs
+        **kwargs,
     ) -> None:
         """
         Internal method to log with context.
@@ -89,7 +89,9 @@ class StructuredLogger(logging.Logger):
 
         self.log(level, msg, exc_info=exc_info, extra=extra)
 
-    def debug_ctx(self, msg: str, context: Optional[Dict[str, Any]] = None, **kwargs) -> None:
+    def debug_ctx(
+        self, msg: str, context: Optional[Dict[str, Any]] = None, **kwargs
+    ) -> None:
         """
         Log debug message with context.
 
@@ -103,7 +105,9 @@ class StructuredLogger(logging.Logger):
         """
         self._log_with_context(logging.DEBUG, msg, context, **kwargs)
 
-    def info_ctx(self, msg: str, context: Optional[Dict[str, Any]] = None, **kwargs) -> None:
+    def info_ctx(
+        self, msg: str, context: Optional[Dict[str, Any]] = None, **kwargs
+    ) -> None:
         """
         Log info message with context.
 
@@ -117,7 +121,9 @@ class StructuredLogger(logging.Logger):
         """
         self._log_with_context(logging.INFO, msg, context, **kwargs)
 
-    def warning_ctx(self, msg: str, context: Optional[Dict[str, Any]] = None, **kwargs) -> None:
+    def warning_ctx(
+        self, msg: str, context: Optional[Dict[str, Any]] = None, **kwargs
+    ) -> None:
         """
         Log warning message with context.
 
@@ -136,7 +142,7 @@ class StructuredLogger(logging.Logger):
         msg: str,
         context: Optional[Dict[str, Any]] = None,
         exc_info: Any = None,
-        **kwargs
+        **kwargs,
     ) -> None:
         """
         Log error message with context.
@@ -157,7 +163,7 @@ class StructuredLogger(logging.Logger):
         msg: str,
         context: Optional[Dict[str, Any]] = None,
         exc_info: Any = None,
-        **kwargs
+        **kwargs,
     ) -> None:
         """
         Log critical message with context.
@@ -171,7 +177,9 @@ class StructuredLogger(logging.Logger):
         Example:
             logger.critical_ctx("Server shutdown", reason="out_of_memory", available_mb=50)
         """
-        self._log_with_context(logging.CRITICAL, msg, context, exc_info=exc_info, **kwargs)
+        self._log_with_context(
+            logging.CRITICAL, msg, context, exc_info=exc_info, **kwargs
+        )
 
 
 # Module-level configuration

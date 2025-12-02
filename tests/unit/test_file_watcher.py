@@ -4,7 +4,6 @@ import pytest
 import asyncio
 import tempfile
 from pathlib import Path
-from typing import List
 
 from src.memory.file_watcher import DebouncedFileWatcher, FileWatcherService
 
@@ -89,7 +88,9 @@ async def test_file_watcher_debouncing(temp_watch_dir, changed_files):
 
     # Should have debounced to exactly 1 callback
     # (all 5 rapid changes within 250ms total should trigger only 1 final callback)
-    assert len(changed_files) == 1, f"Expected 1 callback after debouncing, got {len(changed_files)}"
+    assert (
+        len(changed_files) == 1
+    ), f"Expected 1 callback after debouncing, got {len(changed_files)}"
     assert changed_files[0] == test_file
 
 

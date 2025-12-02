@@ -6,7 +6,10 @@ import tempfile
 import shutil
 from pathlib import Path
 
-from src.memory.cross_project_consent import CrossProjectConsentManager, CrossProjectConsent
+from src.memory.cross_project_consent import (
+    CrossProjectConsentManager,
+    CrossProjectConsent,
+)
 from src.core.server import MemoryRAGServer
 from src.config import ServerConfig
 

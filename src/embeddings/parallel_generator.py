@@ -6,7 +6,7 @@ import os
 import multiprocessing
 from concurrent.futures import ProcessPoolExecutor
 from functools import lru_cache
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Any
 import time
 
 from src.config import ServerConfig
@@ -18,20 +18,23 @@ logger = logging.getLogger(__name__)
 # Set multiprocessing start method to 'spawn' to avoid fork issues with transformers/tokenizers
 # 'spawn' creates fresh processes without copying memory, preventing tokenizers fork conflicts
 # This must be done before creating any processes
-if hasattr(multiprocessing, 'set_start_method'):
+if hasattr(multiprocessing, "set_start_method"):
     try:
         # Only set if not already set
         current_method = multiprocessing.get_start_method(allow_none=True)
         if current_method is None:
-            multiprocessing.set_start_method('spawn', force=False)
-            logger.info("Set multiprocessing start method to 'spawn' (safe for transformers)")
-        elif current_method == 'fork':
+            multiprocessing.set_start_method("spawn", force=False)
+            logger.info(
+                "Set multiprocessing start method to 'spawn' (safe for transformers)"
+            )
+        elif current_method == "fork":
             logger.warning(
-                f"Multiprocessing start method is 'fork'. This may cause issues with "
-                f"tokenizers library. Consider using 'spawn' instead."
+                "Multiprocessing start method is 'fork'. This may cause issues with "
+                "tokenizers library. Consider using 'spawn' instead."
             )
     except RuntimeError as e:
         logger.debug(f"Could not set multiprocessing start method: {e}")
+
 
 @lru_cache(maxsize=4)
 def _load_model_in_worker(model_name: str) -> Any:
@@ -54,12 +57,12 @@ def _load_model_in_worker(model_name: str) -> Any:
     try:
         import torch
         from sentence_transformers import SentenceTransformer
-        from src.embeddings.rust_bridge import RustBridge
 
         # Disable tokenizers parallelism in worker to prevent conflicts
         # This is the proper way to disable it via the API
         try:
             import tokenizers
+
             tokenizers.set_parallelism(False)
         except (ImportError, AttributeError):
             # tokenizers may not be available or may not have this method
@@ -88,17 +91,16 @@ def _load_model_in_worker(model_name: str) -> Any:
                 if param.is_meta:
                     # Use to_empty() instead of to() for meta tensors
                     param.data = torch.nn.Parameter(
-                        torch.empty_like(param, device='cpu')
+                        torch.empty_like(param, device="cpu")
                     ).data
-                elif param.device.type != 'cpu':
-                    param.data = param.data.to('cpu')
+                elif param.device.type != "cpu":
+                    param.data = param.data.to("cpu")
 
             for buffer_name, buffer in module.named_buffers(recurse=False):
                 if buffer.is_meta:
-                    setattr(module, buffer_name,
-                           torch.empty_like(buffer, device='cpu'))
-                elif buffer.device.type != 'cpu':
-                    setattr(module, buffer_name, buffer.to('cpu'))
+                    setattr(module, buffer_name, torch.empty_like(buffer, device="cpu"))
+                elif buffer.device.type != "cpu":
+                    setattr(module, buffer_name, buffer.to("cpu"))
 
         logger.info(f"Worker {os.getpid()}: Model loaded successfully")
         return model
@@ -150,7 +152,9 @@ def _generate_embeddings_batch(
         return normalized
 
     except Exception as e:
-        logger.error(f"Worker {os.getpid()}: Error generating embeddings: {e}", exc_info=True)
+        logger.error(
+            f"Worker {os.getpid()}: Error generating embeddings: {e}", exc_info=True
+        )
         raise EmbeddingError(f"Embedding generation failed in worker: {e}")
 
 
@@ -199,6 +203,7 @@ class ParallelEmbeddingGenerator:
         """
         if config is None:
             from src.config import get_config
+
             config = get_config()
 
         self.config = config
@@ -217,17 +222,24 @@ class ParallelEmbeddingGenerator:
         # MPS (Apple Silicon) is faster for larger models with large batch sizes
         # Small models like all-MiniLM-L6-v2 are faster on CPU due to GPU transfer overhead
         from src.embeddings.gpu_utils import detect_mps
-        large_model = self.model_name in ("all-mpnet-base-v2",)  # Models that benefit from MPS
-        self._use_mps_fallback = detect_mps() and large_model and not config.performance.force_cpu
+
+        large_model = self.model_name in (
+            "all-mpnet-base-v2",
+        )  # Models that benefit from MPS
+        self._use_mps_fallback = (
+            detect_mps() and large_model and not config.performance.force_cpu
+        )
         self._mps_generator = None
 
         if self._use_mps_fallback:
-            logger.info("MPS (Apple Silicon) detected with large model - using GPU acceleration")
+            logger.info(
+                "MPS (Apple Silicon) detected with large model - using GPU acceleration"
+            )
             self.max_workers = 1  # Single-threaded for MPS
         else:
             # Determine worker count from config.performance.parallel_workers (default: 3)
             if max_workers is None:
-                max_workers = getattr(config.performance, 'parallel_workers', 3)
+                max_workers = getattr(config.performance, "parallel_workers", 3)
             self.max_workers = max_workers
 
         self.executor: Optional[ProcessPoolExecutor] = None
@@ -255,16 +267,21 @@ class ParallelEmbeddingGenerator:
             if self._use_mps_fallback:
                 # Use single-threaded MPS generator
                 from src.embeddings.generator import EmbeddingGenerator
+
                 logger.info("Initializing MPS embedding generator")
                 self._mps_generator = EmbeddingGenerator(self.config)
                 await self._mps_generator.initialize()
                 logger.info("MPS embedding generator initialized successfully")
             else:
-                logger.info(f"Initializing process pool with {self.max_workers} workers")
+                logger.info(
+                    f"Initializing process pool with {self.max_workers} workers"
+                )
                 self.executor = ProcessPoolExecutor(max_workers=self.max_workers)
                 logger.info("Process pool initialized successfully")
         except Exception as e:
-            logger.error(f"Failed to initialize embedding generator: {e}", exc_info=True)
+            logger.error(
+                f"Failed to initialize embedding generator: {e}", exc_info=True
+            )
             raise
 
     async def generate(self, text: str) -> List[float]:
@@ -326,7 +343,9 @@ class ParallelEmbeddingGenerator:
         if self._use_mps_fallback and self._mps_generator:
             if show_progress:
                 logger.info(f"Using MPS (Apple Silicon) for {len(texts)} texts")
-            return await self._mps_generator.batch_generate(texts, batch_size, show_progress)
+            return await self._mps_generator.batch_generate(
+                texts, batch_size, show_progress
+            )
 
         # Adaptive batch sizing based on text length (PERF-004)
         if batch_size is None:
@@ -334,12 +353,16 @@ class ParallelEmbeddingGenerator:
             if avg_text_length < 500:
                 batch_size = min(64, self.batch_size * 2)  # Small texts: larger batches
             elif avg_text_length > 2000:
-                batch_size = max(16, self.batch_size // 2)  # Large texts: smaller batches
+                batch_size = max(
+                    16, self.batch_size // 2
+                )  # Large texts: smaller batches
             else:
                 batch_size = self.batch_size  # Medium texts: default
 
             if show_progress and avg_text_length > 0:
-                logger.info(f"Adaptive batch size: {batch_size} (avg text length: {avg_text_length:.0f} chars)")
+                logger.info(
+                    f"Adaptive batch size: {batch_size} (avg text length: {avg_text_length:.0f} chars)"
+                )
         else:
             batch_size = batch_size
 
@@ -365,7 +388,9 @@ class ParallelEmbeddingGenerator:
 
                 if show_progress and cache_hits > 0:
                     hit_rate = (cache_hits / len(texts)) * 100
-                    logger.info(f"Cache hits: {cache_hits}/{len(texts)} ({hit_rate:.1f}%)")
+                    logger.info(
+                        f"Cache hits: {cache_hits}/{len(texts)} ({hit_rate:.1f}%)"
+                    )
 
                 if not texts_to_generate:
                     # All texts were cached
@@ -379,7 +404,9 @@ class ParallelEmbeddingGenerator:
                     logger.info(
                         f"Using single-threaded mode for small batch ({len(texts_to_generate)} texts)"
                     )
-                generated_embeddings = await self._generate_single_threaded(texts_to_generate, batch_size)
+                generated_embeddings = await self._generate_single_threaded(
+                    texts_to_generate, batch_size
+                )
             else:
                 # For large batches, use multiprocessing
                 if show_progress:
@@ -387,7 +414,9 @@ class ParallelEmbeddingGenerator:
                         f"Using parallel mode with {self.max_workers} workers "
                         f"({len(texts_to_generate)} texts)"
                     )
-                generated_embeddings = await self._generate_parallel(texts_to_generate, batch_size, show_progress)
+                generated_embeddings = await self._generate_parallel(
+                    texts_to_generate, batch_size, show_progress
+                )
 
             # Cache generated embeddings
             if self.cache and self.cache.enabled:
@@ -466,10 +495,7 @@ class ParallelEmbeddingGenerator:
         if len(texts) % self.max_workers != 0:
             chunk_size += 1  # Ensure we don't lose any texts
 
-        chunks = [
-            texts[i:i + chunk_size]
-            for i in range(0, len(texts), chunk_size)
-        ]
+        chunks = [texts[i : i + chunk_size] for i in range(0, len(texts), chunk_size)]
 
         if show_progress:
             logger.info(
@@ -577,18 +603,18 @@ class ParallelEmbeddingGenerator:
         Automatic cleanup handlers (atexit, signal) have been removed as they
         interfere with test frameworks and can cause race conditions.
         """
-        if hasattr(self, 'executor') and self.executor:
+        if hasattr(self, "executor") and self.executor:
             # PERF-009: Still use wait=False in __del__ to avoid blocking
             # but this is a fallback - close() should be called explicitly
             self.executor.shutdown(wait=False, cancel_futures=True)
-        if hasattr(self, '_mps_generator') and self._mps_generator:
+        if hasattr(self, "_mps_generator") and self._mps_generator:
             # Can't await in __del__, so just try sync cleanup
             try:
-                if hasattr(self._mps_generator, 'executor'):
+                if hasattr(self._mps_generator, "executor"):
                     self._mps_generator.executor.shutdown(wait=False)
             except Exception:
                 pass
-        if hasattr(self, 'cache') and self.cache:
+        if hasattr(self, "cache") and self.cache:
             try:
                 self.cache.close()
             except Exception:
