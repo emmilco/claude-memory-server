@@ -154,7 +154,7 @@ class QdrantSetup:
             collections = self.client.get_collections().collections
             return any(c.name == self.collection_name for c in collections)
         except Exception as e:
-            logger.error(f"Failed to check collection existence: {e}")
+            logger.error(f"Failed to check collection existence: {e}", exc_info=True)
             return False
 
     def create_collection(self, recreate: bool = False) -> None:
@@ -288,7 +288,7 @@ class QdrantSetup:
                 "optimizer_status": collection_info.optimizer_status,
             }
         except Exception as e:
-            logger.error(f"Failed to get collection info: {e}")
+            logger.error(f"Failed to get collection info: {e}", exc_info=True)
             return {}
 
     def health_check(self) -> bool:
@@ -306,5 +306,5 @@ class QdrantSetup:
             self.client.get_collections()
             return True
         except Exception as e:
-            logger.error(f"Qdrant health check failed: {e}")
+            logger.error(f"Qdrant health check failed: {e}", exc_info=True)
             return False
