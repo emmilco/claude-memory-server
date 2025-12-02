@@ -122,6 +122,19 @@ class AnalyticsFeatures(BaseModel):
             )
         return v
 
+    @field_validator('usage_analytics_retention_days')
+    @classmethod
+    def validate_usage_analytics_retention_days(cls, v: int) -> int:
+        """Ensure usage_analytics_retention_days is > 0 and <= 730 days."""
+        if v <= 0:
+            raise ValueError("usage_analytics_retention_days must be > 0")
+        if v > 730:
+            raise ValueError(
+                f"usage_analytics_retention_days must be <= 730 days (got {v}). "
+                f"Retention periods longer than 2 years are unreasonable and can cause unbounded storage growth."
+            )
+        return v
+
 
 class MemoryFeatures(BaseModel):
     """Memory management features."""
