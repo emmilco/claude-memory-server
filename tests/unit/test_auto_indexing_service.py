@@ -250,13 +250,10 @@ class TestShouldAutoIndex:
         should_index = await service.should_auto_index()
         assert should_index is False
 
-    @pytest.mark.skip(
-        reason="auto_index_enabled config not yet implemented - see FEAT-033"
-    )
     @pytest.mark.asyncio
     async def test_respects_disabled_config(self, service):
         """Test respects disabled configuration."""
-        service.config.auto_index_enabled = False
+        service.config.indexing.auto_index_enabled = False
 
         should_index = await service.should_auto_index()
         assert should_index is False
@@ -272,9 +269,6 @@ class TestExcludePatterns:
         should_index = service.should_index_file(file_path)
         assert should_index is True
 
-    @pytest.mark.skip(
-        reason="auto_index_exclude_patterns config not yet implemented - see FEAT-033"
-    )
     @pytest.mark.asyncio
     async def test_should_exclude_node_modules(self, service, temp_project_dir):
         """Test node_modules files are excluded."""
@@ -377,13 +371,10 @@ class TestBackgroundIndexing:
 class TestStartAutoIndexing:
     """Test starting auto-indexing."""
 
-    @pytest.mark.skip(
-        reason="auto_index_size_threshold config not yet implemented - see FEAT-033"
-    )
     @pytest.mark.asyncio
     async def test_starts_foreground_for_small_project(self, service):
         """Test uses foreground mode for small projects."""
-        service.config.auto_index_size_threshold = 10  # Higher than file count
+        service.config.indexing.auto_index_size_threshold = 10  # Higher than file count
         service.tracker.is_indexed.return_value = False
 
         result = await service.start_auto_indexing()
@@ -392,13 +383,10 @@ class TestStartAutoIndexing:
         assert result["mode"] == "foreground"
         assert result["indexed_files"] == 4
 
-    @pytest.mark.skip(
-        reason="auto_index_size_threshold config not yet implemented - see FEAT-033"
-    )
     @pytest.mark.asyncio
     async def test_starts_background_for_large_project(self, service):
         """Test uses background mode for large projects."""
-        service.config.auto_index_size_threshold = 2  # Lower than file count
+        service.config.indexing.auto_index_size_threshold = 2  # Lower than file count
         service.tracker.is_indexed.return_value = False
 
         result = await service.start_auto_indexing()
@@ -420,27 +408,21 @@ class TestStartAutoIndexing:
         result = await service.start_auto_indexing(force=False)
         assert result is None
 
-    @pytest.mark.skip(
-        reason="auto_index_size_threshold config not yet implemented - see FEAT-033"
-    )
     @pytest.mark.asyncio
     async def test_forces_indexing_when_requested(self, service):
         """Test forces indexing when force=True."""
         service.tracker.is_indexed.return_value = True
         service.tracker.is_stale.return_value = False
-        service.config.auto_index_size_threshold = 10
+        service.config.indexing.auto_index_size_threshold = 10
 
         result = await service.start_auto_indexing(force=True)
         assert result is not None
 
-    @pytest.mark.skip(
-        reason="auto_index_size_threshold config not yet implemented - see FEAT-033"
-    )
     @pytest.mark.asyncio
     async def test_progress_callback(self, service):
         """Test progress callback is called."""
         callback = Mock()
-        service.config.auto_index_size_threshold = 10
+        service.config.indexing.auto_index_size_threshold = 10
         service.tracker.is_indexed.return_value = False
 
         await service.start_auto_indexing(progress_callback=callback)
@@ -506,13 +488,10 @@ class TestProgressQueries:
         assert progress["total_files"] == 10
         assert progress["files_completed"] == 5
 
-    @pytest.mark.skip(
-        reason="auto_index_size_threshold config not yet implemented - see FEAT-033"
-    )
     @pytest.mark.asyncio
     async def test_wait_for_completion(self, service):
         """Test waiting for background task completion."""
-        service.config.auto_index_size_threshold = 2
+        service.config.indexing.auto_index_size_threshold = 2
         service.tracker.is_indexed.return_value = False
 
         # Start background indexing
@@ -549,9 +528,6 @@ class TestManualReindex:
         assert result["mode"] == "foreground"
 
 
-@pytest.mark.skip(
-    reason="Auto-indexing config parameters not yet implemented in ServerConfig - see FEAT-033"
-)
 class TestCleanup:
     """Test resource cleanup."""
 
@@ -616,8 +592,8 @@ class TestCleanup:
 
         await service.initialize()
 
-        # Start background task
-        # Note: auto_index_size_threshold not yet in ServerConfig
+        # Start background task - set low threshold to trigger background mode
+        service.config.indexing.auto_index_size_threshold = 2
         await service.start_auto_indexing()
 
         # Close should wait for task

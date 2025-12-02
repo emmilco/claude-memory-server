@@ -181,7 +181,7 @@ The report claimed `semantic_units: 0` but the actual field is `units_indexed` w
 ### System Health
 - Qdrant connectivity verified
 - Rust parser available and optimal
-- Embedding model loaded (all-MiniLM-L6-v2)
+- Embedding model loaded (all-mpnet-base-v2)
 - 16 indexed projects with 16,538 memories
 - Storage: 445.7 MB embedding cache
 

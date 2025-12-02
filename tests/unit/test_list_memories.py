@@ -8,7 +8,8 @@ from src.config import ServerConfig
 from src.core.server import MemoryRAGServer
 
 # Run sequentially on single worker - Qdrant connection sensitive under parallel execution
-pytestmark = pytest.mark.xdist_group("qdrant_sequential")
+# Mark as slow - initializes full MemoryRAGServer with embeddings
+pytestmark = [pytest.mark.xdist_group("qdrant_sequential"), pytest.mark.slow]
 
 
 @pytest.fixture

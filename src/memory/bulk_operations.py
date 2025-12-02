@@ -198,10 +198,10 @@ class BulkDeleteManager:
         Returns:
             Estimated size in bytes
         """
-        # Rough estimate: content + metadata + vector (384 dimensions * 4 bytes)
+        # Rough estimate: content + metadata + vector (768 dimensions * 4 bytes)
         content_size = len(memory.content.encode("utf-8"))
         metadata_size = 200  # Approximate overhead for metadata
-        vector_size = 384 * 4  # 384-dim float32 vector
+        vector_size = 768 * 4  # 768-dim float32 vector
         return content_size + metadata_size + vector_size
 
     def _generate_warnings(

@@ -58,7 +58,7 @@ Code Parser
   python setup.py --build-rust
 
 Embedding Model
-  Model: all-MiniLM-L6-v2
+  Model: all-mpnet-base-v2
   Dimensions: 384
   Batch Size: 32
 

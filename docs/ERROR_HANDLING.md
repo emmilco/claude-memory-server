@@ -554,7 +554,7 @@ except EmbeddingError as e:
 
 **Recovery strategy:**
 1. Install sentence-transformers: `pip install sentence-transformers`
-2. Verify model is valid (all-MiniLM-L6-v2, all-mpnet-base-v2)
+2. Verify model is valid (all-mpnet-base-v2, all-mpnet-base-v2)
 3. Check text is not empty
 4. Check sufficient memory available
 5. Retry operation
@@ -562,7 +562,6 @@ except EmbeddingError as e:
 **Transient?** No - requires dependency installation or text fix
 
 **Supported models:**
-- `all-MiniLM-L6-v2` (default, 384 dimensions)
 - `all-mpnet-base-v2` (768 dimensions)
 
 **Related errors:**
@@ -696,7 +695,7 @@ except ConfigurationError as e:
     # Option 2: Provide explicit values
     config = Config(
         qdrant_url="http://localhost:6333",
-        embedding_dimension=384
+        embedding_dimension=768
     )
 ```
 
@@ -711,7 +710,7 @@ except ConfigurationError as e:
 
 **Common configuration issues:**
 - Qdrant URL must start with `http://` or `https://`
-- Embedding dimension must be 384 or 768
+- Embedding dimension must be 768
 - Max file size must be positive integer
 - Feature flags must not conflict (e.g., GPU + CPU)
 
@@ -1064,7 +1063,7 @@ async def store_if_allowed(content: str):
 
 💡 Solution: Check:
 1. sentence-transformers is installed: pip install sentence-transformers
-2. Model is valid: all-MiniLM-L6-v2, all-mpnet-base-v2
+2. Model is valid: all-mpnet-base-v2, all-mpnet-base-v2
 3. Sufficient memory available (model requires ~100MB)
 4. Text is not empty or too long (max ~8000 tokens)
 ```
@@ -1137,7 +1136,7 @@ async def index_with_error_handling(file_paths: list[str]):
 
 **Error message:**
 ```
-[E009] Invalid configuration: embedding_dimension must be 384 or 768, got 512
+[E009] Invalid configuration: embedding_dimension must be 768, got 512
 ```
 
 **Solution steps:**

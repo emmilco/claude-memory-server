@@ -515,3 +515,80 @@ class MultiRepositorySearch:
             ]
 
         return [repo.id for repo in candidate_repos]
+
+
+class MultiRepositorySearcher:
+    """Simplified searcher for cross-project service integration.
+
+    This class provides a simpler interface for searching within individual
+    projects, designed for use by CrossProjectService.
+
+    Unlike MultiRepositorySearch which requires a RepositoryRegistry,
+    this class works directly with project names and the vector store.
+    """
+
+    def __init__(
+        self,
+        store: QdrantMemoryStore,
+        embedding_generator: EmbeddingGenerator,
+        config: Optional[ServerConfig] = None,
+    ):
+        """Initialize the searcher.
+
+        Args:
+            store: Vector store for search operations
+            embedding_generator: Embedding generator for queries
+            config: Server configuration
+        """
+        self.store = store
+        self.embedding_generator = embedding_generator
+        self.config = config or get_config()
+
+    async def search_project(
+        self,
+        query: str,
+        query_embedding: List[float],
+        project_name: str,
+        limit: int = 10,
+        search_mode: str = "semantic",
+    ) -> List[Dict[str, Any]]:
+        """Search within a specific project.
+
+        Args:
+            query: Search query text
+            query_embedding: Pre-computed query embedding
+            project_name: Project name to search within
+            limit: Maximum results to return
+            search_mode: Search mode (semantic, keyword, hybrid)
+
+        Returns:
+            List of search results with file_path, relevance_score, etc.
+        """
+        # Build filters for project-scoped search
+        filters = SearchFilters(
+            project=project_name,
+            scope=MemoryScope.PROJECT,
+        )
+
+        # Perform search using store
+        results = await self.store.search(
+            query_embedding=query_embedding,
+            limit=limit,
+            filters=filters,
+        )
+
+        # Convert to expected format
+        formatted_results = []
+        for memory, score in results:
+            formatted_results.append(
+                {
+                    "content": memory.content,
+                    "file_path": memory.metadata.get("file_path", ""),
+                    "language": memory.metadata.get("language", ""),
+                    "unit_type": memory.metadata.get("unit_type", ""),
+                    "relevance_score": score,
+                    "metadata": memory.metadata,
+                }
+            )
+
+        return formatted_results

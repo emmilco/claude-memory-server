@@ -42,23 +42,18 @@ class TestHealthServiceInit:
         store = MagicMock()
         config = ServerConfig()
         metrics_collector = MagicMock()
-        alert_engine = MagicMock()
-        health_reporter = MagicMock()
-        capacity_planner = MagicMock()
 
         service = HealthService(
             store=store,
             config=config,
             metrics_collector=metrics_collector,
-            alert_engine=alert_engine,
-            health_reporter=health_reporter,
-            capacity_planner=capacity_planner,
         )
 
         assert service.metrics_collector == metrics_collector
-        assert service.alert_engine == alert_engine
-        assert service.health_reporter == health_reporter
-        assert service.capacity_planner == capacity_planner
+        # These components were removed in SIMPLIFY-001
+        assert service.alert_engine is None
+        assert service.health_reporter is None
+        assert service.capacity_planner is None
 
     def test_initial_stats_are_zero(self):
         """Test service stats start at zero."""
@@ -287,143 +282,88 @@ class TestGetHealthScore:
 
 
 class TestGetActiveAlerts:
-    """Test get_active_alerts method."""
+    """Test get_active_alerts method.
+
+    Note: alert_engine was removed in SIMPLIFY-001, so all alert methods
+    now return 'disabled' status.
+    """
 
     @pytest.fixture
     def service(self):
-        """Create service with alert engine."""
-        alert_engine = MagicMock()
-        alert_engine.get_active_alerts.return_value = [
-            {"id": "alert1", "severity": "WARNING", "message": "High latency"},
-            {"id": "alert2", "severity": "CRITICAL", "message": "Database error"},
-        ]
-
+        """Create service for alert tests."""
         return HealthService(
             store=MagicMock(),
             config=ServerConfig(),
-            alert_engine=alert_engine,
         )
 
     @pytest.mark.asyncio
-    async def test_alerts_without_engine_returns_disabled(self):
-        """Test getting alerts without engine returns disabled."""
-        service = HealthService(
-            store=MagicMock(),
-            config=ServerConfig(),
-            alert_engine=None,
-        )
-
+    async def test_alerts_returns_disabled(self, service):
+        """Test getting alerts returns disabled (alert_engine removed)."""
         result = await service.get_active_alerts()
 
         assert result["status"] == "disabled"
         assert result["alerts"] == []
 
     @pytest.mark.asyncio
-    async def test_alerts_success(self, service):
-        """Test successful alerts retrieval."""
-        result = await service.get_active_alerts()
+    async def test_alerts_with_severity_filter_returns_disabled(self, service):
+        """Test alerts with severity filter still returns disabled."""
+        result = await service.get_active_alerts(severity_filter="CRITICAL")
 
-        assert result["status"] == "success"
-        assert len(result["alerts"]) == 2
-        assert result["total_count"] == 2
-
-    @pytest.mark.asyncio
-    async def test_alerts_with_severity_filter(self, service):
-        """Test alerts with severity filter."""
-        await service.get_active_alerts(severity_filter="CRITICAL")
-
-        service.alert_engine.get_active_alerts.assert_called_with(
-            severity_filter="CRITICAL"
-        )
+        assert result["status"] == "disabled"
+        assert result["alerts"] == []
 
 
 class TestResolveAlert:
-    """Test resolve_alert method."""
+    """Test resolve_alert method.
+
+    Note: alert_engine was removed in SIMPLIFY-001, so resolve_alert
+    now always returns 'disabled' status.
+    """
 
     @pytest.fixture
     def service(self):
-        """Create service with alert engine."""
-        alert_engine = MagicMock()
-        alert_engine.resolve_alert.return_value = True
-
+        """Create service for resolve alert tests."""
         return HealthService(
             store=MagicMock(),
             config=ServerConfig(),
-            alert_engine=alert_engine,
         )
 
     @pytest.mark.asyncio
-    async def test_resolve_without_engine_returns_disabled(self):
-        """Test resolving without engine returns disabled."""
-        service = HealthService(
-            store=MagicMock(),
-            config=ServerConfig(),
-            alert_engine=None,
-        )
-
+    async def test_resolve_returns_disabled(self, service):
+        """Test resolving alert returns disabled (alert_engine removed)."""
         result = await service.resolve_alert("alert1")
 
         assert result["status"] == "disabled"
 
-    @pytest.mark.asyncio
-    async def test_resolve_success(self, service):
-        """Test successful alert resolution."""
-        result = await service.resolve_alert("alert1")
-
-        assert result["status"] == "success"
-        assert result["alert_id"] == "alert1"
-        assert result["action"] == "resolved"
-
-    @pytest.mark.asyncio
-    async def test_resolve_not_found(self, service):
-        """Test resolving non-existent alert."""
-        service.alert_engine.resolve_alert.return_value = False
-
-        result = await service.resolve_alert("nonexistent")
-
-        assert result["status"] == "not_found"
-
 
 class TestGetCapacityForecast:
-    """Test get_capacity_forecast method."""
+    """Test get_capacity_forecast method.
+
+    Note: capacity_planner was removed in SIMPLIFY-001, so get_capacity_forecast
+    now always returns 'disabled' status.
+    """
 
     @pytest.fixture
     def service(self):
-        """Create service with capacity planner."""
-        capacity_planner = MagicMock()
-        capacity_planner.get_forecast.return_value = {
-            "projected_memory_usage": 0.85,
-            "projected_storage": 500,
-            "recommendations": ["Consider scaling storage"],
-        }
-
+        """Create service for capacity forecast tests."""
         return HealthService(
             store=MagicMock(),
             config=ServerConfig(),
-            capacity_planner=capacity_planner,
         )
 
     @pytest.mark.asyncio
-    async def test_forecast_without_planner_returns_disabled(self):
-        """Test forecast without planner returns disabled."""
-        service = HealthService(
-            store=MagicMock(),
-            config=ServerConfig(),
-            capacity_planner=None,
-        )
-
+    async def test_forecast_returns_disabled(self, service):
+        """Test forecast returns disabled (capacity_planner removed)."""
         result = await service.get_capacity_forecast()
 
         assert result["status"] == "disabled"
 
     @pytest.mark.asyncio
-    async def test_forecast_success(self, service):
-        """Test successful capacity forecast."""
+    async def test_forecast_with_days_returns_disabled(self, service):
+        """Test forecast with days_ahead still returns disabled."""
         result = await service.get_capacity_forecast(days_ahead=30)
 
-        assert result["status"] == "success"
-        assert "forecast" in result
-        assert result["days_ahead"] == 30
+        assert result["status"] == "disabled"
 
 
 class TestGetWeeklyReport:
@@ -475,7 +415,11 @@ class TestGetWeeklyReport:
 
 
 class TestStartDashboard:
-    """Test start_dashboard method."""
+    """Test start_dashboard method.
+
+    Note: Dashboard feature was removed in SIMPLIFY-001.
+    The method now returns a 'disabled' status.
+    """
 
     @pytest.fixture
     def service(self):
@@ -486,50 +430,12 @@ class TestStartDashboard:
         )
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(
-        reason="DashboardServer class not available - needs implementation"
-    )
-    async def test_start_dashboard_success(self, service):
-        """Test successful dashboard start."""
-        with patch("src.dashboard.web_server.DashboardServer") as MockServer:
-            mock_server = AsyncMock()
-            mock_server.start = AsyncMock()
-            MockServer.return_value = mock_server
+    async def test_start_dashboard_returns_disabled(self, service):
+        """Test start_dashboard returns disabled status (feature removed in SIMPLIFY-001)."""
+        result = await service.start_dashboard(port=8080, host="localhost")
 
-            result = await service.start_dashboard(port=8080, host="localhost")
-
-            assert result["status"] == "success"
-            assert result["url"] == "http://localhost:8080"
-            assert result["port"] == 8080
-
-    @pytest.mark.asyncio
-    @pytest.mark.skip(
-        reason="DashboardServer class not available - needs implementation"
-    )
-    async def test_start_dashboard_custom_host_port(self, service):
-        """Test dashboard with custom host and port."""
-        with patch("src.dashboard.web_server.DashboardServer") as MockServer:
-            mock_server = AsyncMock()
-            mock_server.start = AsyncMock()
-            MockServer.return_value = mock_server
-
-            result = await service.start_dashboard(port=9000, host="0.0.0.0")
-
-            assert result["url"] == "http://0.0.0.0:9000"
-            assert result["host"] == "0.0.0.0"
-            assert result["port"] == 9000
-
-    @pytest.mark.asyncio
-    @pytest.mark.skip(
-        reason="DashboardServer class not available - needs implementation"
-    )
-    async def test_start_dashboard_error_raises(self, service):
-        """Test dashboard start error raises StorageError."""
-        with patch("src.dashboard.web_server.DashboardServer") as MockServer:
-            MockServer.side_effect = Exception("Failed to start")
-
-            with pytest.raises(StorageError):
-                await service.start_dashboard()
+        assert result["status"] == "disabled"
+        assert "message" in result
 
 
 class TestCollectMetricsSnapshot:
@@ -605,34 +511,18 @@ class TestErrorHandling:
         with pytest.raises(StorageError):
             await service.get_performance_metrics()
 
-    @pytest.mark.asyncio
-    async def test_alerts_error_raises(self):
-        """Test alerts retrieval error raises StorageError."""
-        alert_engine = MagicMock()
-        alert_engine.get_active_alerts.side_effect = Exception("Alert engine error")
-
-        service = HealthService(
-            store=MagicMock(),
-            config=ServerConfig(),
-            alert_engine=alert_engine,
-        )
-
-        with pytest.raises(StorageError):
-            await service.get_active_alerts()
+    # test_alerts_error_raises removed - alert_engine was removed in SIMPLIFY-001
+    # so no error path is possible (always returns disabled status)
 
     @pytest.mark.asyncio
     async def test_weekly_report_error_raises(self):
-        """Test weekly report error raises StorageError."""
-        health_reporter = MagicMock()
-        health_reporter.generate_weekly_report.side_effect = Exception("Report error")
-
+        """Test weekly report error raises StorageError when store fails."""
         store = AsyncMock()
         store.health_check = AsyncMock(side_effect=Exception("Store error"))
 
         service = HealthService(
             store=store,
             config=ServerConfig(),
-            health_reporter=health_reporter,
         )
 
         with pytest.raises(StorageError):
@@ -640,11 +530,15 @@ class TestErrorHandling:
 
 
 class TestIntegrationScenarios:
-    """Test integration scenarios for health service."""
+    """Test integration scenarios for health service.
+
+    Note: alert_engine, health_reporter, and capacity_planner were removed
+    in SIMPLIFY-001, so those features return 'disabled' status.
+    """
 
     @pytest.fixture
     def fully_configured_service(self):
-        """Create fully configured service."""
+        """Create fully configured service with available components."""
         store = AsyncMock()
         store.health_check = AsyncMock(return_value=True)
 
@@ -657,31 +551,10 @@ class TestIntegrationScenarios:
         metrics_collector.get_historical_metrics.return_value = []
         metrics_collector.collect_snapshot = MagicMock()
 
-        alert_engine = MagicMock()
-        alert_engine.get_active_alerts.return_value = []
-        alert_engine.resolve_alert.return_value = True
-
-        health_reporter = MagicMock()
-        health_reporter.get_health_report.return_value = {
-            "overall_score": 95,
-            "components": {"store": "healthy", "cache": "healthy"},
-        }
-        health_reporter.generate_weekly_report.return_value = {
-            "overall_health": "good",
-        }
-
-        capacity_planner = MagicMock()
-        capacity_planner.get_forecast.return_value = {
-            "projected_memory_usage": 0.75,
-        }
-
         return HealthService(
             store=store,
             config=ServerConfig(),
             metrics_collector=metrics_collector,
-            alert_engine=alert_engine,
-            health_reporter=health_reporter,
-            capacity_planner=capacity_planner,
         )
 
     @pytest.mark.asyncio
@@ -689,26 +562,27 @@ class TestIntegrationScenarios:
         """Test complete health check workflow."""
         service = fully_configured_service
 
-        # Get health score
+        # Get health score - still works via simple calculation
         health = await service.get_health_score()
         assert health["status"] == "success"
-        assert health["health_score"] == 95
+        assert health["health_score"] == 100  # Perfect score with good metrics
 
         # Get metrics
         metrics = await service.get_performance_metrics()
         assert metrics["status"] == "success"
 
-        # Get alerts
+        # Get alerts - returns disabled (alert_engine removed)
         alerts = await service.get_active_alerts()
-        assert alerts["status"] == "success"
+        assert alerts["status"] == "disabled"
 
-        # Get forecast
+        # Get forecast - returns disabled (capacity_planner removed)
         forecast = await service.get_capacity_forecast()
-        assert forecast["status"] == "success"
+        assert forecast["status"] == "disabled"
 
-        # Get weekly report
+        # Get weekly report - still works via basic reporter
         report = await service.get_weekly_report()
         assert report["status"] == "success"
+        assert report["generated_by"] == "basic_reporter"
 
     @pytest.mark.asyncio
     async def test_health_monitoring_over_time(self, fully_configured_service):

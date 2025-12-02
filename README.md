@@ -436,7 +436,7 @@ Claude has access to these tools:
 
 ### AI/ML
 - **sentence-transformers** - Embedding generation
-- **all-MiniLM-L6-v2** - Embedding model (384 dims)
+- **all-mpnet-base-v2** - Embedding model (384 dims)
 
 ### Storage
 - **Qdrant** - Primary vector storage
@@ -523,7 +523,7 @@ Create `~/.claude-rag/config.json`:
 ```json
 {
   "storage_backend": "qdrant",
-  "embedding_model": "all-MiniLM-L6-v2",
+  "embedding_model": "all-mpnet-base-v2",
   "enable_parallel_embeddings": true,
   "enable_file_watcher": true,
   "watch_debounce_ms": 1000
@@ -566,7 +566,7 @@ CLAUDE_RAG_STORAGE_BACKEND=qdrant
 CLAUDE_RAG_QDRANT_URL=http://localhost:6333
 
 # Embeddings
-CLAUDE_RAG_EMBEDDING_MODEL=all-MiniLM-L6-v2
+CLAUDE_RAG_EMBEDDING_MODEL=all-mpnet-base-v2
 CLAUDE_RAG_ENABLE_PARALLEL_EMBEDDINGS=true
 
 # File Watching

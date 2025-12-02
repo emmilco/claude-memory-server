@@ -53,7 +53,7 @@ class TestActionableErrors:
         error_str = str(error)
         assert "Failed to generate embedding" in error_str
         assert "sentence-transformers" in error_str
-        assert "all-MiniLM-L6-v2" in error_str
+        assert "all-mpnet-base-v2" in error_str
         assert "Sufficient memory" in error_str
 
     def test_error_attributes_accessible(self):

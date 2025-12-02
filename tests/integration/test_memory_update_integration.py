@@ -23,7 +23,7 @@ async def test_server(tmp_path, unique_qdrant_collection, monkeypatch):
         qdrant_url="http://localhost:6333",
         qdrant_collection_name=unique_qdrant_collection,
         advanced={"read_only_mode": False},
-        embedding_model="all-MiniLM-L6-v2",
+        embedding_model="all-mpnet-base-v2",
         # BUG-066: Disable all optional features to prevent event loop hangs
         memory={
             "auto_pruning": False,

@@ -305,14 +305,14 @@ class TestEmbeddingInfo:
 
         with patch("src.config.get_config") as mock_config:
             config = MagicMock()
-            config.embedding_model = "all-MiniLM-L6-v2"
+            config.embedding_model = "all-mpnet-base-v2"
             config.embedding_batch_size = 32
             mock_config.return_value = config
 
             info = await cmd.get_embedding_model_info()
 
-            assert info["model"] == "all-MiniLM-L6-v2"
-            assert info["dimensions"] == 384
+            assert info["model"] == "all-mpnet-base-v2"
+            assert info["dimensions"] == 768
             assert info["batch_size"] == 32
 
 
@@ -514,14 +514,14 @@ class TestPrintMethods:
     def test_print_embedding_info(self):
         """Test printing embedding info."""
         cmd = StatusCommand()
-        info = {"model": "all-MiniLM-L6-v2", "dimensions": 384, "batch_size": 32}
+        info = {"model": "all-mpnet-base-v2", "dimensions": 768, "batch_size": 32}
         with patch.object(cmd.console, "print") as mock_print:
             cmd.print_embedding_info(info)
             # Verify console.print was called
             assert mock_print.called
             # Verify embedding model info is displayed
             call_args = str(mock_print.call_args_list)
-            assert any(keyword in call_args for keyword in ["MiniLM", "384", "32"])
+            assert any(keyword in call_args for keyword in ["MiniLM", "768", "32"])
 
     def test_print_projects_table_empty(self):
         """Test printing projects table with no projects."""
@@ -592,8 +592,8 @@ class TestRunCommand:
             "description": "Optimal performance",
         }
         embedding_info = {
-            "model": "all-MiniLM-L6-v2",
-            "dimensions": 384,
+            "model": "all-mpnet-base-v2",
+            "dimensions": 768,
             "batch_size": 32,
         }
         file_watcher_info = {
@@ -776,7 +776,7 @@ class TestFileWatcherInfo:
         cmd.get_cache_stats = AsyncMock(return_value={"exists": False})
         cmd.get_parser_info = AsyncMock(return_value={"mode": "rust"})
         cmd.get_embedding_model_info = AsyncMock(
-            return_value={"model": "all-MiniLM-L6-v2"}
+            return_value={"model": "all-mpnet-base-v2"}
         )
         cmd.get_file_watcher_info = AsyncMock(return_value=file_watcher_info)
         cmd.get_active_project = AsyncMock(return_value=None)

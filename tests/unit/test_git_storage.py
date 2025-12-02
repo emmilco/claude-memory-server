@@ -17,13 +17,8 @@ from src.config import ServerConfig
 from tests.conftest import mock_embedding
 
 # Git storage feature implemented in FEAT-055
-# Tests enabled as of 2025-11-22
-
-# Skip entire file if Qdrant is overloaded or unresponsive
-pytestmark = pytest.mark.skipif(
-    True,  # Temporarily skip - tests timeout due to Qdrant connection issues
-    reason="Git storage tests require stable Qdrant connection - skipped to avoid timeouts",
-)
+# Mark as slow since these tests hit real Qdrant
+pytestmark = pytest.mark.slow
 
 
 @pytest.fixture
@@ -113,7 +108,7 @@ class TestStoreGitCommits:
         assert result["commit_hash"] == sample_commit["commit_hash"]
         assert result["author_name"] == sample_commit["author_name"]
         assert result["message"] == sample_commit["message"]
-        assert len(result["message_embedding"]) == 384
+        assert len(result["message_embedding"]) == 768
 
     @pytest.mark.asyncio
     async def test_store_multiple_commits(self, store):

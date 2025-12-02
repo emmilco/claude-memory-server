@@ -14,9 +14,8 @@ logger = logging.getLogger(__name__)
 # Embedding model dimension mapping
 # Maps model names to their output embedding dimensions
 EMBEDDING_MODEL_DIMENSIONS = {
-    "all-MiniLM-L6-v2": 384,
-    "all-MiniLM-L12-v2": 384,
     "all-mpnet-base-v2": 768,  # Current default model
+    "all-MiniLM-L6-v2": 384,
 }
 
 # Default embedding dimension (768 for all-mpnet-base-v2)

@@ -240,7 +240,7 @@ class MemoryBrowserApp(App):
             # Generate a dummy embedding for "all memories" query
             import numpy as np
 
-            dummy_embedding = np.zeros(384).tolist()
+            dummy_embedding = np.zeros(768).tolist()
 
             results = await self.store.retrieve(
                 query_embedding=dummy_embedding,

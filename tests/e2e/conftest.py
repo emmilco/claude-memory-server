@@ -337,9 +337,8 @@ async def pre_indexed_server(session_sample_code_project, worker_id):
     # Get vector size from config
     config = get_config()
     model_dims = {
-        "all-MiniLM-L6-v2": 384,
-        "all-MiniLM-L12-v2": 384,
         "all-mpnet-base-v2": 768,
+        "all-MiniLM-L6-v2": 384,
     }
     vector_size = model_dims.get(config.embedding_model, 768)
 

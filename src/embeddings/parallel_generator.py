@@ -184,9 +184,8 @@ class ParallelEmbeddingGenerator:
 
     # Supported models and their dimensions
     MODELS = {
-        "all-MiniLM-L6-v2": 384,
-        "all-MiniLM-L12-v2": 384,
         "all-mpnet-base-v2": 768,
+        "all-MiniLM-L6-v2": 384,
     }
 
     def __init__(
@@ -220,7 +219,7 @@ class ParallelEmbeddingGenerator:
         self.embedding_dim = self.MODELS[self.model_name]
 
         # MPS (Apple Silicon) is faster for larger models with large batch sizes
-        # Small models like all-MiniLM-L6-v2 are faster on CPU due to GPU transfer overhead
+        # Small models like all-mpnet-base-v2 are faster on CPU due to GPU transfer overhead
         from src.embeddings.gpu_utils import detect_mps
 
         large_model = self.model_name in (

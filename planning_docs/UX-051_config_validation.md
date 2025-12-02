@@ -235,7 +235,7 @@ def validate_feature_dependencies(self) -> 'ServerConfig':
 # Enhanced with rationale comments
 qdrant_pool_size: int = 5  # Balances connection reuse vs resource usage (tested optimal for 1-10 concurrent clients)
 embedding_batch_size: int = 32  # GPU-friendly size (fits in 4GB VRAM), 2x faster than batch_size=1
-max_query_context_tokens: int = 8000  # Below all-MiniLM-L6-v2 max (8192), leaves room for query
+max_query_context_tokens: int = 8000  # Below all-mpnet-base-v2 max (8192), leaves room for query
 bm25_k1: float = 1.5  # Standard BM25 parameter (Robertson et al. 1995) - term saturation
 bm25_b: float = 0.75  # Standard BM25 parameter (Robertson et al. 1995) - length normalization
 ```

@@ -74,7 +74,7 @@ Files indexed:       4 Python files
 Semantic units:      167 (functions + classes)
 Total time:          3.2 seconds
 Parse time:          1-6ms per file
-Embedding model:     all-MiniLM-L6-v2
+Embedding model:     all-mpnet-base-v2
 
 Semantic Search Test:
 ✅ Query: "memory storage and retrieval"
@@ -133,7 +133,7 @@ File Change Event
 │  ① Parse File (Rust tree-sitter) → 1-6ms per file           │
 │  ② Extract SemanticUnits (functions, classes)               │
 │  ③ Build Indexable Content (file + sig + code)              │
-│  ④ Generate Embeddings (all-MiniLM-L6-v2, 384-dim)         │
+│  ④ Generate Embeddings (all-mpnet-base-v2, 384-dim)         │
 │  ⑤ Delete Old Units (if re-indexing)                        │
 │  ⑥ Store in Qdrant (with rich metadata)                     │
 └───────────────────────┬──────────────────────────────────────┘
@@ -279,7 +279,7 @@ Each semantic unit stored as `MemoryUnit` with:
 - **Rust:** tree-sitter parsing with PyO3 bindings
 - **Python:** sentence-transformers, watchdog, qdrant-client
 - **Storage:** Qdrant vector database
-- **Embedding:** all-MiniLM-L6-v2 (384-dim)
+- **Embedding:** all-mpnet-base-v2 (384-dim)
 
 ### Supported Languages & Extensions
 - Python (`.py`)

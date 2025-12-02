@@ -211,7 +211,7 @@ Other files:
 - HNSW parameters: m=16, ef_construct=200
 - INT8 quantization: 75% memory reduction
 - Payload indices: Fast filtering on category, context_level, scope
-- Vector size: 384 (all-MiniLM-L6-v2)
+- Vector size: 384 (all-mpnet-base-v2)
 
 ### Data Validation
 - Pydantic V2 for schema validation

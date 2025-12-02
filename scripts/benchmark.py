@@ -202,20 +202,20 @@ async def benchmark_cache_performance():
     print("\n1. First pass (cache misses):")
     start = time.time()
     for text in test_texts:
-        await cache.get(text, "all-MiniLM-L6-v2")
+        await cache.get(text, "all-mpnet-base-v2")
     first_pass_time = time.time() - start
 
     # Populate cache
     print("\n2. Populating cache...")
     test_embedding = [0.1] * 384
     for text in test_texts:
-        await cache.set(text, "all-MiniLM-L6-v2", test_embedding)
+        await cache.set(text, "all-mpnet-base-v2", test_embedding)
 
     # Second pass - cache hits
     print("\n3. Second pass (cache hits):")
     start = time.time()
     for text in test_texts:
-        cached = await cache.get(text, "all-MiniLM-L6-v2")
+        cached = await cache.get(text, "all-mpnet-base-v2")
         assert cached is not None
     second_pass_time = time.time() - start
 

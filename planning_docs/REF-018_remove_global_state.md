@@ -751,8 +751,8 @@ class TestWorkerContext:
         """Models are cached after first load."""
         ctx = WorkerContext.get_instance()
 
-        model1 = ctx.get_model("all-MiniLM-L6-v2")
-        model2 = ctx.get_model("all-MiniLM-L6-v2")
+        model1 = ctx.get_model("all-mpnet-base-v2")
+        model2 = ctx.get_model("all-mpnet-base-v2")
 
         assert model1 is model2
         assert len(ctx.model_cache) == 1

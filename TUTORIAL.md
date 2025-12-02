@@ -245,9 +245,9 @@ python -m src.cli health
 ✓ Parser: Rust (mcp_performance_core)
   Performance: 1-6ms per file
 
-✓ Embedding Model: all-MiniLM-L6-v2
+✓ Embedding Model: all-mpnet-base-v2
   Status: Loaded
-  Dimension: 384
+  Dimension: 768
 
 ✓ Resources:
   Disk Space: 125 GB available
@@ -330,7 +330,7 @@ python -m src.cli index ./src --project-name claude-memory
 **What's happening:**
 1. The indexer recursively scans `./src`
 2. For each code file, it parses functions, classes, and methods using tree-sitter
-3. Each semantic unit gets embedded into a 384-dimensional vector
+3. Each semantic unit gets embedded into a 768-dimensional vector
 4. Vectors are stored in Qdrant with metadata (file path, line numbers, etc.)
 
 **Expected output:**

@@ -36,7 +36,7 @@ def config(unique_qdrant_collection):
     return ServerConfig(
         qdrant_url="http://localhost:6333",
         qdrant_collection_name=unique_qdrant_collection,
-        embedding_model="all-MiniLM-L6-v2",
+        embedding_model="all-mpnet-base-v2",
     )
 
 

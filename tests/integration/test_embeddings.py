@@ -12,7 +12,7 @@ from src.embeddings.cache import EmbeddingCache
 def config():
     """Create test configuration."""
     return ServerConfig(
-        embedding_model="all-MiniLM-L6-v2",
+        embedding_model="all-mpnet-base-v2",
         embedding_batch_size=32,
         embedding_cache_enabled=True,
     )
@@ -44,7 +44,7 @@ async def test_generate_single_embedding(generator):
 
     # Check embedding properties
     assert isinstance(embedding, list)
-    assert len(embedding) == 384  # MiniLM-L6-v2 dimension
+    assert len(embedding) == 768  # all-mpnet-base-v2 dimension
     assert all(isinstance(x, float) for x in embedding)
 
     # Check normalization (L2 norm should be close to 1)
@@ -66,7 +66,7 @@ async def test_batch_generate_embeddings(generator):
     embeddings = await generator.batch_generate(texts)
 
     assert len(embeddings) == len(texts)
-    assert all(len(emb) == 384 for emb in embeddings)
+    assert all(len(emb) == 768 for emb in embeddings)
 
     # Different texts should have different embeddings
     assert embeddings[0] != embeddings[1]
@@ -90,7 +90,7 @@ async def test_embedding_deterministic(generator):
 async def test_cache_functionality(cache, generator):
     """Test embedding cache stores and retrieves."""
     text = "Test sentence for caching."
-    model_name = "all-MiniLM-L6-v2"
+    model_name = "all-mpnet-base-v2"
 
     # First request - cache miss
     cached = await cache.get(text, model_name)
@@ -103,7 +103,7 @@ async def test_cache_functionality(cache, generator):
     # Second request - cache hit
     cached = await cache.get(text, model_name)
     assert cached is not None
-    assert len(cached) == 384
+    assert len(cached) == 768
     assert cached == embedding
 
 
@@ -111,7 +111,7 @@ async def test_cache_functionality(cache, generator):
 async def test_cache_statistics(cache, generator):
     """Test cache statistics tracking."""
     texts = ["Sentence one.", "Sentence two.", "Sentence one."]  # Repeat first
-    model_name = "all-MiniLM-L6-v2"
+    model_name = "all-mpnet-base-v2"
 
     for text in texts:
         cached = await cache.get(text, model_name)
@@ -135,7 +135,7 @@ async def test_large_batch_processing(generator):
     embeddings = await generator.batch_generate(texts, show_progress=False)
 
     assert len(embeddings) == 100
-    assert all(len(emb) == 384 for emb in embeddings)
+    assert all(len(emb) == 768 for emb in embeddings)
 
 
 @pytest.mark.asyncio
@@ -156,7 +156,7 @@ async def test_benchmark(generator):
     results = await generator.benchmark(num_texts=10)
 
     assert "model" in results
-    assert results["model"] == "all-MiniLM-L6-v2"
+    assert results["model"] == "all-mpnet-base-v2"
     assert results["num_texts"] == 10
     assert results["single_embedding_ms"] > 0
     assert results["batch_total_s"] > 0

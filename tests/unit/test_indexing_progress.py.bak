@@ -27,7 +27,7 @@ class TestIndexingProgressCallback:
 
         mock_embeddings = MagicMock()
         mock_embeddings.initialize = AsyncMock()
-        mock_embeddings.batch_generate = AsyncMock(return_value=[[0.1] * 384, [0.2] * 384])
+        mock_embeddings.batch_generate = AsyncMock(return_value=[[0.1] * 768, [0.2] * 768])
         mock_embeddings.close = AsyncMock()
 
         # Mock call graph store to avoid Qdrant connection
@@ -101,7 +101,7 @@ class TestIndexingProgressCallback:
 
         mock_embeddings = MagicMock()
         mock_embeddings.initialize = AsyncMock()
-        mock_embeddings.batch_generate = AsyncMock(return_value=[[0.1] * 384])
+        mock_embeddings.batch_generate = AsyncMock(return_value=[[0.1] * 768])
         mock_embeddings.close = AsyncMock()
 
         with patch('src.store.call_graph_store.QdrantCallGraphStore'):
@@ -155,7 +155,7 @@ class TestIndexingProgressCallback:
 
         mock_embeddings = MagicMock()
         mock_embeddings.initialize = AsyncMock()
-        mock_embeddings.batch_generate = AsyncMock(return_value=[[0.1] * 384])
+        mock_embeddings.batch_generate = AsyncMock(return_value=[[0.1] * 768])
         mock_embeddings.close = AsyncMock()
 
         with patch('src.store.call_graph_store.QdrantCallGraphStore'):
@@ -249,7 +249,7 @@ class TestIndexingProgressCallback:
 
         mock_embeddings = MagicMock()
         mock_embeddings.initialize = AsyncMock()
-        mock_embeddings.batch_generate = AsyncMock(return_value=[[0.1] * 384])
+        mock_embeddings.batch_generate = AsyncMock(return_value=[[0.1] * 768])
         mock_embeddings.close = AsyncMock()
 
         with patch('src.store.call_graph_store.QdrantCallGraphStore'):
@@ -288,7 +288,7 @@ class TestIndexingProgressCallback:
 
         mock_embeddings = MagicMock()
         mock_embeddings.initialize = AsyncMock()
-        mock_embeddings.batch_generate = AsyncMock(return_value=[[0.1] * 384])
+        mock_embeddings.batch_generate = AsyncMock(return_value=[[0.1] * 768])
         mock_embeddings.close = AsyncMock()
 
         with patch('src.store.call_graph_store.QdrantCallGraphStore'):
@@ -344,7 +344,7 @@ class TestIndexingProgressCallback:
 
         mock_embeddings = MagicMock()
         mock_embeddings.initialize = AsyncMock()
-        mock_embeddings.batch_generate = AsyncMock(return_value=[[0.1] * 384])
+        mock_embeddings.batch_generate = AsyncMock(return_value=[[0.1] * 768])
         mock_embeddings.close = AsyncMock()
 
         with patch('src.store.call_graph_store.QdrantCallGraphStore'):

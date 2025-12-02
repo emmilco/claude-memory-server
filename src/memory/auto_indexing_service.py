@@ -112,10 +112,12 @@ class AutoIndexingService:
 
         # Exclude pattern matching
         self.exclude_spec: Optional[Any] = None
-        if PATHSPEC_AVAILABLE and hasattr(config, "auto_index_exclude_patterns"):
+        if PATHSPEC_AVAILABLE and hasattr(
+            config.indexing, "auto_index_exclude_patterns"
+        ):
             try:
                 self.exclude_spec = pathspec.PathSpec.from_lines(
-                    "gitwildmatch", config.auto_index_exclude_patterns
+                    "gitwildmatch", config.indexing.auto_index_exclude_patterns
                 )
             except Exception as e:
                 logger.warning(f"Failed to compile exclude patterns: {e}")

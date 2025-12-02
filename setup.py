@@ -608,7 +608,7 @@ class SetupWizard:
 
         gen = EmbeddingGenerator(get_config())
         embedding = await gen.generate("test")
-        assert len(embedding) == 384
+        assert len(embedding) == 768
 
     async def test_storage_backend(self):
         """Test that the correct storage backend is configured."""

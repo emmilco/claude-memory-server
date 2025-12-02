@@ -31,9 +31,8 @@ class EmbeddingGenerator:
 
     # Supported models and their dimensions
     MODELS = {
-        "all-MiniLM-L6-v2": 384,
-        "all-MiniLM-L12-v2": 384,
         "all-mpnet-base-v2": 768,
+        "all-MiniLM-L6-v2": 384,
     }
 
     def __init__(self, config: Optional[ServerConfig] = None):

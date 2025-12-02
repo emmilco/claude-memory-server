@@ -141,7 +141,7 @@ class MemoryUnit(BaseModel):
     scope: str  # "global" or "project"
     project_name: Optional[str] = None
     importance: float = Field(0.5, ge=0.0, le=1.0)
-    embedding_model: str = "all-MiniLM-L6-v2"
+    embedding_model: str = "all-mpnet-base-v2"
     created_at: datetime
     updated_at: datetime
     tags: Optional[List[str]] = []
@@ -233,7 +233,7 @@ curl http://localhost:6333/health
 ```python
 collection_config = {
     "vectors": {
-        "size": 384,  # all-MiniLM-L6-v2 dimension
+        "size": 384,  # all-mpnet-base-v2 dimension
         "distance": "Cosine"
     },
     "hnsw": {

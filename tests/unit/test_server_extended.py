@@ -358,8 +358,8 @@ class TestErrorHandling:
     @pytest.mark.asyncio
     async def test_store_with_invalid_category(self, server):
         """Test storing with invalid category."""
-        # ValueError is wrapped in StorageError by the server
-        with pytest.raises(StorageError, match="not a valid MemoryCategory"):
+        # Invalid category raises ValidationError
+        with pytest.raises(ValidationError, match="Invalid value"):
             await server.store_memory(
                 content="test", category="invalid_category", scope="global"
             )

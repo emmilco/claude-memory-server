@@ -128,9 +128,9 @@ class TestBulkDeleteManager:
         size = bulk_manager._estimate_memory_size(memory)
 
         # Should be content + metadata + vector
-        # ~500 + 200 + 1536 = ~2236 bytes
+        # ~500 + 200 + 3072 (768 dims * 4 bytes) = ~3772 bytes
         # Allow 20% tolerance for encoding variations
-        assert size == pytest.approx(2236, rel=0.2)
+        assert size == pytest.approx(3772, rel=0.2)
 
     def test_calculate_breakdowns(self, bulk_manager, sample_memories):
         """Test breakdown calculations."""

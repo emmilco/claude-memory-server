@@ -117,7 +117,7 @@ class StructuredLogger(logging.Logger):
             **kwargs: Additional context fields as keyword arguments
 
         Example:
-            logger.info_ctx("Embedding generated", model="all-MiniLM-L6-v2", dimension=384)
+            logger.info_ctx("Embedding generated", model="all-mpnet-base-v2", dimension=768)
         """
         self._log_with_context(logging.INFO, msg, context, **kwargs)
 

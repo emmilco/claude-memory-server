@@ -246,22 +246,22 @@ class TestEmbeddingChecks:
 
         with patch("src.embeddings.generator.EmbeddingGenerator") as mock_gen:
             mock_instance = AsyncMock()
-            # all-MiniLM-L6-v2 has 384 dimensions
+            # all-mpnet-base-v2 has 768 dimensions
             mock_instance.generate = AsyncMock(
-                return_value=mock_embedding(dim=384, value=0.1)
+                return_value=mock_embedding(dim=768, value=0.1)
             )
             mock_gen.return_value = mock_instance
 
             with patch("src.config.get_config") as mock_config:
                 config = MagicMock()
-                config.embedding_model = "all-MiniLM-L6-v2"
+                config.embedding_model = "all-mpnet-base-v2"
                 mock_config.return_value = config
 
                 success, message = await cmd.check_embedding_model()
 
                 assert success is True
-                assert "all-MiniLM-L6-v2" in message
-                assert "384" in message
+                assert "all-mpnet-base-v2" in message
+                assert "768" in message
 
     @pytest.mark.asyncio
     async def test_check_embedding_model_error(self):

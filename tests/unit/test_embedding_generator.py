@@ -68,10 +68,10 @@ class TestEmbeddingGeneratorInitialization:
 
     def test_supported_models(self):
         """Test that MODELS dict contains expected models."""
-        assert "all-MiniLM-L6-v2" in EmbeddingGenerator.MODELS
+        assert "all-mpnet-base-v2" in EmbeddingGenerator.MODELS
         assert EmbeddingGenerator.MODELS["all-mpnet-base-v2"] == 768
         assert (
-            EmbeddingGenerator.MODELS["all-MiniLM-L6-v2"] == 384
+            EmbeddingGenerator.MODELS["all-mpnet-base-v2"] == 768
         )  # Old model still supported
         assert "all-mpnet-base-v2" in EmbeddingGenerator.MODELS
         assert EmbeddingGenerator.MODELS["all-mpnet-base-v2"] == 768

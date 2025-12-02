@@ -282,10 +282,10 @@ async def validate_installation():
             console.print(
                 f"✅ Embedding model loaded: [cyan]{config.embedding_model}[/cyan]"
             )
-            console.print("   [dim]Dimensions: 384[/dim]")
+            console.print("   [dim]Dimensions: 768[/dim]")
         else:
             print(f"✅ Embedding model loaded: {config.embedding_model}")
-            print("   Dimensions: 384")
+            print("   Dimensions: 768")
 
     except Exception as e:
         if console:

@@ -20,7 +20,7 @@ Enable GPU (CUDA) acceleration for embedding generation to achieve 50-100x speed
 - Line 101: `self.model.to("cpu")` - **Explicitly disables GPU**
 - ThreadPoolExecutor for async embedding generation
 - Embedding cache for performance
-- Support for multiple models (all-MiniLM-L6-v2, etc.)
+- Support for multiple models (all-mpnet-base-v2, etc.)
 
 ### Performance Baseline (CPU)
 - Initial indexing: 10-20 files/sec (with parallel embeddings)

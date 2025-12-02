@@ -73,7 +73,7 @@ class EmbeddingError(MemoryRAGError):
         solution = (
             "Check:\n"
             "1. sentence-transformers is installed: pip install sentence-transformers\n"
-            "2. Model is valid: all-MiniLM-L6-v2, all-mpnet-base-v2\n"
+            "2. Model is valid: all-mpnet-base-v2, all-mpnet-base-v2\n"
             "3. Sufficient memory available (model requires ~100MB)\n"
             "4. Text is not empty or too long (max ~8000 tokens)"
         )

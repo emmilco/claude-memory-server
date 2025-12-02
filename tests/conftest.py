@@ -125,9 +125,8 @@ def mock_embedding_cache():
 
     config = get_config()
     model_dims = {
-        "all-MiniLM-L6-v2": 384,
-        "all-MiniLM-L12-v2": 384,
         "all-mpnet-base-v2": 768,
+        "all-MiniLM-L6-v2": 384,
     }
     dim = model_dims.get(config.embedding_model, 768)
 
@@ -206,7 +205,10 @@ def mock_embeddings_globally(request, monkeypatch, mock_embedding_cache):
         self.model = "mocked"  # Set to truthy value so model_loaded checks pass
         self._initialized = True
         # Set embedding_dim based on model name
-        model_dims = {"all-MiniLM-L6-v2": 384, "all-mpnet-base-v2": 768}
+        model_dims = {
+            "all-mpnet-base-v2": 768,
+            "all-MiniLM-L6-v2": 384,
+        }
         self.embedding_dim = model_dims.get(self.model_name, 768)
 
     monkeypatch.setattr(EmbeddingGenerator, "initialize", mock_initialize)
@@ -637,9 +639,8 @@ def setup_qdrant_pool(qdrant_client):
 
     config = get_config()
     model_dims = {
-        "all-MiniLM-L6-v2": 384,
-        "all-MiniLM-L12-v2": 384,
         "all-mpnet-base-v2": 768,
+        "all-MiniLM-L6-v2": 384,
     }
     vector_size = model_dims.get(config.embedding_model, 768)
 

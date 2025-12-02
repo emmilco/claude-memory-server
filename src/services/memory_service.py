@@ -66,7 +66,6 @@ class MemoryService:
         query_expander: Optional[Any] = None,
         metrics_collector: Optional[Any] = None,
         project_name: Optional[str] = None,
-        tag_manager: Optional[Any] = None,
     ):
         """
         Initialize the Memory Service.
@@ -81,7 +80,6 @@ class MemoryService:
             query_expander: Optional query expander for conversation-aware search
             metrics_collector: Optional metrics collector for monitoring
             project_name: Current project name (auto-detected if not provided)
-            tag_manager: Optional tag manager for cleaning up tag associations
         """
         self.store = store
         self.embedding_generator = embedding_generator
@@ -92,7 +90,6 @@ class MemoryService:
         self.query_expander = query_expander
         self.metrics_collector = metrics_collector
         self.project_name = project_name
-        self.tag_manager = tag_manager
 
         # Service statistics
         self.stats = {
@@ -629,20 +626,6 @@ class MemoryService:
                 raise StorageError("Memory delete operation timed out")
 
             if success:
-                # Clean up tag associations to prevent orphaned entries
-                if self.tag_manager:
-                    try:
-                        self.tag_manager.cleanup_memory_tags(memory_id)
-                        logger.debug(
-                            f"Cleaned up tag associations for memory: {memory_id}"
-                        )
-                    except Exception as tag_error:
-                        # Log but don't fail the delete operation if tag cleanup fails
-                        logger.warning(
-                            f"Failed to cleanup tags for memory {memory_id}: {tag_error}",
-                            exc_info=True,
-                        )
-
                 with self._stats_lock:
                     self.stats["memories_deleted"] += 1
                 logger.info(f"Deleted memory: {memory_id}")

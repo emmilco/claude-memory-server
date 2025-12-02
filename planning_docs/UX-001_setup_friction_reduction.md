@@ -208,7 +208,7 @@ Parser
   → Run: python setup.py --build-rust
 
 Embedding Model
-  ✓ Model loaded      all-MiniLM-L6-v2 (384 dims)
+  ✓ Model loaded      all-mpnet-base-v2 (384 dims)
   ✓ Cache working     2,345 cached embeddings (95% hit rate)
 
 Indexed Projects

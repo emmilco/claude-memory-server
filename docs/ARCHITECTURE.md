@@ -343,7 +343,7 @@ The Claude Memory RAG Server is a Model Context Protocol (MCP) server that provi
 ### 4. Embeddings (src/embeddings/)
 
 **generator.py** (11KB)
-- Model: all-MiniLM-L6-v2 (384 dimensions)
+- Model: all-mpnet-base-v2 (768 dimensions)
 - Async batch processing
 - Automatic model initialization and lifecycle management
 - Smart batch sizing based on text length
@@ -624,7 +624,7 @@ Claude ← [{
 {
     "collection_name": "memory",
     "vector_config": {
-        "size": 384,  # all-MiniLM-L6-v2
+        "size": 768,  # all-mpnet-base-v2
         "distance": "Cosine"
     },
     "hnsw_config": {
@@ -646,7 +646,7 @@ Claude ← [{
 ```python
 {
     "id": "550e8400-e29b-41d4-a716-446655440000",
-    "vector": [0.123, -0.456, ...],  # 384 dims
+    "vector": [0.123, -0.456, ...],  # 768 dims
     "payload": {
         # Memory fields
         "content": "I prefer Python for ML",

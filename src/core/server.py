@@ -46,7 +46,6 @@ from src.analysis.complexity_analyzer import ComplexityAnalyzer
 from src.analysis.quality_analyzer import QualityAnalyzer
 from src.search.hybrid_search import HybridSearcher, FusionMethod
 from src.monitoring.metrics_collector import MetricsCollector
-from src.monitoring.capacity_planner import CapacityPlanner
 from src.memory.project_archival import ProjectArchivalManager
 from src.core.tracing import new_operation, get_logger
 
@@ -104,16 +103,10 @@ class MemoryRAGServer:
         self.suggestion_engine: Optional[SuggestionEngine] = (
             None  # Proactive suggestions
         )
-        self.pattern_tracker: Optional[UsagePatternTracker] = (
-            None  # Usage pattern analytics
-        )
         self.scheduler = None  # APScheduler instance
         self.auto_indexing_service: Optional = None  # Auto-indexing service (FEAT-016)
         self.archival_manager: Optional[ProjectArchivalManager] = (
             None  # Project archival tracking
-        )
-        self.tag_manager: Optional[TagManager] = (
-            None  # Tag management for memory organization
         )
 
         # Quality analysis (FEAT-060)
@@ -156,7 +149,6 @@ class MemoryRAGServer:
         self.cross_project_service: Optional[CrossProjectService] = None
         self.health_service: Optional[HealthService] = None
         self.query_service: Optional[QueryService] = None
-        self.analytics_service: Optional[AnalyticsService] = None
 
     async def initialize(
         self, defer_preload: bool = False, defer_auto_index: bool = False
@@ -226,9 +218,6 @@ class MemoryRAGServer:
                 store=self.store,
                 archival_manager=self.archival_manager,
             )
-            self.alert_engine = AlertEngine(db_path=monitoring_db_path)
-            self.health_reporter = HealthReporter()
-            self.capacity_planner = CapacityPlanner(self.metrics_collector)
 
             logger.info(
                 f"Performance monitoring enabled (metrics DB: {monitoring_db_path})"
@@ -266,10 +255,6 @@ class MemoryRAGServer:
                 self.store, self.embedding_generator
             )
             logger.info("Quality analysis components initialized")
-
-            # Initialize tag manager for memory organization (BUG-092)
-            self.tag_manager = TagManager(str(self.config.sqlite_path_expanded))
-            logger.info("Tag manager initialized")
 
             # Initialize hybrid searcher if enabled
             if self.config.search.hybrid_search:
@@ -339,23 +324,6 @@ class MemoryRAGServer:
                 self.suggestion_engine = None
                 logger.info("Proactive suggestions disabled")
 
-            # Initialize usage pattern analytics (FEAT-020)
-            # Note: os module imported at module level (line 6)
-            if self.config.analytics.usage_pattern_analytics:
-                # Store analytics DB in same directory as SQLite memory DB
-                sqlite_dir = os.path.dirname(
-                    os.path.expanduser(self.config.sqlite_path)
-                )
-                analytics_db_path = os.path.join(sqlite_dir, "usage_analytics.db")
-                self.pattern_tracker = UsagePatternTracker(db_path=analytics_db_path)
-                logger.info(
-                    f"Usage pattern analytics enabled "
-                    f"(retention: {self.config.analytics.usage_analytics_retention_days} days)"
-                )
-            else:
-                self.pattern_tracker = None
-                logger.info("Usage pattern analytics disabled")
-
             # Initialize service layer (REF-016: Split MemoryRAGServer God Class)
             # Services provide focused interfaces to functionality previously in this class
             self._initialize_services()
@@ -420,7 +388,6 @@ class MemoryRAGServer:
             query_expander=self.query_expander,
             metrics_collector=self.metrics_collector,
             project_name=self.project_name,
-            tag_manager=self.tag_manager,
         )
 
         # Code Indexing Service - Code search, indexing, and dependency analysis
@@ -445,14 +412,11 @@ class MemoryRAGServer:
             metrics_collector=self.metrics_collector,
         )
 
-        # Health Service - Monitoring, metrics, and alerting
+        # Health Service - Monitoring and metrics
         self.health_service = HealthService(
             store=self.store,
             config=self.config,
             metrics_collector=self.metrics_collector,
-            alert_engine=self.alert_engine,
-            health_reporter=self.health_reporter,
-            capacity_planner=self.capacity_planner,
         )
 
         # Query Service - Query expansion, sessions, suggestions
@@ -462,15 +426,6 @@ class MemoryRAGServer:
             query_expander=self.query_expander,
             suggestion_engine=self.suggestion_engine,
             hybrid_searcher=self.hybrid_searcher,
-        )
-
-        # Analytics Service - Usage analytics and patterns
-        self.analytics_service = AnalyticsService(
-            store=self.store,
-            config=self.config,
-            usage_tracker=self.usage_tracker,
-            pattern_tracker=self.pattern_tracker,
-            metrics_collector=self.metrics_collector,
         )
 
         logger.debug("All services initialized")
@@ -5551,153 +5506,6 @@ class MemoryRAGServer:
         except Exception as e:
             logger.error(f"Error setting suggestion mode: {e}", exc_info=True)
             raise ValidationError(f"Failed to set suggestion mode: {str(e)}")
-
-    # FEAT-020: Usage Pattern Analytics MCP Tools
-
-    async def get_usage_statistics(self, days: int = 30) -> Dict[str, Any]:
-        """
-        Get overall usage statistics for the specified time period.
-
-        Args:
-            days: Number of days to look back (1-365)
-
-        Returns:
-            Dictionary with usage statistics
-
-        Raises:
-            ValidationError: If pattern tracker is not enabled or inputs invalid
-        """
-        try:
-            if not self.pattern_tracker:
-                raise ValidationError(
-                    "Usage pattern analytics not enabled",
-                    solution="Enable via config: enable_usage_pattern_analytics = true",
-                )
-
-            if not 1 <= days <= 365:
-                raise ValidationError(
-                    f"Invalid days value: {days}",
-                    solution="Days must be between 1 and 365",
-                )
-
-            stats = await self.pattern_tracker.get_usage_stats(days=days)
-
-            return {
-                "period_days": days,
-                "total_queries": stats.get("total_queries", 0),
-                "unique_queries": stats.get("unique_queries", 0),
-                "avg_query_time_ms": stats.get("avg_query_time", 0.0),
-                "avg_result_count": stats.get("avg_result_count", 0.0),
-                "total_code_accesses": stats.get("total_code_accesses", 0),
-                "unique_files": stats.get("unique_files", 0),
-                "unique_functions": stats.get("unique_functions", 0),
-                "most_active_day": stats.get("most_active_day"),
-                "most_active_day_count": stats.get("most_active_day_count", 0),
-            }
-
-        except ValidationError:
-            raise
-        except Exception as e:
-            logger.error(f"Error getting usage statistics: {e}", exc_info=True)
-            raise ValidationError(f"Failed to get usage statistics: {str(e)}")
-
-    async def get_top_queries(self, limit: int = 10, days: int = 30) -> Dict[str, Any]:
-        """
-        Get most frequently executed queries.
-
-        Args:
-            limit: Maximum number of queries to return (1-100)
-            days: Number of days to look back (1-365)
-
-        Returns:
-            Dictionary with top queries and their statistics
-
-        Raises:
-            ValidationError: If pattern tracker is not enabled or inputs invalid
-        """
-        try:
-            if not self.pattern_tracker:
-                raise ValidationError(
-                    "Usage pattern analytics not enabled",
-                    solution="Enable via config: enable_usage_pattern_analytics = true",
-                )
-
-            if not 1 <= limit <= 100:
-                raise ValidationError(
-                    f"Invalid limit value: {limit}",
-                    solution="Limit must be between 1 and 100",
-                )
-
-            if not 1 <= days <= 365:
-                raise ValidationError(
-                    f"Invalid days value: {days}",
-                    solution="Days must be between 1 and 365",
-                )
-
-            queries = await self.pattern_tracker.get_top_queries(limit=limit, days=days)
-
-            return {
-                "queries": queries,
-                "period_days": days,
-                "total_returned": len(queries),
-            }
-
-        except ValidationError:
-            raise
-        except Exception as e:
-            logger.error(f"Error getting top queries: {e}", exc_info=True)
-            raise ValidationError(f"Failed to get top queries: {str(e)}")
-
-    async def get_frequently_accessed_code(
-        self, limit: int = 10, days: int = 30
-    ) -> Dict[str, Any]:
-        """
-        Get most frequently accessed code files and functions.
-
-        Args:
-            limit: Maximum number of items to return (1-100)
-            days: Number of days to look back (1-365)
-
-        Returns:
-            Dictionary with frequently accessed code and statistics
-
-        Raises:
-            ValidationError: If pattern tracker is not enabled or inputs invalid
-        """
-        try:
-            if not self.pattern_tracker:
-                raise ValidationError(
-                    "Usage pattern analytics not enabled",
-                    solution="Enable via config: enable_usage_pattern_analytics = true",
-                )
-
-            if not 1 <= limit <= 100:
-                raise ValidationError(
-                    f"Invalid limit value: {limit}",
-                    solution="Limit must be between 1 and 100",
-                )
-
-            if not 1 <= days <= 365:
-                raise ValidationError(
-                    f"Invalid days value: {days}",
-                    solution="Days must be between 1 and 365",
-                )
-
-            code_items = await self.pattern_tracker.get_frequently_accessed_code(
-                limit=limit, days=days
-            )
-
-            return {
-                "code_items": code_items,
-                "period_days": days,
-                "total_returned": len(code_items),
-            }
-
-        except ValidationError:
-            raise
-        except Exception as e:
-            logger.error(f"Error getting frequently accessed code: {e}", exc_info=True)
-            raise ValidationError(f"Failed to get frequently accessed code: {str(e)}")
 
     async def close(self) -> None:
         """Clean up resources."""

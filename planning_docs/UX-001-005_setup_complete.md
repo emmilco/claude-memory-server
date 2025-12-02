@@ -106,7 +106,7 @@ Storage Backend
   ✓ SQLite                      ~/.claude-rag/memory.db (125 MB)
 
 Embedding Model
-  ✓ Model loaded                all-MiniLM-L6-v2 (384 dimensions)
+  ✓ Model loaded                all-mpnet-base-v2 (384 dimensions)
   ✓ Embedding cache             ~/.claude-rag/embedding_cache.db (45 MB, 95.2% hit rate)
 
 Summary

@@ -102,7 +102,7 @@ From `src/memory/project_archival.py`:
     "languages": ["python", "javascript", "sql"],
     "file_types": [".py", ".js", ".json", ".md"],
     "total_embeddings": 8500,
-    "embedding_model": "all-MiniLM-L6-v2",
+    "embedding_model": "all-mpnet-base-v2",
     "cache_entries": 2100
   },
 

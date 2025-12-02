@@ -50,7 +50,7 @@ def config():
     """Create test configuration."""
     return ServerConfig(
         qdrant_url="http://localhost:6333",
-        embedding_model="all-MiniLM-L6-v2",
+        embedding_model="all-mpnet-base-v2",
     )
 
 
@@ -106,7 +106,7 @@ async def mock_embedding_generator():
     async def batch_generate_side_effect(texts, show_progress=False):
         """Generate embeddings matching input size."""
         # Return one embedding per text
-        return [[0.1 + (i * 0.01) for _ in range(384)] for i in range(len(texts))]
+        return [[0.1 + (i * 0.01) for _ in range(768)] for i in range(len(texts))]
 
     gen.batch_generate = AsyncMock(side_effect=batch_generate_side_effect)
     gen.close = AsyncMock()

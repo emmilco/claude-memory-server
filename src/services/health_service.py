@@ -35,9 +35,6 @@ class HealthService:
         store: MemoryStore,
         config: ServerConfig,
         metrics_collector: Optional[Any] = None,
-        alert_engine: Optional[Any] = None,
-        health_reporter: Optional[Any] = None,
-        capacity_planner: Optional[Any] = None,
     ):
         """
         Initialize the Health Service.
@@ -46,16 +43,14 @@ class HealthService:
             store: Memory store backend
             config: Server configuration
             metrics_collector: Metrics collector for performance tracking
-            alert_engine: Alert engine for issue notifications
-            health_reporter: Health reporter for summaries
-            capacity_planner: Capacity planner for forecasting
         """
         self.store = store
         self.config = config
         self.metrics_collector = metrics_collector
-        self.alert_engine = alert_engine
-        self.health_reporter = health_reporter
-        self.capacity_planner = capacity_planner
+        # These components were removed in SIMPLIFY-001
+        self.alert_engine = None
+        self.health_reporter = None
+        self.capacity_planner = None
 
         # Service statistics
         self.stats = {
@@ -329,31 +324,11 @@ class HealthService:
         Returns:
             Dict with dashboard URL
         """
-        try:
-            from src.dashboard.web_server import DashboardServer
-
-            server = DashboardServer(
-                metrics_collector=self.metrics_collector,
-                alert_engine=self.alert_engine,
-                health_reporter=self.health_reporter,
-                store=self.store,
-                config=self.config,
-            )
-
-            await server.start(host=host, port=port)
-
-            logger.info(f"Dashboard started at http://{host}:{port}")
-
-            return {
-                "status": "success",
-                "url": f"http://{host}:{port}",
-                "host": host,
-                "port": port,
-            }
-
-        except Exception as e:
-            logger.error(f"Failed to start dashboard: {e}", exc_info=True)
-            raise StorageError(f"Failed to start dashboard: {e}") from e
+        # Dashboard feature removed in SIMPLIFY-001
+        return {
+            "status": "disabled",
+            "message": "Dashboard feature not available",
+        }
 
     async def collect_metrics_snapshot(self) -> None:
         """Collect and store current metrics."""

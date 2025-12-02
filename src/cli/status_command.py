@@ -223,7 +223,7 @@ class StatusCommand:
 
         return {
             "model": config.embedding_model,
-            "dimensions": 384,  # all-MiniLM-L6-v2
+            "dimensions": 768,  # all-mpnet-base-v2
             "batch_size": config.embedding_batch_size,
         }
 

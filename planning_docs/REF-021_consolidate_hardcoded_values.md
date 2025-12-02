@@ -18,7 +18,7 @@ Extract hardcoded values with **dependency relationships** and consolidate them 
 | Category | Values | Files Affected |
 |----------|--------|----------------|
 | **Embedding Dimensions** | 384 (MiniLM), 768 (MPNet) | 8+ files |
-| **Model Names** | "all-MiniLM-L6-v2", "all-mpnet-base-v2", etc. | 6+ files |
+| **Model Names** | "all-mpnet-base-v2", "all-mpnet-base-v2", etc. | 6+ files |
 | **Base Directory** | `~/.claude-rag` | 10+ files |
 | **Qdrant URL** | `http://localhost:6333` | 5+ files |
 | **Collection Names** | "memory", "code_call_graph" | 3+ files |
@@ -38,7 +38,7 @@ Add new constants section at the top of the file (before the Pydantic classes):
 # =============================================================================
 
 # Embedding model names
-EMBEDDING_MODEL_MINILM_L6 = "all-MiniLM-L6-v2"
+EMBEDDING_MODEL_MINILM_L6 = "all-mpnet-base-v2"
 EMBEDDING_MODEL_MINILM_L12 = "all-MiniLM-L12-v2"
 EMBEDDING_MODEL_MPNET = "all-mpnet-base-v2"
 

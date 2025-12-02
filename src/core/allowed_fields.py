@@ -81,8 +81,8 @@ ALLOWED_MEMORY_FIELDS: Dict[str, Dict[str, Any]] = {
         "type": str,
         "required": False,
         "description": "Embedding model used",
-        "allowed_values": ["all-MiniLM-L6-v2"],  # Can add more models later
-        "default": "all-MiniLM-L6-v2",
+        "allowed_values": ["all-mpnet-base-v2"],  # Can add more models later
+        "default": "all-mpnet-base-v2",
     },
     "created_at": {
         "type": "datetime",

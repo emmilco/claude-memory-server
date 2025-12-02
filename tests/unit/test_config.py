@@ -223,7 +223,7 @@ class TestRankingWeightValidation:
             )
 
         error_msg = str(exc_info.value)
-        assert "cannot be negative" in error_msg
+        assert "must be between 0.0 and 1.0" in error_msg
 
     def test_error_shows_current_values(self):
         """Test that error message shows current weight values."""

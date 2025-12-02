@@ -237,7 +237,7 @@ class TestCommitExtraction:
         assert commit_data.stats["files_changed"] == 2
         assert commit_data.stats["insertions"] == 15
         assert commit_data.stats["deletions"] == 3
-        assert len(commit_data.message_embedding) == 384
+        assert len(commit_data.message_embedding) == 768
 
     @pytest.mark.asyncio
     async def test_extract_commit_with_tags(self, git_indexer):
@@ -356,7 +356,7 @@ class TestFileChangeExtraction:
         assert len(file_changes) == 1
         assert file_changes[0].diff_content is not None
         assert file_changes[0].diff_embedding is not None
-        assert len(file_changes[0].diff_embedding) == 384
+        assert len(file_changes[0].diff_embedding) == 768
 
     @pytest.mark.asyncio
     async def test_extract_file_changes_deleted_file(self, git_indexer):
@@ -591,7 +591,7 @@ class TestDataClasses:
 
         assert data.commit_hash == "abc123"
         assert data.author_name == "Test Author"
-        assert len(data.message_embedding) == 384
+        assert len(data.message_embedding) == 768
 
     def test_git_file_change_data_creation(self):
         """Test creating GitFileChangeData."""

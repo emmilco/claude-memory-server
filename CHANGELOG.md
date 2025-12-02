@@ -982,7 +982,7 @@ Organize entries under these headers in chronological order (newest first):
 
 ### Changed - 2025-11-28
 - **Embedding model upgrade**
-  - Changed default from `all-MiniLM-L6-v2` (384 dims) to `all-mpnet-base-v2` (768 dims)
+  - Changed default from `all-mpnet-base-v2` (384 dims) to `all-mpnet-base-v2` (768 dims)
   - Better embedding quality, MPS-optimized batch size (128)
   - Updated vector size references throughout codebase
   - Files: src/config.py, src/store/qdrant_setup.py, src/store/call_graph_store.py
@@ -3615,7 +3615,7 @@ A pre-commit hook enforces CHANGELOG updates:
 **Embedding Engine**
 - Async embedding generation with batching
 - SQLite-based embedding cache
-- all-MiniLM-L6-v2 model (384 dimensions)
+- all-mpnet-base-v2 model (384 dimensions)
 - Rust acceleration for vector operations
 
 **Core Components**

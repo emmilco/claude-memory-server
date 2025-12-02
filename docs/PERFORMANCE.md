@@ -248,7 +248,7 @@ results = await server.search_code(
 - **Total:** ~150MB
 
 **Per 1,000 Memories:**
-- Vectors (384-dim): ~1.5MB
+- Vectors (768-dim): ~1.5MB
 - Metadata: ~0.5MB
 - Indices: ~1MB
 - **Total:** ~3MB per 1K memories

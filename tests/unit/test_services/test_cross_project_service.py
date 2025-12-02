@@ -122,9 +122,6 @@ class TestSearchAllProjectsWithConsent:
         assert "No projects have opted in" in result["message"]
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(
-        reason="MultiRepositorySearcher class not available - needs implementation"
-    )
     async def test_search_with_opted_in_projects(self, service):
         """Test search across opted-in projects."""
         with patch(
@@ -146,9 +143,6 @@ class TestSearchAllProjectsWithConsent:
             assert "query_time_ms" in result
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(
-        reason="MultiRepositorySearcher class not available - needs implementation"
-    )
     async def test_search_increments_stats(self, service):
         """Test search increments statistics."""
         with patch(
@@ -168,9 +162,6 @@ class TestSearchAllProjectsWithConsent:
             )
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(
-        reason="MultiRepositorySearcher class not available - needs implementation"
-    )
     async def test_search_with_file_filter(self, service):
         """Test search with file pattern filter."""
         with patch(
@@ -202,9 +193,6 @@ class TestSearchAllProjectsWithConsent:
             assert all("auth" in r.get("file_path", "") for r in result["results"])
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(
-        reason="MultiRepositorySearcher class not available - needs implementation"
-    )
     async def test_search_with_language_filter(self, service):
         """Test search with language filter."""
         with patch(
@@ -238,9 +226,6 @@ class TestSearchAllProjectsWithConsent:
             )
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(
-        reason="MultiRepositorySearcher class not available - needs implementation"
-    )
     async def test_search_handles_project_errors(self, service):
         """Test search continues when individual project fails."""
         with patch(
@@ -265,9 +250,6 @@ class TestSearchAllProjectsWithConsent:
             assert "project2" in result["projects_searched"]
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(
-        reason="MultiRepositorySearcher class not available - needs implementation"
-    )
     async def test_search_results_sorted_by_relevance(self, service):
         """Test search results are sorted by relevance score."""
         with patch(
@@ -289,9 +271,6 @@ class TestSearchAllProjectsWithConsent:
                 assert scores == sorted(scores, reverse=True)
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(
-        reason="MultiRepositorySearcher class not available - needs implementation"
-    )
     async def test_search_respects_limit(self, service):
         """Test search respects the limit parameter."""
         with patch(
@@ -314,9 +293,6 @@ class TestSearchAllProjectsWithConsent:
             assert len(result["results"]) <= 3
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(
-        reason="MultiRepositorySearcher class not available - needs implementation"
-    )
     async def test_search_logs_metrics(self, service):
         """Test search logs metrics when collector is available."""
         metrics_collector = MagicMock()
@@ -527,9 +503,6 @@ class TestConsentManagerIntegration:
         )
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(
-        reason="MultiRepositorySearcher class not available - needs implementation"
-    )
     async def test_opt_in_then_search(self, service_with_consent):
         """Test opting in a project then searching."""
         # Opt in
@@ -597,9 +570,6 @@ class TestEdgeCases:
         )
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(
-        reason="MultiRepositorySearcher class not available - needs implementation"
-    )
     async def test_empty_query_search(self, service):
         """Test search with empty query."""
         with patch(
@@ -620,9 +590,6 @@ class TestEdgeCases:
         service.consent.opt_in.assert_called_with("project-with-dashes_and_underscores")
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(
-        reason="MultiRepositorySearcher class not available - needs implementation"
-    )
     async def test_search_with_zero_limit(self, service):
         """Test search with zero limit returns empty."""
         with patch(
@@ -642,9 +609,6 @@ class TestEdgeCases:
             assert len(result["results"]) == 0
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(
-        reason="MultiRepositorySearcher class not available - needs implementation"
-    )
     async def test_search_mode_passed_to_searcher(self, service):
         """Test search mode is passed to underlying searcher."""
         with patch(

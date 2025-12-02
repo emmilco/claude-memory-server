@@ -141,6 +141,11 @@ class TestDashboardHandlerGetEndpoints:
                 handler, stats, period, metric
             )
         )
+        handler._map_exception_to_response = (
+            lambda e, context: DashboardHandler._map_exception_to_response(
+                handler, e, context
+            )
+        )
 
         return handler
 
@@ -811,10 +816,16 @@ class TestErrorHandling:
         handler.send_header = MagicMock()
         handler.end_headers = MagicMock()
         handler.wfile = BytesIO()
+        handler.path = "/api/stats"  # Default path for tests
         handler._send_error_response = (
             lambda code, msg: DashboardHandler._send_error_response(handler, code, msg)
         )
         handler._handle_api_stats = lambda: DashboardHandler._handle_api_stats(handler)
+        handler._map_exception_to_response = (
+            lambda e, context: DashboardHandler._map_exception_to_response(
+                handler, e, context
+            )
+        )
 
         return handler
 
@@ -828,8 +839,9 @@ class TestErrorHandling:
 
     def test_server_not_initialized_error(self, mock_handler):
         """Test endpoints return 500 when RAG server not initialized."""
-        DashboardHandler.rag_server = None
-        DashboardHandler.event_loop = None
+        # Set None on the mock instance, not just the class
+        mock_handler.rag_server = None
+        mock_handler.event_loop = None
 
         mock_handler._handle_api_stats()
 
@@ -840,9 +852,9 @@ class TestErrorHandling:
         assert "error" in response_data
 
     def test_asyncio_timeout_handling(self, mock_handler):
-        """Test timeout errors handled with 500 response."""
-        DashboardHandler.rag_server = AsyncMock()
-        DashboardHandler.event_loop = MagicMock()
+        """Test timeout errors handled with 504 Gateway Timeout response."""
+        mock_handler.rag_server = AsyncMock()
+        mock_handler.event_loop = MagicMock()
 
         with patch(
             "src.dashboard.web_server.asyncio.run_coroutine_threadsafe"
@@ -853,7 +865,8 @@ class TestErrorHandling:
 
             mock_handler._handle_api_stats()
 
-        mock_handler.send_response.assert_called_once_with(500)
+        # TimeoutError maps to 504 Gateway Timeout
+        mock_handler.send_response.assert_called_once_with(504)
 
 
 class TestEventLoopHelpers:

@@ -28,7 +28,7 @@ class PerformanceBenchmark:
         self.project_name = project_name
         self.config = ServerConfig(
             qdrant_collection_name=f"benchmark_{int(time.time())}",
-            embedding_model="all-MiniLM-L6-v2",
+            embedding_model="all-mpnet-base-v2",
         )
 
         self.store = QdrantMemoryStore(self.config)

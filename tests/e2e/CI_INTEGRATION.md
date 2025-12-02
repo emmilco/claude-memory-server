@@ -275,7 +275,7 @@ CLAUDE_RAG_SEARCH_DEFAULT_LIMIT=10
 **Solutions:**
 - Pre-download model in CI setup:
   ```bash
-  python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')"
+  python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-mpnet-base-v2')"
   ```
 - Cache model directory:
   ```yaml

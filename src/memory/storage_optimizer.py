@@ -217,8 +217,8 @@ class StorageOptimizer:
         # Content size (UTF-8 encoded)
         content_size = len(memory.content.encode("utf-8"))
 
-        # Embedding size (384 dimensions * 4 bytes per float32)
-        embedding_size = 384 * 4
+        # Embedding size (768 dimensions * 4 bytes per float32)
+        embedding_size = 768 * 4
 
         # Metadata size (rough estimate)
         metadata_size = (

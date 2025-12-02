@@ -16,7 +16,7 @@
   "sqlite_path": "~/.claude-rag/memory.db",
 
   "_section_embeddings": "=== EMBEDDING CONFIGURATION ===",
-  "embedding_model": "all-MiniLM-L6-v2",
+  "embedding_model": "all-mpnet-base-v2",
   "embedding_cache_enabled": true,
   "embedding_cache_path": "~/.claude-rag/embedding_cache.db",
   "embedding_cache_ttl_days": 30,

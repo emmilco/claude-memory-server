@@ -31,7 +31,7 @@ The mapping of embedding models to vector dimensions is hardcoded in 9 separate 
 ```python
 # Duplicated in 9 locations:
 model_dims = {
-    "all-MiniLM-L6-v2": 384,
+    "all-mpnet-base-v2": 384,
     "all-MiniLM-L12-v2": 384,
     "all-mpnet-base-v2": 768,
 }

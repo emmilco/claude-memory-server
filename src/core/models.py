@@ -91,7 +91,7 @@ class MemoryUnit(BaseModel):
     scope: MemoryScope = MemoryScope.GLOBAL
     project_name: Optional[str] = None
     importance: float = Field(default=0.5, ge=0.0, le=1.0)
-    embedding_model: str = "all-MiniLM-L6-v2"
+    embedding_model: str = "all-mpnet-base-v2"
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     last_accessed: datetime = Field(default_factory=lambda: datetime.now(UTC))

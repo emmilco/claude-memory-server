@@ -291,13 +291,13 @@ Task IDs: BUG-XXX (bugs), REF-XXX (refactoring), FEAT-XXX (features), TEST-XXX (
 
 - [ ] **BUG-339**: Embedding Model Configuration Mismatch Between config.py and allowed_fields.py
   - **Location:** `src/config.py:16-20` vs `src/core/allowed_fields.py:80-86`
-  - **Problem:** config.py defines 3 supported embedding models (`EMBEDDING_MODEL_DIMENSIONS`): "all-MiniLM-L6-v2", "all-MiniLM-L12-v2", "all-mpnet-base-v2". But allowed_fields.py only allows "all-MiniLM-L6-v2" in the validation schema. If user sets `embedding_model="all-mpnet-base-v2"` (the DEFAULT), validation will reject it as invalid.
-  - **Fix:** Update `allowed_fields.py:84` to `"allowed_values": ["all-MiniLM-L6-v2", "all-MiniLM-L12-v2", "all-mpnet-base-v2"]`
+  - **Problem:** config.py defines 3 supported embedding models (`EMBEDDING_MODEL_DIMENSIONS`): "all-mpnet-base-v2", "all-MiniLM-L12-v2", "all-mpnet-base-v2". But allowed_fields.py only allows "all-mpnet-base-v2" in the validation schema. If user sets `embedding_model="all-mpnet-base-v2"` (the DEFAULT), validation will reject it as invalid.
+  - **Fix:** Update `allowed_fields.py:84` to `"allowed_values": ["all-mpnet-base-v2", "all-MiniLM-L12-v2", "all-mpnet-base-v2"]`
 
 - [ ] **BUG-341**: Embedding Model Configuration Mismatch Between config.py and allowed_fields.py
   - **Location:** `src/config.py:16-20` vs `src/core/allowed_fields.py:80-86`
-  - **Problem:** config.py defines 3 supported embedding models (`EMBEDDING_MODEL_DIMENSIONS`): "all-MiniLM-L6-v2", "all-MiniLM-L12-v2", "all-mpnet-base-v2". But allowed_fields.py only allows "all-MiniLM-L6-v2" in the validation schema. If user sets `embedding_model="all-mpnet-base-v2"` (the DEFAULT), validation will reject it as invalid.
-  - **Fix:** Update `allowed_fields.py:84` to `"allowed_values": ["all-MiniLM-L6-v2", "all-MiniLM-L12-v2", "all-mpnet-base-v2"]`
+  - **Problem:** config.py defines 3 supported embedding models (`EMBEDDING_MODEL_DIMENSIONS`): "all-mpnet-base-v2", "all-MiniLM-L12-v2", "all-mpnet-base-v2". But allowed_fields.py only allows "all-mpnet-base-v2" in the validation schema. If user sets `embedding_model="all-mpnet-base-v2"` (the DEFAULT), validation will reject it as invalid.
+  - **Fix:** Update `allowed_fields.py:84` to `"allowed_values": ["all-mpnet-base-v2", "all-MiniLM-L12-v2", "all-mpnet-base-v2"]`
 
 - [ ] **BUG-352**: Missing Validation for Empty Embeddings Array in Duplicate Detector
   - **Location:** `src/analysis/code_duplicate_detector.py:159-163`
@@ -1590,7 +1590,7 @@ Task IDs: BUG-XXX (bugs), REF-XXX (refactoring), FEAT-XXX (features), TEST-XXX (
 
 - [ ] **REF-106**: Hardcoded 384-Dimension Embedding Vectors in Tests 🔥
   - **Location:** 150+ test files with `[0.1] * 384` patterns
-  - **Problem:** Default model changed from `all-MiniLM-L6-v2` (384 dims) to `all-mpnet-base-v2` (768 dims), but tests still hardcode 384
+  - **Problem:** Default model changed from `all-mpnet-base-v2` (384 dims) to `all-mpnet-base-v2` (768 dims), but tests still hardcode 384
   - **Impact:** Tests fail with "Vector dimension error: expected dim: 384, got 768" when hitting real Qdrant collections
   - **Files affected:**
     - `tests/unit/test_advanced_filtering.py` (25+ instances)

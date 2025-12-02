@@ -19,7 +19,7 @@ from src.core.exceptions import EmbeddingError
 def config():
     """Create test configuration."""
     return ServerConfig(
-        embedding_model="all-MiniLM-L6-v2",
+        embedding_model="all-mpnet-base-v2",
         embedding_batch_size=8,
         enable_parallel_embeddings=True,
         embedding_parallel_workers=2,  # Use 2 workers for testing
@@ -44,8 +44,8 @@ class TestParallelEmbeddingGenerator:
         generator = ParallelEmbeddingGenerator(config, max_workers=2)
         await generator.initialize()
 
-        assert generator.model_name == "all-MiniLM-L6-v2"
-        assert generator.embedding_dim == 384
+        assert generator.model_name == "all-mpnet-base-v2"
+        assert generator.embedding_dim == 768
         assert generator.max_workers == 2
         assert generator.executor is not None
 
@@ -55,7 +55,7 @@ class TestParallelEmbeddingGenerator:
     async def test_default_worker_count(self):
         """Test default worker count is 3."""
         config = ServerConfig(
-            embedding_model="all-MiniLM-L6-v2",
+            embedding_model="all-mpnet-base-v2",
             enable_parallel_embeddings=True,
         )
         generator = ParallelEmbeddingGenerator(config)
@@ -73,7 +73,7 @@ class TestParallelEmbeddingGenerator:
         embedding = await parallel_generator.generate(text)
 
         assert isinstance(embedding, list)
-        assert len(embedding) == 384  # all-MiniLM-L6-v2 dimension
+        assert len(embedding) == 768  # all-mpnet-base-v2 dimension
         assert all(isinstance(x, float) for x in embedding)
 
     @pytest.mark.asyncio
@@ -98,7 +98,7 @@ class TestParallelEmbeddingGenerator:
         embeddings = await parallel_generator.batch_generate(texts)
 
         assert len(embeddings) == len(texts)
-        assert all(len(emb) == 384 for emb in embeddings)
+        assert all(len(emb) == 768 for emb in embeddings)
         assert all(isinstance(emb, list) for emb in embeddings)
 
     @pytest.mark.asyncio
@@ -111,7 +111,7 @@ class TestParallelEmbeddingGenerator:
         embeddings = await parallel_generator.batch_generate(texts, show_progress=True)
 
         assert len(embeddings) == len(texts)
-        assert all(len(emb) == 384 for emb in embeddings)
+        assert all(len(emb) == 768 for emb in embeddings)
 
         # Verify embeddings are different (not all the same)
         # Check that first and second embeddings differ
@@ -183,7 +183,7 @@ class TestParallelEmbeddingGenerator:
     async def test_get_embedding_dim(self, parallel_generator):
         """Test getting embedding dimension."""
         dim = parallel_generator.get_embedding_dim()
-        assert dim == 384  # all-MiniLM-L6-v2
+        assert dim == 768  # all-mpnet-base-v2
 
     @pytest.mark.asyncio
     async def test_invalid_model_error(self):
@@ -208,7 +208,7 @@ class TestParallelEmbeddingGenerator:
         embeddings = await parallel_generator.batch_generate(texts, show_progress=True)
 
         assert len(embeddings) == 50
-        assert all(len(emb) == 384 for emb in embeddings)
+        assert all(len(emb) == 768 for emb in embeddings)
 
     @pytest.mark.asyncio
     async def test_custom_batch_size(self, parallel_generator):
@@ -221,7 +221,7 @@ class TestParallelEmbeddingGenerator:
         )
 
         assert len(embeddings) == 20
-        assert all(len(emb) == 384 for emb in embeddings)
+        assert all(len(emb) == 768 for emb in embeddings)
 
     @pytest.mark.asyncio
     async def test_close_cleanup(self, config):
@@ -401,7 +401,7 @@ class TestParallelPerformance:
         import time
 
         config = ServerConfig(
-            embedding_model="all-MiniLM-L6-v2",
+            embedding_model="all-mpnet-base-v2",
             embedding_batch_size=16,
             embedding_cache_enabled=False,  # Disable cache for fair performance comparison
         )
