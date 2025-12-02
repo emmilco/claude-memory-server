@@ -89,6 +89,13 @@ class TestHelperMethods:
         result = cmd._format_time_ago(dt)
         assert "m ago" in result or "Just now" in result
 
+    def test_format_time_ago_future(self):
+        """Test formatting future datetime (clock skew)."""
+        cmd = StatusCommand()
+        dt = datetime.now(UTC) + timedelta(hours=1)
+        result = cmd._format_time_ago(dt)
+        assert result == "In the future"
+
 
 class TestStorageStats:
     """Test storage statistics retrieval."""
