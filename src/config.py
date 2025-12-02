@@ -84,7 +84,7 @@ class SearchFeatures(BaseModel):
 
     # Cross-project search
     cross_project_enabled: bool = True  # Allow searching across projects
-    cross_project_default_mode: str = "current"  # "current" or "all"
+    cross_project_default_mode: Literal["current", "all"] = "current"
 
     # Query expansion
     query_expansion_enabled: bool = True  # Expand queries with synonyms/context
@@ -119,6 +119,19 @@ class AnalyticsFeatures(BaseModel):
         if v and not info.data.get('usage_tracking', False):
             raise ValueError(
                 "usage_pattern_analytics requires usage_tracking to be enabled"
+            )
+        return v
+
+    @field_validator('usage_analytics_retention_days')
+    @classmethod
+    def validate_usage_analytics_retention_days(cls, v: int) -> int:
+        """Ensure usage_analytics_retention_days is > 0 and <= 730 days."""
+        if v <= 0:
+            raise ValueError("usage_analytics_retention_days must be > 0")
+        if v > 730:
+            raise ValueError(
+                f"usage_analytics_retention_days must be <= 730 days (got {v}). "
+                f"Retention periods longer than 2 years are unreasonable and can cause unbounded storage growth."
             )
         return v
 
