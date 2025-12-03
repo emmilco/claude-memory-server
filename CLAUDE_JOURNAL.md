@@ -1597,3 +1597,36 @@ Hardening sprint continuation - merged 12 worktrees, fixed all recent BUG/REF ti
 - Would likely displace current generic memory storage in favor of structured PAEO-based experience learning
 - Semantic code search would remain as complementary capability
 - Implementation estimate: 2-3 weeks for complete system
+
+### 2025-12-02 13:06 | 2afc11d3 | USER_PROMPT
+Distill project into rebuild blueprint - investigate architecture, features, technical choices, write summary doc
+
+### 2025-12-02 18:43 | 2d2a1d44 | USER_PROMPT
+User wants to design agent orchestration system: human->orchestrator->6 workers. Key insight: fault-tolerant means self-correcting toward perfection, not just error recovery. Greenfield - no existing codebase, will build app using the system. Human can walk away after spec agreement.
+
+### 2025-12-02 19:00 | 2d2a1d44 | USER_PROMPT
+Refinements: Design phase needs human. Human involved in spec+design+rare code review. Agents are specialists but dynamically allocated (more reviewers if reviewing is bottleneck). Workers produce code+tests+docs, have planning_docs folder, maybe SQLite for tracking. User wants deep dive on invariant checker options.
+
+### 2025-12-02 19:12 | 2d2a1d44 | DESIGN_DECISION
+User rejects continuous invariant checking. Reasoning: complexity cost of continuous > cost of late detection. Multiple gates before main already provide coverage. Merge conflicts are a natural attention-forcing mechanism. Going with gate-only approach.
+
+### 2025-12-02 19:25 | 2d2a1d44 | DESIGN_DECISION
+Gate details: linter+targeted tests for impl, full suite minus e2e for test phase, e2e batched every ~12 merges. Specialists: architect, QA, frontend, backend, infra, UX, product, debugger, AI/DL. Task sizing by planning agent optimizing throughput. Docs updated by dedicated agent every ~12 merges from changelog. Planning_docs for proposals/notes, SQLite for workflow state.
+
+### 2025-12-02 19:33 | 2d2a1d44 | DESIGN_DECISION
+Orchestrator is Claude (can exercise judgment). Best reviewer for job, multiple OK. Workers own failures - never pass along failing work. Product/UX for validation (is it working? spec adjustments?). E2E failure: block merges, assign debugger, work continues in branches until main healthy.
+
+### 2025-12-02 19:45 | 2d2a1d44 | USER_PROMPT
+Critical topic: agent behavior failure modes. User identified: laziness/overgeneralization, validation theater, premature 'done' declarations, context forgetting, 'pre-existing failure' excuse, not using fail-fast/verbose, not treating debugging as differential diagnosis, over-engineering, leaving work unfinished, accepting tech debt. This is about behavioral norms, not just workflow structure.
+
+### 2025-12-02 19:56 | 2d2a1d44 | DESIGN_DECISION
+Debugging norm refined: parallel hypothesis testing, not sequential. Generate multiple alternative hypotheses, design single test run that discriminates between ALL of them via logging/monitoring. More efficient, more thorough. Enforcement: mechanical where possible, keep simple. Violations logged (what/why/how-to-avoid) for pattern analysis.
+
+### 2025-12-02 19:59 | 2d2a1d44 | INTERVAL
+User asked for missing angles. Thinking through: communication patterns between agents, handoff protocols, escalation paths, spec amendment process, knowledge accumulation, metrics/visibility, bootstrap problem.
+
+### 2025-12-02 20:09 | 2d2a1d44 | DESIGN_DECISION
+Final decisions: (1) Handoff via full worktree, reviewer sees diff. (2) All spec revisions need human approval. (3) No inter-worker communication, orchestrator dispatches then waits for completion. (4) Codebase is memory for now. (5) Human ensures wrapup command before context ends, generates handoff. New orchestrator reconstructs from docs/worktrees/db. (6) Test runs logged: sha, worktree, counts, failures, timing. (7) Build workflow system manually first.
+
+### 2025-12-02 20:17 | 2d2a1d44 | PROGRESS
+Created CLAMS repo at ~/Documents/GitHub/clams/ with DESIGN.md (497 lines). Comprehensive design covering architecture, roles, phases, gates, isolation, state management, behavioral norms, debugging protocol, batch jobs, session continuity. Initial commit made.
